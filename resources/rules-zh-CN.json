@@ -498,5 +498,105 @@
   [
     "^Media\\\\s+(\\\\d+)$",
     "媒体 "
+  ],
+  [
+    "\\\\((\\\\d+)\\\\s+subagents?\\\\)",
+    "( 个子智能体)"
+  ],
+  [
+    "^Worked for (\\d+)h (\\d+)m$",
+    "已运行  小时  分钟"
+  ],
+  [
+    "^Worked for (\\d+)m (\\d+)s$",
+    "已运行  分钟  秒"
+  ],
+  [
+    "^Worked for (\\d+)h$",
+    "已运行  小时"
+  ],
+  [
+    "^Worked for (\\d+)m$",
+    "已运行  分钟"
+  ],
+  [
+    "^Worked for (\\d+)s$",
+    "已运行  秒"
+  ],
+  [
+    "^Worked for (.+)$",
+    "已运行 "
+  ],
+  [
+    "^Skills Used\\s+(\\d+)$",
+    "已使用技能 "
+  ],
+  [
+    "^Skills used\\s+(\\d+)$",
+    "已使用技能 "
+  ],
+  [
+    "^Skills Used$",
+    "已使用技能"
+  ],
+  [
+    "^Skills used$",
+    "已使用技能"
+  ],
+  [
+    "^[否No]\\s*\\(tell the agent what to do instead\\)$",
+    "否（告知 Agent 改为执行其他操作）"
+  ],
+  [
+    "^Allow reading (?:from )?this URL\\??$",
+    "允许读取此 URL 吗？"
+  ],
+  [
+    "^Allow reading this URL$",
+    "允许读取此 URL"
+  ],
+  [
+    "^Allow running this command\\??$",
+    "允许运行此命令吗？"
+  ],
+  [
+    "^Allow executing this command\\??$",
+    "允许执行此命令吗？"
+  ],
+  [
+    "^Allow reading this file\\??$",
+    "允许读取此文件吗？"
+  ],
+  [
+    "^Allow writing to this file\\??$",
+    "允许写入此文件吗？"
+  ],
+  [
+    "^Allow deleting this file\\??$",
+    "允许删除此文件吗？"
+  ],
+  [
+    "^Allow accessing this folder\\??$",
+    "允许访问此文件夹吗？"
+  ],
+  [
+    "^(\\d+)\\s+tasks?\\s+running$",
+    " 个任务运行中"
+  ],
+  [
+    "^No tasks running$",
+    "无运行中的任务"
+  ],
+  [
+    "^(\\d+)\\s+tasks?\\s+completed$",
+    " 个任务已完成"
+  ],
+  [
+    "^(\\d+)\\s+tasks?\\s+failed$",
+    " 个任务已失败"
+  ],
+  [
+    "^(\\d+)\\s+tasks?\\s+pending$",
+    " 个任务等待中"
   ]
 ]

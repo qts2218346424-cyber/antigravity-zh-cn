@@ -14,6 +14,41 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 NEW_TRANSLATIONS = {
+    # 权限请求与授权弹窗
+    "Allow reading this URL?": "允许读取此 URL 吗？",
+    "Allow reading this URL": "允许读取此 URL",
+    "Allow reading from this URL?": "允许从此 URL 读取吗？",
+    "Allow running this command?": "允许运行此命令吗？",
+    "Allow executing this command?": "允许执行此命令吗？",
+    "Allow reading this file?": "允许读取此文件吗？",
+    "Allow writing to this file?": "允许写入此文件吗？",
+    "Allow deleting this file?": "允许删除此文件吗？",
+    "Allow accessing this folder?": "允许访问此文件夹吗？",
+    "Yes, allow this time": "是，本次允许",
+    "Yes, and always allow in this conversation": "是，在此会话中始终允许",
+    "Yes, and always allow in this project": "是，在此项目中始终允许",
+    "Yes, and always allow": "是，始终允许",
+    "Always allow in this conversation": "在此会话中始终允许",
+    "Always allow in this project": "在此项目中始终允许",
+    "Always allow": "始终允许",
+    "tell the agent what to do instead": "告知 Agent 改为执行其他操作",
+    "(tell the agent what to do instead)": "（告知 Agent 改为执行其他操作）",
+    "否 (tell the agent what to do instead)": "否（告知 Agent 改为执行其他操作）",
+    "No (tell the agent what to do instead)": "否（告知 Agent 改为执行其他操作）",
+
+    # 目标、编辑与技能使用统计
+    "Active Goal": "当前目标",
+    "Active goal": "当前目标",
+    "Agent Edits": "Agent 编辑记录",
+    "Agent edits": "Agent 编辑记录",
+    "Skills Used": "已使用技能",
+    "Skills used": "已使用技能",
+    "Skill Used": "已使用技能",
+    "Skill used": "已使用技能",
+    "Post-Victory Auditor": "胜利后审查员",
+    "Project Orchestrator": "项目编排器",
+    "Pet Team Lead": "宠物团队主管",
+
     # Agent 设置与沙箱/审查模式
     "Agent Settings": "Agent 设置",
     "Agent settings": "Agent 设置",
