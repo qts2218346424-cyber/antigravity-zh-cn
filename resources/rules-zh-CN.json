@@ -33,5 +33,9 @@
   ["^Agent settings and permissions for conversations outside of (.+)\\.?$", "针对 $1 之外会话的 Agent 设置与运行权限。"],
   ["^A (.+) with this name already exists\\.?$", "已存在同名的 $1。"],
   ["^Edit (.+) name$", "编辑 $1 名称"],
-  ["^Select one of the (two|three) options\\. Agent settings and permissions can be further customized below\\.?$", "请选择以下 $1 个选项之一。Agent 设置与运行权限可在下方进一步自定义。"]
+  ["^Select one of the (two|three) options\\. Agent settings and permissions can be further customized below\\.?$", "请选择以下 $1 个选项之一。Agent 设置与运行权限可在下方进一步自定义。"],
+  ["^When toggled on, (.+) collects usage data to help Google enhance performance and features\\.?$", "启用后，$1 将收集匿名使用数据以帮助 Google 持续优化产品性能与功能体验。"],
+  ["^Receive product updates, tips, and promotions from (.+) via email\\.?$", "通过电子邮件接收来自 $1 的产品更新、实用技巧以及优惠动态。"],
+  ["^You can upgrade to a (.+) plan to receive higher rate limits\\.?$", "您可以升级至 $1 订阅计划以获取更高的请求速率与使用额度。"],
+  ["^Your Plan:\\s*(.+)$", "当前计划: $1"]
 ]

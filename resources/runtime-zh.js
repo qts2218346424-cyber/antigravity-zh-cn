@@ -81,13 +81,25 @@
       '.code-block-content'
     ].join(',');
 
-    const isProtectedNode = (node) => {
+    const isProtectedTextNode = (node) => {
       try {
         const el = node.nodeType === 1 ? node : node.parentElement;
         if (!el || !el.closest) return true;
         if (IGNORED_TAGS.has(el.tagName)) return true;
         if (el.closest(CODE_PROTECT_SELECTOR)) return true;
         if (el.closest(USER_CONTENT_SELECTOR)) return true;
+        return false;
+      } catch (_) {
+        return true;
+      }
+    };
+
+    const isProtectedAttrNode = (el) => {
+      try {
+        if (!el || !el.closest) return true;
+        if (IGNORED_TAGS.has(el.tagName)) return true;
+        // 允许 input 与 textarea 的 placeholder/title/aria-label 进行汉化，仅严格保护代码编辑器核心与终端
+        if (el.closest('.monaco-editor, .cm-editor, .xterm, .code-block-content')) return true;
         return false;
       } catch (_) {
         return true;
@@ -104,7 +116,7 @@
           NodeFilter.SHOW_TEXT,
           {
             acceptNode(n) {
-              if (isProtectedNode(n)) return NodeFilter.FILTER_REJECT;
+              if (isProtectedTextNode(n)) return NodeFilter.FILTER_REJECT;
               if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
               return NodeFilter.FILTER_ACCEPT;
             }
@@ -139,7 +151,7 @@
       try {
         const elements = root.querySelectorAll('[aria-label],[placeholder],[title],[alt],input[type="button"],input[type="submit"]');
         elements.forEach((el) => {
-          if (isProtectedNode(el)) return;
+          if (isProtectedAttrNode(el)) return;
           ['aria-label', 'placeholder', 'title', 'alt', 'value'].forEach((attr) => {
             let val = el.getAttribute ? el.getAttribute(attr) : null;
             if (!val && attr in el && typeof el[attr] === 'string') val = el[attr];
