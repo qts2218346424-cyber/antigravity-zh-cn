@@ -227,42 +227,144 @@
   // --------------------------------------------------------------------------
   // 4. Mascot State Machine & Presentation
   // --------------------------------------------------------------------------
+  const PRESET_ANIMATIONS = {
+    default: {
+      nameZh: 'Gemini 灵动星灵（动态像素）',
+      idle: 'assets/pet_idle.gif',
+      thinking: 'assets/pet_thinking.gif',
+      task_finished: 'assets/pet_celebrate.gif',
+      quota_low: 'assets/pet_worry.gif'
+    },
+    paimon: {
+      nameZh: '派蒙（Codex Pet 原神经典）',
+      idle: 'assets/presets/paimon/idle.webp',
+      thinking: 'assets/presets/paimon/waving.webp',
+      task_finished: 'assets/presets/paimon/jumping.webp',
+      quota_low: 'assets/presets/paimon/waving.webp'
+    },
+    doraemon: {
+      nameZh: '哆啦A梦（Codex Pet 经典）',
+      idle: 'assets/presets/doraemon/idle.webp',
+      thinking: 'assets/presets/doraemon/waving.webp',
+      task_finished: 'assets/presets/doraemon/jumping.webp',
+      quota_low: 'assets/presets/doraemon/waving.webp'
+    },
+    gemini_chibi: {
+      nameZh: 'Gemini 绒绒棉花糖',
+      idle: 'assets/gemini_chibi.png',
+      thinking: 'assets/gemini_chibi.png',
+      task_finished: 'assets/gemini_chibi.png',
+      quota_low: 'assets/gemini_chibi.png'
+    }
+  };
+
+  const SPEECH_LINES = {
+    idle: [
+      "主人，我在！额度还很充足~",
+      "今天也是元气满满的敲代码一天！",
+      "代码写累了？记得喝杯水休息一下~",
+      "随时待命！拖动我可以换个舒服的位置~",
+      "有什么新的开发任务需要我协助吗？"
+    ],
+    thinking: [
+      "正在全速思考与处理任务中...",
+      "别着急，灵感马上就来！",
+      "智能体联邦正在交叉会诊方案..."
+    ],
+    task_finished: [
+      "耶！任务已经顺利完成啦！",
+      "大功告成！代码已合并落地~",
+      "太棒了！今天也是超高效的一天！"
+    ],
+    quota_low: [
+      "报告主人！额度快见底了，记得切号~",
+      "警告：当前 Token 额度不足 20%！",
+      "建议及时切换备用账号继续工作！"
+    ]
+  };
+
   class MascotController {
     constructor() {
       this.appEl = document.getElementById('pet-app');
       this.mascotContainer = document.getElementById('mascot-container');
-      this.svgWrapper = document.getElementById('svg-mascot-wrapper');
+      this.spriteWrapper = document.getElementById('svg-mascot-wrapper');
+      this.spriteImg = document.getElementById('mascot-sprite-img');
       this.customWrapper = document.getElementById('custom-avatar-wrapper');
       this.customImg = document.getElementById('custom-avatar-img');
+      this.speechBubble = document.getElementById('pet-speech-bubble');
+      this.speechText = document.getElementById('speech-bubble-text');
+      this.currentPreset = 'default';
+      this.speechTimer = null;
+    }
+
+    showSpeechBubble(text = null, durationMs = 2800) {
+      if (!this.speechBubble) return;
+      if (this.speechTimer) {
+        clearTimeout(this.speechTimer);
+      }
+      if (!text) {
+        const lines = SPEECH_LINES[appState.currentState] || SPEECH_LINES.idle;
+        text = lines[Math.floor(Math.random() * lines.length)];
+      }
+      if (this.speechText) this.speechText.textContent = text;
+      this.speechBubble.classList.add('show');
+      this.speechTimer = setTimeout(() => {
+        this.speechBubble.classList.remove('show');
+      }, durationMs);
     }
 
     setState(newState, durationMs = 0) {
-      // Fallback unrecognized state gracefully to idle (T1.F2.05)
       if (!MASCOT_STATES.includes(newState)) {
-        console.warn(`Unrecognized pet state: "${newState}", defaulting to "idle".`);
         newState = 'idle';
       }
 
-      // Clear existing state classes
       MASCOT_STATES.forEach(st => this.appEl.classList.remove(`state-${st}`));
       this.appEl.classList.add(`state-${newState}`);
 
       appState.previousState = appState.currentState;
       appState.currentState = newState;
 
+      // Update animated sprite if using preset mode or default
+      if (appState.avatarMode === 'default' || appState.avatarMode === 'preset') {
+        const preset = PRESET_ANIMATIONS[this.currentPreset] || PRESET_ANIMATIONS.default;
+        const targetSrc = preset[newState] || preset.idle;
+        if (this.spriteImg && this.spriteImg.getAttribute('src') !== targetSrc) {
+          this.spriteImg.src = targetSrc;
+        }
+      }
+
       if (appState.stateTimer) {
         clearTimeout(appState.stateTimer);
         appState.stateTimer = null;
       }
 
-      // If temporary duration specified (e.g. task_finished celebration), revert to base state
       if (durationMs > 0) {
         appState.stateTimer = setTimeout(() => {
-          // Revert to quota_low if quota is still low, otherwise idle
           const revertState = (appState.quota && appState.quota.remaining_percentage < 20) ? 'quota_low' : 'idle';
           this.setState(revertState);
         }, durationMs);
       }
+    }
+
+    setPreset(presetName) {
+      this.currentPreset = presetName;
+      appState.avatarMode = (presetName === 'default') ? 'default' : 'preset';
+      appState.customAvatarData = null;
+
+      if (this.spriteWrapper) this.spriteWrapper.style.display = 'flex';
+      if (this.customWrapper) this.customWrapper.style.display = 'none';
+
+      const preset = PRESET_ANIMATIONS[presetName] || PRESET_ANIMATIONS.default;
+      const targetSrc = preset[appState.currentState] || preset.idle;
+      if (this.spriteImg) {
+        this.spriteImg.src = targetSrc;
+      }
+
+      try {
+        localStorage.setItem(STORAGE_KEY_AVATAR, JSON.stringify({ mode: 'preset', preset: presetName }));
+      } catch (e) {}
+
+      this.showSpeechBubble(`已切换至形象：${preset.nameZh || presetName}`);
     }
 
     setAvatarMode(mode, dataUrl = null) {
@@ -270,13 +372,10 @@
       appState.customAvatarData = dataUrl;
 
       if (mode === 'default') {
-        this.svgWrapper.style.display = 'flex';
-        this.customWrapper.style.display = 'none';
-        this.customImg.src = '';
-        localStorage.removeItem(STORAGE_KEY_AVATAR);
+        this.setPreset('default');
       } else {
-        this.svgWrapper.style.display = 'none';
-        this.customWrapper.style.display = 'flex';
+        if (this.spriteWrapper) this.spriteWrapper.style.display = 'none';
+        if (this.customWrapper) this.customWrapper.style.display = 'flex';
         this.customImg.src = dataUrl;
         this.customImg.onerror = () => {
           console.error('Failed to render custom avatar. Reverting to default mascot.');
@@ -285,13 +384,11 @@
             body: '自定义形象无法渲染，已自动恢复至默认 Gemini 星灵形象。',
             level: 'warning'
           });
-          this.setAvatarMode('default');
+          this.setPreset('default');
         };
         try {
           localStorage.setItem(STORAGE_KEY_AVATAR, JSON.stringify({ mode, dataUrl }));
-        } catch (e) {
-          console.warn('Could not persist avatar to localStorage:', e);
-        }
+        } catch (e) {}
       }
     }
 
@@ -299,15 +396,23 @@
       try {
         const saved = localStorage.getItem(STORAGE_KEY_AVATAR);
         if (saved) {
-          const { mode, dataUrl } = JSON.parse(saved);
-          if (dataUrl) {
-            this.setAvatarMode(mode, dataUrl);
+          const parsed = JSON.parse(saved);
+          if (parsed.preset && PRESET_ANIMATIONS[parsed.preset]) {
+            this.setPreset(parsed.preset);
+            const thumb = document.querySelector(`[data-preset="${parsed.preset}"]`);
+            if (thumb) {
+              document.querySelectorAll('.preset-thumb').forEach(t => t.classList.remove('active'));
+              thumb.classList.add('active');
+            }
+            return;
+          }
+          if (parsed.dataUrl) {
+            this.setAvatarMode(parsed.mode, parsed.dataUrl);
+            return;
           }
         }
-      } catch (err) {
-        console.warn('Failed to restore avatar from storage:', err);
-        this.setAvatarMode('default');
-      }
+      } catch (err) {}
+      this.setPreset('default');
     }
   }
 
@@ -750,6 +855,15 @@
           this.loadPreset(presetName);
         });
       });
+
+      // External Link to Codex Pet community gallery
+      const linkCodexpet = document.getElementById('link-open-codexpet');
+      if (linkCodexpet) {
+        linkCodexpet.addEventListener('click', (e) => {
+          e.preventDefault();
+          bridge.invoke('open_external_url', { url: 'https://codexpet.top' });
+        });
+      }
     }
 
     open() {
@@ -765,24 +879,14 @@
       const activeThumb = document.querySelector(`[data-preset="${presetName}"]`);
       if (activeThumb) activeThumb.classList.add('active');
 
-      if (presetName === 'default') {
-        this.mascotCtrl.setAvatarMode('default');
-        this.toastMgr.showToast({ title: '默认星灵', body: '已恢复原生 Gemini 动态星灵形象。', level: 'info' });
-        this.close();
-      } else {
-        const presetPath = `assets/presets/${presetName}.svg`;
-        fetch(presetPath)
-          .then(res => res.text())
-          .then(svgText => {
-            const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
-            this.mascotCtrl.setAvatarMode('preset', dataUrl);
-            this.toastMgr.showToast({ title: '形象已应用', body: `已切换形象预设：${presetName}`, level: 'success' });
-            this.close();
-          })
-          .catch(err => {
-            this.toastMgr.showToast({ title: '预设加载失败', body: '无法读取预设形象文件。', level: 'error' });
-          });
-      }
+      this.mascotCtrl.setPreset(presetName);
+      this.toastMgr.showToast({
+        title: '桌宠已切换',
+        body: `当前形象已更新至：${(PRESET_ANIMATIONS[presetName] && PRESET_ANIMATIONS[presetName].nameZh) || presetName}`,
+        level: 'success',
+        duration_ms: 2500
+      });
+      this.close();
     }
 
     async handleFile(file) {
@@ -1011,6 +1115,8 @@
       let hasMoved = false;
 
       const mascotViewport = document.getElementById('mascot-viewport');
+      if (!mascotViewport) return;
+
       mascotViewport.addEventListener('mousedown', async (e) => {
         if (e.button === 0 && !e.target.closest('.no-drag, button, input, a')) {
           isMouseDown = true;
@@ -1018,6 +1124,12 @@
           startX = e.clientX;
           startY = e.clientY;
 
+          // 1. Instant native Win32 window drag (144Hz zero-lag drag)
+          try {
+            bridge.invoke('start_drag');
+          } catch (err) {}
+
+          // 2. Tauri v2 fallback
           if (window.__TAURI__ && window.__TAURI__.window) {
             try {
               await window.__TAURI__.window.getCurrentWindow().startDragging();
@@ -1029,7 +1141,7 @@
 
       window.addEventListener('mousemove', (e) => {
         if (isMouseDown) {
-          if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+          if (Math.abs(e.clientX - startX) > 4 || Math.abs(e.clientY - startY) > 4) {
             hasMoved = true;
           }
         }
@@ -1037,15 +1149,26 @@
 
       window.addEventListener('mouseup', () => {
         if (isMouseDown && !hasMoved) {
-          // Click mascot: playful happy reaction!
+          // Click mascot: instant playful happy jump reaction + Chinese speech bubble!
           if (window.__ANTIGRAVITY_PET__) {
-            const cur = window.__ANTIGRAVITY_PET__.getAppState().currentState;
+            const pet = window.__ANTIGRAVITY_PET__;
+            const cur = pet.getAppState().currentState;
             if (cur === 'idle') {
-              window.__ANTIGRAVITY_PET__.setState('task_finished', 1800);
+              pet.setState('task_finished', 2200);
+            }
+            if (pet.mascotCtrl && typeof pet.mascotCtrl.showSpeechBubble === 'function') {
+              pet.mascotCtrl.showSpeechBubble();
             }
           }
         }
         isMouseDown = false;
+      });
+
+      // Hover over mascot triggers friendly speech bubble
+      mascotViewport.addEventListener('mouseenter', () => {
+        if (window.__ANTIGRAVITY_PET__ && window.__ANTIGRAVITY_PET__.mascotCtrl) {
+          window.__ANTIGRAVITY_PET__.mascotCtrl.showSpeechBubble(null, 2500);
+        }
       });
 
       // Right-click mascot: toggle thinking/idle state
@@ -1105,6 +1228,7 @@
 
     // Expose global controller API for external automation / pywebview bridge
     window.__ANTIGRAVITY_PET__ = {
+      mascotCtrl: mascotCtrl,
       setState: (st, dur) => mascotCtrl.setState(st, dur),
       refreshQuota: () => quotaTracker.refreshQuota(true),
       showToast: (opts) => toastMgr.showToast(opts),

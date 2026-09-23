@@ -169,6 +169,15 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(49);
         }
 
+        // 10. Queue message, image attachment, undo to this point, see less, changes since
+        if (translate("Queue message Enter") !== "消息排队 Enter") process.exit(50);
+        if (translate("Send immediately (Alt+Enter)") !== "立即发送 (Alt+Enter)") process.exit(51);
+        if (translate("image.png") !== "图片.png") process.exit(52);
+        if (translate("Undo to this point") !== "撤销至此处") process.exit(53);
+        if (translate("See less") !== "收起") process.exit(54);
+        if (translate("See more") !== "展开") process.exit(55);
+        if (translate("All changes since origin/main") !== "自 origin/main 以来的所有更改") process.exit(56);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)

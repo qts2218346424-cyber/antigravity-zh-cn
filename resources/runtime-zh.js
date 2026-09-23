@@ -132,8 +132,8 @@
         if (!el || !el.closest) return true;
         if (IGNORED_TAGS.has(el.tagName)) return true;
 
-        // 1. 占位符、浮层提示或禁用指针的 UI 描述文本一律允许汉化（如 Lexical placeholder）
-        if (el.closest('[class*="placeholder"], [data-placeholder], [class*="pointer-events-none"]')) {
+        // 1. 占位符、浮层提示、禁用指针或不可编辑嵌入组件的 UI 描述文本一律允许汉化（如 Lexical placeholder / 附件芯片）
+        if (el.closest('[class*="placeholder"], [data-placeholder], [class*="pointer-events-none"], [contenteditable="false"]')) {
           return false;
         }
 

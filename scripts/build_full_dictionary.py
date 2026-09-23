@@ -34,6 +34,18 @@ NEW_TRANSLATIONS = {
     "Cancel recording": "取消录制",
 
     # 快捷键提示与排队发送 (Keyboard Shortcuts & Message Queueing)
+    "Queue message Enter": "消息排队 Enter",
+    "Queue message": "消息排队",
+    "Queue Message": "消息排队",
+    "Queue Message Enter": "消息排队 Enter",
+    "Queue message (Enter)": "消息排队 (Enter)",
+    "Send immediately (Alt+Enter)": "立即发送 (Alt+Enter)",
+    "Send Immediately (Alt+Enter)": "立即发送 (Alt+Enter)",
+    "Send immediately (Ctrl+Enter)": "立即发送 (Ctrl+Enter)",
+    "Send immediately (Cmd+Enter)": "立即发送 (Cmd+Enter)",
+    "Send immediately (Enter)": "立即发送 (Enter)",
+    "Queue message Enter\nSend immediately (Alt+Enter)": "消息排队 Enter\n立即发送 (Alt+Enter)",
+    "Queue message Enter Send immediately (Alt+Enter)": "消息排队 Enter 立即发送 (Alt+Enter)",
     "Enter Queues after the turn": "Enter：本轮结束后排队",
     "Enter: Queues after the turn": "Enter：本轮结束后排队",
     "Alt+Enter Sends immediately": "Alt+Enter：立即发送",
@@ -52,6 +64,54 @@ NEW_TRANSLATIONS = {
     "Sends next in queue": "发送队列中下一条",
     "Next in queue": "队列中下一条",
     "Send next in queue": "发送队列中下一条",
+
+    # 剪贴板附件与截图 (Clipboard Attachments)
+    "image.png": "图片.png",
+    "image.jpg": "图片.jpg",
+    "image.jpeg": "图片.jpeg",
+    "image.gif": "图片.gif",
+    "image.webp": "图片.webp",
+    "image.svg": "图片.svg",
+    "Image.png": "图片.png",
+    "Image.jpg": "图片.jpg",
+
+    # 对话回滚与撤销 (Undo / Revert Actions)
+    "Undo to this point": "撤销至此处",
+    "Undo to this point...": "撤销至此处...",
+    "Undo to this step": "撤销至此步骤",
+    "Undo to here": "撤销至此处",
+    "Undo To Here": "撤销至此处",
+    "Undo to this message": "撤销至此消息",
+    "Revert to this point": "还原至此处",
+    "Revert to this step": "还原至此步骤",
+    "Rollback to this point": "回滚至此处",
+    "Rollback to this step": "回滚至此步骤",
+
+    # 查看更少/查看更多 (Collapse & Expand)
+    "See less": "收起",
+    "See more": "展开",
+    "see less": "收起",
+    "see more": "展开",
+    "Show less": "收起",
+    "Show more": "展开",
+    "show less": "收起",
+    "show more": "展开",
+    "View less": "收起",
+    "View more": "查看更多",
+    "view less": "收起",
+    "view more": "查看更多",
+
+    # Git 差异与分支对比 (Git Changes & Compare)
+    "All changes since origin/main": "自 origin/main 以来的所有更改",
+    "All changes since origin/master": "自 origin/master 以来的所有更改",
+    "All changes since upstream/main": "自 upstream/main 以来的所有更改",
+    "All changes since main": "自 main 以来的所有更改",
+    "All changes since master": "自 master 以来的所有更改",
+    "All changes since HEAD": "自 HEAD 以来的所有更改",
+    "All changes since": "自此以来的所有更改",
+    "all changes since": "自此以来的所有更改",
+    "Changes since origin/main": "自 origin/main 以来的更改",
+    "Changes since": "自此以来的更改",
 
     # 模型选择器 / 限时体验勾选容错
     "Limited time ✓": "限时体验 ✓",

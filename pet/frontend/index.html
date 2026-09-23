@@ -147,22 +147,23 @@
             <div class="drop-zone-hint">支持 PNG、动态 GIF、WebP、SVG（最大 10MB）</div>
             <input type="file" id="avatar-file-input" accept=".png,.gif,.webp,.svg,image/png,image/gif,image/webp,image/svg+xml" style="display: none;">
           </div>
-          <div style="font-size: 11px; font-weight: 600; color: var(--color-text-secondary); margin-top: 8px;">预设经典形象：</div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--color-text-secondary); margin-top: 8px;">预设热门桌宠（点击即换）：</div>
           <div class="presets-grid">
-            <div class="preset-thumb active" data-preset="default" title="原生 Gemini 星灵">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#00F0FF" stroke-width="2">
-                <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9 12 2"></polygon>
-              </svg>
+            <div class="preset-thumb active" data-preset="default" title="Gemini 灵动星灵（动态像素）">
+              <img src="assets/pet_idle.gif" alt="Gemini 像素星灵">
             </div>
-            <div class="preset-thumb" data-preset="gemini_sparkle" title="璀璨金星">
-              <img src="assets/presets/gemini_sparkle.svg" alt="金星">
+            <div class="preset-thumb" data-preset="paimon" title="派蒙（Codex Pet 原神经典）">
+              <img src="assets/presets/paimon/idle.webp" alt="派蒙">
             </div>
-            <div class="preset-thumb" data-preset="quantum_bot" title="量子智械">
-              <img src="assets/presets/quantum_bot.svg" alt="智械">
+            <div class="preset-thumb" data-preset="doraemon" title="哆啦A梦（Codex Pet 经典）">
+              <img src="assets/presets/doraemon/idle.webp" alt="哆啦A梦">
             </div>
-            <div class="preset-thumb" data-preset="cosmic_orb" title="星云光球">
-              <img src="assets/presets/cosmic_orb.svg" alt="光球">
+            <div class="preset-thumb" data-preset="gemini_chibi" title="Gemini 绒绒棉花糖">
+              <img src="assets/gemini_chibi.png" alt="棉花糖">
             </div>
+          </div>
+          <div style="margin-top: 10px; font-size: 11px; text-align: center;">
+            <a href="#" id="link-open-codexpet" style="color: var(--accent-cyan); text-decoration: none;">✦ 浏览 Awesome Codex Pet 社区 255+ 款桌宠 ↗</a>
           </div>
         </div>
       </div>

@@ -750,5 +750,61 @@
   [
     "^Next in queue$",
     "队列中下一条"
+  ],
+  [
+    "^Queue\\s+message(?:\\s+Enter)?$",
+    "消息排队 Enter"
+  ],
+  [
+    "^Send\\s+immediately\\s*\\((?:Alt|Ctrl|Cmd)\\+Enter\\)$",
+    "立即发送 (Alt+Enter)"
+  ],
+  [
+    "^[iI]mage\\.(png|jpe?g|gif|webp|svg)$",
+    "图片."
+  ],
+  [
+    "^[uU]ndo\\s+to\\s+this\\s+(?:point|step|message)$",
+    "撤销至此处"
+  ],
+  [
+    "^[uU]ndo\\s+[tT]o\\s+[tT]his\\s+(?:[pP]oint|[sS]tep)$",
+    "撤销至此处"
+  ],
+  [
+    "^[rR]evert\\s+to\\s+this\\s+(?:point|step)$",
+    "还原至此处"
+  ],
+  [
+    "^[rR]ollback\\s+to\\s+this\\s+(?:point|step)$",
+    "回滚至此处"
+  ],
+  [
+    "^[sS]ee\\s+less$",
+    "收起"
+  ],
+  [
+    "^[sS]ee\\s+more$",
+    "展开"
+  ],
+  [
+    "^[sS]how\\s+less$",
+    "收起"
+  ],
+  [
+    "^[sS]how\\s+more$",
+    "展开"
+  ],
+  [
+    "^[aA]ll\\s+changes\\s+since\\s+(.+)$",
+    "自  以来的所有更改"
+  ],
+  [
+    "^[cC]hanges\\s+since\\s+(.+)$",
+    "自  以来的更改"
+  ],
+  [
+    "^[cC]ompare\\s+with\\s+(.+)$",
+    "与  进行对比"
   ]
 ]
