@@ -345,6 +345,40 @@ const __AGY_ZH_CODE__ = {js_raw};
     except Exception as e:
         print(f"  [!] 主世界注入通道修补失败: {e}")
 
+    # (6) 修补 dist/loadingOverlay.js (消除启动白屏卡顿与翻译启动文本)
+    try:
+        overlay_content = read_asar_file_content(asar_data, "dist/loadingOverlay.js").decode("utf-8")
+        overlay_content = overlay_content.replace(
+            '<div class="text">Loading Antigravity</div>',
+            '<div class="text">正在加载 Antigravity...</div>'
+        )
+        old_remove_str = """    win.webContents.once('did-finish-load', () => {
+        try {
+            win.contentView.removeChildView(view);
+        }
+        catch (_) {
+            // In case window was closed quickly
+        }
+        win.off('resize', updateBounds);
+    });"""
+        new_remove_str = """    let __agyOverlayRemoved = false;
+    const __agyRemoveOverlay = () => {
+        if (__agyOverlayRemoved) return;
+        __agyOverlayRemoved = true;
+        try {
+            win.contentView.removeChildView(view);
+        } catch (_) {}
+        win.off('resize', updateBounds);
+    };
+    win.webContents.once('dom-ready', __agyRemoveOverlay);
+    win.webContents.once('did-finish-load', __agyRemoveOverlay);
+    setTimeout(__agyRemoveOverlay, 1500);"""
+        if old_remove_str in overlay_content:
+            overlay_content = overlay_content.replace(old_remove_str, new_remove_str)
+            asar_data = replace_asar_file_content(asar_data, "dist/loadingOverlay.js", overlay_content.encode("utf-8"))
+            print("  [OK] 启动加载遮罩 (dist/loadingOverlay.js) 防白屏卡顿优化完成")
+    except Exception as e:
+        print(f"  [!] 忽略非致命项 dist/loadingOverlay.js: {e}")
 
     # 4. 安全写入目标文件
     print(f"[4/4] 正在安全写入汉化文件: {asar_path.name}...")
