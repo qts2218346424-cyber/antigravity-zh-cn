@@ -1686,5 +1686,113 @@
   [
     "^\\((\\d+)\\s*子智能体s\\)$",
     "($1 个子智能体)"
+  ],
+  [
+    "^[Yy]ou have used some of your 5-hour limit,\\s*it will fully refresh in (\\d+)\\s+hours?,\\s+(\\d+)\\s+minutes?\\.?$",
+    "您已使用部分 5 小时配额，将在 $1 小时 $2 分钟后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used all of your 5-hour limit,\\s*it will fully refresh in (\\d+)\\s+hours?,\\s+(\\d+)\\s+minutes?\\.?$",
+    "您的 5 小时配额已用尽，将在 $1 小时 $2 分钟后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used some of your 5-hour limit,\\s*it will fully refresh in (\\d+)\\s+hours?\\.?$",
+    "您已使用部分 5 小时配额，将在 $1 小时后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used all of your 5-hour limit,\\s*it will fully refresh in (\\d+)\\s+hours?\\.?$",
+    "您的 5 小时配额已用尽，将在 $1 小时后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used some of your 5-hour limit,\\s*it will fully refresh in (\\d+)\\s+minutes?\\.?$",
+    "您已使用部分 5 小时配额，将在 $1 分钟后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used all of your 5-hour limit,\\s*it will fully refresh in (\\d+)\\s+minutes?\\.?$",
+    "您的 5 小时配额已用尽，将在 $1 分钟后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used some of your 5-hour limit,\\s*it will fully refresh in (.+?)\\.?$",
+    "您已使用部分 5 小时配额，将在 $1 后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used all of your 5-hour limit,\\s*it will fully refresh in (.+?)\\.?$",
+    "您的 5 小时配额已用尽，将在 $1 后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used some of your 5-hour limit\\.?$",
+    "您已使用部分 5 小时配额。"
+  ],
+  [
+    "^[Yy]ou have used all of your 5-hour limit\\.?$",
+    "您的 5 小时配额已用尽。"
+  ],
+  [
+    "^[Yy]ou have used some of your weekly limit,\\s*it will fully refresh in (\\d+)\\s+days?,\\s+(\\d+)\\s+hours?\\.?$",
+    "您已使用部分每周配额，将在 $1 天 $2 小时后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used all of your weekly limit,\\s*it will fully refresh in (\\d+)\\s+days?,\\s+(\\d+)\\s+hours?\\.?$",
+    "您的每周配额已用尽，将在 $1 天 $2 小时后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used some of your weekly limit,\\s*it will fully refresh in (\\d+)\\s+days?\\.?$",
+    "您已使用部分每周配额，将在 $1 天后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used all of your weekly limit,\\s*it will fully refresh in (\\d+)\\s+days?\\.?$",
+    "您的每周配额已用尽，将在 $1 天后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used some of your weekly limit,\\s*it will fully refresh in (\\d+)\\s+hours?\\.?$",
+    "您已使用部分每周配额，将在 $1 小时后完全刷新。"
+  ],
+  [
+    "^[Yy]ou have used all of your weekly limit,\\s*it will fully refresh in (\\d+)\\s+hours?\\.?$",
+    "您的每周配额已用尽，将在 $1 小时后完全刷新。"
+  ],
+  [
+    "^[Ii]t will fully refresh in (\\d+)\\s+hours?,\\s+(\\d+)\\s+minutes?\\.?$",
+    "将在 $1 小时 $2 分钟后完全刷新。"
+  ],
+  [
+    "^[Ii]t will fully refresh in (\\d+)\\s+days?,\\s+(\\d+)\\s+hours?\\.?$",
+    "将在 $1 天 $2 小时后完全刷新。"
+  ],
+  [
+    "^fully refresh in (\\d+)\\s+hours?,\\s+(\\d+)\\s+minutes?\\.?$",
+    "将在 $1 小时 $2 分钟后完全刷新。"
+  ],
+  [
+    "^fully refresh in (\\d+)\\s+days?,\\s+(\\d+)\\s+hours?\\.?$",
+    "将在 $1 天 $2 小时后完全刷新。"
+  ],
+  [
+    "^(\\d+)\\s+hours?,\\s*(\\d+)\\s+minutes?$",
+    "$1 小时 $2 分钟"
+  ],
+  [
+    "^(\\d+)\\s+days?,\\s*(\\d+)\\s+hours?$",
+    "$1 天 $2 小时"
+  ],
+  [
+    "^[Aa]llow using this MCP tool[\\?？]?$",
+    "允许使用此 MCP 工具吗？"
+  ],
+  [
+    "^[Aa]llow using this MCP tool\\.?$",
+    "允许使用此 MCP 工具"
+  ],
+  [
+    "^[Aa]llow using this (.+?) tool[\\?？]?$",
+    "允许使用此 $1 工具吗？"
+  ],
+  [
+    "^[Aa]llow using this tool[\\?？]?$",
+    "允许使用此工具吗？"
+  ],
+  [
+    "^[Aa]llow using MCP tool[\\?？]?$",
+    "允许使用 MCP 工具吗？"
   ]
 ]

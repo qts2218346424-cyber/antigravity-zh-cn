@@ -345,6 +345,26 @@ NEW_TRANSLATIONS = {
     "Integrity mode:": "完整性模式：",
     "Requirements": "需求清单",
 
+    # 配额限制与刷新说明 (Quota Limits & Refresh Messages)
+    "You have used some of your 5-hour limit": "您已使用部分 5 小时配额",
+    "You have used some of your 5-hour limit.": "您已使用部分 5 小时配额。",
+    "You have used all of your 5-hour limit": "您的 5 小时配额已用尽",
+    "You have used all of your 5-hour limit.": "您的 5 小时配额已用尽。",
+    "5-hour limit": "5 小时配额",
+    "5-hour": "5 小时",
+    "5-hour limit remaining": "5 小时剩余配额",
+    "Five-hour limit": "5 小时配额",
+
+    # MCP 工具使用授权 (MCP Tool Permissions)
+    "Allow using this MCP tool?": "允许使用此 MCP 工具吗？",
+    "Allow using this MCP tool": "允许使用此 MCP 工具",
+    "Allow using this tool?": "允许使用此工具吗？",
+    "Allow using this tool": "允许使用此工具",
+    "Allow using MCP tool?": "允许使用 MCP 工具吗？",
+    "Allow using MCP tool": "允许使用 MCP 工具",
+    "Allow using this command?": "允许使用此命令吗？",
+    "Allow using this command": "允许使用此命令",
+
     # 历史会话常见技术短语 (Session Titles & Tech Topics)
     "Multi-Agent AI Task Delegation": "多智能体 AI 任务委派",
     "Multi-Agent AI": "多智能体 AI",

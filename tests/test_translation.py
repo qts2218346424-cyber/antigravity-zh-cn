@@ -363,6 +363,17 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Status: Launched") !== "状态：已启动") process.exit(134);
         if (translate("Requirements") !== "需求清单") process.exit(135);
 
+        // 20. Quota 5-hour limit countdown & MCP tool permissions
+        if (translate("You have used some of your 5-hour limit, it will fully refresh in 4 hours, 13 minutes.") !== "您已使用部分 5 小时配额，将在 4 小时 13 分钟后完全刷新。") {
+            console.error("5-hour limit countdown failed:", translate("You have used some of your 5-hour limit, it will fully refresh in 4 hours, 13 minutes."));
+            process.exit(136);
+        }
+        if (translate("Allow using this MCP tool?") !== "允许使用此 MCP 工具吗？") {
+            console.error("Allow using this MCP tool failed:", translate("Allow using this MCP tool?"));
+            process.exit(137);
+        }
+        if (translate("Allow using this MCP tool") !== "允许使用此 MCP 工具") process.exit(138);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
