@@ -274,6 +274,27 @@ def audit_and_update_rules():
         # 模型与用量大标题 (Models & Usage)
         [r"^Models?\s*&\s*Usage$", "模型与用量"],
         [r"^Models?\s+and\s+Usage$", "模型与用量"],
+
+        # 历史会话常见技术标题 (Multi-Agent AI Task Delegation)
+        [r"^[Mm]ulti-[Aa]gent AI Task Delegation\s*(?:>|›)?$", "多智能体 AI 任务委派"],
+
+        # 代码差异审查与 Diff 菜单 (View Split Diff / Hide Whitespace Changes / Collapse All)
+        [r"^[Vv]iew Split Diff$", "查看分屏差异"],
+        [r"^[Vv]iew Unified Diff$", "查看合并差异"],
+        [r"^[Hh]ide Whitespace Changes$", "隐藏空白字符更改"],
+        [r"^[Ss]how Whitespace Changes$", "显示空白字符更改"],
+        [r"^[Cc]ollapse All$", "全部折叠"],
+        [r"^[Ee]xpand All$", "全部展开"],
+
+        # Git 提交与推送状态提示 (No commits to push)
+        [r"^[Nn]o commits to push\.?$", "没有需要推送的提交"],
+        [r"^[Nn]o commits to pull\.?$", "没有需要拉取的提交"],
+        [r"^[Nn]o changes to commit\.?$", "没有需要提交的更改"],
+
+        # 自定义预算拆分节点容错 (of the customization budget is available.)
+        [r"^of the customization budget is available\.?$", "可用自定义预算。"],
+        [r"^of the (.+?) budget is available\.?$", "可用 $1 预算。"],
+        [r"^([0-9.]+)%\s+of the customization budget is available\.?$", "自定义预算剩余 $1%"],
     ]
 
     for pattern, repl in additional_rules:

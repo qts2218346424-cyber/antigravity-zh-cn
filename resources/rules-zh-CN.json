@@ -1394,5 +1394,57 @@
   [
     "^Models?\\s+and\\s+Usage$",
     "模型与用量"
+  ],
+  [
+    "^[Mm]ulti-[Aa]gent AI Task Delegation\\s*(?:>|›)?$",
+    "多智能体 AI 任务委派"
+  ],
+  [
+    "^[Vv]iew Split Diff$",
+    "查看分屏差异"
+  ],
+  [
+    "^[Vv]iew Unified Diff$",
+    "查看合并差异"
+  ],
+  [
+    "^[Hh]ide Whitespace Changes$",
+    "隐藏空白字符更改"
+  ],
+  [
+    "^[Ss]how Whitespace Changes$",
+    "显示空白字符更改"
+  ],
+  [
+    "^[Cc]ollapse All$",
+    "全部折叠"
+  ],
+  [
+    "^[Ee]xpand All$",
+    "全部展开"
+  ],
+  [
+    "^[Nn]o commits to push\\.?$",
+    "没有需要推送的提交"
+  ],
+  [
+    "^[Nn]o commits to pull\\.?$",
+    "没有需要拉取的提交"
+  ],
+  [
+    "^[Nn]o changes to commit\\.?$",
+    "没有需要提交的更改"
+  ],
+  [
+    "^of the customization budget is available\\.?$",
+    "可用自定义预算。"
+  ],
+  [
+    "^of the (.+?) budget is available\\.?$",
+    "可用 $1 预算。"
+  ],
+  [
+    "^([0-9.]+)%\\s+of the customization budget is available\\.?$",
+    "自定义预算剩余 $1%"
   ]
 ]

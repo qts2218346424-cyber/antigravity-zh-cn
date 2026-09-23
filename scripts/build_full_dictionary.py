@@ -219,6 +219,39 @@ NEW_TRANSLATIONS = {
     "Heartbeat check confirmed": "心跳检测确认",
     "Heartbeat check confirmed:": "心跳检测确认：",
 
+    # 代码差异查看器与审查操作 (Diff Viewer & Review Controls)
+    "View Split Diff": "查看分屏差异",
+    "View Split Diff.": "查看分屏差异",
+    "View Unified Diff": "查看合并差异",
+    "View Unified Diff.": "查看合并差异",
+    "Hide Whitespace Changes": "隐藏空白字符更改",
+    "Hide Whitespace Changes.": "隐藏空白字符更改",
+    "Show Whitespace Changes": "显示空白字符更改",
+    "Show Whitespace Changes.": "显示空白字符更改",
+    "Collapse All": "全部折叠",
+    "Expand All": "全部展开",
+
+    # Git 提交与推送状态提示 (Commit & Push Status Notices)
+    "No commits to push": "没有需要推送的提交",
+    "No commits to push.": "没有需要推送的提交。",
+    "No commits to pull": "没有需要拉取的提交",
+    "No commits to pull.": "没有需要拉取的提交。",
+    "No changes to commit": "没有需要提交的更改",
+    "No changes to commit.": "没有需要提交的更改。",
+
+    # 自定义预算拆分短语 (Customization Budget Segmentation)
+    "of the customization budget is available.": "可用自定义预算。",
+    "of the customization budget is available": "可用自定义预算",
+    "customization budget is available.": "自定义预算可用。",
+    "customization budget is available": "自定义预算可用",
+    "customization budget": "自定义预算",
+    "Customization budget": "自定义预算",
+
+    # 历史会话常见技术短语 (Session Titles & Tech Topics)
+    "Multi-Agent AI Task Delegation": "多智能体 AI 任务委派",
+    "Multi-Agent AI": "多智能体 AI",
+    "Task Delegation": "任务委派",
+
     # 会话变更与项目统计 (Project Modification Stats)
     "Modified in": "修改于",
     "Modified in ": "修改于 ",

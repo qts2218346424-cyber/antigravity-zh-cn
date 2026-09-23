@@ -284,6 +284,24 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Connect") !== "连接") process.exit(102);
         if (translate("Models & Usage") !== "模型与用量") process.exit(103);
 
+        // 16. Diff viewer controls, Push status notice, Session title, and Customization budget segmentation
+        if (translate("Multi-Agent AI Task Delegation") !== "多智能体 AI 任务委派") {
+            console.error("Multi-Agent AI Task Delegation failed:", translate("Multi-Agent AI Task Delegation"));
+            process.exit(104);
+        }
+        if (translate("View Split Diff") !== "查看分屏差异") process.exit(105);
+        if (translate("Hide Whitespace Changes") !== "隐藏空白字符更改") process.exit(106);
+        if (translate("Collapse All") !== "全部折叠") process.exit(107);
+        if (translate("No commits to push") !== "没有需要推送的提交") process.exit(108);
+        if (!translate("83.6% of the customization budget is available.").includes("83.6%")) {
+            console.error("Budget percentage failed:", translate("83.6% of the customization budget is available."));
+            process.exit(109);
+        }
+        if (translate("of the customization budget is available.") !== "可用自定义预算。") {
+            console.error("Budget segment failed:", translate("of the customization budget is available."));
+            process.exit(110);
+        }
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
