@@ -18,5 +18,12 @@
   ["^Are you sure you want to delete (.+)\\?$", "确定要删除 $1 吗？"],
   ["^Connecting to (.+)\\.\\.\\.$", "正在连接至 $1..."],
   ["^Running command: (.+)$", "正在执行命令: $1"],
-  ["^Listening on (.+)$", "监听于 $1"]
+  ["^Listening on (.+)$", "监听于 $1"],
+  ["^Learn more about (.+)$", "了解有关 $1 的更多信息"],
+  ["^Also includes (.+) when working in this project\\.?$", "在此项目中工作时同时包含 $1。"],
+  ["^Manage (.+) folders, agent settings, and permissions\\.?$", "管理 $1 文件夹、Agent 设置与运行权限。"],
+  ["^Agent settings and permissions for conversations outside of (.+)\\.?$", "针对 $1 之外会话的 Agent 设置与运行权限。"],
+  ["^A (.+) with this name already exists\\.?$", "已存在同名的 $1。"],
+  ["^Edit (.+) name$", "编辑 $1 名称"],
+  ["^Select one of the (two|three) options\\. Agent settings and permissions can be further customized below\\.?$", "请选择以下 $1 个选项之一。Agent 设置与运行权限可在下方进一步自定义。"]
 ]

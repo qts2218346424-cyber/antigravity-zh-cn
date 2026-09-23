@@ -28,6 +28,23 @@
         return DICT[text];
       }
 
+      // 1.1 标点容错（冒号、省略号、句号、问号）
+      if (text.endsWith(':') && DICT[text.slice(0, -1).trim()]) {
+        return DICT[text.slice(0, -1).trim()] + '：';
+      }
+      if (text.endsWith('...') && DICT[text.slice(0, -3).trim()]) {
+        return DICT[text.slice(0, -3).trim()] + '...';
+      }
+      if (text.endsWith('…') && DICT[text.slice(0, -1).trim()]) {
+        return DICT[text.slice(0, -1).trim()] + '...';
+      }
+      if (text.endsWith('.') && DICT[text.slice(0, -1).trim()]) {
+        return DICT[text.slice(0, -1).trim()] + '。';
+      }
+      if (text.endsWith('?') && DICT[text.slice(0, -1).trim()]) {
+        return DICT[text.slice(0, -1).trim()] + '？';
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -101,8 +118,10 @@
           if (translated) {
             const trimmedOrig = norm(original);
             if (trimmedOrig !== norm(translated)) {
-              // 保留原有空格与换行排版
-              current.nodeValue = original.replace(trimmedOrig, translated);
+              // 保留原有空格与换行排版，且不受内部换行与多空格影响
+              const leading = (original.match(/^\s*/) || [''])[0];
+              const trailing = (original.match(/\s*$/) || [''])[0];
+              current.nodeValue = leading + translated + trailing;
               count++;
             }
           }
