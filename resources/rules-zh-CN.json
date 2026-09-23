@@ -858,5 +858,45 @@
   [
     "^The browser subagent can be invoked by typing /browser in the conversation input box\\.?$",
     "在对话输入框中输入 /browser 即可调用浏览器子代理。"
+  ],
+  [
+    "^You have used some of your weekly limit,\\s*it will fully refresh in (.+?)\\.?$",
+    "您已使用部分每周配额，将在  后完全刷新。"
+  ],
+  [
+    "^You have used some of your five hour limit,\\s*it will fully refresh in (.+?)\\.?$",
+    "您已使用部分 5 小时配额，将在  后完全刷新。"
+  ],
+  [
+    "^You have used all of your weekly limit,\\s*it will fully refresh in (.+?)\\.?$",
+    "您的每周配额已用尽，将在  后完全刷新。"
+  ],
+  [
+    "^You have used all of your five hour limit,\\s*it will fully refresh in (.+?)\\.?$",
+    "您的 5 小时配额已用尽，将在  后完全刷新。"
+  ],
+  [
+    "^it will fully refresh in (.+?)\\.?$",
+    "将在  后完全刷新。"
+  ],
+  [
+    "^will fully refresh in (.+?)\\.?$",
+    "将在  后完全刷新。"
+  ],
+  [
+    "^(\\d+)\\s*days?,\\s*(\\d+)\\s*hours?$",
+    " 天  小时"
+  ],
+  [
+    "^(\\d+)\\s*hours?,\\s*(\\d+)\\s*minutes?$",
+    " 小时  分钟"
+  ],
+  [
+    "^Thought Process\\.{0,3}$",
+    "思考过程"
+  ],
+  [
+    "^Thinking Process\\.{0,3}$",
+    "思考过程"
   ]
 ]

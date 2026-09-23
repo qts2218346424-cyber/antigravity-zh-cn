@@ -73,6 +73,32 @@ NEW_TRANSLATIONS = {
     "The browser subagent has been disabled by your administrator.": "管理员已禁用浏览器子代理。",
     "Contact your administrator to enable browser use.": "请联系您的管理员以启用浏览器功能。",
 
+    # 思考过程状态与折叠 (Thinking Process UI & Status)
+    "Thought Process": "思考过程",
+    "Thought Process...": "思考过程...",
+    "Thinking Process": "思考过程",
+    "Thinking Process...": "思考过程...",
+    "Hide thoughts": "收起思考",
+    "Show thoughts": "展开思考",
+    "Hide thinking": "收起思考",
+    "Show thinking": "展开思考",
+    "Hide process": "收起过程",
+    "Show process": "展开过程",
+
+    # 配额用量与周期刷新说明 (Quota Limits & Refresh Messages)
+    "You have used some of your weekly limit": "您已使用部分每周配额",
+    "You have used some of your five hour limit": "您已使用部分 5 小时配额",
+    "You have used some of your daily limit": "您已使用部分每日配额",
+    "You have used all of your weekly limit": "您的每周配额已用尽",
+    "You have used all of your five hour limit": "您的 5 小时配额已用尽",
+    "it will fully refresh in": "将在以下时间后完全刷新：",
+    "fully refresh in": "完全刷新时间：",
+    "will fully refresh in": "将在以下时间后完全刷新：",
+    "You have used some of your weekly limit, it will fully refresh in": "您已使用部分每周配额，将在以下时间后完全刷新：",
+    "You have used all of your weekly limit, it will fully refresh in": "您的每周配额已用尽，将在以下时间后完全刷新：",
+    "You have used some of your five hour limit, it will fully refresh in": "您已使用部分 5 小时配额，将在以下时间后完全刷新：",
+    "You have used all of your five hour limit, it will fully refresh in": "您的 5 小时配额已用尽，将在以下时间后完全刷新：",
+
     # 快捷键提示与排队发送 (Keyboard Shortcuts & Message Queueing)
     "Queue message Enter": "消息排队 Enter",
     "Queue message": "消息排队",

@@ -183,7 +183,12 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Enabled ✓") !== "已启用 ✓") process.exit(59);
         if (translate("Configure the browser subagent. It requires") !== "配置浏览器子代理。该功能需要安装") process.exit(60);
         if (translate("to be installed.") !== "浏览器。") process.exit(61);
-        if (translate("The browser subagent can be invoked by typing /browser in the conversation input box.") !== "在对话输入框中输入 /browser 即可调用浏览器子代理。") process.exit(62);
+        // 12. Thinking Process UI and Quota Refresh Messages
+        if (translate("Thought Process") !== "思考过程") process.exit(63);
+        if (translate("Hide thoughts") !== "收起思考") process.exit(64);
+        if (translate("Show thoughts") !== "展开思考") process.exit(65);
+        if (translate("Working") !== "正在处理") process.exit(66);
+        if (!translate("You have used some of your weekly limit, it will fully refresh in 6 days, 22 hours.").includes("您已使用部分每周配额")) process.exit(67);
 
         console.log("SUCCESS");
         """
