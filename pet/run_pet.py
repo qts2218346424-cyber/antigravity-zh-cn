@@ -18,9 +18,17 @@ from typing import Dict, Any, Optional
 try:
     from pet_engine.switcher import AccountSwitcher
     from pet_engine.quota import QuotaMonitor
+    from pet_engine.version_checker import VersionChecker
     HAS_PET_ENGINE = True
 except ImportError:
-    HAS_PET_ENGINE = False
+    try:
+        from pet.pet_engine.switcher import AccountSwitcher
+        from pet.pet_engine.quota import QuotaMonitor
+        from pet.pet_engine.version_checker import VersionChecker
+        HAS_PET_ENGINE = True
+    except ImportError:
+        HAS_PET_ENGINE = False
+        VersionChecker = None
 
 
 # -----------------------------------------------------------------------------
@@ -120,10 +128,13 @@ class JsBridge:
         self.pet_state = "idle"
 
         # Initialize backend engine if available
+        self.version_checker = None
         if HAS_PET_ENGINE and not self.mock_mode:
             try:
                 self.switcher = AccountSwitcher()
                 self.quota_monitor = QuotaMonitor(mode="auto")
+                if VersionChecker:
+                    self.version_checker = VersionChecker()
             except Exception as e:
                 print(f"[JsBridge] Backend init warning, falling back to mock: {e}")
                 self.mock_mode = True
@@ -319,6 +330,29 @@ class JsBridge:
                 pass
         return {"success": True}
 
+    def open_external_url(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Opens external URL in default system browser."""
+        url = payload.get("url", "")
+        if url and (url.startswith("http://") or url.startswith("https://")):
+            try:
+                import webbrowser
+                webbrowser.open(url)
+                return {"success": True}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+        return {"success": False, "error": "INVALID_URL"}
+
+    def check_for_updates(self, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Triggered manually or via background timer to verify version alignment."""
+        if not self.version_checker:
+            return {"success": True, "result": None}
+        force = payload.get("force", True) if payload else True
+        try:
+            res = self.version_checker.check_and_notify(self, force=force)
+            return {"success": True, "result": res}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
 
 # -----------------------------------------------------------------------------
 # 4. Windows Win32 Composition & Transparency Helper
@@ -389,6 +423,7 @@ class PetTrayController:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Always on Top", self._on_toggle_pin, checked=lambda item: self.bridge.always_on_top),
                 pystray.MenuItem("Click-Through Mode", self._on_toggle_click_through, checked=lambda item: self.bridge.click_through),
+                pystray.MenuItem("Check for Updates / 检查更新", self._on_check_updates),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Mascot State", pystray.Menu(
                     pystray.MenuItem("Idle", lambda: self.bridge.set_pet_state({"state": "idle"})),
@@ -433,6 +468,18 @@ class PetTrayController:
         if win:
             status = "enabled" if self.bridge.click_through else "disabled"
             win.evaluate_js(f"window.__ANTIGRAVITY_PET__.showToast({{ title: 'Tray Control', body: 'Click-through mode {status}.', level: 'info' }});")
+
+    def _on_check_updates(self, icon=None, item=None):
+        def _run_check():
+            res = self.bridge.check_for_updates({"force": True})
+            if not res.get("result"):
+                self.bridge.send_notification({
+                    "title": "版本检查",
+                    "body": "当前 Antigravity 客户端与汉化补丁状态正常，已是最新版本！",
+                    "level": "success",
+                    "duration_ms": 4000
+                })
+        threading.Thread(target=_run_check, daemon=True).start()
 
     def _on_exit(self, icon=None, item=None):
         if self.tray:
@@ -559,6 +606,12 @@ def run_smoke_test() -> int:
     notif_res = bridge.send_notification({"title": "Test", "body": "Body", "level": "info"})
     checks.append(("JsBridge.send_notification", notif_res.get("success") is True and "notification_id" in notif_res))
 
+    # open_external_url & check_for_updates
+    url_err = bridge.open_external_url({"url": "invalid://schema"})
+    checks.append(("JsBridge.open_external_url (rejection)", url_err.get("success") is False))
+    upd_res = bridge.check_for_updates({"force": True})
+    checks.append(("JsBridge.check_for_updates", upd_res.get("success") is True))
+
     # 4. Test Tray Icon Generator
     tray_img = create_tray_image()
     checks.append(("Tray Icon Image Generation", tray_img is not None and tray_img.size == (64, 64)))
@@ -657,6 +710,19 @@ def main():
         apply_win32_window_styles(always_on_top=True, click_through=False)
 
     threading.Thread(target=_delayed_win32_init, daemon=True).start()
+
+    # Start background version consistency monitor (5s delay, then every 2 hours)
+    def _background_version_monitor():
+        time.sleep(5.0)
+        while True:
+            try:
+                if bridge.version_checker:
+                    bridge.version_checker.check_and_notify(bridge, force=False)
+            except Exception as e:
+                print(f"[VersionChecker] Background check notice: {e}")
+            time.sleep(7200)
+
+    threading.Thread(target=_background_version_monitor, daemon=True).start()
 
     print("[Runner] Launching Antigravity Desktop Pet...")
     webview.start(debug=args.debug)

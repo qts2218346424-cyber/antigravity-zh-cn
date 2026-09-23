@@ -98,7 +98,12 @@
           return false;
         }
 
-        // 2. 严格保护专业代码编辑器核心与终端容器
+        // 2. 浮层菜单、列表框、弹出浮层、提示框与斜杠命令自动补全一律允许汉化
+        if (el.closest('[role="listbox"], [role="menu"], [role="tooltip"], [class*="typeahead"], [class*="popover"], [class*="dropdown"], [class*="menu-item"]')) {
+          return false;
+        }
+
+        // 3. 严格保护专业代码编辑器核心与终端容器
         if (el.closest(CODE_PROTECT_SELECTOR)) {
           return true;
         }

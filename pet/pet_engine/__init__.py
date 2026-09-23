@@ -23,6 +23,7 @@ from pet_engine.proto_decoder import ProtoWireParser
 from pet_engine.switcher import AccountSwitcher, ProfileList
 from pet_engine.quota import QuotaMonitor
 from pet_engine.notification import NotificationService
+from pet_engine.version_checker import VersionChecker
 
 __version__ = "1.0.0"
 
@@ -42,6 +43,7 @@ __all__ = [
     "ProfileList",
     "QuotaMonitor",
     "NotificationService",
+    "VersionChecker",
     "now_utc_iso",
     "validate_safe_identifier",
     "validate_email",

@@ -151,6 +151,15 @@
         case 'send_notification': {
           return { success: true, notification_id: 'notif-' + Date.now() };
         }
+        case 'open_external_url': {
+          if (payload && payload.url) {
+            try { window.open(payload.url, '_blank'); } catch (e) {}
+          }
+          return { success: true };
+        }
+        case 'check_for_updates': {
+          return { success: true, checked: true };
+        }
         default:
           return { success: false, error: `Unknown mock command: ${cmd}` };
       }
@@ -310,9 +319,9 @@
       this.container = document.getElementById('toast-container');
     }
 
-    showToast({ title = 'Antigravity Alert', body = '', level = 'info', duration_ms = 5000 }) {
+    showToast({ title = 'Antigravity Alert', body = '', level = 'info', duration_ms = 5000, action_url = '', action_text = '' }) {
       // E5 Boundary & Deduplication check
-      const hash = `${title}:${body}:${level}`;
+      const hash = `${title}:${body}:${level}:${action_url}`;
       const now = Date.now();
       if (appState.lastNotificationHash === hash && (now - appState.lastNotificationTime < 3000)) {
         return; // Suppress duplicate burst
@@ -334,15 +343,22 @@
       if (level === 'warning') icon = '⚠';
       if (level === 'error') icon = '✖';
 
+      const actionHtml = action_url ? `
+        <div class="toast-action-row">
+          <button class="toast-action-btn no-drag" type="button">${this._escapeHtml(action_text || '立即查看')} ↗</button>
+        </div>
+      ` : '';
+
       card.innerHTML = `
         <div class="toast-header">
           <div class="toast-title-group">
             <span class="toast-icon">${icon}</span>
             <span class="toast-title">${this._escapeHtml(title)}</span>
           </div>
-          <button class="toast-close-btn" aria-label="Dismiss">&times;</button>
+          <button class="toast-close-btn no-drag" aria-label="Dismiss">&times;</button>
         </div>
         <div class="toast-body">${this._escapeHtml(body)}</div>
+        ${actionHtml}
         <div class="toast-progress-bar">
           <div class="toast-progress-fill"></div>
         </div>
@@ -350,6 +366,7 @@
 
       const closeBtn = card.querySelector('.toast-close-btn');
       const progressFill = card.querySelector('.toast-progress-fill');
+      const actionBtn = card.querySelector('.toast-action-btn');
 
       let isDismissed = false;
       const dismiss = () => {
@@ -360,6 +377,13 @@
       };
 
       closeBtn.addEventListener('click', dismiss);
+
+      if (actionBtn && action_url) {
+        actionBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          bridge.invoke('open_external_url', { url: action_url });
+        });
+      }
 
       // Auto-dismiss countdown
       progressFill.style.transition = `transform ${duration_ms}ms linear`;
