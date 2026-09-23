@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions
 set "PET_DIR=%~dp0pet"
+cd /d "%~dp0"
 
 title Antigravity Desktop Pet Launcher
 
@@ -10,17 +11,24 @@ if not exist "%PET_DIR%\run_pet.py" (
     exit /b 1
 )
 
-:: Try pythonw for silent windowless launch
-where pythonw >nul 2>&1
-if %errorLevel% == 0 (
-    start "" pythonw "%PET_DIR%\run_pet.py" %*
-    exit /b 0
+:: Find Python executable path
+set "PY_BIN="
+if exist "C:\Program Files\Python311\pythonw.exe" (
+    set "PY_BIN=C:\Program Files\Python311\pythonw.exe"
+) else (
+    for /f "delims=" %%I in ('where pythonw 2^>nul') do if not defined PY_BIN set "PY_BIN=%%I"
 )
 
-:: Fallback to python
-where python >nul 2>&1
-if %errorLevel% == 0 (
-    start "" python "%PET_DIR%\run_pet.py" %*
+if not defined PY_BIN (
+    if exist "C:\Program Files\Python311\python.exe" (
+        set "PY_BIN=C:\Program Files\Python311\python.exe"
+    ) else (
+        for /f "delims=" %%I in ('where python 2^>nul') do if not defined PY_BIN set "PY_BIN=%%I"
+    )
+)
+
+if defined PY_BIN (
+    start "" "%PY_BIN%" "%PET_DIR%\run_pet.py" %*
     exit /b 0
 )
 

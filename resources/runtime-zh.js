@@ -226,6 +226,7 @@
               const leading = (original.match(/^\s*/) || [''])[0];
               const trailing = (original.match(/\s*$/) || [''])[0];
               current.nodeValue = leading + translated + trailing;
+              try { translatedNodeSet.add(current); } catch (_) {}
               count++;
             }
           }
@@ -292,7 +293,26 @@
     // 立即执行初始扫描
     runTranslation();
 
-    // 监听 DOM 树变化并防抖触发（限制最大等待时间 150ms）
+    // 全局用户交互感知窗口（点击/按压时开启 250ms 零延迟同步直出通道）
+    let isUserInteracting = false;
+    let interactExpiry = 0;
+    const markInteraction = () => {
+      isUserInteracting = true;
+      interactExpiry = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 300;
+    };
+
+    ['pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach((evtType) => {
+      try {
+        window.addEventListener(evtType, markInteraction, { capture: true, passive: true });
+      } catch (_) {}
+    });
+
+    // 已翻译文本节点弱引用集合，彻底阻断活锁与重复处理
+    const translatedNodeSet = new WeakSet();
+
+    // 监听 DOM 树变化并根据交互场景智能分流：
+    // 1. 用户交互期：微任务同步增量直出（抢在浏览器首帧 Paint 绘制前完成，0ms 消除英文闪烁）
+    // 2. 非交互期（如流式打字）：平滑防抖批量扫描，确保主线程与渲染流绝对不卡顿
     let mutationTimer = null;
     let maxWaitDeadline = 0;
 
@@ -301,8 +321,46 @@
       runTranslation();
     };
 
-    const observer = new MutationObserver(() => {
-      const now = Date.now();
+    const observer = new MutationObserver((mutations) => {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const shouldSync = isUserInteracting && now < interactExpiry;
+
+      if (shouldSync && mutations && mutations.length > 0) {
+        let syncCount = 0;
+        for (let i = 0; i < mutations.length; i++) {
+          const m = mutations[i];
+          if (m.type === 'childList') {
+            for (let j = 0; j < m.addedNodes.length; j++) {
+              const node = m.addedNodes[j];
+              if (node.nodeType === 1) { // 元素节点
+                syncCount += translateTextNodes(node);
+                translateAttributes(node);
+              } else if (node.nodeType === 3) { // 文本节点
+                if (!translatedNodeSet.has(node)) {
+                  const orig = node.nodeValue;
+                  const tr = translate(orig);
+                  if (tr && norm(orig) !== norm(tr)) {
+                    const lead = (orig.match(/^\s*/) || [''])[0];
+                    const trail = (orig.match(/\s*$/) || [''])[0];
+                    node.nodeValue = lead + tr + trail;
+                    translatedNodeSet.add(node);
+                    syncCount++;
+                  }
+                }
+              }
+            }
+          } else if (m.type === 'attributes') {
+            if (m.target && m.target.nodeType === 1) {
+              translateAttributes(m.target);
+            }
+          }
+        }
+        if (syncCount > 0) {
+          return; // 同步增量直出已完成，第一帧即为纯正中文，直接返回无需等待宏任务！
+        }
+      }
+
+      // 非用户点击期间（如后台流式推理输出）：采用轻量防抖调度
       if (!maxWaitDeadline) {
         maxWaitDeadline = now + 150;
       }
@@ -323,12 +381,11 @@
             attributes: true,
             attributeFilter: ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value']
           });
-          console.log('[AGY-ZH] MutationObserver attached successfully.');
+          console.log('[AGY-ZH] MutationObserver attached successfully with zero-fouc sync channel.');
         } catch (obsErr) {
           console.warn('[AGY-ZH] Failed to attach MutationObserver:', obsErr);
         }
       } else {
-        // 如果 target 暂时不可用，等待 50ms 再次尝试
         setTimeout(attachObserver, 50);
       }
     };

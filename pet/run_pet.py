@@ -7,6 +7,13 @@ Provides frameless transparent desktop window, system tray menu, and IPC bridge.
 
 import sys
 import os
+
+# Guard against pythonw.exe NoneType stdout/stderr crashes
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
 import json
 import time
 import threading
