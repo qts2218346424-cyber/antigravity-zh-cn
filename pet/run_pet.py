@@ -382,8 +382,19 @@ class _MARGINS(ctypes.Structure):
     ]
 
 
+_GLOBAL_WINDOW_HOLDER: Dict[str, Any] = {}
+
+
 def get_pet_hwnd() -> Optional[int]:
     """Finds the HWND for the Antigravity Desktop Pet window."""
+    try:
+        win = _GLOBAL_WINDOW_HOLDER.get("window")
+        if win and hasattr(win, "native") and win.native:
+            handle = getattr(win.native, "Handle", None)
+            if handle:
+                return int(handle.ToString())
+    except Exception:
+        pass
     try:
         import win32gui
         hwnd = win32gui.FindWindow(None, "Antigravity Desktop Pet")
@@ -745,7 +756,8 @@ def main():
         print(f"Error: Could not locate frontend entrypoint at: {index_html}", file=sys.stderr)
         sys.exit(1)
 
-    window_holder = {}
+    window_holder = _GLOBAL_WINDOW_HOLDER
+    window_holder.clear()
     bridge = JsBridge(window_holder, mock_mode=args.mock)
 
     # Initialize System Tray

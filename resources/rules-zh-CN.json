@@ -806,5 +806,57 @@
   [
     "^[cC]ompare\\s+with\\s+(.+)$",
     "与  进行对比"
+  ],
+  [
+    "^[mM]aximize\\s+[pP]ane$",
+    "最大化窗格"
+  ],
+  [
+    "^[rR]estore\\s+[pP]ane$",
+    "还原窗格"
+  ],
+  [
+    "^[mM]inimize\\s+[pP]ane$",
+    "最小化窗格"
+  ],
+  [
+    "^[cC]lose\\s+[pP]ane$",
+    "关闭窗格"
+  ],
+  [
+    "^[sS]plit\\s+[pP]ane$",
+    "拆分窗格"
+  ],
+  [
+    "^[nN]ew\\s+[pP]ane$",
+    "新建窗格"
+  ],
+  [
+    "^[eE]nabled(?:\\s*[✓✔])?$",
+    "已启用"
+  ],
+  [
+    "^[eE]nabled(\\s*[✓✔])$",
+    "已启用"
+  ],
+  [
+    "^[dD]isabled(?:\\s*[✓✔])?$",
+    "已禁用"
+  ],
+  [
+    "^[dD]isabled(\\s*[✓✔])$",
+    "已禁用"
+  ],
+  [
+    "^Configure the browser subagent\\.\\s*It requires$",
+    "配置浏览器子代理。该功能需要安装"
+  ],
+  [
+    "^to be installed\\.?$",
+    "浏览器。"
+  ],
+  [
+    "^The browser subagent can be invoked by typing /browser in the conversation input box\\.?$",
+    "在对话输入框中输入 /browser 即可调用浏览器子代理。"
   ]
 ]

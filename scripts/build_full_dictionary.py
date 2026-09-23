@@ -33,6 +33,46 @@ NEW_TRANSLATIONS = {
     "Start recording": "开始录制",
     "Cancel recording": "取消录制",
 
+    # 窗格控制 (Pane Controls)
+    "Maximize Pane": "最大化窗格",
+    "Maximize pane": "最大化窗格",
+    "Restore Pane": "还原窗格",
+    "Restore pane": "还原窗格",
+    "Minimize Pane": "最小化窗格",
+    "Minimize pane": "最小化窗格",
+    "Close Pane": "关闭窗格",
+    "Close pane": "关闭窗格",
+    "Split Pane": "拆分窗格",
+    "Split pane": "拆分窗格",
+    "New Pane": "新建窗格",
+    "New pane": "新建窗格",
+
+    # 配置项开关与继承状态 (Enabled / Disabled / Inherit States)
+    "Enabled": "已启用",
+    "enabled": "已启用",
+    "Enabled ✓": "已启用 ✓",
+    "Enabled ✔": "已启用 ✔",
+    "Disabled ✓": "已禁用 ✓",
+    "Disabled ✔": "已禁用 ✔",
+    "Inherit Global": "继承全局配置",
+    "Inherit global": "继承全局配置",
+    "Inherit Global Config": "继承全局配置",
+    "Inherit global config": "继承全局配置",
+
+    # 浏览器子代理设置与说明 (Browser Subagent Settings)
+    "Configure the browser subagent. It requires": "配置浏览器子代理。该功能需要安装",
+    "to be installed.": "浏览器。",
+    "to be installed": "浏览器",
+    "The browser subagent can be invoked by typing /browser in the conversation input box.": "在对话输入框中输入 /browser 即可调用浏览器子代理。",
+    "The browser subagent can be invoked by typing /browser in the conversation input box": "在对话输入框中输入 /browser 即可调用浏览器子代理",
+    "The browser subagent can be invoked by typing": "在对话输入框中输入",
+    "in the conversation input box.": "即可调用浏览器子代理。",
+    "in the conversation input box": "即可调用浏览器子代理",
+    "Configure the browser subagent. It requires Google Chrome to be installed. The browser subagent can be invoked by typing /browser in the conversation input box.": "配置浏览器子代理。该功能需要安装 Google Chrome 浏览器。在对话输入框中输入 /browser 即可调用浏览器子代理。",
+    "The browser subagent has been disabled by your administrator. Contact your administrator to enable browser use.": "管理员已禁用浏览器子代理。请联系您的管理员以启用浏览器功能。",
+    "The browser subagent has been disabled by your administrator.": "管理员已禁用浏览器子代理。",
+    "Contact your administrator to enable browser use.": "请联系您的管理员以启用浏览器功能。",
+
     # 快捷键提示与排队发送 (Keyboard Shortcuts & Message Queueing)
     "Queue message Enter": "消息排队 Enter",
     "Queue message": "消息排队",

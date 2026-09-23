@@ -177,6 +177,13 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("See less") !== "收起") process.exit(54);
         if (translate("See more") !== "展开") process.exit(55);
         if (translate("All changes since origin/main") !== "自 origin/main 以来的所有更改") process.exit(56);
+        // 11. Maximize Pane, Enabled state, and Browser subagent settings
+        if (translate("Maximize Pane") !== "最大化窗格") process.exit(57);
+        if (translate("Enabled") !== "已启用") process.exit(58);
+        if (translate("Enabled ✓") !== "已启用 ✓") process.exit(59);
+        if (translate("Configure the browser subagent. It requires") !== "配置浏览器子代理。该功能需要安装") process.exit(60);
+        if (translate("to be installed.") !== "浏览器。") process.exit(61);
+        if (translate("The browser subagent can be invoked by typing /browser in the conversation input box.") !== "在对话输入框中输入 /browser 即可调用浏览器子代理。") process.exit(62);
 
         console.log("SUCCESS");
         """
