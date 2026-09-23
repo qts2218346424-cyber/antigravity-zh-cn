@@ -247,6 +247,52 @@ NEW_TRANSLATIONS = {
     "customization budget": "自定义预算",
     "Customization budget": "自定义预算",
 
+    # 子智能体与任务终止状态 (Task & Agent Termination)
+    "Killed": "已终止",
+    "killed": "已终止",
+    "Killing": "正在终止",
+    "killing": "正在终止",
+
+    # 子智能体角色名称 (Subagent Role Names)
+    "CLI Interface Explorer": "CLI 接口探索员",
+    "Atomic Switcher Explorer": "原子切换探索员",
+    "Data Models Explorer": "数据模型探索员",
+    "E2E Test Writer": "端到端测试编写员",
+    "Requirements and Spec Miner": "需求与规范挖掘员",
+    "Auth and Quota Explorer": "鉴权与配额探索员",
+    "Toolchain and Window Explorer": "工具链与窗口探索员",
+
+    # 会话与任务数量说明 (Active Conversations & Inclusion)
+    "active conversations": "活跃会话",
+    "active conversations.": "活跃会话。",
+    "active conversation": "活跃会话",
+    "including": "包含",
+    "Including": "包含",
+
+    # 资源与脚本侧边栏标签 (Sidebar Group Labels)
+    "resources": "资源",
+    "Resources": "资源",
+    "scripts": "脚本",
+    "Scripts": "脚本",
+
+    # 代码块操作与剪贴板 (Code Block & Clipboard Actions)
+    "Copy code": "复制代码",
+    "Copy Code": "复制代码",
+    "copy code": "复制代码",
+    "Copied code": "已复制代码",
+    "Copied!": "已复制！",
+    "Copied": "已复制",
+    "Copied to clipboard": "已复制到剪贴板",
+    "Copied to clipboard.": "已复制到剪贴板。",
+    "Copy to clipboard": "复制到剪贴板",
+    "Copy to clipboard.": "复制到剪贴板。",
+    "Copy line": "复制行",
+    "Copy selection": "复制选中内容",
+    "Copy path": "复制路径",
+    "Copy relative path": "复制相对路径",
+    "Copy link": "复制链接",
+    "Copy URL": "复制链接",
+
     # 历史会话常见技术短语 (Session Titles & Tech Topics)
     "Multi-Agent AI Task Delegation": "多智能体 AI 任务委派",
     "Multi-Agent AI": "多智能体 AI",

@@ -295,6 +295,46 @@ def audit_and_update_rules():
         [r"^of the customization budget is available\.?$", "可用自定义预算。"],
         [r"^of the (.+?) budget is available\.?$", "可用 $1 预算。"],
         [r"^([0-9.]+)%\s+of the customization budget is available\.?$", "自定义预算剩余 $1%"],
+
+        # 子智能体与任务终止状态 (Killed / Killing)
+        [r"^[Kk]illed$", "已终止"],
+        [r"^[Kk]illing$", "正在终止"],
+        [r"^Task (.+?) killed$", "任务 $1 已终止"],
+        [r"^Subagent (.+?) killed$", "子代理 $1 已终止"],
+        [r"^Agent (.+?) killed$", "代理 $1 已终止"],
+
+        # 子智能体角色名称与通用后缀 (Subagent Role Names)
+        [r"^CLI Interface Explorer$", "CLI 接口探索员"],
+        [r"^Atomic Switcher Explorer$", "原子切换探索员"],
+        [r"^Data Models Explorer$", "数据模型探索员"],
+        [r"^E2E Test Writer$", "端到端测试编写员"],
+        [r"^Requirements and Spec Miner$", "需求与规范挖掘员"],
+        [r"^Auth and Quota Explorer$", "鉴权与配额探索员"],
+        [r"^Toolchain and Window Explorer$", "工具链与窗口探索员"],
+        [r"^(.+?)\s+Explorer$", "$1 探索员"],
+        [r"^(.+?)\s+Writer$", "$1 编写员"],
+        [r"^(.+?)\s+Miner$", "$1 挖掘员"],
+
+        # 包含活跃会话统计 (including 5 active conversations.)
+        [r"^[Ii]ncluding\s+(\d+)\s+active\s+conversations?\.?$", "包含 $1 个活跃会话。"],
+        [r"^[Ii]ncluding\s+(\d+)\s+conversations?\.?$", "包含 $1 个会话。"],
+        [r"^[Ii]ncluding\s+(\d+)\s+active\s+tasks?\.?$", "包含 $1 个活跃任务。"],
+        [r"^[Ii]ncluding\s+(\d+)\s+active\s+agents?\.?$", "包含 $1 个活跃代理。"],
+        [r"^[Ii]ncluding\s+(.+)$", "包含 $1"],
+
+        # 目录与资源分组标签 (resources / scripts)
+        [r"^resources$", "资源"],
+        [r"^scripts$", "脚本"],
+
+        # 代码块操作与剪贴板 (Copy code / Copied!)
+        [r"^[Cc]opy\s+code$", "复制代码"],
+        [r"^[Cc]opied\s+code$", "已复制代码"],
+        [r"^[Cc]opied!$", "已复制！"],
+        [r"^[Cc]opied to clipboard\.?$", "已复制到剪贴板"],
+        [r"^[Cc]opy to clipboard\.?$", "复制到剪贴板"],
+        [r"^[Cc]opy\s+link$", "复制链接"],
+        [r"^[Cc]opy\s+path$", "复制路径"],
+        [r"^[Cc]opy\s+relative\s+path$", "复制相对路径"],
     ]
 
     for pattern, repl in additional_rules:

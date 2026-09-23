@@ -1446,5 +1446,125 @@
   [
     "^([0-9.]+)%\\s+of the customization budget is available\\.?$",
     "自定义预算剩余 $1%"
+  ],
+  [
+    "^[Kk]illed$",
+    "已终止"
+  ],
+  [
+    "^[Kk]illing$",
+    "正在终止"
+  ],
+  [
+    "^Task (.+?) killed$",
+    "任务 $1 已终止"
+  ],
+  [
+    "^Subagent (.+?) killed$",
+    "子代理 $1 已终止"
+  ],
+  [
+    "^Agent (.+?) killed$",
+    "代理 $1 已终止"
+  ],
+  [
+    "^CLI Interface Explorer$",
+    "CLI 接口探索员"
+  ],
+  [
+    "^Atomic Switcher Explorer$",
+    "原子切换探索员"
+  ],
+  [
+    "^Data Models Explorer$",
+    "数据模型探索员"
+  ],
+  [
+    "^E2E Test Writer$",
+    "端到端测试编写员"
+  ],
+  [
+    "^Requirements and Spec Miner$",
+    "需求与规范挖掘员"
+  ],
+  [
+    "^Auth and Quota Explorer$",
+    "鉴权与配额探索员"
+  ],
+  [
+    "^Toolchain and Window Explorer$",
+    "工具链与窗口探索员"
+  ],
+  [
+    "^(.+?)\\s+Explorer$",
+    "$1 探索员"
+  ],
+  [
+    "^(.+?)\\s+Writer$",
+    "$1 编写员"
+  ],
+  [
+    "^(.+?)\\s+Miner$",
+    "$1 挖掘员"
+  ],
+  [
+    "^[Ii]ncluding\\s+(\\d+)\\s+active\\s+conversations?\\.?$",
+    "包含 $1 个活跃会话。"
+  ],
+  [
+    "^[Ii]ncluding\\s+(\\d+)\\s+conversations?\\.?$",
+    "包含 $1 个会话。"
+  ],
+  [
+    "^[Ii]ncluding\\s+(\\d+)\\s+active\\s+tasks?\\.?$",
+    "包含 $1 个活跃任务。"
+  ],
+  [
+    "^[Ii]ncluding\\s+(\\d+)\\s+active\\s+agents?\\.?$",
+    "包含 $1 个活跃代理。"
+  ],
+  [
+    "^[Ii]ncluding\\s+(.+)$",
+    "包含 $1"
+  ],
+  [
+    "^resources$",
+    "资源"
+  ],
+  [
+    "^scripts$",
+    "脚本"
+  ],
+  [
+    "^[Cc]opy\\s+code$",
+    "复制代码"
+  ],
+  [
+    "^[Cc]opied\\s+code$",
+    "已复制代码"
+  ],
+  [
+    "^[Cc]opied!$",
+    "已复制！"
+  ],
+  [
+    "^[Cc]opied to clipboard\\.?$",
+    "已复制到剪贴板"
+  ],
+  [
+    "^[Cc]opy to clipboard\\.?$",
+    "复制到剪贴板"
+  ],
+  [
+    "^[Cc]opy\\s+link$",
+    "复制链接"
+  ],
+  [
+    "^[Cc]opy\\s+path$",
+    "复制路径"
+  ],
+  [
+    "^[Cc]opy\\s+relative\\s+path$",
+    "复制相对路径"
   ]
 ]

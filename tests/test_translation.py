@@ -302,6 +302,28 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(110);
         }
 
+        // 17. Killed status, Subagent role names, Active conversations count, resources/scripts, and Copy code
+        if (translate("Killed") !== "已终止") process.exit(111);
+        if (translate("killed") !== "已终止") process.exit(112);
+        if (translate("CLI Interface Explorer") !== "CLI 接口探索员") {
+            console.error("CLI Interface Explorer failed:", translate("CLI Interface Explorer"));
+            process.exit(113);
+        }
+        if (translate("Atomic Switcher Explorer") !== "原子切换探索员") process.exit(114);
+        if (translate("E2E Test Writer") !== "端到端测试编写员") process.exit(115);
+        if (translate("Requirements and Spec Miner") !== "需求与规范挖掘员") process.exit(116);
+        if (translate("including 5 active conversations.") !== "包含 5 个活跃会话。") {
+            console.error("including 5 active conversations failed:", translate("including 5 active conversations."));
+            process.exit(117);
+        }
+        if (translate("resources") !== "资源") process.exit(118);
+        if (translate("scripts") !== "脚本") process.exit(119);
+        if (translate("Copy code") !== "复制代码") {
+            console.error("Copy code failed:", translate("Copy code"));
+            process.exit(120);
+        }
+        if (translate("Copied!") !== "已复制！") process.exit(121);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
