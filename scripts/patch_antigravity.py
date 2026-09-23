@@ -3,11 +3,11 @@
 """
 Antigravity 跨平台汉化补丁核心引擎 (patch_antigravity.py)
 支持 Windows、macOS 和 Linux。
-功能：
-1. 自动定位 Antigravity 安装目录与 app.asar；
-2. 安全备份原始 app.asar；
-3. 修补 app.asar（原生菜单 menu.js、托盘 tray.js、更新器 updater.js、预加载 preload.js 注入 DOM 翻译引擎）；
-4. 提供一键还原 (restore/uninstall) 与自动更新管理。
+特性：
+1. 原位（In-place）无损修补 ASAR 归档，无需提取到磁盘，100% 保留 app.asar.unpacked/ 下所有解包索引（如 chrome-devtools-mcp）；
+2. 毫秒级执行，不依赖 node、npm 或 npx；
+3. 修补原生菜单 (menu.js)、系统托盘 (tray.js)、更新提示 (updater.js) 与预加载脚本 (preload.js)；
+4. 自动备份 app.asar.bak，支持一键还原与更新管理。
 """
 
 import os
@@ -15,8 +15,7 @@ import sys
 import json
 import shutil
 import struct
-import tempfile
-import subprocess
+import hashlib
 from pathlib import Path
 
 # UTF-8 控制台编码兼容
@@ -29,90 +28,121 @@ if hasattr(sys.stdout, 'reconfigure'):
 
 # 补丁注入特征标记
 PATCH_MARKER = "/* __ANTIGRAVITY_ZH_CN_PATCHED__ */"
+ASAR_INTEGRITY_BLOCK_SIZE = 4 * 1024 * 1024
 
-class AsarArchive:
+
+def align4(size: int) -> int:
+    return (size + 3) & ~3
+
+
+def calculate_file_integrity(data: bytes) -> dict:
+    blocks = [
+        hashlib.sha256(data[i : i + ASAR_INTEGRITY_BLOCK_SIZE]).hexdigest()
+        for i in range(0, len(data), ASAR_INTEGRITY_BLOCK_SIZE)
+    ]
+    if not blocks:
+        blocks.append(hashlib.sha256(data).hexdigest())
+    return {
+        "algorithm": "SHA256",
+        "hash": hashlib.sha256(data).hexdigest(),
+        "blockSize": ASAR_INTEGRITY_BLOCK_SIZE,
+        "blocks": blocks,
+    }
+
+
+def read_asar_header(data: bytes | bytearray) -> tuple[int, str, dict]:
+    if len(data) < 16:
+        raise ValueError("ASAR 文件损坏或格式不支持（小于 16 字节）")
+    header_size = struct.unpack_from("<I", data, 4)[0]
+    header_pickle = data[8 : 8 + header_size]
+    header_str_size = struct.unpack_from("<i", header_pickle, 4)[0]
+    header_str = header_pickle[8 : 8 + header_str_size].decode("utf-8")
+    return header_size, header_str, json.loads(header_str)
+
+
+def encode_asar_header_dynamic(header_string: str) -> bytes:
+    hb = header_string.encode("utf-8")
+    payload_size = align4(4 + len(hb))
+    pickle = (
+        struct.pack("<I", payload_size)
+        + struct.pack("<i", len(hb))
+        + hb
+        + b"\0" * (payload_size - 4 - len(hb))
+    )
+    return struct.pack("<I", 4) + struct.pack("<I", len(pickle)) + pickle
+
+
+def get_asar_file_entry(header: dict, file_path: str) -> dict:
+    node = header
+    for part in file_path.split("/"):
+        files = node.get("files")
+        if not isinstance(files, dict) or part not in files:
+            raise KeyError(f"ASAR 索引中未找到文件: {file_path}")
+        node = files[part]
+    if "offset" not in node or "size" not in node:
+        raise ValueError(f"文件条目缺少 offset 或 size 字段: {file_path}")
+    return node
+
+
+def iter_asar_file_entries(header: dict) -> list[dict]:
+    entries = []
+    def walk(node):
+        files = node.get("files")
+        if not isinstance(files, dict):
+            return
+        for child in files.values():
+            if not isinstance(child, dict):
+                continue
+            if "files" in child:
+                walk(child)
+            elif "offset" in child and "size" in child:
+                entries.append(child)
+    walk(header)
+    return entries
+
+
+def read_asar_file_content(asar_data: bytes | bytearray, file_path: str) -> bytes:
+    header_size, _, header = read_asar_header(asar_data)
+    entry = get_asar_file_entry(header, file_path)
+    offset = 8 + header_size + int(entry["offset"])
+    size = int(entry["size"])
+    return bytes(asar_data[offset : offset + size])
+
+
+def replace_asar_file_content(asar_data: bytearray, file_path: str, new_content: bytes) -> bytearray:
     """
-    轻量级原生 Python 实现的 Electron ASAR 解构与打包工具。
-    无需依赖全局 node/npm/npx，可在纯 Python 环境下完成 asar 打包与解包。
+    原位替换 ASAR 归档内部特定文件的内容，并动态更新偏移量与头部哈希。
+    保留所有 unpacked: true 的外部文件索引，完全避免丢失 app.asar.unpacked/。
     """
-    @staticmethod
-    def extract(asar_path: Path, output_dir: Path):
-        output_dir.mkdir(parents=True, exist_ok=True)
-        with open(asar_path, 'rb') as f:
-            # 读取 asar 头部
-            magic = struct.unpack('<I', f.read(4))[0]
-            header_size = struct.unpack('<I', f.read(4))[0]
-            header_str_size = struct.unpack('<I', f.read(4))[0]
-            header_json_size = struct.unpack('<I', f.read(4))[0]
-            
-            header_json_bytes = f.read(header_json_size)
-            header_str = header_json_bytes.decode('utf-8').rstrip('\x00')
-            header = json.loads(header_str)
-            
-            base_offset = f.tell()
-            
-            def extract_files(files_dict, current_dir):
-                for name, info in files_dict.items():
-                    target_path = current_dir / name
-                    if 'files' in info:
-                        target_path.mkdir(exist_ok=True)
-                        extract_files(info['files'], target_path)
-                    elif 'offset' in info and 'size' in info:
-                        file_offset = base_offset + int(info['offset'])
-                        file_size = int(info['size'])
-                        curr = f.tell()
-                        f.seek(file_offset)
-                        data = f.read(file_size)
-                        f.seek(curr)
-                        with open(target_path, 'wb') as out_f:
-                            out_f.write(data)
-                            
-            if 'files' in header:
-                extract_files(header['files'], output_dir)
+    header_size, _, header = read_asar_header(asar_data)
+    entry = get_asar_file_entry(header, file_path)
 
-    @staticmethod
-    def pack(source_dir: Path, output_asar: Path):
-        files_data = []
-        
-        def build_header_tree(dir_path: Path):
-            files = {}
-            for item in sorted(dir_path.iterdir(), key=lambda p: p.name):
-                if item.is_dir():
-                    files[item.name] = {
-                        "files": build_header_tree(item)
-                    }
-                elif item.is_file():
-                    with open(item, 'rb') as f:
-                        data = f.read()
-                    offset = len(files_data)
-                    files_data.extend(data)
-                    files[item.name] = {
-                        "size": len(data),
-                        "offset": str(offset)
-                    }
-            return files
+    old_offset = int(entry["offset"])
+    old_size = int(entry["size"])
+    content_offset = 8 + header_size + old_offset
+    content_end = content_offset + old_size
 
-        file_tree = {"files": build_header_tree(source_dir)}
-        header_json = json.dumps(file_tree, separators=(',', ':')).encode('utf-8')
-        
-        # 4字节对齐填充
-        padding = 4 - (len(header_json) % 4)
-        if padding == 4:
-            padding = 0
-        header_json += b'\0' * padding
+    old_content = bytes(asar_data[content_offset:content_end])
+    if old_content == new_content:
+        return asar_data
 
-        header_json_size = len(header_json)
-        header_str_size = header_json_size + 4
-        header_size = header_str_size + 4
-        magic = 4
+    delta = len(new_content) - old_size
+    asar_data[content_offset:content_end] = new_content
 
-        with open(output_asar, 'wb') as f:
-            f.write(struct.pack('<I', magic))
-            f.write(struct.pack('<I', header_size))
-            f.write(struct.pack('<I', header_str_size))
-            f.write(struct.pack('<I', header_json_size))
-            f.write(header_json)
-            f.write(bytes(files_data))
+    entry["size"] = len(new_content)
+    if "integrity" in entry:
+        entry["integrity"] = calculate_file_integrity(new_content)
+
+    if delta != 0:
+        for other in iter_asar_file_entries(header):
+            if other is not entry and int(other["offset"]) > old_offset:
+                other["offset"] = str(int(other["offset"]) + delta)
+
+    updated_header_string = json.dumps(header, ensure_ascii=False, separators=(",", ":"))
+    updated_header = encode_asar_header_dynamic(updated_header_string)
+    body = bytes(asar_data[8 + header_size :])
+
+    return bytearray(updated_header + body)
 
 
 def get_default_install_path() -> Path | None:
@@ -145,68 +175,95 @@ def get_asar_path(install_dir: Path) -> Path:
     return install_dir / "resources" / "app.asar"
 
 
-def patch_dist_files(dist_dir: Path, lang: str, repo_root: Path):
-    """修补解包后 dist 目录内的关键脚本"""
+def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
+    """
+    完整安装补丁流程：
+    采用原位无损修改技术，精准替换 menu.js、tray.js、updater.js 和 preload.js。
+    """
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parent.parent
+
+    asar_path = get_asar_path(install_dir)
+    if not asar_path.is_file():
+        raise FileNotFoundError(f"未找到 app.asar: {asar_path}")
+
+    backup_path = asar_path.with_suffix('.asar.bak')
+
+    # 1. 备份原版 asar（如果尚未存在备份）
+    if not backup_path.exists():
+        print(f"[1/4] 正在创建原版备份: {backup_path.name}...")
+        shutil.copy2(asar_path, backup_path)
+    else:
+        print(f"[1/4] 发现已有原版备份: {backup_path.name}")
+
+    # 载入本地化资源
     res_dir = repo_root / "resources"
-    
-    # 1. 载入词典
     dict_file = res_dir / f"antigravity-{lang}.json"
     if not dict_file.is_file():
         dict_file = res_dir / "antigravity-zh-CN.json"
-        
-    with open(dict_file, 'r', encoding='utf-8') as f:
+
+    with open(dict_file, "r", encoding="utf-8") as f:
         lang_dict = json.load(f)
 
-    with open(res_dir / "desktop-zh-CN.json", 'r', encoding='utf-8') as f:
+    with open(res_dir / "desktop-zh-CN.json", "r", encoding="utf-8") as f:
         desktop_dict = json.load(f)
 
-    with open(res_dir / "rules-zh-CN.json", 'r', encoding='utf-8') as f:
+    with open(res_dir / "rules-zh-CN.json", "r", encoding="utf-8") as f:
         rules_list = json.load(f)
 
-    with open(res_dir / "runtime-zh.js", 'r', encoding='utf-8') as f:
+    with open(res_dir / "runtime-zh.js", "r", encoding="utf-8") as f:
         runtime_js_code = f.read()
 
-    # 2. 修补 menu.js (应用主菜单)
-    menu_file = dist_dir / "menu.js"
-    if menu_file.is_file():
-        content = menu_file.read_text(encoding='utf-8')
+    # 始终基于纯净备份读取，确保多次重复运行不受影响
+    source_asar = backup_path if backup_path.exists() else asar_path
+    print(f"[2/4] 正在读取并解析 ASAR 索引 (源: {source_asar.name})...")
+    asar_data = bytearray(source_asar.read_bytes())
+
+    print("[3/4] 正在原位修补原生菜单、托盘及注入 DOM 翻译引擎...")
+
+    # (1) 修补 dist/menu.js
+    try:
+        menu_content = read_asar_file_content(asar_data, "dist/menu.js").decode("utf-8")
         for en, zh in desktop_dict.get("menu", {}).items():
-            content = content.replace(f"'{en}'", f"'{zh}'")
-            content = content.replace(f'"{en}"', f'"{zh}"')
-        menu_file.write_text(content, encoding='utf-8')
-        print("  [OK] 已修补原生菜单: dist/menu.js")
+            menu_content = menu_content.replace(f"'{en}'", f"'{zh}'")
+            menu_content = menu_content.replace(f'"{en}"', f'"{zh}"')
+        asar_data = replace_asar_file_content(asar_data, "dist/menu.js", menu_content.encode("utf-8"))
+        print("  [OK] 原生菜单 (dist/menu.js) 修补完成")
+    except Exception as e:
+        print(f"  [!] 忽略非致命项 dist/menu.js: {e}")
 
-    # 3. 修补 tray.js (系统托盘)
-    tray_file = dist_dir / "tray.js"
-    if tray_file.is_file():
-        content = tray_file.read_text(encoding='utf-8')
-        content = content.replace("'No agents running'", "'无运行中的代理'")
-        content = content.replace('"No agents running"', '"无运行中的代理"')
-        content = content.replace("'Quit'", "'退出'")
-        content = content.replace('"Quit"', '"退出"')
-        content = content.replace("`Open ${electron_1.app.getName()}`", "`打开 ${electron_1.app.getName()}`")
-        content = content.replace("' agent'", "' 个代理'")
-        content = content.replace("' agents'", "' 个代理'")
-        content = content.replace("' running'", "' 正在运行'")
-        tray_file.write_text(content, encoding='utf-8')
-        print("  [OK] 已修补系统托盘: dist/tray.js")
+    # (2) 修补 dist/tray.js
+    try:
+        tray_content = read_asar_file_content(asar_data, "dist/tray.js").decode("utf-8")
+        tray_content = tray_content.replace("'No agents running'", "'无运行中的代理'")
+        tray_content = tray_content.replace('"No agents running"', '"无运行中的代理"')
+        tray_content = tray_content.replace("'Quit'", "'退出'")
+        tray_content = tray_content.replace('"Quit"', '"退出"')
+        tray_content = tray_content.replace("`Open ${electron_1.app.getName()}`", "`打开 ${electron_1.app.getName()}`")
+        tray_content = tray_content.replace("' agent'", "' 个代理'")
+        tray_content = tray_content.replace("' agents'", "' 个代理'")
+        tray_content = tray_content.replace("' running'", "' 正在运行'")
+        asar_data = replace_asar_file_content(asar_data, "dist/tray.js", tray_content.encode("utf-8"))
+        print("  [OK] 系统托盘 (dist/tray.js) 修补完成")
+    except Exception as e:
+        print(f"  [!] 忽略非致命项 dist/tray.js: {e}")
 
-    # 4. 修补 updater.js (自动更新步骤文字)
-    updater_file = dist_dir / "updater.js"
-    if updater_file.is_file():
-        content = updater_file.read_text(encoding='utf-8')
-        content = content.replace('"Check for Updates"', '"检查更新"')
-        content = content.replace('"Checking for Updates..."', '"正在检查更新..."')
-        content = content.replace('"Downloading Update..."', '"正在下载更新..."')
-        content = content.replace('"Restart to Update"', '"重启以更新"')
-        updater_file.write_text(content, encoding='utf-8')
-        print("  [OK] 已修补更新提示: dist/updater.js")
+    # (3) 修补 dist/updater.js
+    try:
+        updater_content = read_asar_file_content(asar_data, "dist/updater.js").decode("utf-8")
+        updater_content = updater_content.replace('"Check for Updates"', '"检查更新"')
+        updater_content = updater_content.replace('"Checking for Updates..."', '"正在检查更新..."')
+        updater_content = updater_content.replace('"Downloading Update..."', '"正在下载更新..."')
+        updater_content = updater_content.replace('"Restart to Update"', '"重启以更新"')
+        asar_data = replace_asar_file_content(asar_data, "dist/updater.js", updater_content.encode("utf-8"))
+        print("  [OK] 更新提示 (dist/updater.js) 修补完成")
+    except Exception as e:
+        print(f"  [!] 忽略非致命项 dist/updater.js: {e}")
 
-    # 5. 修补 preload.js (注入 DOM 翻译引擎)
-    preload_file = dist_dir / "preload.js"
-    if preload_file.is_file():
-        content = preload_file.read_text(encoding='utf-8')
-        if PATCH_MARKER not in content:
+    # (4) 修补 dist/preload.js (注入 DOM 翻译引擎)
+    try:
+        preload_content = read_asar_file_content(asar_data, "dist/preload.js").decode("utf-8")
+        if PATCH_MARKER not in preload_content:
             injection = f"""
 {PATCH_MARKER}
 (function() {{
@@ -220,55 +277,20 @@ def patch_dist_files(dist_dir: Path, lang: str, repo_root: Path):
   }}
 }})();
 """
-            preload_file.write_text(content + injection, encoding='utf-8')
-            print("  [OK] 已向预加载环境注入 DOM 翻译引擎: dist/preload.js")
+            preload_content += injection
+            asar_data = replace_asar_file_content(asar_data, "dist/preload.js", preload_content.encode("utf-8"))
+            print("  [OK] DOM 翻译引擎成功注入至预加载环境 (dist/preload.js)")
+    except Exception as e:
+        print(f"  [!] 预加载环境注入失败: {e}")
+        raise
 
+    # 4. 安全写入目标文件
+    print(f"[4/4] 正在安全写入汉化文件: {asar_path.name}...")
+    temp_dest = asar_path.with_suffix('.asar.tmp')
+    temp_dest.write_bytes(asar_data)
+    shutil.move(str(temp_dest), str(asar_path))
 
-def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
-    """完整安装补丁流程"""
-    if repo_root is None:
-        repo_root = Path(__file__).resolve().parent.parent
-
-    asar_path = get_asar_path(install_dir)
-    if not asar_path.is_file():
-        raise FileNotFoundError(f"未找到 app.asar: {asar_path}")
-
-    backup_path = asar_path.with_suffix('.asar.bak')
-    
-    # 1. 备份原版 asar（如果尚未存在备份）
-    if not backup_path.exists():
-        print(f"[1/4] 正在创建原版备份: {backup_path.name}...")
-        shutil.copy2(asar_path, backup_path)
-    else:
-        print(f"[1/4] 发现已有原版备份: {backup_path.name}")
-
-    print("[2/4] 正在解包 app.asar...")
-    with tempfile.TemporaryDirectory(prefix="antigravity_zh_") as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        extract_dir = temp_dir_path / "app"
-
-        # 解包始终基于原版备份解包，确保无论重打多少次补丁都不会脏污染
-        source_asar = backup_path if backup_path.exists() else asar_path
-        AsarArchive.extract(source_asar, extract_dir)
-
-        # 修补文件
-        dist_dir = extract_dir / "dist"
-        if not dist_dir.is_dir():
-            raise RuntimeError(f"解包后的目录结构异常，缺少 dist 目录: {extract_dir}")
-
-        print("[3/4] 正在修补原生菜单、托盘及注入 DOM 翻译引擎...")
-        patch_dist_files(dist_dir, lang, repo_root)
-
-        # 打包回临时 asar
-        temp_asar = temp_dir_path / "patched.asar"
-        print("[4/4] 正在重新封包 app.asar (约需 5~10 秒)...")
-        AsarArchive.pack(extract_dir, temp_asar)
-
-        # 原子化覆盖目标 app.asar
-        print(f"正在写入汉化文件: {asar_path.name}...")
-        shutil.copy2(temp_asar, asar_path)
-
-    print("[OK] Antigravity 汉化补丁安装成功！")
+    print("[OK] Antigravity 汉化补丁无损安装成功！所有解包索引 100% 保留！")
 
 
 def restore_backup(install_dir: Path):

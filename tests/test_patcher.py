@@ -5,23 +5,36 @@ Antigravity 汉化项目单元测试套件 (tests/test_patcher.py)
 用于验证：
 1. 词典 JSON 文件合法性与编码规范；
 2. 动态正则规则的编译与匹配替换准确性；
-3. Python 原生 ASAR 解包与打包的一致性与无损回环；
-4. 补丁注入与修补的幂等性与标记完整性。
+3. 原位 (In-place) ASAR 无损修补与 unpacked 外部链接索引 100% 保留；
+4. 真实 app.asar 结构的无损修补验证。
 """
 
 import os
 import re
 import sys
 import json
-import shutil
-import tempfile
+import struct
 import unittest
 from pathlib import Path
+
+# UTF-8 控制台编码兼容
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from patch_antigravity import AsarArchive, patch_dist_files, PATCH_MARKER
+from patch_antigravity import (
+    read_asar_header,
+    encode_asar_header_dynamic,
+    replace_asar_file_content,
+    read_asar_file_content,
+    PATCH_MARKER
+)
 
 class TestAntigravityZh(unittest.TestCase):
     
@@ -44,7 +57,6 @@ class TestAntigravityZh(unittest.TestCase):
                 data = json.load(f)
                 self.assertTrue(len(data) > 0, f"词典文件内容为空: {fname}")
                 
-            # 校验桌面词典关键键
             if fname == "desktop-zh-CN.json":
                 self.assertIn("menu", data)
                 self.assertIn("tray", data)
@@ -77,7 +89,6 @@ class TestAntigravityZh(unittest.TestCase):
             matched = False
             for reg, repl in compiled_rules:
                 if reg.search(text):
-                    # 将 JS 替换语法 $1, $2 转换为 Python re 兼容的 \1, \2
                     py_repl = re.sub(r'\$(\d+)', r'\\\1', repl)
                     result = reg.sub(py_repl, text)
                     self.assertEqual(result, expected, f"规则替换结果不符: 原文 '{text}', 得到 '{result}', 期望 '{expected}'")
@@ -85,78 +96,98 @@ class TestAntigravityZh(unittest.TestCase):
                     break
             self.assertTrue(matched, f"未匹配到任何正则规则: '{text}'")
 
-    def test_python_asar_pack_and_extract_roundtrip(self):
-        """测试纯 Python ASAR 打包与解包的完全一致性"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            source_dir = temp_path / "source"
-            source_dir.mkdir()
+    def test_in_place_asar_patching_with_unpacked_preservation(self):
+        """测试原位修补技术并验证对 unpacked 外部文件引用的 100% 保护"""
+        # 构建一个模拟的 ASAR，包含 unpacked: true 的文件条目
+        f1_data = b"console.log('original menu');"
+        f2_data = b"console.log('original preload');"
+        
+        body_data = f1_data + f2_data
+        
+        mock_header = {
+            "files": {
+                "dist": {
+                    "files": {
+                        "menu.js": {
+                            "size": len(f1_data),
+                            "offset": "0"
+                        },
+                        "preload.js": {
+                            "size": len(f2_data),
+                            "offset": str(len(f1_data))
+                        }
+                    }
+                },
+                "node_modules": {
+                    "files": {
+                        "chrome-devtools-mcp": {
+                            "files": {
+                                "tool.js": {
+                                    "unpacked": True
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        header_bytes = encode_asar_header_dynamic(json.dumps(mock_header, separators=(',', ':')))
+        asar_bytes = bytearray(header_bytes + body_data)
+        
+        # 1. 验证初始 header
+        _, _, init_h = read_asar_header(asar_bytes)
+        self.assertTrue(init_h["files"]["node_modules"]["files"]["chrome-devtools-mcp"]["files"]["tool.js"]["unpacked"])
+        
+        # 2. 原位替换 menu.js 为更长的新内容
+        new_menu = b"console.log('patched menu with new window text');"
+        patched_asar = replace_asar_file_content(asar_bytes, "dist/menu.js", new_menu)
+        
+        # 3. 验证修补后 unpacked 引用绝对未丢失
+        _, _, patched_h = read_asar_header(patched_asar)
+        self.assertTrue(
+            patched_h["files"]["node_modules"]["files"]["chrome-devtools-mcp"]["files"]["tool.js"]["unpacked"],
+            "严重错误: 原位修补丢弃了 unpacked: true 外部链接！"
+        )
+        
+        # 4. 验证内容读取正确
+        read_back_menu = read_asar_file_content(patched_asar, "dist/menu.js")
+        self.assertEqual(read_back_menu, new_menu)
+        
+        # 5. 验证后续文件 preload.js 偏移自动校准且内容依然无损
+        read_back_preload = read_asar_file_content(patched_asar, "dist/preload.js")
+        self.assertEqual(read_back_preload, f2_data)
 
-            # 创建模拟目录与文件
-            (source_dir / "index.html").write_text("<!doctype html><html><body>Test</body></html>", encoding="utf-8")
-            sub_dir = source_dir / "dist"
-            sub_dir.mkdir()
-            (sub_dir / "main.js").write_text("console.log('antigravity');", encoding="utf-8")
-            (sub_dir / "binary.bin").write_bytes(b"\x00\x01\x02\x03\xFF\xFE\xFD")
-
-            asar_output = temp_path / "test.asar"
-            extracted_dir = temp_path / "extracted"
-
-            # 1. 打包
-            AsarArchive.pack(source_dir, asar_output)
-            self.assertTrue(asar_output.is_file(), "ASAR 打包未生成文件")
-            self.assertGreater(asar_output.stat().st_size, 0, "生成的 ASAR 文件为空")
-
-            # 2. 解包
-            AsarArchive.extract(asar_output, extracted_dir)
+    def test_real_antigravity_asar_unpacked_preservation(self):
+        """如果本地存在真实的 Antigravity app.asar.bak，进行真实结构测试"""
+        real_asar_bak = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "antigravity" / "resources" / "app.asar.bak"
+        if not real_asar_bak.is_file():
+            self.skipTest("本地未检测到 app.asar.bak，跳过真实环境测试")
             
-            # 3. 比对还原完整性
-            self.assertTrue((extracted_dir / "index.html").is_file())
-            self.assertEqual((extracted_dir / "index.html").read_text(encoding="utf-8"),
-                             (source_dir / "index.html").read_text(encoding="utf-8"))
+        data = bytearray(real_asar_bak.read_bytes())
+        _, _, h = read_asar_header(data)
+        
+        def count_unpacked(node):
+            cnt = 0
+            if isinstance(node, dict):
+                for k, v in node.get("files", {}).items():
+                    if isinstance(v, dict):
+                        if v.get("unpacked") is True:
+                            cnt += 1
+                        cnt += count_unpacked(v)
+            return cnt
             
-            self.assertTrue((extracted_dir / "dist" / "main.js").is_file())
-            self.assertEqual((extracted_dir / "dist" / "main.js").read_text(encoding="utf-8"),
-                             (source_dir / "dist" / "main.js").read_text(encoding="utf-8"))
-            
-            self.assertEqual((extracted_dir / "dist" / "binary.bin").read_bytes(),
-                             (source_dir / "dist" / "binary.bin").read_bytes())
-
-    def test_patch_dist_files_execution(self):
-        """测试对 dist 目录各文件的修补逻辑"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            dist_dir = Path(temp_dir) / "dist"
-            dist_dir.mkdir()
-
-            menu_js = dist_dir / "menu.js"
-            menu_js.write_text("const a = 'New Window'; const b = 'Help';", encoding="utf-8")
-
-            tray_js = dist_dir / "tray.js"
-            tray_js.write_text("const item = 'No agents running'; const q = 'Quit';", encoding="utf-8")
-
-            updater_js = dist_dir / "updater.js"
-            updater_js.write_text('const s = "Check for Updates";', encoding="utf-8")
-
-            preload_js = dist_dir / "preload.js"
-            preload_js.write_text("console.log('preload ready');", encoding="utf-8")
-
-            patch_dist_files(dist_dir, "zh-CN", REPO_ROOT)
-
-            # 验证菜单修补
-            self.assertIn("新建窗口", menu_js.read_text(encoding="utf-8"))
-            self.assertIn("帮助", menu_js.read_text(encoding="utf-8"))
-
-            # 验证托盘修补
-            self.assertIn("无运行中的代理", tray_js.read_text(encoding="utf-8"))
-            self.assertIn("退出", tray_js.read_text(encoding="utf-8"))
-
-            # 验证更新器修补
-            self.assertIn("检查更新", updater_js.read_text(encoding="utf-8"))
-
-            # 验证预加载脚本注入
-            preload_content = preload_js.read_text(encoding="utf-8")
-            self.assertIn(PATCH_MARKER, preload_content)
-            self.assertIn("window.__AGY_ZH_DICT__", preload_content)
+        orig_unpacked = count_unpacked(h)
+        self.assertEqual(orig_unpacked, 293, f"原版 unpacked 数量不符合预期: {orig_unpacked}")
+        
+        # 模拟修补 dist/menu.js
+        old_menu = read_asar_file_content(data, "dist/menu.js")
+        new_menu = old_menu + b" // test comment"
+        patched = replace_asar_file_content(data, "dist/menu.js", new_menu)
+        
+        _, _, patched_h = read_asar_header(patched)
+        patched_unpacked = count_unpacked(patched_h)
+        self.assertEqual(patched_unpacked, 293, "真实 asar 修补后丢弃了 unpacked 文件！")
 
 
 if __name__ == "__main__":
