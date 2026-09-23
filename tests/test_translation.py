@@ -234,6 +234,19 @@ class TestRuntimeTranslation(unittest.TestCase):
             console.error("Jev description prefix failed:", translate("Universal TypeSafe Jev (System One) Coprocessor for rapid micro-decisions, risk gating, multi-criteria scoring, and intent classification across all coding and researc..."));
             process.exit(89);
         }
+        if (translate("Show in File Explorer") !== "在文件资源管理器中显示") {
+            console.error("Show in File Explorer failed:", translate("Show in File Explorer"));
+            process.exit(90);
+        }
+        if (translate("5 tools") !== "5 个工具") {
+            console.error("5 tools failed:", translate("5 tools"));
+            process.exit(91);
+        }
+        if (translate("5 tools 38") !== "5 个工具 38") {
+            console.error("5 tools 38 failed:", translate("5 tools 38"));
+            process.exit(92);
+        }
+        if (translate("crons") !== "定时任务") process.exit(93);
 
         console.log("SUCCESS");
         """

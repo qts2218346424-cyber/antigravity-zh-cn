@@ -661,6 +661,9 @@ class QuotaStatus:
             "reset_time_utc": self.reset_time_utc,
             "is_cached": self.is_cached,
             "models": list(self.models),
+            "groups": list(self.groups),
+            "user_name": self.user_name,
+            "user_picture": self.user_picture,
             "fetched_at": self.fetched_at,
             "schema_version": self.schema_version,
         }
@@ -684,7 +687,8 @@ class QuotaStatus:
         known_keys = {
             "success", "account_email", "profile_id", "total_tokens", "used_tokens",
             "remaining_tokens", "remaining_percentage", "status", "reset_time_utc",
-            "is_cached", "models", "fetched_at", "remaining_basis_points", "schema_version"
+            "is_cached", "models", "groups", "user_name", "user_picture", "fetched_at",
+            "remaining_basis_points", "schema_version"
         }
         unknown = {k: v for k, v in data.items() if k not in known_keys}
 
@@ -702,6 +706,9 @@ class QuotaStatus:
             status=str(data["status"]),
             reset_time_utc=data.get("reset_time_utc"),
             models=list(data.get("models") or []),
+            groups=list(data.get("groups") or []),
+            user_name=str(data.get("user_name") or ""),
+            user_picture=str(data.get("user_picture") or ""),
             fetched_at=data.get("fetched_at") or now_utc_iso(),
             remaining_basis_points=bps,
             account_email=str(data.get("account_email") or ""),

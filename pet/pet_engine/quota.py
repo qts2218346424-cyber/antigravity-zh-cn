@@ -28,6 +28,16 @@ from pet_engine.models import (
 )
 from pet_engine.proto_decoder import ProtoWireParser
 
+try:
+    from pet_engine.probe_account import read_system_credential, fetch_user_info, fetch_real_quota
+except ImportError:
+    try:
+        from pet.pet_engine.probe_account import read_system_credential, fetch_user_info, fetch_real_quota
+    except ImportError:
+        read_system_credential = None
+        fetch_user_info = None
+        fetch_real_quota = None
+
 
 class QuotaMonitor:
     """
@@ -65,12 +75,122 @@ class QuotaMonitor:
         self._cached_status: Optional[QuotaStatus] = None
         self._cache_time: float = 0.0
         self._cache_ttl: float = 5.0  # 5-second in-memory cache
+        self._api_cached_status: Optional[QuotaStatus] = None
+        self._api_last_fetch_time: float = 0.0
+        self._api_cache_ttl: float = 300.0  # 5-minute lazy-load cache for Google API
         self._lock = threading.Lock()
 
         # Alert tracking
         self._last_low_quota_alert_time: float = 0.0
         self._last_alert_percentage: Optional[float] = None
         self._seen_tasks: Dict[str, float] = {}
+
+    def _read_from_system_credential_api(self, force_refresh: bool = False) -> Optional[QuotaStatus]:
+        """
+        Reads real Antigravity live quota from Windows Credential Manager and CloudCode API.
+        Enforces a 5-minute lazy-load cache and never rotates tokens to protect host IDE session.
+        """
+        if not read_system_credential or not fetch_real_quota:
+            return None
+
+        now = time.monotonic()
+        if not force_refresh and self._api_cached_status and (now - self._api_last_fetch_time < self._api_cache_ttl):
+            return self._api_cached_status
+
+        try:
+            cred = read_system_credential()
+            if not cred or not isinstance(cred, dict):
+                return None
+
+            token_data = cred.get("token", {})
+            access_token = token_data.get("access_token", "")
+            if not access_token:
+                return None
+
+            user_info = fetch_user_info(access_token) if fetch_user_info else {}
+            user_name = user_info.get("name", "") if user_info else ""
+            user_email = user_info.get("email", "") if user_info else ""
+            user_pic = user_info.get("picture", "") if user_info else ""
+
+            quota_json = fetch_real_quota(access_token)
+            if not quota_json or not isinstance(quota_json, dict):
+                return None
+
+            raw_groups = quota_json.get("groups", [])
+            parsed_groups = []
+            models_list = []
+            primary_percentage = 100.0
+            primary_reset_time = None
+
+            for g in raw_groups:
+                g_display = g.get("displayName", "Model Group")
+                g_desc = g.get("description", "")
+                parsed_buckets = []
+                for b in g.get("buckets", []):
+                    b_id = b.get("bucketId", "")
+                    b_name = b.get("displayName", b_id)
+                    b_rem = float(b.get("remainingFraction", 1.0))
+                    b_pct = round(b_rem * 100.0, 1)
+                    b_reset = b.get("resetTime")
+                    b_desc = b.get("description", "")
+
+                    parsed_buckets.append({
+                        "bucketId": b_id,
+                        "displayName": b_name,
+                        "remainingFraction": b_rem,
+                        "percentage": b_pct,
+                        "resetTime": b_reset,
+                        "description": b_desc,
+                    })
+
+                    # If this is Gemini 5h bucket or 3p 5h bucket, use for health classification
+                    if "5h" in b_id.lower() or "rolling" in b_id.lower():
+                        if "gemini" in b_id.lower() or primary_percentage == 100.0:
+                            primary_percentage = b_pct
+                            primary_reset_time = b_reset
+
+                parsed_groups.append({
+                    "displayName": g_display,
+                    "description": g_desc,
+                    "buckets": parsed_buckets
+                })
+
+                models_list.append({
+                    "name": g_display,
+                    "available": True,
+                    "percentage": primary_percentage,
+                    "remaining_requests": int(primary_percentage),
+                    "total_requests": 100,
+                })
+
+            total = 1000
+            used = int(round((100.0 - primary_percentage) * 10))
+            status = self._classify_status(total, used)
+
+            res = QuotaStatus(
+                total_tokens=total,
+                used_tokens=used,
+                remaining_tokens=max(0, total - used),
+                remaining_percentage=round(primary_percentage, 2),
+                status=status,
+                reset_time_utc=primary_reset_time,
+                models=models_list,
+                groups=parsed_groups,
+                user_name=user_name,
+                user_picture=user_pic,
+                fetched_at=now_utc_iso(),
+                remaining_basis_points=int(primary_percentage * 100),
+                account_email=user_email,
+                profile_id="antigravity-system",
+                is_cached=False,
+            )
+
+            self._api_cached_status = res
+            self._api_last_fetch_time = now
+            return res
+
+        except Exception:
+            return None
 
     def _read_from_sqlite(self) -> Optional[QuotaStatus]:
         """Inspect state.vscdb and decode unified state sync records."""
@@ -231,7 +351,9 @@ class QuotaMonitor:
             status: Optional[QuotaStatus] = None
 
             if self.mode in ("live", "auto"):
-                status = self._read_from_sqlite()
+                status = self._read_from_system_credential_api(force_refresh)
+                if not status:
+                    status = self._read_from_sqlite()
 
             if not status and self.mode in ("mock", "auto"):
                 status = self._read_from_mock()

@@ -1078,5 +1078,53 @@
   [
     "^Universal TypeSafe Jev \\(System One\\) Coprocessor.*$",
     "通用的 TypeSafe Jev (系统一) 协处理器，用于在所有编程和研究任务中进行快速微决策、风险门禁、多维度评分及意图分类。"
+  ],
+  [
+    "^[Ss]how in [Ff]ile [Ee]xplorer$",
+    "在文件资源管理器中显示"
+  ],
+  [
+    "^[Rr]eveal in [Ff]ile [Ee]xplorer$",
+    "在文件资源管理器中显示"
+  ],
+  [
+    "^[Oo]pen in [Ff]ile [Ee]xplorer$",
+    "在文件资源管理器中打开"
+  ],
+  [
+    "^[Ss]how in [Ee]xplorer$",
+    "在资源管理器中显示"
+  ],
+  [
+    "^[Ss]how in [Ff]inder$",
+    "在访达中显示"
+  ],
+  [
+    "^[Rr]eveal in [Ff]inder$",
+    "在访达中显示"
+  ],
+  [
+    "^(\\d+)\\s+tools?$",
+    "$1 个工具"
+  ],
+  [
+    "^(\\d+)\\s+tools?\\s+(\\d+)$",
+    "$1 个工具 $2"
+  ],
+  [
+    "^(\\d+)\\s+tool\\s+calls?$",
+    "$1 次工具调用"
+  ],
+  [
+    "^(\\d+)\\s+tools?\\s*,\\s*(\\d+)\\s*calls?$",
+    "$1 个工具，$2 次调用"
+  ],
+  [
+    "^runs?\\s+as\\s+(.+?)\\.?$",
+    "以 $1 运行。"
+  ],
+  [
+    "^crons?$",
+    "定时任务"
   ]
 ]

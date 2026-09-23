@@ -106,6 +106,7 @@ NEW_TRANSLATIONS = {
 
     # 模型重试与系统状态提示 (Model Availability & Retry)
     "Model unavailable": "模型不可用",
+    "Model unavailable.": "模型不可用。",
     "retrying in": "重试倒计时",
     "attempt": "尝试",
     "All crons run as Flash.": "所有定时任务均以 Flash 运行。",
@@ -113,7 +114,43 @@ NEW_TRANSLATIONS = {
     "all crons run as Flash.": "所有定时任务均以 Flash 运行。",
     "all crons run as Flash": "所有定时任务均以 Flash 运行",
     "All crons run as": "所有定时任务均以",
+    "run as Flash.": "均以 Flash 运行。",
     "run as Flash": "以 Flash 运行",
+    " run as Flash.": " 均以 Flash 运行。",
+    " run as Flash": " 均以 Flash 运行",
+    "runs as Flash.": "以 Flash 运行。",
+    "runs as Flash": "以 Flash 运行",
+    "crons": "定时任务",
+    "Crons": "定时任务",
+    "cron": "定时任务",
+    "Cron": "定时任务",
+    "runs as": "以...运行",
+    "run as": "以...运行",
+
+    # 文件资源管理器操作与系统定位 (File Explorer & OS Reveal)
+    "Show in File Explorer": "在文件资源管理器中显示",
+    "Show in file explorer": "在文件资源管理器中显示",
+    "Reveal in File Explorer": "在文件资源管理器中显示",
+    "Reveal in file explorer": "在文件资源管理器中显示",
+    "Open in File Explorer": "在文件资源管理器中打开",
+    "Open in file explorer": "在文件资源管理器中打开",
+    "Show in Explorer": "在资源管理器中显示",
+    "Show in Finder": "在访达中显示",
+    "Reveal in Finder": "在访达中显示",
+    "Open in Finder": "在访达中打开",
+    "File Explorer": "文件资源管理器",
+    "file explorer": "文件资源管理器",
+
+    # 工具与调用统计 (Tools & Tool Calls)
+    "tools": "工具",
+    "Tools": "工具",
+    "tool": "工具",
+    "Tool": "工具",
+    "1 tool": "1 个工具",
+    "2 tools": "2 个工具",
+    "3 tools": "3 个工具",
+    "4 tools": "4 个工具",
+    "5 tools": "5 个工具",
 
     # 应用程序与设置 (Application & Plugin Settings)
     "Manage Antigravity app settings.": "管理 Antigravity 应用程序设置。",

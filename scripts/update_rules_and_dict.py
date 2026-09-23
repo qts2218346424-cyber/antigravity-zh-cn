@@ -143,6 +143,24 @@ def audit_and_update_rules():
         [r"^Modified in\s+(\d+)\s+(?:projects?|项目列表|个项目)$", "在 $1 个项目中已修改"],
         [r"^Modified in\s+(\d+)\s+(?:files?|文件)$", "在 $1 个文件中已修改"],
         [r"^Modified in\s+(\d+)\s+(?:items?|项)$", "在 $1 个项目中已修改"],
+
+        # 文件操作与系统目录定位
+        [r"^[Ss]how in [Ff]ile [Ee]xplorer$", "在文件资源管理器中显示"],
+        [r"^[Rr]eveal in [Ff]ile [Ee]xplorer$", "在文件资源管理器中显示"],
+        [r"^[Oo]pen in [Ff]ile [Ee]xplorer$", "在文件资源管理器中打开"],
+        [r"^[Ss]how in [Ee]xplorer$", "在资源管理器中显示"],
+        [r"^[Ss]how in [Ff]inder$", "在访达中显示"],
+        [r"^[Rr]eveal in [Ff]inder$", "在访达中显示"],
+
+        # 工具与调用统计 (5 tools 38)
+        [r"^(\d+)\s+tools?$", "$1 个工具"],
+        [r"^(\d+)\s+tools?\s+(\d+)$", "$1 个工具 $2"],
+        [r"^(\d+)\s+tool\s+calls?$", "$1 次工具调用"],
+        [r"^(\d+)\s+tools?\s*,\s*(\d+)\s*calls?$", "$1 个工具，$2 次调用"],
+
+        # 运行方式子短语与定时任务容错
+        [r"^runs?\s+as\s+(.+?)\.?$", "以 $1 运行。"],
+        [r"^crons?$", "定时任务"],
     ]
 
     for pattern, repl in additional_rules:
