@@ -28,7 +28,7 @@
         return DICT[text];
       }
 
-      // 1.1 标点容错（冒号、省略号、句号、问号）
+      // 1.1 标点与后缀容错（冒号、省略号、句号、问号、箭头、括号）
       if (text.endsWith(':') && DICT[text.slice(0, -1).trim()]) {
         return DICT[text.slice(0, -1).trim()] + '：';
       }
@@ -43,6 +43,20 @@
       }
       if (text.endsWith('?') && DICT[text.slice(0, -1).trim()]) {
         return DICT[text.slice(0, -1).trim()] + '？';
+      }
+      if (text.endsWith('>') && DICT[text.slice(0, -1).trim()]) {
+        return DICT[text.slice(0, -1).trim()] + ' >';
+      }
+      if (text.startsWith('(') && text.endsWith(')') && DICT[text.slice(1, -1).trim()]) {
+        return '（' + DICT[text.slice(1, -1).trim()] + '）';
+      }
+      const countMatch = text.match(/^(.+?)\s*\(([0-9]+)\)$/);
+      if (countMatch && DICT[countMatch[1].trim()]) {
+        return DICT[countMatch[1].trim()] + ' (' + countMatch[2] + ')';
+      }
+      const modelTagMatch = text.match(/^(.+?)\s*\((Thinking|Fast|Medium|High|Low)\)$/i);
+      if (modelTagMatch && DICT[modelTagMatch[2]]) {
+        return modelTagMatch[1] + '（' + DICT[modelTagMatch[2]] + '）';
       }
 
       // 2. 正则动态匹配
@@ -63,21 +77,13 @@
     // 排除的容器标签
     const IGNORED_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG', 'PATH', 'IFRAME']);
 
-    // 严格代码与输入保护选择器：绝对不要篡改代码编辑器、终端输出与输入框
+    // 严格代码与终端保护选择器：绝对不要篡改专业代码编辑器核心、终端输出与代码高亮块
     const CODE_PROTECT_SELECTOR = [
       'pre', 'code', 'kbd', 'samp', 'var',
       '[data-language]',
       '.cm-editor', '.cm-content', '.cm-line',
-      '.monaco-editor', '.monaco-editor *',
-      '.xterm', '.xterm *', '.terminal-container',
-      '[contenteditable="true"]',
-      'textarea', 'input:not([type="button"]):not([type="submit"])'
-    ].join(',');
-
-    // 用户聊天输入与模型输出中代码保护
-    const USER_CONTENT_SELECTOR = [
-      '[data-testid="user-message"]',
-      '[data-testid="chat-input"]',
+      '.monaco-editor',
+      '.xterm', '.terminal-container',
       '.code-block-content'
     ].join(',');
 
@@ -86,8 +92,27 @@
         const el = node.nodeType === 1 ? node : node.parentElement;
         if (!el || !el.closest) return true;
         if (IGNORED_TAGS.has(el.tagName)) return true;
-        if (el.closest(CODE_PROTECT_SELECTOR)) return true;
-        if (el.closest(USER_CONTENT_SELECTOR)) return true;
+
+        // 1. 占位符、浮层提示或禁用指针的 UI 描述文本一律允许汉化（如 Lexical placeholder）
+        if (el.closest('[class*="placeholder"], [data-placeholder], [class*="pointer-events-none"]')) {
+          return false;
+        }
+
+        // 2. 严格保护专业代码编辑器核心与终端容器
+        if (el.closest(CODE_PROTECT_SELECTOR)) {
+          return true;
+        }
+
+        // 3. 保护用户已发送的聊天历史消息正文
+        if (el.closest('[data-testid="user-message"]')) {
+          return true;
+        }
+
+        // 4. 保护正在编辑中的用户真实输入内容（注意：非占位符）
+        if (el.closest('[contenteditable="true"], textarea, input:not([type="button"]):not([type="submit"])')) {
+          return true;
+        }
+
         return false;
       } catch (_) {
         return true;
@@ -144,15 +169,15 @@
       return count;
     };
 
-    // 属性翻译 (aria-label, placeholder, title, value, alt)
+    // 属性翻译 (aria-label, placeholder, data-placeholder, title, value, alt, data-tooltip)
     const translateAttributes = (root) => {
       if (!root || !root.querySelectorAll) return 0;
       let count = 0;
       try {
-        const elements = root.querySelectorAll('[aria-label],[placeholder],[title],[alt],input[type="button"],input[type="submit"]');
+        const elements = root.querySelectorAll('[aria-label],[placeholder],[data-placeholder],[title],[alt],[data-tooltip],input[type="button"],input[type="submit"]');
         elements.forEach((el) => {
           if (isProtectedAttrNode(el)) return;
-          ['aria-label', 'placeholder', 'title', 'alt', 'value'].forEach((attr) => {
+          ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].forEach((attr) => {
             let val = el.getAttribute ? el.getAttribute(attr) : null;
             if (!val && attr in el && typeof el[attr] === 'string') val = el[attr];
             if (val) {
@@ -228,7 +253,7 @@
             childList: true,
             characterData: true,
             attributes: true,
-            attributeFilter: ['aria-label', 'placeholder', 'title', 'alt', 'value']
+            attributeFilter: ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value']
           });
           console.log('[AGY-ZH] MutationObserver attached successfully.');
         } catch (obsErr) {

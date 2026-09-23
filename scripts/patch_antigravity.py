@@ -291,8 +291,17 @@ function __agyTranslateMenu(m) {{
         updater_content = updater_content.replace('"Checking for Updates..."', '"正在检查更新..."')
         updater_content = updater_content.replace('"Downloading Update..."', '"正在下载更新..."')
         updater_content = updater_content.replace('"Restart to Update"', '"重启以更新"')
+        # 禁止后台静默自动下载与退出时静默覆盖安装，防止破坏汉化
+        updater_content = updater_content.replace(
+            "electron_updater_1.autoUpdater.autoDownload = true;",
+            "electron_updater_1.autoUpdater.autoDownload = false;"
+        )
+        updater_content = updater_content.replace(
+            "electron_updater_1.autoUpdater.autoInstallOnAppQuit = electron_1.app.isPackaged;",
+            "electron_updater_1.autoUpdater.autoInstallOnAppQuit = false;"
+        )
         asar_data = replace_asar_file_content(asar_data, "dist/updater.js", updater_content.encode("utf-8"))
-        print("  [OK] 更新提示 (dist/updater.js) 修补完成")
+        print("  [OK] 更新提示与自动静默覆盖防护 (dist/updater.js) 修补完成")
     except Exception as e:
         print(f"  [!] 忽略非致命项 dist/updater.js: {e}")
 
@@ -395,6 +404,11 @@ const __AGY_ZH_CODE__ = {js_raw};
                 pass
 
     print("[OK] Antigravity 汉化补丁无损安装成功！所有解包索引 100% 保留！")
+    # 默认自动禁止静默更新，防止重启后被官方静默覆盖
+    try:
+        toggle_auto_updates(install_dir, disable=True)
+    except Exception as e:
+        print(f"  [!] 自动禁用更新提示: {e}")
 
 
 def restore_backup(install_dir: Path):
@@ -425,6 +439,17 @@ def toggle_auto_updates(install_dir: Path, disable: bool):
             print("ℹ 当前已处于禁止自动更新状态。")
         else:
             print("⚠ 未找到 app-update.yml 配置文件。")
+
+        # 清除本地缓存中的 pending 安装包，彻底杜绝重启静默安装
+        local_app_data = os.environ.get('LOCALAPPDATA', '')
+        if local_app_data:
+            cache_dir = Path(local_app_data) / "antigravity-updater"
+            if cache_dir.is_dir():
+                try:
+                    shutil.rmtree(cache_dir, ignore_errors=True)
+                    print("[OK] 已清空后台静默更新缓存 (antigravity-updater)。")
+                except Exception as e:
+                    print(f"⚠ 清理更新缓存失败: {e}")
     else:
         if disabled_yml.is_file():
             shutil.move(str(disabled_yml), str(update_yml))

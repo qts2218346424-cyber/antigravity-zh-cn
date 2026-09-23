@@ -1,63 +1,322 @@
 [
-  ["^(\\d+) agents? running$", "$1 个代理正在运行"],
-  ["^No agents running$", "无运行中的代理"],
-  ["^(\\d+) files? changed$", "$1 个文件已修改"],
-  ["^(\\d+) additions?, (\\d+) deletions?$", "$1 处添加，$2 处删除"],
-  ["^Added (\\d+) lines?$", "添加了 $1 行"],
-  ["^Deleted (\\d+) lines?$", "删除了 $1 行"],
-  ["^Step (\\d+) of (\\d+)$", "步骤 $1 / $2"],
-  ["^(\\d+) of (\\d+)$", "$1 / $2"],
-  ["^Task (\\d+) completed$", "任务 $1 已完成"],
-  ["^Task (\\d+) failed$", "任务 $1 已失败"],
-  ["^Task (\\d+) running$", "任务 $1 运行中"],
-  ["^(\\d+) seconds? ago$", "$1 秒前"],
-  ["^(\\d+) mins? ago$", "$1 分钟前"],
-  ["^(\\d+) hours? ago$", "$1 小时前"],
-  ["^(\\d+) days? ago$", "$1 天前"],
-  ["^Just now$", "刚刚"],
-  ["^Delete (\\d+) chats?$", "删除 $1 个对话"],
-  ["^Are you sure you want to delete (.+)\\?$", "确定要删除 $1 吗？"],
-  ["^Connecting to (.+)\\.\\.\\.$", "正在连接至 $1..."],
-  ["^Running command: (.+)$", "正在执行命令: $1"],
-  ["^Listening on (.+)$", "监听于 $1"],
-  ["^Updated (.+)$", "更新于 $1"],
-  ["^Resets in (\\d+)d (\\d+)h$", "$1 天 $2 小时后重置"],
-  ["^Resets in (\\d+)d$", "$1 天后重置"],
-  ["^Resets in (\\d+)h (\\d+)m$", "$1 小时 $2 分钟后重置"],
-  ["^Resets in (\\d+)h$", "$1 小时后重置"],
-  ["^Resets in (\\d+)m$", "$1 分钟后重置"],
-  ["^Resets in <1m$", "<1 分钟后重置"],
-  ["^Resets in (.+)$", "$1 后重置"],
-  ["^Learn more about (.+)$", "了解有关 $1 的更多信息"],
-  ["^Also includes (.+) when working in this project\\.?$", "在此项目中工作时同时包含 $1。"],
-  ["^Manage (.+) folders, agent settings, and permissions\\.?$", "管理 $1 文件夹、Agent 设置与运行权限。"],
-  ["^Agent settings and permissions for conversations outside of (.+)\\.?$", "针对 $1 之外会话的 Agent 设置与运行权限。"],
-  ["^A (.+) with this name already exists\\.?$", "已存在同名的 $1。"],
-  ["^Edit (.+) name$", "编辑 $1 名称"],
-  ["^Select one of the (two|three) options\\. Agent settings and permissions can be further customized below\\.?$", "请选择以下 $1 个选项之一。Agent 设置与运行权限可在下方进一步自定义。"],
-  ["^When toggled on, (.+) collects usage data to help Google enhance performance and features\\.?$", "启用后，$1 将收集匿名使用数据以帮助 Google 持续优化产品性能与功能体验。"],
-  ["^Receive product updates, tips, and promotions from (.+) via email\\.?$", "通过电子邮件接收来自 $1 的产品更新、实用技巧以及优惠动态。"],
-  ["^You can upgrade to a (.+) plan to receive higher rate limits\\.?$", "您可以升级至 $1 订阅计划以获取更高的请求速率与使用额度。"],
-  ["^Your Plan:\\s*(.+)$", "当前计划: $1"],
-  ["^Thought for (\\d+)s$", "思考了 $1 秒"],
-  ["^Thinking for (\\d+)s$", "正在思考 $1 秒"],
-  ["^Thought Process$", "思考过程"],
-  ["^Exploring (\\d+) actions?$", "正在探索 $1 个操作"],
-  ["^Explored (\\d+) actions?$", "已探索 $1 个操作"],
-  ["^Exploring (\\d+) files?$", "正在探索 $1 个文件"],
-  ["^Explored (\\d+) files?$", "已探索 $1 个文件"],
-  ["^Exploring (\\d+) searches?$", "正在探索 $1 次搜索"],
-  ["^Explored (\\d+) searches?$", "已探索 $1 次搜索"],
-  ["^Exploring (\\d+) tasks?$", "正在探索 $1 个任务"],
-  ["^Explored (\\d+) tasks?$", "已探索 $1 个任务"],
-  ["^Exploring (\\d+) commands?$", "正在探索 $1 条命令"],
-  ["^Explored (\\d+) commands?$", "已探索 $1 条命令"],
-  ["^Exploring (\\d+) pages?$", "正在探索 $1 个页面"],
-  ["^Explored (\\d+) pages?$", "已探索 $1 个页面"],
-  ["^Running (\\d+) commands?$", "正在执行 $1 条命令"],
-  ["^Ran (\\d+) commands?$", "已执行 $1 条命令"],
-  ["^Edited (.+)$", "已编辑 $1"],
-  ["^Editing (.+)$", "正在编辑 $1"],
-  ["^Created (.+)$", "已创建 $1"],
-  ["^Deleted (.+)$", "已删除 $1"]
+  [
+    "^(\\d+) agents? running$",
+    "$1 个代理正在运行"
+  ],
+  [
+    "^No agents running$",
+    "无运行中的代理"
+  ],
+  [
+    "^(\\d+) files? changed$",
+    "$1 个文件已修改"
+  ],
+  [
+    "^(\\d+) additions?, (\\d+) deletions?$",
+    "$1 处添加，$2 处删除"
+  ],
+  [
+    "^Added (\\d+) lines?$",
+    "添加了 $1 行"
+  ],
+  [
+    "^Deleted (\\d+) lines?$",
+    "删除了 $1 行"
+  ],
+  [
+    "^Step (\\d+) of (\\d+)$",
+    "步骤 $1 / $2"
+  ],
+  [
+    "^(\\d+) of (\\d+)$",
+    "$1 / $2"
+  ],
+  [
+    "^Task (\\d+) completed$",
+    "任务 $1 已完成"
+  ],
+  [
+    "^Task (\\d+) failed$",
+    "任务 $1 已失败"
+  ],
+  [
+    "^Task (\\d+) running$",
+    "任务 $1 运行中"
+  ],
+  [
+    "^(\\d+) seconds? ago$",
+    "$1 秒前"
+  ],
+  [
+    "^(\\d+) mins? ago$",
+    "$1 分钟前"
+  ],
+  [
+    "^(\\d+) hours? ago$",
+    "$1 小时前"
+  ],
+  [
+    "^(\\d+) days? ago$",
+    "$1 天前"
+  ],
+  [
+    "^Just now$",
+    "刚刚"
+  ],
+  [
+    "^Delete (\\d+) chats?$",
+    "删除 $1 个对话"
+  ],
+  [
+    "^Are you sure you want to delete (.+)\\?$",
+    "确定要删除 $1 吗？"
+  ],
+  [
+    "^Connecting to (.+)\\.\\.\\.$",
+    "正在连接至 $1..."
+  ],
+  [
+    "^Running command: (.+)$",
+    "正在执行命令: $1"
+  ],
+  [
+    "^Listening on (.+)$",
+    "监听于 $1"
+  ],
+  [
+    "^Updated (.+)$",
+    "更新于 $1"
+  ],
+  [
+    "^Resets in (\\d+)d (\\d+)h$",
+    "$1 天 $2 小时后重置"
+  ],
+  [
+    "^Resets in (\\d+)d$",
+    "$1 天后重置"
+  ],
+  [
+    "^Resets in (\\d+)h (\\d+)m$",
+    "$1 小时 $2 分钟后重置"
+  ],
+  [
+    "^Resets in (\\d+)h$",
+    "$1 小时后重置"
+  ],
+  [
+    "^Resets in (\\d+)m$",
+    "$1 分钟后重置"
+  ],
+  [
+    "^Resets in <1m$",
+    "<1 分钟后重置"
+  ],
+  [
+    "^Resets in (.+)$",
+    "$1 后重置"
+  ],
+  [
+    "^Learn more about (.+)$",
+    "了解有关 $1 的更多信息"
+  ],
+  [
+    "^Also includes (.+) when working in this project\\.?$",
+    "在此项目中工作时同时包含 $1。"
+  ],
+  [
+    "^Manage (.+) folders, agent settings, and permissions\\.?$",
+    "管理 $1 文件夹、Agent 设置与运行权限。"
+  ],
+  [
+    "^Agent settings and permissions for conversations outside of (.+)\\.?$",
+    "针对 $1 之外会话的 Agent 设置与运行权限。"
+  ],
+  [
+    "^A (.+) with this name already exists\\.?$",
+    "已存在同名的 $1。"
+  ],
+  [
+    "^Edit (.+) name$",
+    "编辑 $1 名称"
+  ],
+  [
+    "^Select one of the (two|three) options\\. Agent settings and permissions can be further customized below\\.?$",
+    "请选择以下 $1 个选项之一。Agent 设置与运行权限可在下方进一步自定义。"
+  ],
+  [
+    "^When toggled on, (.+) collects usage data to help Google enhance performance and features\\.?$",
+    "启用后，$1 将收集匿名使用数据以帮助 Google 持续优化产品性能与功能体验。"
+  ],
+  [
+    "^Receive product updates, tips, and promotions from (.+) via email\\.?$",
+    "通过电子邮件接收来自 $1 的产品更新、实用技巧以及优惠动态。"
+  ],
+  [
+    "^You can upgrade to a (.+) plan to receive higher rate limits\\.?$",
+    "您可以升级至 $1 订阅计划以获取更高的请求速率与使用额度。"
+  ],
+  [
+    "^Your Plan:\\s*(.+)$",
+    "当前计划: $1"
+  ],
+  [
+    "^Thought for (\\d+)s$",
+    "思考了 $1 秒"
+  ],
+  [
+    "^Thinking for (\\d+)s$",
+    "正在思考 $1 秒"
+  ],
+  [
+    "^Thought Process$",
+    "思考过程"
+  ],
+  [
+    "^Exploring (\\d+) actions?$",
+    "正在探索 $1 个操作"
+  ],
+  [
+    "^Explored (\\d+) actions?$",
+    "已探索 $1 个操作"
+  ],
+  [
+    "^Exploring (\\d+) files?$",
+    "正在探索 $1 个文件"
+  ],
+  [
+    "^Explored (\\d+) files?$",
+    "已探索 $1 个文件"
+  ],
+  [
+    "^Exploring (\\d+) searches?$",
+    "正在探索 $1 次搜索"
+  ],
+  [
+    "^Explored (\\d+) searches?$",
+    "已探索 $1 次搜索"
+  ],
+  [
+    "^Exploring (\\d+) tasks?$",
+    "正在探索 $1 个任务"
+  ],
+  [
+    "^Explored (\\d+) tasks?$",
+    "已探索 $1 个任务"
+  ],
+  [
+    "^Exploring (\\d+) commands?$",
+    "正在探索 $1 条命令"
+  ],
+  [
+    "^Explored (\\d+) commands?$",
+    "已探索 $1 条命令"
+  ],
+  [
+    "^Exploring (\\d+) pages?$",
+    "正在探索 $1 个页面"
+  ],
+  [
+    "^Explored (\\d+) pages?$",
+    "已探索 $1 个页面"
+  ],
+  [
+    "^Running (\\d+) commands?$",
+    "正在执行 $1 条命令"
+  ],
+  [
+    "^Ran (\\d+) commands?$",
+    "已执行 $1 条命令"
+  ],
+  [
+    "^Edited (.+)$",
+    "已编辑 $1"
+  ],
+  [
+    "^Editing (.+)$",
+    "正在编辑 $1"
+  ],
+  [
+    "^Created (.+)$",
+    "已创建 $1"
+  ],
+  [
+    "^Deleted (.+)$",
+    "已删除 $1"
+  ],
+  [
+    "^(.+?)\\s*\\((Thinking|thinking)\\)$",
+    "$1（深度思考）"
+  ],
+  [
+    "^(.+?)\\s*\\((Fast|fast)\\)$",
+    "$1（快速）"
+  ],
+  [
+    "^(.+?)\\s*\\((Medium|medium)\\)$",
+    "$1（中等）"
+  ],
+  [
+    "^(.+?)\\s*\\((High|high)\\)$",
+    "$1（高）"
+  ],
+  [
+    "^(.+?)\\s*\\((Low|low)\\)$",
+    "$1（低）"
+  ],
+  [
+    "^Resets in (\\d+)s$",
+    "$1 秒后重置"
+  ],
+  [
+    "^Resets in <1h$",
+    "<1 小时后重置"
+  ],
+  [
+    "^(\\d+)% Remaining$",
+    "剩余 $1%"
+  ],
+  [
+    "^(\\d+)% remaining$",
+    "剩余 $1%"
+  ],
+  [
+    "^(\\d+)% Used$",
+    "已用 $1%"
+  ],
+  [
+    "^(\\d+)% used$",
+    "已用 $1%"
+  ],
+  [
+    "^(\\d+)% Limit Remaining$",
+    "剩余配额 $1%"
+  ],
+  [
+    "^(\\d+)% limit remaining$",
+    "剩余配额 $1%"
+  ],
+  [
+    "^Tool Calls \\((\\d+)\\)$",
+    "工具调用 ($1)"
+  ],
+  [
+    "^System Prompt Sections \\((\\d+)\\)$",
+    "系统提示词分段 ($1)"
+  ],
+  [
+    "^Child Subagents \\((\\d+)\\)$",
+    "子智能体 ($1)"
+  ],
+  [
+    "^Generation Steps \\((\\d+)\\)$",
+    "生成步骤 ($1)"
+  ],
+  [
+    "^Message History \\((\\d+)\\)$",
+    "历史消息 ($1)"
+  ],
+  [
+    "^See all \\((\\d+)\\)$",
+    "查看全部 ($1)"
+  ]
 ]

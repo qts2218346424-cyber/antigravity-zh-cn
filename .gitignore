@@ -23,6 +23,7 @@ Desktop.ini
 # Temporary files
 temp/
 tmp/
+scratch/
 *.tmp
 resources/untranslated.json
 resources/untranslated_all.json

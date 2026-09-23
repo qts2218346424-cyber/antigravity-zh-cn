@@ -175,10 +175,13 @@ python scripts/extract_strings.py
 #### Q: 汉化后会影响代码生成或终端命令吗？
 **不会**。我们的 DOM 引擎设置了多重白名单防线，代码编辑器区、Terminal 终端流、Markdown 代码块、用户输入框均被严格保护，只有按钮、标签、菜单等 UI 界面元素才会被中文化。
 
-#### Q: Antigravity 自动更新后汉化失效了怎么办？
-官方自动更新会下载全新的 `app.asar` 覆盖本地目录。若更新后界面变为英文：
-- 重新运行 `install-windows.bat`（或对应系统脚本），按 `1` 重新安装即可；
-- 或者使用菜单选项 `5` 禁止自动更新，锁定当前版本。
+#### Q: 为什么重启应用后汉化会掉？更新软件版本后会掉吗？
+**原因分析**：Google 官方客户端内置了后台静默更新机制（Electron autoUpdater），默认会在后台静默轮询并下载官方全量更新包（`installer.exe`）到 `%LOCALAPPDATA%\antigravity-updater\pending` 中。当用户退出或重启 Antigravity 时，更新器会自动执行静默覆盖安装，将整个安装目录及 `resources/app.asar` 还原为 Google 官方未汉化版。
+
+**最新版本的永久解决方案**：
+1. **自动禁用静默更新**：最新补丁安装时，已默认将 `dist/updater.js` 中的 `autoDownload` 与 `autoInstallOnAppQuit` 关闭，从代码底层阻断静默下载；
+2. **清空并阻断静默缓存**：自动将 `app-update.yml` 重命名为 `app-update.yml.disabled`，并彻底清空本地残留的静默安装包，确保重启再也不会被静默覆盖；
+3. **版本升级后一键重打**：若未来您主动选择升级了新版 Antigravity，只需鼠标双击 `install-windows.bat` 按 `1`，2 秒内即可全自动无损重装最新汉化！
 
 #### Q: 如何彻底卸载汉化补丁？
 运行安装脚本并选择选项 `[4] 还原原版 / 卸载补丁`，程序会自动将 `app.asar.bak` 恢复为原样，没有任何残留文件。
