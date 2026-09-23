@@ -666,5 +666,25 @@
   [
     "^Send Immediately$",
     "立即发送"
+  ],
+  [
+    "^now$",
+    "刚刚"
+  ],
+  [
+    "^Now$",
+    "刚刚"
+  ],
+  [
+    "^(?:全部|所有|All)?\\\\s*scheduled tasks run as (.+?)\\\\.?$",
+    "所有定时任务均以  模型运行。"
+  ],
+  [
+    "^scheduled tasks run as (.+?)\\\\.?$",
+    "定时任务均以  模型运行。"
+  ],
+  [
+    "^No scheduled tasks(?: configured)?\\\\.?$",
+    "尚未配置任何定时任务。"
   ]
 ]
