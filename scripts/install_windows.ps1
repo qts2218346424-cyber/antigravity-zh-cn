@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Antigravity Windows 简体中文汉化补丁安装/管理脚本
 .DESCRIPTION
@@ -165,10 +165,11 @@ function Run-InteractiveMenu {
         Write-Color "[5] 禁止自动更新 (锁定当前版本)" Magenta
         Write-Color "[6] 恢复自动更新" Magenta
         Write-Color "[7] 查看 Antigravity IDE 汉化指引" Gray
+        Write-Color "[8] 开启/配置 版本更新自动维护看门狗 (Auto-Maintainer & GitHub 同步)" Cyan
         Write-Color "[Q] 退出" DarkGray
         Write-Host ""
 
-        $choice = (Read-Host "请选择操作 [1-7 / Q]").Trim().ToUpper()
+        $choice = (Read-Host "请选择操作 [1-8 / Q]").Trim().ToUpper()
         switch ($choice) {
             '1' {
                 $ok = Invoke-PatchAction "install" "zh-CN" $installDir
@@ -199,6 +200,15 @@ function Run-InteractiveMenu {
             }
             '7' {
                 Show-IdeGuidance
+            }
+            '8' {
+                $watchdogBat = Join-Path $ScriptDir "setup_watchdog.bat"
+                if (Test-Path $watchdogBat) {
+                    Start-Process cmd.exe -ArgumentList "/c `"$watchdogBat`"" -Wait
+                } else {
+                    Write-Color "未找到 setup_watchdog.bat 文件。" Red
+                    Pause
+                }
             }
             'Q' {
                 Write-Color "已退出。" Gray

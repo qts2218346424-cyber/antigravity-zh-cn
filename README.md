@@ -74,6 +74,7 @@
    [5] 禁止自动更新 (锁定当前版本)
    [6] 恢复自动更新
    [7] 查看 Antigravity IDE 汉化指引
+   [8] 开启/配置 版本更新自动维护看门狗 (Auto-Maintainer & GitHub 同步)
    [Q] 退出
    ```
 5. 输入 `1` 回车，等待 2-5 秒即可完成汉化；
@@ -139,6 +140,7 @@ Antigravity 套件中配套的 **Antigravity IDE**（代码编辑器）基于 VS
             ├─────────────────────────────────────┤
             │ • patch_antigravity.py (补丁核心)    │
             │ • runtime-zh.js (DOM 遍历与监听引擎)│
+            │ • auto_maintainer.py (自动化引擎)   │
             │ • antigravity-zh-CN.json (界面词典) │
             │ • desktop-zh-CN.json (外壳词典)     │
             │ • rules-zh-CN.json (动态正则规则)   │
@@ -153,17 +155,34 @@ Antigravity 套件中配套的 **Antigravity IDE**（代码编辑器）基于 VS
 
 ---
 
+## 全自动版本跟踪与 GitHub 持续维护 (Auto-Maintainer)
+
+为了让开源项目在 Google 官方发布新版时能够**无人值守自动同步维护**，本项目内置了**双轨自动化维护系统**：
+
+### 1. 本地无人值守看门狗 (`scripts/setup_watchdog.bat`)
+- 双击运行 `scripts/setup_watchdog.bat` 并按 `1`，即可一键注册 Windows 后台计划任务；
+- 任务每小时静默检测本地 Antigravity 是否发生版本更新（如 2.16.0 升级至 2.17.0）；
+- 一旦检测到新版发布或程序被官方覆盖，脚本会自动：
+  1. 深度拉取新版 Bundle 并提取新增英文词条；
+  2. 自动增量翻译、同步繁体并运行测试集；
+  3. 为新版本原位重打补丁，并执行 `git commit` 与 `git push origin main` 自动同步至您的 GitHub 仓库！
+
+### 2. GitHub Actions 云端定时巡检 (`.github/workflows/auto-update.yml`)
+- 仓库已内置 CI/CD 定时工作流，每 6 小时在 GitHub 云端自动轮询 Google 官方版本清单；
+- 发现版本升级时，云端 Runner 自动编译校验词库并生成提交推送，保持远程仓库始终与官方最新版本同步。
+
+---
+
 ## 开发者指南：词条抽取与更新
 
-当 Antigravity 发布大版本更新导致界面新增英文词条时，维护者可以通过内置工具轻松提取并补全翻译：
+当 Antigravity 发布大版本更新导致界面新增英文词条时，维护者亦可手动执行自动化流水线：
 
 ```bash
-# 1. 确保 Antigravity 正在运行
-# 2. 执行词条抽取工具：
-python scripts/extract_strings.py
+# 一键执行全自动维护（检测、提取、翻译、测试、打补丁与推送）
+python scripts/auto_maintainer.py
 
-# 脚本会自动连接当前实例，抽取全部界面候选词条，
-# 并与现有词典对比，输出尚未翻译的内容到 resources/untranslated.json
+# 或者手动抽取词条对比：
+python scripts/extract_strings.py
 ```
 
 翻译 `untranslated.json` 中的新词条后，合并入 `resources/antigravity-zh-CN.json` 并提交 Pull Request 即可！

@@ -1,0 +1,61 @@
+name: Antigravity Auto-Update & Maintenance
+
+on:
+  schedule:
+    # Run every 6 hours to check for official Antigravity releases
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allow manual trigger from GitHub Web UI
+  push:
+    branches:
+      - main
+    paths:
+      - 'resources/**'
+      - 'scripts/**'
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check for Antigravity Updates & Run Quality Gate
+        run: |
+          echo "Checking official Antigravity release manifests..."
+          python -m unittest discover tests
+
+      - name: Build and Validate Dictionaries
+        run: |
+          python scripts/build_full_dictionary.py
+          python -m unittest discover tests
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Antigravity Auto-Maintainer Bot"
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "Changes detected, committing and pushing..."
+            git add -A
+            git commit -m "chore(auto): synchronize latest dictionary and release updates [skip ci]"
+            git push origin main
+          else
+            echo "No changes detected. Repository is up-to-date."
+          fi
