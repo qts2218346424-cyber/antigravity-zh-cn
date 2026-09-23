@@ -482,5 +482,21 @@
   [
     "^Universal TypeSafe Jev \\(System One\\) Intuitive Coprocessor.*$",
     "通用 TypeSafe Jev（快思考/系统一）直觉协处理器。"
+  ],
+  [
+    "^Media\\\\s*\\\\(Today\\\\s+(.+)\\\\)$",
+    "媒体 (今天 )"
+  ],
+  [
+    "^Media\\\\s*\\\\(Yesterday\\\\s+(.+)\\\\)$",
+    "媒体 (昨天 )"
+  ],
+  [
+    "^Media\\\\s*\\\\((.+)\\\\)$",
+    "媒体 ()"
+  ],
+  [
+    "^Media\\\\s+(\\\\d+)$",
+    "媒体 "
   ]
 ]

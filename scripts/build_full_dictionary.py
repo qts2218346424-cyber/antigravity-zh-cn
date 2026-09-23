@@ -14,6 +14,42 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 NEW_TRANSLATIONS = {
+    # Agent 设置与沙箱/审查模式
+    "Agent Settings": "Agent 设置",
+    "Agent settings": "Agent 设置",
+    "Require Review": "需要审查",
+    "Require review": "需要审查",
+    "Proceed in Sandbox": "在沙箱中继续",
+    "Proceed in sandbox": "在沙箱中继续",
+
+    # 斜杠命令与技能描述（命令本身保留英文，仅介绍汉化）
+    "Run until the specified goal is completely finished.": "持续运行直至指定目标彻底完成。",
+    "Run until the specified goal is completely finished": "持续运行直至指定目标彻底完成",
+    "Run an instruction on a recurring schedule or as a one-time timer.": "按定时循环计划或单次倒计时运行指令。",
+    "Run an instruction on a recurring schedule or as a one-time timer": "按定时循环计划或单次倒计时运行指令",
+    "Invoke a browser agent for web tasks.": "调用浏览器 Agent 执行网页相关任务。",
+    "Invoke a browser agent for web tasks": "调用浏览器 Agent 执行网页相关任务",
+    "Interview me to align on a plan.": "通过人机交互访谈对齐设计与技术方案。",
+    "Interview me to align on a plan": "通过人机交互访谈对齐设计与技术方案",
+    "Invoke a team of agents to autonomously tackle large projects.": "调用多智能体团队自主协作处理大型项目。",
+    "Invoke a team of agents to autonomously tackle large projects": "调用多智能体团队自主协作处理大型项目",
+    "Reflect on recent successes or corrections to capture reusable skills or rules.": "反思近期成功经验或纠偏记录，沉淀可复用的技能或规则。",
+    "Reflect on recent successes or corrections to capture reusable skills or rules": "反思近期成功经验或纠偏记录，沉淀可复用的技能或规则",
+    "Invoke the Boost multi-agent orchestrator for complex tasks.": "调用 Boost 多智能体编排器处理复杂任务。",
+    "Invoke the Boost multi-agent orchestrator for complex tasks": "调用 Boost 多智能体编排器处理复杂任务",
+    "Compact the conversation now (summarize history to free up the context window).": "立即压缩对话（总结历史记录以释放上下文窗口）。",
+    "Compact the conversation now (summarize history to free up the context window)": "立即压缩对话（总结历史记录以释放上下文窗口）",
+    "Generate an implementation plan for the current task.": "为当前任务生成详细的技术实施方案。",
+    "Generate an implementation plan for the current task": "为当前任务生成详细的技术实施方案",
+
+    # 工件与媒体列表
+    "Implementation Plan": "实施计划",
+    "implementation plan": "实施计划",
+    "Implementation plan": "实施计划",
+    "Scratch Main": "临时脚本 (Scratch Main)",
+    "Scratch main": "临时脚本 (Scratch Main)",
+    "scratch main": "临时脚本 (Scratch Main)",
+
     # 思考过程 / 工具执行动词
     "Ran": "已运行",
     "Analyzed": "已分析",
