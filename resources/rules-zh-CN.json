@@ -1,0 +1,22 @@
+[
+  ["^(\\d+) agents? running$", "$1 个代理正在运行"],
+  ["^No agents running$", "无运行中的代理"],
+  ["^(\\d+) files? changed$", "$1 个文件已修改"],
+  ["^(\\d+) additions?, (\\d+) deletions?$", "$1 处添加，$2 处删除"],
+  ["^Added (\\d+) lines?$", "添加了 $1 行"],
+  ["^Deleted (\\d+) lines?$", "删除了 $1 行"],
+  ["^Step (\\d+) of (\\d+)$", "步骤 $1 / $2"],
+  ["^Task (\\d+) completed$", "任务 $1 已完成"],
+  ["^Task (\\d+) failed$", "任务 $1 已失败"],
+  ["^Task (\\d+) running$", "任务 $1 运行中"],
+  ["^(\\d+) seconds? ago$", "$1 秒前"],
+  ["^(\\d+) mins? ago$", "$1 分钟前"],
+  ["^(\\d+) hours? ago$", "$1 小时前"],
+  ["^(\\d+) days? ago$", "$1 天前"],
+  ["^Just now$", "刚刚"],
+  ["^Delete (\\d+) chats?$", "删除 $1 个对话"],
+  ["^Are you sure you want to delete (.+)\\?$", "确定要删除 $1 吗？"],
+  ["^Connecting to (.+)\\.\\.\\.$", "正在连接至 $1..."],
+  ["^Running command: (.+)$", "正在执行命令: $1"],
+  ["^Listening on (.+)$", "监听于 $1"]
+]

@@ -1,0 +1,27 @@
+# Logs & Backups
+*.log
+*.bak
+*.asar.bak
+app-update.yml.disabled
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+
+# OS specific
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+resources/untranslated.json
