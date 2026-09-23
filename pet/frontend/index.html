@@ -1,29 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Antigravity Desktop Pet</title>
+  <title>Antigravity 桌面宠物</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="pet-app" class="state-idle" data-tauri-drag-region>
     
-    <!-- Top Floating Toolbar (Interactive Buttons) -->
+    <!-- 顶部悬浮控制栏（鼠标移入宠物时轻柔淡入，平时隐藏） -->
     <div class="top-toolbar interactive" data-tauri-drag-region>
       <div class="toolbar-left no-drag">
-        <button id="btn-profile-switcher" class="tool-btn" title="Switch Account Profiles" aria-label="Profiles">
+        <button id="btn-profile-switcher" class="tool-btn" title="一键切换账号" aria-label="切换账号">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </button>
-        <button id="btn-avatar-picker" class="tool-btn" title="Customize Mascot Avatar" aria-label="Avatar Customizer">
+        <button id="btn-avatar-picker" class="tool-btn" title="更换宠物形象" aria-label="更换形象">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
           </svg>
         </button>
-        <button id="btn-state-sim" class="tool-btn" title="Simulate States & Tasks" aria-label="State Simulator">
+        <button id="btn-state-sim" class="tool-btn" title="动作与通知调试" aria-label="状态模拟">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
@@ -31,20 +31,20 @@
       </div>
 
       <div class="toolbar-right no-drag">
-        <button id="btn-toggle-pin" class="tool-btn active" title="Toggle Always on Top" aria-label="Pin on Top">
+        <button id="btn-toggle-pin" class="tool-btn active" title="始终置顶窗口" aria-label="置顶">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="17" x2="12" y2="22"></line>
             <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
           </svg>
         </button>
-        <button id="btn-toggle-ghost" class="tool-btn" title="Toggle Click-Through Mode (Ctrl+Alt+P)" aria-label="Click Through">
+        <button id="btn-toggle-ghost" class="tool-btn" title="鼠标穿透模式 (快捷键 Ctrl+Alt+P)" aria-label="鼠标穿透">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 10h.01"></path>
             <path d="M15 10h.01"></path>
             <path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"></path>
           </svg>
         </button>
-        <button id="btn-minimize" class="tool-btn" title="Minimize to Tray" aria-label="Minimize">
+        <button id="btn-minimize" class="tool-btn" title="隐藏至托盘" aria-label="最小化">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
@@ -52,11 +52,11 @@
       </div>
     </div>
 
-    <!-- Mascot Viewport & Interactive Avatar -->
+    <!-- 宠物展示主区域（支持全域拖拽） -->
     <div id="mascot-viewport" class="mascot-viewport" data-tauri-drag-region>
       <div id="mascot-container" class="mascot-container" data-tauri-drag-region>
         
-        <!-- Native Gemini Vector SVG Mascot -->
+        <!-- 原生 Gemini 动态星灵 SVG -->
         <div id="svg-mascot-wrapper" data-tauri-drag-region>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%" id="gemini-mascot-svg">
             <defs>
@@ -98,10 +98,9 @@
               </filter>
             </defs>
 
-            <!-- Outer Aura Glow -->
+            <!-- 呼吸星环与灵能轨道 -->
             <circle cx="120" cy="120" r="95" fill="url(#celestialGlow)" class="mascot-aura" />
 
-            <!-- Orbital Ring with Orbiting Energy Spark -->
             <g class="orbital-system" transform="rotate(-20 120 120)">
               <ellipse cx="120" cy="120" rx="90" ry="32" fill="none" stroke="url(#orbitalRingGrad)" stroke-width="2.5" stroke-dasharray="8 6" opacity="0.75" class="orbital-ring" />
               <circle cx="210" cy="120" r="4.5" fill="#00F0FF" filter="url(#glowFilter)" class="satellite-spark">
@@ -109,7 +108,7 @@
               </circle>
             </g>
 
-            <!-- Mascot Star Shape Core -->
+            <!-- 星灵本体核心 -->
             <g class="mascot-star-body" id="mascot-star-group">
               <path d="M 120,25 Q 120,120 25,120 Q 120,120 120,215 Q 120,120 215,120 Q 120,120 120,25 Z"
                     fill="url(#geminiCoreGrad)"
@@ -121,13 +120,13 @@
                     opacity="0.18"
                     class="inner-highlight" />
 
-              <!-- Antennae / Star Points Tips -->
+              <!-- 灵能星芒触角 -->
               <circle cx="120" cy="22" r="3.5" fill="#00F0FF" filter="url(#glowFilter)" />
               <circle cx="218" cy="120" r="3.5" fill="#FF007A" filter="url(#glowFilter)" />
               <circle cx="120" cy="218" r="3.5" fill="#7B2CBF" filter="url(#glowFilter)" />
               <circle cx="22" cy="120" r="3.5" fill="#00F0FF" filter="url(#glowFilter)" />
 
-              <!-- Cute Animated Face -->
+              <!-- 灵动面部表情与眨眼 -->
               <g class="mascot-face" id="mascot-face">
                 <ellipse cx="88" cy="132" rx="7" ry="4" fill="#FF4081" opacity="0.65" filter="url(#glowFilter)" class="blush blush-left" />
                 <ellipse cx="152" cy="132" rx="7" ry="4" fill="#FF4081" opacity="0.65" filter="url(#glowFilter)" class="blush blush-right" />
@@ -151,7 +150,7 @@
                 <path id="mascot-mouth" d="M 112,130 Q 120,138 128,130" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" class="mouth" />
               </g>
 
-              <!-- State Indicator Overlays -->
+              <!-- 状态光效层 -->
               <g class="state-overlay thinking-sparks" opacity="0" id="thinking-indicator">
                 <circle cx="120" cy="65" r="4" fill="#00F0FF" filter="url(#intenseGlow)" />
                 <circle cx="70" cy="85" r="3" fill="#7000FF" filter="url(#intenseGlow)" />
@@ -172,52 +171,52 @@
           </svg>
         </div>
 
-        <!-- Custom Avatar Layer (for user imported PNG, GIF, WebP, SVG) -->
+        <!-- 自定义形象渲染层（支持导入 PNG, GIF, WebP, SVG） -->
         <div id="custom-avatar-wrapper" style="display: none;" data-tauri-drag-region>
-          <img id="custom-avatar-img" alt="Custom Avatar" />
+          <img id="custom-avatar-img" alt="自定义宠物形象" />
         </div>
 
       </div>
     </div>
 
-    <!-- Quota Meter Badge & Tooltip Popover -->
+    <!-- 底部极简额度胶囊（点击展开详细卡片） -->
     <div class="quota-section no-drag">
-      <div id="quota-badge" class="quota-badge healthy" title="Click to view detailed quota breakdown">
+      <div id="quota-badge" class="quota-badge healthy" title="点击查看反重力模型额度明细">
         <span id="quota-indicator-dot" class="quota-indicator-dot"></span>
         <span id="quota-text" class="quota-text">--%</span>
-        <span id="quota-profile-label" class="quota-profile-label">Primary</span>
+        <span id="quota-profile-label" class="quota-profile-label">主账号</span>
       </div>
 
-      <!-- Popover Card for Detailed Token Breakdown -->
+      <!-- 额度明细弹出卡片 -->
       <div id="quota-details-card" class="quota-details-card">
         <div class="quota-card-header">
-          <span id="quota-card-title" class="quota-card-title">Antigravity Quota</span>
+          <span id="quota-card-title" class="quota-card-title">反重力额度剩余</span>
           <span id="quota-card-email" class="quota-card-email">--</span>
         </div>
         <div class="quota-row">
-          <span class="quota-row-label">Tokens Used / Total:</span>
+          <span class="quota-row-label">已用 / 总可用 Token:</span>
           <span><strong id="quota-tokens-used">0</strong> / <span id="quota-tokens-total">0</span></span>
         </div>
         <div class="quota-bar-track">
           <div id="quota-bar-fill" class="quota-bar-fill" style="width: 0%;"></div>
         </div>
         <div class="quota-row">
-          <span class="quota-row-label">Quota Reset UTC:</span>
+          <span class="quota-row-label">额度重置时间 (UTC):</span>
           <span id="quota-reset-time">--</span>
         </div>
         <div class="quota-models-list" id="quota-models-list"></div>
       </div>
     </div>
 
-    <!-- Toast Notification Container -->
+    <!-- 桌面通知气泡容器 -->
     <div id="toast-container"></div>
 
-    <!-- Click-Through Active Reminder Banner -->
+    <!-- 鼠标穿透提醒条 -->
     <div class="click-through-banner">
-      Click-Through Active • Press <strong>Ctrl+Alt+P</strong> or use Tray Icon to restore
+      已开启鼠标穿透 • 按 <strong>Ctrl+Alt+P</strong> 或右键托盘图标可恢复交互
     </div>
 
-    <!-- Modal 1: Account Profile Switcher -->
+    <!-- 模态框 1：一键便携切换账号 -->
     <div id="modal-profiles" class="modal-backdrop">
       <div class="modal-dialog">
         <div class="modal-header">
@@ -226,17 +225,17 @@
               <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            Switch Profile
+            一键便携换号
           </div>
-          <button id="btn-close-profiles" class="modal-close-btn">&times;</button>
+          <button id="btn-close-profiles" class="modal-close-btn" aria-label="关闭">&times;</button>
         </div>
         <div class="modal-body" id="profile-list-container">
-          <!-- Dynamic Profile Items -->
+          <!-- 动态账号列表 -->
         </div>
       </div>
     </div>
 
-    <!-- Modal 2: Avatar Customizer & Presets -->
+    <!-- 模态框 2：自定义宠物形象 -->
     <div id="modal-avatar" class="modal-backdrop">
       <div class="modal-dialog">
         <div class="modal-header">
@@ -244,39 +243,39 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
             </svg>
-            Customize Avatar
+            自定义形象中心
           </div>
-          <button id="btn-close-avatar" class="modal-close-btn">&times;</button>
+          <button id="btn-close-avatar" class="modal-close-btn" aria-label="关闭">&times;</button>
         </div>
         <div class="modal-body">
           <div id="avatar-drop-zone" class="avatar-drop-zone">
             <div class="drop-zone-icon">📥</div>
-            <div class="drop-zone-text">Drop image here or click to browse</div>
-            <div class="drop-zone-hint">Supports PNG, GIF, WebP, SVG (Max 10MB)</div>
+            <div class="drop-zone-text">拖放图片至此处，或点击浏览选择</div>
+            <div class="drop-zone-hint">支持 PNG、动态 GIF、WebP、SVG（最大 10MB）</div>
             <input type="file" id="avatar-file-input" accept=".png,.gif,.webp,.svg,image/png,image/gif,image/webp,image/svg+xml" style="display: none;">
           </div>
-          <div style="font-size: 11px; font-weight: 600; color: var(--color-text-secondary); margin-top: 6px;">Presets:</div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--color-text-secondary); margin-top: 8px;">预设经典形象：</div>
           <div class="presets-grid">
-            <div class="preset-thumb active" data-preset="default" title="Gemini Vector Mascot">
+            <div class="preset-thumb active" data-preset="default" title="原生 Gemini 星灵">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#00F0FF" stroke-width="2">
                 <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9 12 2"></polygon>
               </svg>
             </div>
-            <div class="preset-thumb" data-preset="gemini_sparkle" title="Golden Sparkle">
-              <img src="assets/presets/gemini_sparkle.svg" alt="Sparkle">
+            <div class="preset-thumb" data-preset="gemini_sparkle" title="璀璨金星">
+              <img src="assets/presets/gemini_sparkle.svg" alt="金星">
             </div>
-            <div class="preset-thumb" data-preset="quantum_bot" title="Quantum Bot">
-              <img src="assets/presets/quantum_bot.svg" alt="Bot">
+            <div class="preset-thumb" data-preset="quantum_bot" title="量子智械">
+              <img src="assets/presets/quantum_bot.svg" alt="智械">
             </div>
-            <div class="preset-thumb" data-preset="cosmic_orb" title="Cosmic Orb">
-              <img src="assets/presets/cosmic_orb.svg" alt="Orb">
+            <div class="preset-thumb" data-preset="cosmic_orb" title="星云光球">
+              <img src="assets/presets/cosmic_orb.svg" alt="光球">
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Modal 3: State & Alert Simulator -->
+    <!-- 模态框 3：动作与通知调试器 -->
     <div id="modal-simulator" class="modal-backdrop">
       <div class="modal-dialog">
         <div class="modal-header">
@@ -284,24 +283,24 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
-            State & Notification Simulator
+            动作与通知调试
           </div>
-          <button id="btn-close-sim" class="modal-close-btn">&times;</button>
+          <button id="btn-close-sim" class="modal-close-btn" aria-label="关闭">&times;</button>
         </div>
         <div class="modal-body">
-          <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 6px;">Mascot States:</div>
+          <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 6px;">宠物动作状态：</div>
           <div class="simulator-grid">
-            <button class="sim-btn btn-sim-state" data-state="idle">Idle Float</button>
-            <button class="sim-btn btn-sim-state" data-state="thinking">Thinking Spin</button>
-            <button class="sim-btn btn-sim-state" data-state="task_finished">Task Celebrated</button>
-            <button class="sim-btn btn-sim-state" data-state="quota_low">Low Quota Alert</button>
+            <button class="sim-btn btn-sim-state" data-state="idle">空闲待机</button>
+            <button class="sim-btn btn-sim-state" data-state="thinking">思考旋转</button>
+            <button class="sim-btn btn-sim-state" data-state="task_finished">任务完成庆祝</button>
+            <button class="sim-btn btn-sim-state" data-state="quota_low">额度告急警报</button>
           </div>
-          <div style="font-size: 11px; color: var(--color-text-secondary); margin: 8px 0 6px 0;">Test Events:</div>
+          <div style="font-size: 11px; color: var(--color-text-secondary); margin: 8px 0 6px 0;">弹窗测试事件：</div>
           <div class="simulator-grid">
-            <button class="sim-btn" id="sim-task-complete">✔ Task Complete</button>
-            <button class="sim-btn" id="sim-task-failed">✖ Task Failed</button>
+            <button class="sim-btn" id="sim-task-complete">✔ 任务完成通知</button>
+            <button class="sim-btn" id="sim-task-failed">✖ 任务失败通知</button>
           </div>
-          <button class="sim-btn" id="sim-quota-drop" style="width: 100%; margin-top: 4px;">⚠ Drop Quota to 12%</button>
+          <button class="sim-btn" id="sim-quota-drop" style="width: 100%; margin-top: 6px;">⚠ 模拟额度告急 (12%)</button>
         </div>
       </div>
     </div>

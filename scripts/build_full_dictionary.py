@@ -14,6 +14,35 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 NEW_TRANSLATIONS = {
+    # 对话操作、固定置顶与归档
+    "Pin": "固定",
+    "Unpin": "取消固定",
+    "Pinned": "已固定",
+    "Pin conversation": "固定对话",
+    "Unpin conversation": "取消固定对话",
+    "Pin to top": "置顶",
+    "Unpin from top": "取消置顶",
+    "Archive Conversation": "归档对话",
+    "Archive conversation": "归档对话",
+    "Unarchive Conversation": "取消归档对话",
+    "Unarchive conversation": "取消归档对话",
+    "Archived Conversations": "已归档对话",
+    "Archived conversations": "已归档对话",
+
+    # 项目创建与引导
+    "Create New Project": "创建新项目",
+    "Create new project": "创建新项目",
+    "Instantly create a new project and folder to start building.": "立即创建新项目与文件夹以开始构建。",
+    "Instantly create a new project and folder to start building": "立即创建新项目与文件夹以开始构建",
+    "Open Existing Project": "打开现有项目",
+    "Open existing project": "打开现有项目",
+    "Select a folder to open as a project.": "选择要作为项目打开的文件夹。",
+    "Select a folder to open as a project": "选择要作为项目打开的文件夹",
+    "Clone Repository": "克隆代码仓库",
+    "Clone repository": "克隆代码仓库",
+    "Clone a Git repository to start working.": "克隆 Git 代码仓库以开始工作。",
+    "Clone a Git repository to start working": "克隆 Git 代码仓库以开始工作",
+
     # 权限请求与授权弹窗
     "Allow reading this URL?": "允许读取此 URL 吗？",
     "Allow reading this URL": "允许读取此 URL",

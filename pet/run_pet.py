@@ -355,8 +355,19 @@ class JsBridge:
 
 
 # -----------------------------------------------------------------------------
-# 4. Windows Win32 Composition & Transparency Helper
+# 4. Windows Win32 Composition & True Transparency Helper
 # -----------------------------------------------------------------------------
+import ctypes
+
+class _MARGINS(ctypes.Structure):
+    _fields_ = [
+        ('cxLeftWidth', ctypes.c_int),
+        ('cxRightWidth', ctypes.c_int),
+        ('cyTopHeight', ctypes.c_int),
+        ('cyBottomHeight', ctypes.c_int),
+    ]
+
+
 def get_pet_hwnd() -> Optional[int]:
     """Finds the HWND for the Antigravity Desktop Pet window."""
     try:
@@ -367,8 +378,14 @@ def get_pet_hwnd() -> Optional[int]:
         return None
 
 
-def apply_win32_window_styles(always_on_top: bool, click_through: bool):
-    """Configures HWND styles for click-through and topmost composition."""
+def configure_true_desktop_transparency(always_on_top: bool = True, click_through: bool = False):
+    """
+    Enforces true glass/alpha transparency on Windows 10/11:
+    1. Extends DWM glass frame across entire client area (-1, -1, -1, -1).
+    2. Sets Form BackColor to Color.Black on UI thread (in DWM composition, black is 100% transparent).
+    3. Sets Win32 class background brush to BLACK_BRUSH.
+    4. Applies HWND_TOPMOST and click-through flags.
+    """
     try:
         import win32gui
         import win32con
@@ -377,7 +394,33 @@ def apply_win32_window_styles(always_on_top: bool, click_through: bool):
         if not hwnd:
             return
 
-        # 1. Update Click-Through (WS_EX_TRANSPARENT)
+        # 1. Full DWM frame extension (-1 margins)
+        m = _MARGINS(-1, -1, -1, -1)
+        ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
+
+        # 2. Set WinForms Form BackColor to Black via Control.FromHandle
+        try:
+            import clr
+            clr.AddReference('System.Windows.Forms')
+            clr.AddReference('System.Drawing')
+            from System import IntPtr, Action
+            from System.Windows.Forms import Control
+            from System.Drawing import Color
+
+            form = Control.FromHandle(IntPtr(hwnd))
+            if form:
+                form.Invoke(Action(lambda: setattr(form, 'BackColor', Color.Black)))
+        except Exception:
+            pass
+
+        # 3. Set Win32 Class Brush to BLACK_BRUSH (4)
+        try:
+            h_black_brush = ctypes.windll.gdi32.GetStockObject(4)
+            ctypes.windll.user32.SetClassLongPtrW(hwnd, -10, h_black_brush)
+        except Exception:
+            pass
+
+        # 4. Configure Layered & TopMost
         ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
         if click_through:
             ex_style |= (win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
@@ -386,7 +429,6 @@ def apply_win32_window_styles(always_on_top: bool, click_through: bool):
 
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
 
-        # 2. Update Always-on-Top (HWND_TOPMOST)
         insert_after = win32con.HWND_TOPMOST if always_on_top else win32con.HWND_NOTOPMOST
         win32gui.SetWindowPos(
             hwnd,
@@ -394,9 +436,16 @@ def apply_win32_window_styles(always_on_top: bool, click_through: bool):
             0, 0, 0, 0,
             win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE | win32con.SWP_FRAMECHANGED
         )
-    except Exception as e:
-        # Non-fatal on non-Windows or development environments
+
+        win32gui.InvalidateRect(hwnd, None, True)
+        win32gui.UpdateWindow(hwnd)
+    except Exception:
         pass
+
+
+def apply_win32_window_styles(always_on_top: bool, click_through: bool):
+    """Wrapper delegating to configure_true_desktop_transparency."""
+    configure_true_desktop_transparency(always_on_top=always_on_top, click_through=click_through)
 
 
 # -----------------------------------------------------------------------------
@@ -416,26 +465,26 @@ class PetTrayController:
             icon_img = create_tray_image()
 
             menu_items = (
-                pystray.MenuItem("Antigravity Pet", None, enabled=False),
+                pystray.MenuItem("Antigravity 桌面宠物", None, enabled=False),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Show / Restore", self._on_show),
-                pystray.MenuItem("Hide Pet", self._on_hide),
+                pystray.MenuItem("显示 / 恢复窗口", self._on_show),
+                pystray.MenuItem("隐藏到托盘", self._on_hide),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Always on Top", self._on_toggle_pin, checked=lambda item: self.bridge.always_on_top),
-                pystray.MenuItem("Click-Through Mode", self._on_toggle_click_through, checked=lambda item: self.bridge.click_through),
-                pystray.MenuItem("Check for Updates / 检查更新", self._on_check_updates),
+                pystray.MenuItem("始终置顶显示", self._on_toggle_pin, checked=lambda item: self.bridge.always_on_top),
+                pystray.MenuItem("鼠标穿透模式 (Ctrl+Alt+P)", self._on_toggle_click_through, checked=lambda item: self.bridge.click_through),
+                pystray.MenuItem("检查汉化与客户端更新", self._on_check_updates),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Mascot State", pystray.Menu(
-                    pystray.MenuItem("Idle", lambda: self.bridge.set_pet_state({"state": "idle"})),
-                    pystray.MenuItem("Thinking", lambda: self.bridge.set_pet_state({"state": "thinking"})),
-                    pystray.MenuItem("Task Finished", lambda: self.bridge.set_pet_state({"state": "task_finished"})),
-                    pystray.MenuItem("Low Quota", lambda: self.bridge.set_pet_state({"state": "quota_low"})),
+                pystray.MenuItem("宠物动作与状态", pystray.Menu(
+                    pystray.MenuItem("空闲待机 (Idle)", lambda: self.bridge.set_pet_state({"state": "idle"})),
+                    pystray.MenuItem("深度思考 (Thinking)", lambda: self.bridge.set_pet_state({"state": "thinking"})),
+                    pystray.MenuItem("任务完成 (Celebrated)", lambda: self.bridge.set_pet_state({"state": "task_finished"})),
+                    pystray.MenuItem("额度告急 (Low Quota)", lambda: self.bridge.set_pet_state({"state": "quota_low"})),
                 )),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Exit", self._on_exit)
+                pystray.MenuItem("退出桌面宠物", self._on_exit)
             )
 
-            self.tray = pystray.Icon("antigravity_pet", icon_img, "Antigravity Desktop Pet", menu=pystray.Menu(*menu_items))
+            self.tray = pystray.Icon("antigravity_pet", icon_img, "Antigravity 桌面宠物", menu=pystray.Menu(*menu_items))
             tray_thread = threading.Thread(target=self.tray.run, daemon=True)
             tray_thread.start()
         except Exception as e:
@@ -466,8 +515,8 @@ class PetTrayController:
         # Notify user via toast in webview
         win = self.holder.get("window")
         if win:
-            status = "enabled" if self.bridge.click_through else "disabled"
-            win.evaluate_js(f"window.__ANTIGRAVITY_PET__.showToast({{ title: 'Tray Control', body: 'Click-through mode {status}.', level: 'info' }});")
+            status = "已开启（按 Ctrl+Alt+P 恢复）" if self.bridge.click_through else "已关闭"
+            win.evaluate_js(f"window.__ANTIGRAVITY_PET__.showToast({{ title: '托盘控制', body: '鼠标穿透模式{status}', level: 'info' }});")
 
     def _on_check_updates(self, icon=None, item=None):
         def _run_check():
