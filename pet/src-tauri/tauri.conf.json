@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "antigravity-pet",
+  "version": "0.1.0",
+  "identifier": "com.antigravity.pet",
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Antigravity Pet",
+        "label": "main",
+        "width": 320,
+        "height": 380,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "shadow": false,
+        "skipTaskbar": true,
+        "visible": false,
+        "center": true
+      }
+    ],
+    "trayIcon": {
+      "id": "antigravity-tray",
+      "iconPath": "icons/icon.png",
+      "tooltip": "Antigravity Desktop Pet",
+      "iconAsTemplate": false,
+      "menuOnLeftClick": false
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.png"
+    ]
+  }
+}

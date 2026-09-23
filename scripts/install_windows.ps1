@@ -129,6 +129,65 @@ function Show-IdeGuidance {
     Read-Host "按回车键返回主菜单..." | Out-Null
 }
 
+function Start-DesktopPet {
+    $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
+    $launcherBat = Join-Path $ProjectRoot "launch-pet.bat"
+    if (-not (Test-Path -LiteralPath $petPy)) {
+        Write-Color "[!] 未找到 pet\run_pet.py，无法启动桌面小宠物。" Red
+        return
+    }
+
+    Write-Color "`n正在唤醒 Antigravity 灵动桌面小宠物..." Cyan
+    $pyw = Get-Command pythonw -ErrorAction SilentlyContinue
+    if ($pyw) {
+        Start-Process -FilePath "pythonw" -ArgumentList "`"$petPy`""
+    } else {
+        Start-Process -FilePath "python" -ArgumentList "`"$petPy`""
+    }
+    Write-Color "[OK] 桌面小宠物已在后台启动！已挂载系统托盘与桌面浮窗。" Green
+}
+
+function Create-PetShortcut {
+    $launcherBat = Join-Path $ProjectRoot "launch-pet.bat"
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    $shortcutPath = Join-Path $desktopPath "Antigravity 桌面宠物.lnk"
+
+    try {
+        $wshShell = New-Object -ComObject WScript.Shell
+        $shortcut = $wshShell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = $launcherBat
+        $shortcut.WorkingDirectory = $ProjectRoot
+        $shortcut.Description = "Antigravity 灵动桌面小宠物 (额度感知 / 任务弹窗 / 一键换号)"
+        $iconCandidate = Join-Path $ProjectRoot "pet\src-tauri\icons\icon.png"
+        if (Test-Path $iconCandidate) {
+            $shortcut.IconLocation = $iconCandidate
+        }
+        $shortcut.Save()
+        Write-Color "[OK] 已成功在桌面创建快捷方式: $shortcutPath" Green
+    } catch {
+        Write-Color "[!] 创建桌面快捷方式失败: $($_.Exception.Message)" Yellow
+    }
+}
+
+function Ask-DesktopPet {
+    $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
+    if (-not (Test-Path -LiteralPath $petPy)) { return }
+
+    Write-Host ""
+    Write-Color "------------------------------------------------------------" DarkCyan
+    Write-Color "✨ 专属特性: Antigravity 灵动桌面小宠物 (Gemini Mascot)" Cyan
+    Write-Color "   功能包括: 实时剩余额度感知 / 任务完成弹窗气泡 / 一键多账号无感安全换号" Gray
+    Write-Color "------------------------------------------------------------" DarkCyan
+    $ans = (Read-Host "是否同时启动 Antigravity 灵动桌面小宠物？[y/n]").Trim().ToLower()
+    if ($ans -eq 'y' -or $ans -eq 'yes') {
+        Start-DesktopPet
+        $scAns = (Read-Host "是否在桌面创建小宠物一键启动快捷方式？[y/n]").Trim().ToLower()
+        if ($scAns -eq 'y' -or $scAns -eq 'yes') {
+            Create-PetShortcut
+        }
+    }
+}
+
 function Start-AntigravityApp([string]$installDir) {
     $exePath = Join-Path $installDir "Antigravity.exe"
     if (Test-Path -LiteralPath $exePath) {
@@ -138,6 +197,7 @@ function Start-AntigravityApp([string]$installDir) {
             Start-Process -FilePath $exePath
         }
     }
+    Ask-DesktopPet
 }
 
 function Run-InteractiveMenu {
@@ -166,10 +226,11 @@ function Run-InteractiveMenu {
         Write-Color "[6] 恢复自动更新" Magenta
         Write-Color "[7] 查看 Antigravity IDE 汉化指引" Gray
         Write-Color "[8] 开启/配置 版本更新自动维护看门狗 (Auto-Maintainer & GitHub 同步)" Cyan
+        Write-Color "[9] 启动 / 管理 Antigravity 灵动桌面小宠物 (额度感知 / 任务弹窗 / 一键换号)" Yellow
         Write-Color "[Q] 退出" DarkGray
         Write-Host ""
 
-        $choice = (Read-Host "请选择操作 [1-8 / Q]").Trim().ToUpper()
+        $choice = (Read-Host "请选择操作 [1-9 / Q]").Trim().ToUpper()
         switch ($choice) {
             '1' {
                 $ok = Invoke-PatchAction "install" "zh-CN" $installDir
@@ -209,6 +270,23 @@ function Run-InteractiveMenu {
                     Write-Color "未找到 setup_watchdog.bat 文件。" Red
                     Pause
                 }
+            }
+            '9' {
+                Write-Color "`n--- Antigravity 灵动桌面小宠物管理 ---" Cyan
+                Write-Color "[1] 立即在后台启动小宠物" Green
+                Write-Color "[2] 在桌面创建一键启动快捷方式" Green
+                Write-Color "[3] 运行 30 项自检冒烟测试 (Smoke Test)" Yellow
+                Write-Color "[B] 返回主菜单" Gray
+                $sub = (Read-Host "请选择操作 [1/2/3/B]").Trim().ToUpper()
+                switch ($sub) {
+                    '1' { Start-DesktopPet }
+                    '2' { Create-PetShortcut }
+                    '3' {
+                        $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
+                        & python $petPy --smoke
+                    }
+                }
+                Pause
             }
             'Q' {
                 Write-Color "已退出。" Gray

@@ -1,0 +1,20 @@
+[package]
+name = "antigravity-pet"
+version = "0.1.0"
+description = "Antigravity Desktop Pet with transparent floating mascot and quota monitor"
+authors = ["Antigravity Team"]
+edition = "2021"
+
+[lib]
+name = "antigravity_pet_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["tray-icon"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldSpark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE066" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <filter id="goldGlow">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <circle cx="100" cy="100" r="80" fill="rgba(245, 158, 11, 0.15)" stroke="url(#goldSpark)" stroke-width="2" stroke-dasharray="4 4" />
+  <path d="M 100,20 Q 100,100 20,100 Q 100,100 100,180 Q 100,100 180,100 Q 100,100 100,20 Z" fill="url(#goldSpark)" filter="url(#goldGlow)" />
+  <circle cx="80" cy="95" r="6" fill="#1E293B" />
+  <circle cx="82" cy="93" r="2" fill="#FFFFFF" />
+  <circle cx="120" cy="95" r="6" fill="#1E293B" />
+  <circle cx="122" cy="93" r="2" fill="#FFFFFF" />
+  <path d="M 94,115 Q 100,122 106,115" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" fill="none" />
+</svg>

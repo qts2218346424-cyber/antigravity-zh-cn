@@ -1,0 +1,1049 @@
+/**
+ * Antigravity Desktop Pet — Frontend Mascot Controller & IPC Bridge
+ * Fully reactive, zero external dependencies, ultra-lightweight (<40MB RAM)
+ */
+
+(function () {
+  'use strict';
+
+  // --------------------------------------------------------------------------
+  // 1. Constants & State Definitions
+  // --------------------------------------------------------------------------
+  const MASCOT_STATES = ['idle', 'thinking', 'task_finished', 'quota_low'];
+  const MAX_AVATAR_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+  const LOW_QUOTA_COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes cooldown
+
+  // Storage Keys
+  const STORAGE_KEY_AVATAR = 'antigravity_pet_avatar_v1';
+  const STORAGE_KEY_CONFIG = 'antigravity_pet_config_v1';
+
+  // State Store
+  const appState = {
+    currentState: 'idle',
+    previousState: 'idle',
+    stateTimer: null,
+    avatarMode: 'default', // 'default' | 'preset' | 'custom'
+    customAvatarData: null,
+    activeProfileId: null,
+    profiles: [],
+    quota: null,
+    isAlwaysOnTop: true,
+    isClickThrough: false,
+    lastQuotaAlertTimestamp: 0,
+    activeToastQueue: [],
+    lastNotificationHash: null,
+    lastNotificationTime: 0
+  };
+
+  // --------------------------------------------------------------------------
+  // 2. Dual-Shell Universal IPC Bridge (Tauri v2 + pywebview + Browser Mock)
+  // --------------------------------------------------------------------------
+  class IPCBridge {
+    constructor() {
+      this.isTauri = typeof window !== 'undefined' && Boolean(window.__TAURI__);
+      this.isPyWebView = typeof window !== 'undefined' && Boolean(window.pywebview && window.pywebview.api);
+    }
+
+    async invoke(cmd, payload = {}) {
+      // 1. Check if Tauri v2 is active
+      if (this.isTauri && window.__TAURI__.core) {
+        try {
+          return await window.__TAURI__.core.invoke(cmd, payload);
+        } catch (err) {
+          console.warn(`[Tauri IPC] ${cmd} failed:`, err);
+          throw err;
+        }
+      }
+
+      // 2. Check if pywebview API is active
+      if (window.pywebview && window.pywebview.api && typeof window.pywebview.api[cmd] === 'function') {
+        try {
+          return await window.pywebview.api[cmd](payload);
+        } catch (err) {
+          console.warn(`[pywebview IPC] ${cmd} failed:`, err);
+          throw err;
+        }
+      }
+
+      // 3. Fallback to Local Mock Engine
+      return this._mockInvoke(cmd, payload);
+    }
+
+    async _mockInvoke(cmd, payload) {
+      // Deterministic mock fallback for offline browser testing
+      switch (cmd) {
+        case 'get_quota_status': {
+          return {
+            success: true,
+            account_email: 'qts2218346424@gmail.com',
+            profile_id: appState.activeProfileId || 'profile-primary',
+            total_tokens: 1000000,
+            used_tokens: 154000,
+            remaining_tokens: 846000,
+            remaining_percentage: 84.6,
+            status: 'healthy',
+            reset_time_utc: new Date(Date.now() + 86400000).toISOString(),
+            is_cached: false,
+            models: {
+              'gemini-1.5-pro': { remaining_requests: 48, total_requests: 50, percentage: 96.0 },
+              'gemini-1.5-flash': { remaining_requests: 950, total_requests: 1000, percentage: 95.0 }
+            }
+          };
+        }
+        case 'list_profiles': {
+          return {
+            success: true,
+            active_profile_id: appState.activeProfileId || 'profile-primary',
+            profiles: [
+              {
+                id: 'profile-primary',
+                label: 'Main Account',
+                email: 'qts2218346424@gmail.com',
+                tier: 'pay_as_you_go',
+                last_used: new Date().toISOString(),
+                created_at: new Date(Date.now() - 7 * 86400000).toISOString()
+              },
+              {
+                id: 'profile-backup',
+                label: 'Work Workspace',
+                email: 'workspace-dev@antigravity.io',
+                tier: 'enterprise',
+                last_used: new Date(Date.now() - 3600000).toISOString(),
+                created_at: new Date(Date.now() - 14 * 86400000).toISOString()
+              }
+            ]
+          };
+        }
+        case 'switch_profile': {
+          appState.activeProfileId = payload.profile_id;
+          const quota = await this._mockInvoke('get_quota_status');
+          return {
+            success: true,
+            switched_to: payload.profile_id,
+            email: payload.profile_id === 'profile-backup' ? 'workspace-dev@antigravity.io' : 'qts2218346424@gmail.com',
+            backup_path: '~/.gemini/backups/credential_backup_mock.json',
+            timestamp: new Date().toISOString(),
+            quota: quota
+          };
+        }
+        case 'import_avatar': {
+          return {
+            success: true,
+            asset_id: 'custom-' + Date.now(),
+            format: 'png',
+            cached_path: payload.source_path || 'local_cache',
+            is_animated: false
+          };
+        }
+        case 'toggle_always_on_top': {
+          const newState = typeof payload.enabled === 'boolean' ? payload.enabled : !appState.isAlwaysOnTop;
+          appState.isAlwaysOnTop = newState;
+          return { success: true, always_on_top: newState };
+        }
+        case 'toggle_click_through': {
+          const newState = typeof payload.enabled === 'boolean' ? payload.enabled : !appState.isClickThrough;
+          appState.isClickThrough = newState;
+          return { success: true, click_through: newState };
+        }
+        case 'set_pet_state': {
+          return { success: true, current_state: payload.state || 'idle' };
+        }
+        case 'send_notification': {
+          return { success: true, notification_id: 'notif-' + Date.now() };
+        }
+        default:
+          return { success: false, error: `Unknown mock command: ${cmd}` };
+      }
+    }
+  }
+
+  const bridge = new IPCBridge();
+
+  // --------------------------------------------------------------------------
+  // 3. Magic-Byte Image Validation & Sanitization
+  // --------------------------------------------------------------------------
+  const MagicByteValidator = {
+    async validateBuffer(buffer) {
+      if (!buffer || buffer.byteLength === 0) {
+        return { valid: false, error: 'INVALID_FILE_EMPTY' };
+      }
+      if (buffer.byteLength > MAX_AVATAR_SIZE_BYTES) {
+        return { valid: false, error: 'FILE_EXCEEDS_MAX_SIZE_10MB' };
+      }
+
+      const bytes = new Uint8Array(buffer.slice(0, 16));
+
+      // 1. PNG: 89 50 4E 47 0D 0A 1A 0A
+      if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47 &&
+          bytes[4] === 0x0D && bytes[5] === 0x0A && bytes[6] === 0x1A && bytes[7] === 0x0A) {
+        return { valid: true, format: 'png', isAnimated: false };
+      }
+
+      // 2. GIF: 47 49 46 38 (37|39) 61 ("GIF87a" or "GIF89a")
+      if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38 &&
+          (bytes[4] === 0x37 || bytes[4] === 0x39) && bytes[5] === 0x61) {
+        return { valid: true, format: 'gif', isAnimated: true };
+      }
+
+      // 3. WebP: 52 49 46 46 (RIFF) ... 57 45 42 50 (WEBP)
+      if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+          bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+        return { valid: true, format: 'webp', isAnimated: false };
+      }
+
+      // 4. SVG: Detect XML text starting with or containing <svg
+      try {
+        const textDecoder = new TextDecoder('utf-8');
+        const headerText = textDecoder.decode(buffer.slice(0, Math.min(1024, buffer.byteLength)));
+        if (headerText.toLowerCase().includes('<svg')) {
+          return { valid: true, format: 'svg', isAnimated: false };
+        }
+      } catch (e) {
+        // Not a valid UTF-8 SVG string
+      }
+
+      return { valid: false, error: 'INVALID_MAGIC_BYTES' };
+    },
+
+    sanitizeSvg(svgText) {
+      // Strip script tags and event handlers to prevent XSS (E7 compliance)
+      return svgText
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/\son\w+="[^"]*"/gi, '')
+        .replace(/\son\w+='[^']*'/gi, '')
+        .replace(/javascript:/gi, '');
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // 4. Mascot State Machine & Presentation
+  // --------------------------------------------------------------------------
+  class MascotController {
+    constructor() {
+      this.appEl = document.getElementById('pet-app');
+      this.mascotContainer = document.getElementById('mascot-container');
+      this.svgWrapper = document.getElementById('svg-mascot-wrapper');
+      this.customWrapper = document.getElementById('custom-avatar-wrapper');
+      this.customImg = document.getElementById('custom-avatar-img');
+    }
+
+    setState(newState, durationMs = 0) {
+      // Fallback unrecognized state gracefully to idle (T1.F2.05)
+      if (!MASCOT_STATES.includes(newState)) {
+        console.warn(`Unrecognized pet state: "${newState}", defaulting to "idle".`);
+        newState = 'idle';
+      }
+
+      // Clear existing state classes
+      MASCOT_STATES.forEach(st => this.appEl.classList.remove(`state-${st}`));
+      this.appEl.classList.add(`state-${newState}`);
+
+      appState.previousState = appState.currentState;
+      appState.currentState = newState;
+
+      if (appState.stateTimer) {
+        clearTimeout(appState.stateTimer);
+        appState.stateTimer = null;
+      }
+
+      // If temporary duration specified (e.g. task_finished celebration), revert to base state
+      if (durationMs > 0) {
+        appState.stateTimer = setTimeout(() => {
+          // Revert to quota_low if quota is still low, otherwise idle
+          const revertState = (appState.quota && appState.quota.remaining_percentage < 20) ? 'quota_low' : 'idle';
+          this.setState(revertState);
+        }, durationMs);
+      }
+    }
+
+    setAvatarMode(mode, dataUrl = null) {
+      appState.avatarMode = mode;
+      appState.customAvatarData = dataUrl;
+
+      if (mode === 'default') {
+        this.svgWrapper.style.display = 'flex';
+        this.customWrapper.style.display = 'none';
+        this.customImg.src = '';
+        localStorage.removeItem(STORAGE_KEY_AVATAR);
+      } else {
+        this.svgWrapper.style.display = 'none';
+        this.customWrapper.style.display = 'flex';
+        this.customImg.src = dataUrl;
+        this.customImg.onerror = () => {
+          console.error('Failed to render custom avatar. Reverting to default mascot.');
+          toastManager.showToast({
+            title: 'Avatar Load Error',
+            body: 'Custom avatar failed to render, reverted to default Gemini mascot.',
+            level: 'warning'
+          });
+          this.setAvatarMode('default');
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY_AVATAR, JSON.stringify({ mode, dataUrl }));
+        } catch (e) {
+          console.warn('Could not persist avatar to localStorage:', e);
+        }
+      }
+    }
+
+    restorePersistedAvatar() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_AVATAR);
+        if (saved) {
+          const { mode, dataUrl } = JSON.parse(saved);
+          if (dataUrl) {
+            this.setAvatarMode(mode, dataUrl);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to restore avatar from storage:', err);
+        this.setAvatarMode('default');
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 5. Toast Notification Manager
+  // --------------------------------------------------------------------------
+  class ToastManager {
+    constructor() {
+      this.container = document.getElementById('toast-container');
+    }
+
+    showToast({ title = 'Antigravity Alert', body = '', level = 'info', duration_ms = 5000 }) {
+      // E5 Boundary & Deduplication check
+      const hash = `${title}:${body}:${level}`;
+      const now = Date.now();
+      if (appState.lastNotificationHash === hash && (now - appState.lastNotificationTime < 3000)) {
+        return; // Suppress duplicate burst
+      }
+      appState.lastNotificationHash = hash;
+      appState.lastNotificationTime = now;
+
+      // Limit concurrent toasts
+      if (this.container.children.length >= 3) {
+        const oldest = this.container.children[0];
+        if (oldest) oldest.remove();
+      }
+
+      const card = document.createElement('div');
+      card.className = `toast-card ${level}`;
+
+      let icon = '✦';
+      if (level === 'success') icon = '✔';
+      if (level === 'warning') icon = '⚠';
+      if (level === 'error') icon = '✖';
+
+      card.innerHTML = `
+        <div class="toast-header">
+          <div class="toast-title-group">
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-title">${this._escapeHtml(title)}</span>
+          </div>
+          <button class="toast-close-btn" aria-label="Dismiss">&times;</button>
+        </div>
+        <div class="toast-body">${this._escapeHtml(body)}</div>
+        <div class="toast-progress-bar">
+          <div class="toast-progress-fill"></div>
+        </div>
+      `;
+
+      const closeBtn = card.querySelector('.toast-close-btn');
+      const progressFill = card.querySelector('.toast-progress-fill');
+
+      let isDismissed = false;
+      const dismiss = () => {
+        if (isDismissed) return;
+        isDismissed = true;
+        card.classList.add('dismissing');
+        setTimeout(() => card.remove(), 250);
+      };
+
+      closeBtn.addEventListener('click', dismiss);
+
+      // Auto-dismiss countdown
+      progressFill.style.transition = `transform ${duration_ms}ms linear`;
+      progressFill.style.transform = 'scaleX(1)';
+      requestAnimationFrame(() => {
+        progressFill.style.transform = 'scaleX(0)';
+      });
+
+      const timer = setTimeout(dismiss, duration_ms);
+      card.addEventListener('mouseenter', () => {
+        clearTimeout(timer);
+        progressFill.style.transition = 'none';
+      });
+
+      this.container.appendChild(card);
+    }
+
+    _escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 6. Quota Tracker & Presenter
+  // --------------------------------------------------------------------------
+  class QuotaTracker {
+    constructor(mascotCtrl, toastMgr) {
+      this.mascotCtrl = mascotCtrl;
+      this.toastMgr = toastMgr;
+      this.badge = document.getElementById('quota-badge');
+      this.dot = document.getElementById('quota-indicator-dot');
+      this.text = document.getElementById('quota-text');
+      this.profileLabel = document.getElementById('quota-profile-label');
+      this.card = document.getElementById('quota-details-card');
+      this.cardTitle = document.getElementById('quota-card-title');
+      this.cardEmail = document.getElementById('quota-card-email');
+      this.tokensUsed = document.getElementById('quota-tokens-used');
+      this.tokensTotal = document.getElementById('quota-tokens-total');
+      this.barFill = document.getElementById('quota-bar-fill');
+      this.resetTime = document.getElementById('quota-reset-time');
+      this.modelsList = document.getElementById('quota-models-list');
+
+      this._setupListeners();
+    }
+
+    _setupListeners() {
+      // Toggle detailed popover card
+      this.badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.card.classList.toggle('show');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!this.card.contains(e.target) && !this.badge.contains(e.target)) {
+          this.card.classList.remove('show');
+        }
+      });
+    }
+
+    async refreshQuota(forceRefresh = false) {
+      try {
+        const quota = await bridge.invoke('get_quota_status', { force_refresh: forceRefresh });
+        if (quota && quota.success !== false) {
+          appState.quota = quota;
+          this.render(quota);
+          this._checkLowQuotaAlert(quota);
+        }
+      } catch (err) {
+        console.warn('Failed to refresh quota:', err);
+      }
+    }
+
+    render(quota) {
+      // Calculate clamped percentage safely (prevent division by zero, E9/E10)
+      let percentage = 0;
+      if (quota.total_tokens && quota.total_tokens > 0) {
+        percentage = ((quota.remaining_tokens || 0) / quota.total_tokens) * 100;
+      } else if (typeof quota.remaining_percentage === 'number') {
+        percentage = quota.remaining_percentage;
+      }
+      percentage = Math.max(0, Math.min(100, Math.round(percentage * 10) / 10));
+
+      // Color coding & class setup
+      this.badge.classList.remove('healthy', 'warning', 'critical');
+      let statusClass = 'healthy';
+      let fillColor = 'var(--quota-healthy)';
+
+      if (percentage <= 0) {
+        statusClass = 'critical';
+        fillColor = 'var(--quota-critical)';
+        this.text.textContent = '0% EXHAUSTED';
+      } else if (percentage < 20) {
+        statusClass = 'critical';
+        fillColor = 'var(--quota-critical)';
+        this.text.textContent = `${percentage}% LOW`;
+      } else if (percentage <= 50) {
+        statusClass = 'warning';
+        fillColor = 'var(--quota-warning)';
+        this.text.textContent = `${percentage}%`;
+      } else {
+        statusClass = 'healthy';
+        fillColor = 'var(--quota-healthy)';
+        this.text.textContent = `${percentage}%`;
+      }
+
+      this.badge.classList.add(statusClass);
+      this.profileLabel.textContent = quota.account_email ? quota.account_email.split('@')[0] : 'Profile';
+
+      // Detailed Card Content
+      this.cardTitle.textContent = `Antigravity Quota (${statusClass.toUpperCase()})`;
+      this.cardEmail.textContent = quota.account_email || 'Active Account';
+      this.tokensUsed.textContent = (quota.used_tokens || 0).toLocaleString();
+      this.tokensTotal.textContent = (quota.total_tokens || 0).toLocaleString();
+
+      this.barFill.style.width = `${percentage}%`;
+      this.barFill.style.background = fillColor;
+
+      if (quota.reset_time_utc) {
+        try {
+          const resetDate = new Date(quota.reset_time_utc);
+          this.resetTime.textContent = resetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+          this.resetTime.textContent = quota.reset_time_utc;
+        }
+      } else {
+        this.resetTime.textContent = 'Unknown';
+      }
+
+      // Models breakdown
+      if (quota.models && Object.keys(quota.models).length > 0) {
+        this.modelsList.innerHTML = Object.entries(quota.models)
+          .map(([model, info]) => `
+            <div class="model-item">
+              <span>${model}</span>
+              <span>${info.remaining_requests}/${info.total_requests} reqs (${info.percentage}%)</span>
+            </div>
+          `).join('');
+      } else {
+        this.modelsList.innerHTML = '<div class="model-item"><span>Status</span><span>Standard Tier</span></div>';
+      }
+    }
+
+    _checkLowQuotaAlert(quota) {
+      const pct = typeof quota.remaining_percentage === 'number' ? quota.remaining_percentage : 100;
+      if (pct < 20) {
+        const now = Date.now();
+        // Cooldown check (15 minutes, F2.5 / E14)
+        if (now - appState.lastQuotaAlertTimestamp > LOW_QUOTA_COOLDOWN_MS) {
+          appState.lastQuotaAlertTimestamp = now;
+          this.mascotCtrl.setState('quota_low');
+          this.toastMgr.showToast({
+            title: 'Low Quota Warning',
+            body: `Antigravity quota is running low (${pct.toFixed(1)}% remaining). Consider switching profiles.`,
+            level: 'warning',
+            duration_ms: 7000
+          });
+        }
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 7. Profile Switcher Modal Controller
+  // --------------------------------------------------------------------------
+  class ProfileModalController {
+    constructor(mascotCtrl, quotaTracker, toastMgr) {
+      this.mascotCtrl = mascotCtrl;
+      this.quotaTracker = quotaTracker;
+      this.toastMgr = toastMgr;
+      this.backdrop = document.getElementById('modal-profiles');
+      this.listContainer = document.getElementById('profile-list-container');
+      this.btnOpen = document.getElementById('btn-profile-switcher');
+      this.btnClose = document.getElementById('btn-close-profiles');
+
+      this._setupListeners();
+    }
+
+    _setupListeners() {
+      this.btnOpen.addEventListener('click', () => this.open());
+      this.btnClose.addEventListener('click', () => this.close());
+      this.backdrop.addEventListener('click', (e) => {
+        if (e.target === this.backdrop) this.close();
+      });
+    }
+
+    async open() {
+      this.backdrop.classList.add('open');
+      await this.loadProfiles();
+    }
+
+    close() {
+      this.backdrop.classList.remove('open');
+    }
+
+    async loadProfiles() {
+      this.listContainer.innerHTML = '<div style="text-align:center; padding:12px; color:var(--color-text-muted);">Loading profiles...</div>';
+      try {
+        const res = await bridge.invoke('list_profiles');
+        if (res && res.success) {
+          appState.profiles = res.profiles || [];
+          appState.activeProfileId = res.active_profile_id;
+          this.renderProfiles();
+        } else {
+          this.listContainer.innerHTML = '<div style="text-align:center; padding:12px; color:var(--toast-error);">Failed to load profiles.</div>';
+        }
+      } catch (err) {
+        this.listContainer.innerHTML = `<div style="text-align:center; padding:12px; color:var(--toast-error);">${err.message || 'Error loading profiles'}</div>`;
+      }
+    }
+
+    renderProfiles() {
+      if (appState.profiles.length === 0) {
+        this.listContainer.innerHTML = '<div style="text-align:center; padding:12px; color:var(--color-text-muted);">No profiles found in store.</div>';
+        return;
+      }
+
+      this.listContainer.innerHTML = appState.profiles.map(p => {
+        const isActive = p.id === appState.activeProfileId;
+        return `
+          <div class="profile-item ${isActive ? 'active' : ''}">
+            <div class="profile-info">
+              <div class="profile-label-row">
+                <span class="profile-label-text">${this._escape(p.label)}</span>
+                ${isActive ? '<span class="active-pill">ACTIVE</span>' : ''}
+              </div>
+              <div class="profile-email-text">${this._escape(p.email)}</div>
+            </div>
+            ${!isActive ? `<button class="btn-switch-profile" data-profile-id="${p.id}">Switch</button>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Attach switch handlers
+      this.listContainer.querySelectorAll('.btn-switch-profile').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const profileId = e.currentTarget.getAttribute('data-profile-id');
+          await this.executeSwitch(profileId);
+        });
+      });
+    }
+
+    async executeSwitch(profileId) {
+      this.toastMgr.showToast({
+        title: 'Switching Profile...',
+        body: `Atomically switching to profile ${profileId}`,
+        level: 'info',
+        duration_ms: 2500
+      });
+
+      try {
+        const res = await bridge.invoke('switch_profile', { profile_id: profileId, create_backup: true });
+        if (res && res.success) {
+          appState.activeProfileId = profileId;
+          this.toastMgr.showToast({
+            title: 'Profile Switched!',
+            body: `Now active: ${res.email || profileId}`,
+            level: 'success',
+            duration_ms: 4000
+          });
+          this.close();
+          // Immediately refresh quota and mascot state
+          await this.quotaTracker.refreshQuota(true);
+          this.mascotCtrl.setState('task_finished', 3000);
+        } else {
+          this.toastMgr.showToast({
+            title: 'Switch Failed',
+            body: res.error || 'Could not complete atomic switch',
+            level: 'error'
+          });
+        }
+      } catch (err) {
+        this.toastMgr.showToast({
+          title: 'Switch Error',
+          body: err.message || 'Exception during profile switch',
+          level: 'error'
+        });
+      }
+    }
+
+    _escape(s) {
+      return (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 8. Avatar Importer & Settings Controller
+  // --------------------------------------------------------------------------
+  class AvatarModalController {
+    constructor(mascotCtrl, toastMgr) {
+      this.mascotCtrl = mascotCtrl;
+      this.toastMgr = toastMgr;
+      this.backdrop = document.getElementById('modal-avatar');
+      this.btnOpen = document.getElementById('btn-avatar-picker');
+      this.btnClose = document.getElementById('btn-close-avatar');
+      this.dropZone = document.getElementById('avatar-drop-zone');
+      this.fileInput = document.getElementById('avatar-file-input');
+      this.presetThumbs = document.querySelectorAll('.preset-thumb');
+
+      this._setupListeners();
+    }
+
+    _setupListeners() {
+      this.btnOpen.addEventListener('click', () => this.open());
+      this.btnClose.addEventListener('click', () => this.close());
+      this.backdrop.addEventListener('click', (e) => {
+        if (e.target === this.backdrop) this.close();
+      });
+
+      // Drop zone click triggers file input
+      this.dropZone.addEventListener('click', () => this.fileInput.click());
+
+      // File input change
+      this.fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          this.handleFile(e.target.files[0]);
+        }
+      });
+
+      // Drag and drop events on dropzone
+      ['dragenter', 'dragover'].forEach(name => {
+        this.dropZone.addEventListener(name, (e) => {
+          e.preventDefault();
+          this.dropZone.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(name => {
+        this.dropZone.addEventListener(name, (e) => {
+          e.preventDefault();
+          this.dropZone.classList.remove('dragover');
+        });
+      });
+
+      this.dropZone.addEventListener('drop', (e) => {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          this.handleFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Drag and drop onto pet viewport directly!
+      const mascotViewport = document.getElementById('mascot-viewport');
+      mascotViewport.addEventListener('dragover', (e) => e.preventDefault());
+      mascotViewport.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          this.handleFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Preset avatar choices
+      this.presetThumbs.forEach(thumb => {
+        thumb.addEventListener('click', () => {
+          const presetName = thumb.getAttribute('data-preset');
+          this.loadPreset(presetName);
+        });
+      });
+    }
+
+    open() {
+      this.backdrop.classList.add('open');
+    }
+
+    close() {
+      this.backdrop.classList.remove('open');
+    }
+
+    loadPreset(presetName) {
+      this.presetThumbs.forEach(t => t.classList.remove('active'));
+      const activeThumb = document.querySelector(`[data-preset="${presetName}"]`);
+      if (activeThumb) activeThumb.classList.add('active');
+
+      if (presetName === 'default') {
+        this.mascotCtrl.setAvatarMode('default');
+        this.toastMgr.showToast({ title: 'Default Mascot', body: 'Restored animated Gemini mascot.', level: 'info' });
+        this.close();
+      } else {
+        const presetPath = `assets/presets/${presetName}.svg`;
+        fetch(presetPath)
+          .then(res => res.text())
+          .then(svgText => {
+            const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
+            this.mascotCtrl.setAvatarMode('preset', dataUrl);
+            this.toastMgr.showToast({ title: 'Preset Applied', body: `Switched avatar to ${presetName}`, level: 'success' });
+            this.close();
+          })
+          .catch(err => {
+            this.toastMgr.showToast({ title: 'Preset Error', body: 'Could not load preset avatar.', level: 'error' });
+          });
+      }
+    }
+
+    async handleFile(file) {
+      if (!file) return;
+
+      // 1. Check size guard (10MB limit, E6)
+      if (file.size === 0) {
+        this.toastMgr.showToast({ title: 'Invalid File', body: 'The selected file is empty (0 bytes).', level: 'error' });
+        return;
+      }
+      if (file.size > MAX_AVATAR_SIZE_BYTES) {
+        this.toastMgr.showToast({ title: 'File Too Large', body: 'Avatar image must be under 10MB.', level: 'error' });
+        return;
+      }
+
+      // 2. Read array buffer for magic-byte check
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const buffer = reader.result;
+        const validation = await MagicByteValidator.validateBuffer(buffer);
+
+        if (!validation.valid) {
+          this.toastMgr.showToast({
+            title: 'Unsupported Format',
+            body: `File failed magic-byte validation (${validation.error}). Please use PNG, GIF, WebP, or SVG.`,
+            level: 'error'
+          });
+          return;
+        }
+
+        // 3. Process valid image into data URL
+        if (validation.format === 'svg') {
+          const textDecoder = new TextDecoder('utf-8');
+          const rawSvg = textDecoder.decode(buffer);
+          const cleanSvg = MagicByteValidator.sanitizeSvg(rawSvg);
+          const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(cleanSvg);
+          this.mascotCtrl.setAvatarMode('custom', dataUrl);
+        } else {
+          const blob = new Blob([buffer], { type: `image/${validation.format}` });
+          const blobUrl = URL.createObjectURL(blob);
+          this.mascotCtrl.setAvatarMode('custom', blobUrl);
+        }
+
+        this.toastMgr.showToast({
+          title: 'Avatar Updated!',
+          body: `Successfully imported custom ${validation.format.toUpperCase()} avatar.`,
+          level: 'success'
+        });
+        this.close();
+      };
+
+      reader.onerror = () => {
+        this.toastMgr.showToast({ title: 'Read Error', body: 'Could not read image file.', level: 'error' });
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 9. State Simulator & Quick Actions Controller
+  // --------------------------------------------------------------------------
+  class SimulatorController {
+    constructor(mascotCtrl, toastMgr, quotaTracker) {
+      this.mascotCtrl = mascotCtrl;
+      this.toastMgr = toastMgr;
+      this.quotaTracker = quotaTracker;
+      this.backdrop = document.getElementById('modal-simulator');
+      this.btnOpen = document.getElementById('btn-state-sim');
+      this.btnClose = document.getElementById('btn-close-sim');
+
+      this._setupListeners();
+    }
+
+    _setupListeners() {
+      this.btnOpen.addEventListener('click', () => this.backdrop.classList.add('open'));
+      this.btnClose.addEventListener('click', () => this.backdrop.classList.remove('open'));
+      this.backdrop.addEventListener('click', (e) => {
+        if (e.target === this.backdrop) this.backdrop.classList.remove('open');
+      });
+
+      // Quick State Buttons
+      document.querySelectorAll('.btn-sim-state').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const state = e.currentTarget.getAttribute('data-state');
+          this.mascotCtrl.setState(state);
+          this.toastMgr.showToast({ title: 'State Transition', body: `Mascot transitioned to "${state}"`, level: 'info' });
+          this.backdrop.classList.remove('open');
+        });
+      });
+
+      // Task Completion Event Simulation
+      document.getElementById('sim-task-complete').addEventListener('click', () => {
+        this.mascotCtrl.setState('task_finished', 5000);
+        this.toastMgr.showToast({
+          title: 'Task Finished!',
+          body: 'Agent task "Build Refactor" completed successfully in 12.4s.',
+          level: 'success',
+          duration_ms: 5000
+        });
+        this.backdrop.classList.remove('open');
+      });
+
+      // Task Failure Simulation
+      document.getElementById('sim-task-failed').addEventListener('click', () => {
+        this.mascotCtrl.setState('quota_low', 4000);
+        this.toastMgr.showToast({
+          title: 'Task Failed',
+          body: 'Agent task failed: Network socket timeout.',
+          level: 'error',
+          duration_ms: 5000
+        });
+        this.backdrop.classList.remove('open');
+      });
+
+      // Low Quota Simulation
+      document.getElementById('sim-quota-drop').addEventListener('click', () => {
+        const simulatedQuota = {
+          success: true,
+          account_email: 'test@antigravity.io',
+          total_tokens: 1000000,
+          used_tokens: 880000,
+          remaining_tokens: 120000,
+          remaining_percentage: 12.0,
+          status: 'critical',
+          reset_time_utc: new Date(Date.now() + 3600000).toISOString(),
+          models: {
+            'gemini-1.5-pro': { remaining_requests: 3, total_requests: 50, percentage: 6.0 }
+          }
+        };
+        this.quotaTracker.render(simulatedQuota);
+        this.mascotCtrl.setState('quota_low');
+        this.toastMgr.showToast({
+          title: 'Low Quota Warning',
+          body: 'Antigravity quota dropped to 12.0% (Critical).',
+          level: 'warning',
+          duration_ms: 6000
+        });
+        this.backdrop.classList.remove('open');
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 10. Window Controls & Dragging Support
+  // --------------------------------------------------------------------------
+  class WindowControls {
+    constructor(toastMgr) {
+      this.toastMgr = toastMgr;
+      this.appEl = document.getElementById('pet-app');
+      this.btnPin = document.getElementById('btn-toggle-pin');
+      this.btnGhost = document.getElementById('btn-toggle-ghost');
+      this.btnMin = document.getElementById('btn-minimize');
+
+      this._setupControls();
+      this._setupMouseDragFallback();
+      this._setupHotkeys();
+    }
+
+    _setupControls() {
+      // Toggle Always on Top
+      this.btnPin.addEventListener('click', async () => {
+        try {
+          const res = await bridge.invoke('toggle_always_on_top');
+          if (res && res.success) {
+            appState.isAlwaysOnTop = res.always_on_top;
+            this.btnPin.classList.toggle('active', res.always_on_top);
+            this.toastMgr.showToast({
+              title: 'Pin Window',
+              body: res.always_on_top ? 'Always on Top: ON' : 'Always on Top: OFF',
+              level: 'info',
+              duration_ms: 2000
+            });
+          }
+        } catch (e) {
+          console.warn('Could not toggle always on top:', e);
+        }
+      });
+
+      // Toggle Click-Through Mode
+      this.btnGhost.addEventListener('click', async () => {
+        await this.setClickThrough(!appState.isClickThrough);
+      });
+
+      // Minimize to Tray / Hide
+      this.btnMin.addEventListener('click', async () => {
+        if (window.__TAURI__ && window.__TAURI__.window) {
+          window.__TAURI__.window.getCurrentWindow().hide();
+        } else if (window.pywebview && window.pywebview.api && window.pywebview.api.hide_window) {
+          window.pywebview.api.hide_window();
+        } else {
+          this.toastMgr.showToast({ title: 'Minimize to Tray', body: 'Running in preview mode.', level: 'info' });
+        }
+      });
+    }
+
+    async setClickThrough(enable) {
+      try {
+        const res = await bridge.invoke('toggle_click_through', { enabled: enable });
+        appState.isClickThrough = Boolean(res && res.click_through !== undefined ? res.click_through : enable);
+        this.appEl.classList.toggle('click-through-active', appState.isClickThrough);
+        this.btnGhost.classList.toggle('active', appState.isClickThrough);
+
+        if (appState.isClickThrough) {
+          this.toastMgr.showToast({
+            title: 'Click-Through Active',
+            body: 'Cursor passes through pet. Press Ctrl+Alt+P or click Tray icon to restore.',
+            level: 'info',
+            duration_ms: 4000
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to toggle click through:', err);
+      }
+    }
+
+    _setupMouseDragFallback() {
+      // Fallback dragging for browser preview mode when Tauri drag region isn't active
+      let isDragging = false;
+      let startX = 0, startY = 0;
+
+      const mascotViewport = document.getElementById('mascot-viewport');
+      mascotViewport.addEventListener('mousedown', async (e) => {
+        if (e.button === 0 && !e.target.closest('.no-drag, button, input, a')) {
+          if (window.__TAURI__ && window.__TAURI__.window) {
+            try {
+              await window.__TAURI__.window.getCurrentWindow().startDragging();
+              return;
+            } catch (err) {
+              // fall through to manual drag
+            }
+          }
+        }
+      });
+    }
+
+    _setupHotkeys() {
+      // Global shortcut listener to exit click-through (Ctrl+Alt+P or Escape)
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey && e.altKey && (e.key === 'p' || e.key === 'P')) || e.key === 'Escape') {
+          if (appState.isClickThrough) {
+            this.setClickThrough(false);
+          }
+        }
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 11. Main App Initialization
+  // --------------------------------------------------------------------------
+  document.addEventListener('DOMContentLoaded', async () => {
+    const mascotCtrl = new MascotController();
+    const toastMgr = new ToastManager();
+    const quotaTracker = new QuotaTracker(mascotCtrl, toastMgr);
+    const profileModal = new ProfileModalController(mascotCtrl, quotaTracker, toastMgr);
+    const avatarModal = new AvatarModalController(mascotCtrl, toastMgr);
+    const simCtrl = new SimulatorController(mascotCtrl, toastMgr, quotaTracker);
+    const winControls = new WindowControls(toastMgr);
+
+    // Restore saved avatar preference
+    mascotCtrl.restorePersistedAvatar();
+
+    // Initial Quota Refresh
+    await quotaTracker.refreshQuota();
+
+    // Periodic Quota Polling (every 30 seconds)
+    setInterval(() => {
+      quotaTracker.refreshQuota();
+    }, 30000);
+
+    // Reveal Tauri window once fully initialized (eliminates white-flash glitch on Windows)
+    if (window.__TAURI__ && window.__TAURI__.window) {
+      try {
+        await window.__TAURI__.window.getCurrentWindow().show();
+      } catch (e) {
+        // window already visible
+      }
+    }
+
+    // Expose global controller API for external automation / pywebview bridge
+    window.__ANTIGRAVITY_PET__ = {
+      setState: (st, dur) => mascotCtrl.setState(st, dur),
+      refreshQuota: () => quotaTracker.refreshQuota(true),
+      showToast: (opts) => toastMgr.showToast(opts),
+      switchProfile: (id) => profileModal.executeSwitch(id),
+      setClickThrough: (en) => winControls.setClickThrough(en),
+      getAppState: () => ({ ...appState })
+    };
+
+    console.log('[Antigravity Desktop Pet] Initialized successfully.');
+  });
+})();

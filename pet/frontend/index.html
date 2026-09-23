@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Antigravity Desktop Pet</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="pet-app" class="state-idle" data-tauri-drag-region>
+    
+    <!-- Top Floating Toolbar (Interactive Buttons) -->
+    <div class="top-toolbar interactive" data-tauri-drag-region>
+      <div class="toolbar-left no-drag">
+        <button id="btn-profile-switcher" class="tool-btn" title="Switch Account Profiles" aria-label="Profiles">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </button>
+        <button id="btn-avatar-picker" class="tool-btn" title="Customize Mascot Avatar" aria-label="Avatar Customizer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+          </svg>
+        </button>
+        <button id="btn-state-sim" class="tool-btn" title="Simulate States & Tasks" aria-label="State Simulator">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-right no-drag">
+        <button id="btn-toggle-pin" class="tool-btn active" title="Toggle Always on Top" aria-label="Pin on Top">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="17" x2="12" y2="22"></line>
+            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+          </svg>
+        </button>
+        <button id="btn-toggle-ghost" class="tool-btn" title="Toggle Click-Through Mode (Ctrl+Alt+P)" aria-label="Click Through">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 10h.01"></path>
+            <path d="M15 10h.01"></path>
+            <path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"></path>
+          </svg>
+        </button>
+        <button id="btn-minimize" class="tool-btn" title="Minimize to Tray" aria-label="Minimize">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mascot Viewport & Interactive Avatar -->
+    <div id="mascot-viewport" class="mascot-viewport" data-tauri-drag-region>
+      <div id="mascot-container" class="mascot-container" data-tauri-drag-region>
+        
+        <!-- Native Gemini Vector SVG Mascot -->
+        <div id="svg-mascot-wrapper" data-tauri-drag-region>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%" id="gemini-mascot-svg">
+            <defs>
+              <linearGradient id="geminiCoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#4E80FF" />
+                <stop offset="45%" stop-color="#7B2CBF" />
+                <stop offset="85%" stop-color="#B5179E" />
+                <stop offset="100%" stop-color="#F72585" />
+              </linearGradient>
+
+              <linearGradient id="orbitalRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.85" />
+                <stop offset="50%" stop-color="#7209B7" stop-opacity="0.2" />
+                <stop offset="100%" stop-color="#FF007A" stop-opacity="0.9" />
+              </linearGradient>
+
+              <radialGradient id="celestialGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.45" />
+                <stop offset="55%" stop-color="#7000FF" stop-opacity="0.2" />
+                <stop offset="100%" stop-color="#0B0E17" stop-opacity="0" />
+              </radialGradient>
+
+              <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+
+              <filter id="intenseGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="10" result="blur1" />
+                <feGaussianBlur stdDeviation="4" result="blur2" />
+                <feMerge>
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="blur2" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- Outer Aura Glow -->
+            <circle cx="120" cy="120" r="95" fill="url(#celestialGlow)" class="mascot-aura" />
+
+            <!-- Orbital Ring with Orbiting Energy Spark -->
+            <g class="orbital-system" transform="rotate(-20 120 120)">
+              <ellipse cx="120" cy="120" rx="90" ry="32" fill="none" stroke="url(#orbitalRingGrad)" stroke-width="2.5" stroke-dasharray="8 6" opacity="0.75" class="orbital-ring" />
+              <circle cx="210" cy="120" r="4.5" fill="#00F0FF" filter="url(#glowFilter)" class="satellite-spark">
+                <animateTransform attributeName="transform" type="rotate" from="0 120 120" to="360 120 120" dur="6s" repeatCount="indefinite" />
+              </circle>
+            </g>
+
+            <!-- Mascot Star Shape Core -->
+            <g class="mascot-star-body" id="mascot-star-group">
+              <path d="M 120,25 Q 120,120 25,120 Q 120,120 120,215 Q 120,120 215,120 Q 120,120 120,25 Z"
+                    fill="url(#geminiCoreGrad)"
+                    filter="url(#glowFilter)"
+                    class="gemini-star-shape" />
+
+              <path d="M 120,45 Q 120,120 45,120 Q 120,120 120,195 Q 120,120 195,120 Q 120,120 120,45 Z"
+                    fill="#FFFFFF"
+                    opacity="0.18"
+                    class="inner-highlight" />
+
+              <!-- Antennae / Star Points Tips -->
+              <circle cx="120" cy="22" r="3.5" fill="#00F0FF" filter="url(#glowFilter)" />
+              <circle cx="218" cy="120" r="3.5" fill="#FF007A" filter="url(#glowFilter)" />
+              <circle cx="120" cy="218" r="3.5" fill="#7B2CBF" filter="url(#glowFilter)" />
+              <circle cx="22" cy="120" r="3.5" fill="#00F0FF" filter="url(#glowFilter)" />
+
+              <!-- Cute Animated Face -->
+              <g class="mascot-face" id="mascot-face">
+                <ellipse cx="88" cy="132" rx="7" ry="4" fill="#FF4081" opacity="0.65" filter="url(#glowFilter)" class="blush blush-left" />
+                <ellipse cx="152" cy="132" rx="7" ry="4" fill="#FF4081" opacity="0.65" filter="url(#glowFilter)" class="blush blush-right" />
+
+                <g id="mascot-eye-left" class="mascot-eye eye-left" transform="translate(94, 114)">
+                  <ellipse cx="0" cy="0" rx="8" ry="11" fill="#FFFFFF" />
+                  <ellipse cx="0" cy="0" rx="6" ry="9" fill="#0A0F24" />
+                  <circle cx="-2" cy="-3" r="3" fill="#00F0FF" />
+                  <circle cx="2" cy="3" r="1.5" fill="#FFFFFF" />
+                  <rect x="-9" y="-12" width="18" height="0" fill="#7B2CBF" class="eye-lid eyelid-left" />
+                </g>
+
+                <g id="mascot-eye-right" class="mascot-eye eye-right" transform="translate(146, 114)">
+                  <ellipse cx="0" cy="0" rx="8" ry="11" fill="#FFFFFF" />
+                  <ellipse cx="0" cy="0" rx="6" ry="9" fill="#0A0F24" />
+                  <circle cx="-2" cy="-3" r="3" fill="#00F0FF" />
+                  <circle cx="2" cy="3" r="1.5" fill="#FFFFFF" />
+                  <rect x="-9" y="-12" width="18" height="0" fill="#7B2CBF" class="eye-lid eyelid-right" />
+                </g>
+
+                <path id="mascot-mouth" d="M 112,130 Q 120,138 128,130" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" class="mouth" />
+              </g>
+
+              <!-- State Indicator Overlays -->
+              <g class="state-overlay thinking-sparks" opacity="0" id="thinking-indicator">
+                <circle cx="120" cy="65" r="4" fill="#00F0FF" filter="url(#intenseGlow)" />
+                <circle cx="70" cy="85" r="3" fill="#7000FF" filter="url(#intenseGlow)" />
+                <circle cx="170" cy="85" r="3" fill="#00F0FF" filter="url(#intenseGlow)" />
+              </g>
+
+              <g class="state-overlay celebration-stars" opacity="0" id="celebration-indicator">
+                <polygon points="120,4 124,14 135,15 127,22 129,33 120,27 111,33 113,22 105,15 116,14" fill="#FFD700" filter="url(#intenseGlow)" />
+                <circle cx="95" cy="20" r="3" fill="#FFE066" filter="url(#glowFilter)" />
+                <circle cx="145" cy="20" r="3" fill="#FFE066" filter="url(#glowFilter)" />
+              </g>
+
+              <g class="state-overlay quota-warning" opacity="0" id="warning-indicator" transform="translate(120, 60)">
+                <polygon points="0,-16 14,10 -14,10" fill="#FF3366" stroke="#FFFFFF" stroke-width="1.5" filter="url(#glowFilter)" />
+                <text x="0" y="7" font-size="14" font-weight="900" text-anchor="middle" fill="#FFFFFF">!</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Custom Avatar Layer (for user imported PNG, GIF, WebP, SVG) -->
+        <div id="custom-avatar-wrapper" style="display: none;" data-tauri-drag-region>
+          <img id="custom-avatar-img" alt="Custom Avatar" />
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Quota Meter Badge & Tooltip Popover -->
+    <div class="quota-section no-drag">
+      <div id="quota-badge" class="quota-badge healthy" title="Click to view detailed quota breakdown">
+        <span id="quota-indicator-dot" class="quota-indicator-dot"></span>
+        <span id="quota-text" class="quota-text">--%</span>
+        <span id="quota-profile-label" class="quota-profile-label">Primary</span>
+      </div>
+
+      <!-- Popover Card for Detailed Token Breakdown -->
+      <div id="quota-details-card" class="quota-details-card">
+        <div class="quota-card-header">
+          <span id="quota-card-title" class="quota-card-title">Antigravity Quota</span>
+          <span id="quota-card-email" class="quota-card-email">--</span>
+        </div>
+        <div class="quota-row">
+          <span class="quota-row-label">Tokens Used / Total:</span>
+          <span><strong id="quota-tokens-used">0</strong> / <span id="quota-tokens-total">0</span></span>
+        </div>
+        <div class="quota-bar-track">
+          <div id="quota-bar-fill" class="quota-bar-fill" style="width: 0%;"></div>
+        </div>
+        <div class="quota-row">
+          <span class="quota-row-label">Quota Reset UTC:</span>
+          <span id="quota-reset-time">--</span>
+        </div>
+        <div class="quota-models-list" id="quota-models-list"></div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Click-Through Active Reminder Banner -->
+    <div class="click-through-banner">
+      Click-Through Active • Press <strong>Ctrl+Alt+P</strong> or use Tray Icon to restore
+    </div>
+
+    <!-- Modal 1: Account Profile Switcher -->
+    <div id="modal-profiles" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Switch Profile
+          </div>
+          <button id="btn-close-profiles" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body" id="profile-list-container">
+          <!-- Dynamic Profile Items -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Avatar Customizer & Presets -->
+    <div id="modal-avatar" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+            </svg>
+            Customize Avatar
+          </div>
+          <button id="btn-close-avatar" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="avatar-drop-zone" class="avatar-drop-zone">
+            <div class="drop-zone-icon">📥</div>
+            <div class="drop-zone-text">Drop image here or click to browse</div>
+            <div class="drop-zone-hint">Supports PNG, GIF, WebP, SVG (Max 10MB)</div>
+            <input type="file" id="avatar-file-input" accept=".png,.gif,.webp,.svg,image/png,image/gif,image/webp,image/svg+xml" style="display: none;">
+          </div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--color-text-secondary); margin-top: 6px;">Presets:</div>
+          <div class="presets-grid">
+            <div class="preset-thumb active" data-preset="default" title="Gemini Vector Mascot">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#00F0FF" stroke-width="2">
+                <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9 12 2"></polygon>
+              </svg>
+            </div>
+            <div class="preset-thumb" data-preset="gemini_sparkle" title="Golden Sparkle">
+              <img src="assets/presets/gemini_sparkle.svg" alt="Sparkle">
+            </div>
+            <div class="preset-thumb" data-preset="quantum_bot" title="Quantum Bot">
+              <img src="assets/presets/quantum_bot.svg" alt="Bot">
+            </div>
+            <div class="preset-thumb" data-preset="cosmic_orb" title="Cosmic Orb">
+              <img src="assets/presets/cosmic_orb.svg" alt="Orb">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 3: State & Alert Simulator -->
+    <div id="modal-simulator" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            State & Notification Simulator
+          </div>
+          <button id="btn-close-sim" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 6px;">Mascot States:</div>
+          <div class="simulator-grid">
+            <button class="sim-btn btn-sim-state" data-state="idle">Idle Float</button>
+            <button class="sim-btn btn-sim-state" data-state="thinking">Thinking Spin</button>
+            <button class="sim-btn btn-sim-state" data-state="task_finished">Task Celebrated</button>
+            <button class="sim-btn btn-sim-state" data-state="quota_low">Low Quota Alert</button>
+          </div>
+          <div style="font-size: 11px; color: var(--color-text-secondary); margin: 8px 0 6px 0;">Test Events:</div>
+          <div class="simulator-grid">
+            <button class="sim-btn" id="sim-task-complete">✔ Task Complete</button>
+            <button class="sim-btn" id="sim-task-failed">✖ Task Failed</button>
+          </div>
+          <button class="sim-btn" id="sim-quota-drop" style="width: 100%; margin-top: 4px;">⚠ Drop Quota to 12%</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="mascot.js"></script>
+</body>
+</html>

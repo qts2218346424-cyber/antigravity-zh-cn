@@ -1,0 +1,924 @@
+/* ==========================================================================
+   Antigravity Desktop Pet — Modern Glassmorphic Stylesheet
+   Designed for transparent frameless desktop overlay on Windows 10/11
+   ========================================================================== */
+
+:root {
+  --bg-glass: rgba(15, 23, 42, 0.85);
+  --bg-glass-card: rgba(30, 41, 59, 0.8);
+  --border-glass: rgba(255, 255, 255, 0.15);
+  --border-glass-glow: rgba(0, 240, 255, 0.35);
+
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+
+  --accent-cyan: #00F0FF;
+  --accent-blue: #3B82F6;
+  --accent-purple: #8B5CF6;
+  --accent-pink: #EC4899;
+
+  --quota-healthy: #10B981;
+  --quota-healthy-glow: rgba(16, 185, 129, 0.5);
+  --quota-warning: #F59E0B;
+  --quota-warning-glow: rgba(245, 158, 11, 0.5);
+  --quota-critical: #EF4444;
+  --quota-critical-glow: rgba(239, 68, 68, 0.6);
+
+  --toast-success: #10B981;
+  --toast-warning: #F59E0B;
+  --toast-error: #EF4444;
+  --toast-info: #00F0FF;
+
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --------------------------------------------------------------------------
+   1. Base Reset & Full Window Transparency
+   -------------------------------------------------------------------------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0) !important;
+  overflow: hidden;
+  user-select: none;
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --------------------------------------------------------------------------
+   2. Main Window Wrapper & Dragging
+   -------------------------------------------------------------------------- */
+#pet-app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 12px 12px 12px;
+  background: transparent;
+  transition: opacity 0.3s ease;
+}
+
+/* Tauri Drag Region */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+  cursor: grab;
+}
+
+[data-tauri-drag-region]:active {
+  cursor: grabbing;
+}
+
+.no-drag, button, input, select, .interactive, .modal-dialog {
+  -webkit-app-region: no-drag;
+  cursor: default;
+}
+
+/* Click-Through Ghost Mode */
+#pet-app.click-through-active {
+  opacity: 0.62;
+  pointer-events: none;
+  filter: saturate(0.85);
+}
+
+#pet-app.click-through-active .click-through-banner {
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   3. Floating Top Toolbar & Badges
+   -------------------------------------------------------------------------- */
+.top-toolbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 50;
+  opacity: 0.35;
+  transition: opacity 0.2s ease;
+  padding: 2px 4px;
+}
+
+#pet-app:hover .top-toolbar {
+  opacity: 1;
+}
+
+.toolbar-left, .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tool-btn {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 12px;
+}
+
+.tool-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  transform: translateY(-1px);
+}
+
+.tool-btn.active {
+  background: rgba(0, 240, 255, 0.2);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.tool-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+  border-color: #EF4444;
+}
+
+/* --------------------------------------------------------------------------
+   4. Mascot Viewport & Multi-State Animations
+   -------------------------------------------------------------------------- */
+.mascot-viewport {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 6px auto 4px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  z-index: 10;
+}
+
+.mascot-viewport:active {
+  cursor: grabbing;
+}
+
+.mascot-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#svg-mascot-wrapper, #custom-avatar-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#custom-avatar-wrapper img, #custom-avatar-wrapper svg {
+  max-width: 180px;
+  max-height: 180px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
+}
+
+/* --- State: IDLE --- */
+.state-idle .mascot-container {
+  animation: mascot-idle-float 4s ease-in-out infinite;
+}
+
+.state-idle .gemini-star-shape {
+  filter: drop-shadow(0 0 14px rgba(123, 44, 191, 0.5));
+}
+
+.state-idle .orbital-ring {
+  animation: orbital-drift 10s linear infinite;
+}
+
+.state-idle .eye-lid {
+  animation: eye-blink 4.2s infinite;
+}
+
+/* --- State: THINKING --- */
+.state-thinking .mascot-container {
+  animation: mascot-thinking-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.state-thinking .gemini-star-shape {
+  filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.85));
+}
+
+.state-thinking .orbital-system {
+  animation: orbit-spin-fast 1.4s linear infinite;
+}
+
+.state-thinking #thinking-indicator {
+  opacity: 1 !important;
+  animation: thinking-sparks-flicker 0.6s infinite alternate;
+}
+
+.state-thinking .mascot-eye ellipse:nth-child(2) {
+  fill: #00F0FF;
+}
+
+/* --- State: TASK FINISHED --- */
+.state-task_finished .mascot-container {
+  animation: celebration-bounce 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) 3;
+}
+
+.state-task_finished .gemini-star-shape {
+  filter: drop-shadow(0 0 24px rgba(255, 215, 0, 0.9));
+}
+
+.state-task_finished #celebration-indicator {
+  opacity: 1 !important;
+  animation: crown-shine 1s ease-in-out infinite alternate;
+}
+
+.state-task_finished .mouth {
+  d: path("M 108,126 Q 120,144 132,126");
+  stroke-width: 3.2px;
+}
+
+/* --- State: QUOTA LOW --- */
+.state-quota_low .mascot-container {
+  animation: quota-low-wobble 2.6s ease-in-out infinite;
+}
+
+.state-quota_low .gemini-star-shape {
+  filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.8)) hue-rotate(150deg);
+}
+
+.state-quota_low #warning-indicator {
+  opacity: 1 !important;
+  animation: warning-pulse 0.8s ease-in-out infinite alternate;
+}
+
+.state-quota_low .mouth {
+  d: path("M 112,136 Q 120,128 128,136");
+}
+
+/* --------------------------------------------------------------------------
+   5. Keyframe Animations
+   -------------------------------------------------------------------------- */
+@keyframes mascot-idle-float {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+@keyframes orbital-drift {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes orbit-spin-fast {
+  0% { transform: rotate(-20deg) scale(1); }
+  50% { transform: rotate(160deg) scale(1.06); }
+  100% { transform: rotate(340deg) scale(1); }
+}
+
+@keyframes mascot-thinking-pulse {
+  0% {
+    transform: scale(0.97) rotate(-1.5deg);
+  }
+  100% {
+    transform: scale(1.03) rotate(1.5deg);
+  }
+}
+
+@keyframes thinking-sparks-flicker {
+  0% { opacity: 0.4; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+
+@keyframes celebration-bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  30% {
+    transform: translateY(-22px) scale(1.05, 0.95);
+  }
+  50% {
+    transform: translateY(0) scale(0.95, 1.05);
+  }
+  75% {
+    transform: translateY(-8px) scale(1.02, 0.98);
+  }
+}
+
+@keyframes crown-shine {
+  0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 6px #FFD700); }
+  100% { transform: translateY(-3px) scale(1.1); filter: drop-shadow(0 0 16px #FFE066); }
+}
+
+@keyframes quota-low-wobble {
+  0%, 100% {
+    transform: translateY(2px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(5px) rotate(-3deg);
+  }
+  75% {
+    transform: translateY(4px) rotate(3deg);
+  }
+}
+
+@keyframes warning-pulse {
+  0% { transform: translate(120px, 58px) scale(0.9); }
+  100% { transform: translate(120px, 56px) scale(1.2); }
+}
+
+@keyframes eye-blink {
+  0%, 94%, 98%, 100% {
+    height: 0px;
+    y: -12px;
+  }
+  96% {
+    height: 24px;
+    y: -12px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Quota Meter Badge & Tooltip
+   -------------------------------------------------------------------------- */
+.quota-section {
+  position: relative;
+  margin-top: 2px;
+  z-index: 25;
+}
+
+.quota-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.quota-badge:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-cyan);
+}
+
+.quota-indicator-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--quota-healthy);
+  box-shadow: 0 0 8px var(--quota-healthy-glow);
+  transition: var(--transition-smooth);
+}
+
+.quota-badge.healthy .quota-indicator-dot {
+  background: var(--quota-healthy);
+  box-shadow: 0 0 8px var(--quota-healthy-glow);
+}
+
+.quota-badge.warning .quota-indicator-dot {
+  background: var(--quota-warning);
+  box-shadow: 0 0 10px var(--quota-warning-glow);
+  animation: pulse-dot 1.2s infinite;
+}
+
+.quota-badge.critical .quota-indicator-dot {
+  background: var(--quota-critical);
+  box-shadow: 0 0 12px var(--quota-critical-glow);
+  animation: pulse-dot 0.7s infinite;
+}
+
+.quota-text {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+}
+
+.quota-profile-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  border-left: 1px solid var(--border-glass);
+  padding-left: 6px;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.7; }
+}
+
+/* Quota Detailed Dropdown / Popover */
+.quota-details-card {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  width: 260px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 240, 255, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 60;
+}
+
+.quota-details-card.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.quota-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-glass);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.quota-card-title {
+  font-weight: 600;
+  color: var(--accent-cyan);
+  font-size: 12px;
+}
+
+.quota-card-email {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.quota-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.quota-row-label {
+  color: var(--color-text-secondary);
+}
+
+.quota-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 6px 0 10px 0;
+}
+
+.quota-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+
+.quota-models-list {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.model-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+/* --------------------------------------------------------------------------
+   7. Glassmorphic Toast Notifications
+   -------------------------------------------------------------------------- */
+#toast-container {
+  position: absolute;
+  top: 40px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.toast-card {
+  pointer-events: auto;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 12px rgba(0, 240, 255, 0.15);
+  animation: toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.toast-card.dismissing {
+  animation: toast-slide-out 0.25s ease-in forwards;
+}
+
+.toast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.toast-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toast-icon {
+  font-size: 13px;
+}
+
+.toast-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+.toast-close-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s ease;
+}
+
+.toast-close-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.toast-body {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.35;
+}
+
+.toast-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2.5px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.toast-progress-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+}
+
+.toast-card.success .toast-progress-fill { background: var(--toast-success); }
+.toast-card.warning .toast-progress-fill { background: var(--toast-warning); }
+.toast-card.error .toast-progress-fill { background: var(--toast-error); }
+.toast-card.info .toast-progress-fill { background: var(--toast-info); }
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.92);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Modals (Profiles, Settings, Avatar Picker, State Simulator)
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 29, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  padding: 14px;
+}
+
+.modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 290px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.2);
+  transform: translateY(8px) scale(0.96);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-backdrop.open .modal-dialog {
+  transform: translateY(0) scale(1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 10px;
+}
+
+.modal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.modal-body {
+  overflow-y: auto;
+  max-height: 240px;
+  padding-right: 2px;
+}
+
+/* Custom Scrollbar */
+.modal-body::-webkit-scrollbar {
+  width: 4px;
+}
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-glass);
+  border-radius: 2px;
+}
+
+/* Profile List Items */
+.profile-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid var(--border-glass);
+  margin-bottom: 6px;
+  transition: var(--transition-smooth);
+}
+
+.profile-item:hover {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: var(--accent-cyan);
+}
+
+.profile-item.active {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: var(--accent-cyan);
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.profile-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-label-text {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.active-pill {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent-cyan);
+  color: #0A0F24;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profile-email-text {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-switch-profile {
+  background: rgba(0, 240, 255, 0.2);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  flex-shrink: 0;
+}
+
+.btn-switch-profile:hover {
+  background: var(--accent-cyan);
+  color: #0A0F24;
+}
+
+/* Avatar Drop Target & Preset Grid */
+.avatar-drop-zone {
+  border: 2px dashed var(--border-glass);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  margin-bottom: 12px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.avatar-drop-zone.dragover {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.1);
+}
+
+.drop-zone-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+  color: var(--accent-cyan);
+}
+
+.drop-zone-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.drop-zone-hint {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.presets-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.preset-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: rgba(30, 41, 59, 0.6);
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.preset-thumb:hover, .preset-thumb.active {
+  border-color: var(--accent-cyan);
+  transform: scale(1.06);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.35);
+}
+
+.preset-thumb img, .preset-thumb svg {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* State Simulator Buttons */
+.simulator-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sim-btn {
+  padding: 7px;
+  border-radius: 8px;
+  border: 1px solid var(--border-glass);
+  background: rgba(30, 41, 59, 0.7);
+  color: var(--color-text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sim-btn:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+/* --------------------------------------------------------------------------
+   9. Click-Through Warning Banner
+   -------------------------------------------------------------------------- */
+.click-through-banner {
+  display: none;
+  position: absolute;
+  bottom: 6px;
+  font-size: 10px;
+  color: #F8FAFC;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  text-align: center;
+}
