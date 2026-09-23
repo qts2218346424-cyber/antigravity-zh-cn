@@ -237,50 +237,35 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
     
     # 1. 备份原版 asar（如果尚未存在备份）
     if not backup_path.exists():
-        print(f"正在创建原版备份: {backup_path.name}...")
+        print(f"[1/4] 正在创建原版备份: {backup_path.name}...")
         shutil.copy2(asar_path, backup_path)
     else:
-        print(f"发现已有原版备份: {backup_path.name}")
+        print(f"[1/4] 发现已有原版备份: {backup_path.name}")
 
-    # 2. 检查是否使用系统已有 npx asar 还是内置纯 Python 打包解包
-    has_npx_asar = False
-    try:
-        res = subprocess.run(["npx", "asar", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
-        if res.returncode == 0:
-            has_npx_asar = True
-    except Exception:
-        has_npx_asar = False
-
-    print(f"开始解包 app.asar ({'使用 npx asar' if has_npx_asar else '使用内置 Python asar 引擎'})...")
+    print("[2/4] 正在解包 app.asar...")
     with tempfile.TemporaryDirectory(prefix="antigravity_zh_") as temp_dir:
         temp_dir_path = Path(temp_dir)
         extract_dir = temp_dir_path / "app"
 
         # 解包始终基于原版备份解包，确保无论重打多少次补丁都不会脏污染
         source_asar = backup_path if backup_path.exists() else asar_path
-
-        if has_npx_asar:
-            subprocess.run(["npx", "asar", "extract", str(source_asar), str(extract_dir)], check=True, shell=True)
-        else:
-            AsarArchive.extract(source_asar, extract_dir)
+        AsarArchive.extract(source_asar, extract_dir)
 
         # 修补文件
         dist_dir = extract_dir / "dist"
         if not dist_dir.is_dir():
             raise RuntimeError(f"解包后的目录结构异常，缺少 dist 目录: {extract_dir}")
 
+        print("[3/4] 正在修补原生菜单、托盘及注入 DOM 翻译引擎...")
         patch_dist_files(dist_dir, lang, repo_root)
 
         # 打包回临时 asar
         temp_asar = temp_dir_path / "patched.asar"
-        print("正在打包新版 app.asar...")
-        if has_npx_asar:
-            subprocess.run(["npx", "asar", "pack", str(extract_dir), str(temp_asar)], check=True, shell=True)
-        else:
-            AsarArchive.pack(extract_dir, temp_asar)
+        print("[4/4] 正在重新封包 app.asar (约需 5~10 秒)...")
+        AsarArchive.pack(extract_dir, temp_asar)
 
         # 原子化覆盖目标 app.asar
-        print(f"写入汉化文件到: {asar_path}...")
+        print(f"正在写入汉化文件: {asar_path.name}...")
         shutil.copy2(temp_asar, asar_path)
 
     print("[OK] Antigravity 汉化补丁安装成功！")
