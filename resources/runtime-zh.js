@@ -52,6 +52,18 @@
       const text = norm(raw);
       if (!text) return null;
 
+      // 0.1 中文词汇残存复数 s 自动清洗（根治如 "(16 子智能体s)"、"子智能体s" 等英文拼接残留 bug）
+      if (/[\u4e00-\u9fa5]/.test(text)) {
+        const cleaned = text
+          .replace(/\((\d+)\s*子智能体s\)/g, '($1 个子智能体)')
+          .replace(/(\d+)\s*子智能体s/g, '$1 个子智能体')
+          .replace(/(子智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1')
+          .replace(/([\u4e00-\u9fa5])s(?=[^\w]|$)/g, '$1');
+        if (cleaned !== text) {
+          return cleaned;
+        }
+      }
+
       // 1. 精确匹配字典（含小写兜底）
       if (DICT[text]) {
         return DICT[text];
@@ -193,8 +205,19 @@
         );
 
         let current;
+        let lastEndedWithChinese = false;
         while ((current = walker.nextNode())) {
-          const original = current.nodeValue;
+          let original = current.nodeValue;
+          const trimmed = (original || '').trim();
+
+          // 若前一个兄弟文本节点以中文字符结尾，且当前节点为独立的 "s)" 或 "s"，消除该复数残留
+          if (lastEndedWithChinese && (trimmed === 's)' || trimmed === 's')) {
+            current.nodeValue = trimmed === 's)' ? ')' : '';
+            count++;
+            lastEndedWithChinese = trimmed === 's)';
+            continue;
+          }
+
           const translated = translate(original);
           if (translated) {
             const trimmedOrig = norm(original);
@@ -206,6 +229,7 @@
               count++;
             }
           }
+          lastEndedWithChinese = /[\u4e00-\u9fa5]$/.test((current.nodeValue || '').trim());
         }
       } catch (err) {
         // 防止遍历异常中断主流程

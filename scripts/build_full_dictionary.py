@@ -326,6 +326,25 @@ NEW_TRANSLATIONS = {
     "Ask for confirmation": "请求确认",
     "ask for confirmation": "请求确认",
 
+    # 子智能体与团队草稿 UI 标签 (Subagents & Teamwork Prompt Draft UI)
+    "subagents": "子智能体",
+    "subagent": "子智能体",
+    "Subagents": "子智能体",
+    "Subagent": "子智能体",
+    "Child Subagents": "子智能体",
+    "child subagents": "子智能体",
+    "Child Subagent": "子智能体",
+    "Teamwork Project Prompt — Draft": "团队项目提示词 — 草稿",
+    "Teamwork Project Prompt": "团队项目提示词",
+    "Prompt Draft": "提示词草稿",
+    "Prompt draft": "提示词草稿",
+    "Status: Launched": "状态：已启动",
+    "Requested team:": "请求团队：",
+    "Working directory:": "工作目录：",
+    "Integrity mode: benchmark": "完整性模式：基准测试",
+    "Integrity mode:": "完整性模式：",
+    "Requirements": "需求清单",
+
     # 历史会话常见技术短语 (Session Titles & Tech Topics)
     "Multi-Agent AI Task Delegation": "多智能体 AI 任务委派",
     "Multi-Agent AI": "多智能体 AI",

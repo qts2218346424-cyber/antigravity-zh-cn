@@ -46,7 +46,7 @@ def audit_and_update_rules():
         r"^Media\s*\((.+)\)$": "媒体 ($1)",
         r"^Media\s+(\d+)$": "媒体 $1",
         r"([0-9.]+)%\s+of the customization budget is available\.?": "自定义预算剩余 $1%",
-        r"\((\d+)\s+subagents?\)": "($1 个子代理)",
+        r"\((\d+)\s+subagents?\)": "($1 个子智能体)",
         r"^Worked for (\d+)h (\d+)m$": "已工作 $1 小时 $2 分钟",
         r"^Worked for (\d+)m (\d+)s$": "已工作 $1 分钟 $2 秒",
         r"^Worked for (\d+)h$": "已工作 $1 小时",
@@ -86,6 +86,8 @@ def audit_and_update_rules():
     seen_patterns = set()
 
     for pattern, repl in rules:
+        if pattern == r"^\(?(\d+)\s*(?:subagents?|子智能体s?)\)?$":
+            continue
         if pattern == r"^Are you sure you want to delete (.+)\?$":
             project_rule = r"^[Aa]re you sure you want to delete\s+(?:the\s+)?(?:projects?\s+|项目\s*)(.+?)[\?？]?$"
             if project_rule not in seen_patterns:
@@ -348,6 +350,28 @@ def audit_and_update_rules():
         [r"^[Aa]sk\s+first(\s*[✓✔])?$", "先询问$1"],
         [r"^[Aa]sk\s+before\s+(?:running|executing)(\s*[✓✔])?$", "执行前询问$1"],
         [r"^[Aa]sk\s+(?:for\s+)?confirmation(\s*[✓✔])?$", "请求确认$1"],
+
+        # 子智能体单复数、残留 s 彻底清洗与规范化 (16 子智能体s / 16 subagents)
+        [r"^\((\d+)\s*(?:subagents?|子智能体s?)\)$", "($1 个子智能体)"],
+        [r"^(\d+)\s*(?:subagents?|子智能体s?)$", "$1 个子智能体"],
+        [r"^\((\d+)\s*子智能体s\)$", "($1 个子智能体)"],
+        [r"^(\d+)\s*子智能体s\)$", "$1 个子智能体)"],
+        [r"^子智能体s$", "子智能体"],
+        [r"^子智能体s\)$", "子智能体)"],
+        [r"^Child Subagents\s*\(([0-9]+)\)$", "子智能体 ($1)"],
+        [r"^Child Subagents$", "子智能体"],
+
+        # 团队项目草稿与工件面板 UI (Teamwork Prompt Draft)
+        [r"^Teamwork Project Prompt(?:\s*[—–-]\s*Draft)?$", "团队项目提示词 — 草稿"],
+        [r"^Teamwork Project Prompt$", "团队项目提示词"],
+        [r"^Prompt Draft$", "提示词草稿"],
+        [r"^Status:\s*Launched$", "状态：已启动"],
+        [r"^Status:\s*(.+)$", "状态：$1"],
+        [r"^Goal:\s*(.+)$", "目标：$1"],
+        [r"^Requested team:\s*(.+)$", "请求团队：$1"],
+        [r"^Working directory:\s*(.+)$", "工作目录：$1"],
+        [r"^Integrity mode:\s*(.+)$", "完整性模式：$1"],
+        [r"^Requirements$", "需求清单"],
     ]
 
     for pattern, repl in additional_rules:

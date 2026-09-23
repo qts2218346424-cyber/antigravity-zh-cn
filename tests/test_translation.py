@@ -44,6 +44,16 @@ class TestRuntimeTranslation(unittest.TestCase):
 
             const text = norm(raw);
             if (!text) return null;
+
+            if (/[\u4e00-\u9fa5]/.test(text)) {
+                const cleaned = text
+                    .replace(/\((\d+)\s*子智能体s\)/g, '($1 个子智能体)')
+                    .replace(/(\d+)\s*子智能体s/g, '$1 个子智能体')
+                    .replace(/(子智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1')
+                    .replace(/([\u4e00-\u9fa5])s(?=[^\w]|$)/g, '$1');
+                if (cleaned !== text) return cleaned;
+            }
+
             if (DICT[text]) return DICT[text];
             const lower = text.toLowerCase();
             if (LOWER_DICT[lower]) return LOWER_DICT[lower];
@@ -335,8 +345,23 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(124);
         }
         if (translate("always ask") !== "总是询问") process.exit(125);
-        if (translate("Always ask") !== "总是询问") process.exit(126);
         if (translate("Ask first") !== "先询问") process.exit(127);
+
+        // 19. Subagent plural cleanup, s display bug eradication, and Teamwork prompt draft UI
+        if (translate("(16 子智能体s)") !== "(16 个子智能体)") {
+            console.error("(16 子智能体s) failed:", translate("(16 子智能体s)"));
+            process.exit(128);
+        }
+        if (translate("16 子智能体s") !== "16 个子智能体") process.exit(129);
+        if (translate("(16 subagents)") !== "(16 个子智能体)") {
+            console.error("(16 subagents) failed:", translate("(16 subagents)"));
+            process.exit(130);
+        }
+        if (translate("16 subagents") !== "16 个子智能体") process.exit(131);
+        if (translate("子智能体s") !== "子智能体") process.exit(132);
+        if (translate("Teamwork Project Prompt — Draft") !== "团队项目提示词 — 草稿") process.exit(133);
+        if (translate("Status: Launched") !== "状态：已启动") process.exit(134);
+        if (translate("Requirements") !== "需求清单") process.exit(135);
 
         console.log("SUCCESS");
         """

@@ -12,7 +12,40 @@ import time
 import threading
 import argparse
 import pathlib
+import re
 from typing import Dict, Any, Optional
+
+# Clean conflicting global WebView2 remote debugging port to prevent E_ABORT (0x80004004)
+if "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS" in os.environ:
+    _wb_args = os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"]
+    if "--remote-debugging-port" in _wb_args:
+        _cleaned = re.sub(r'--remote-debugging-port=\d+', '', _wb_args).strip()
+        if _cleaned:
+            os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = _cleaned
+        else:
+            del os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"]
+
+
+def ensure_default_desktop_session():
+    """
+    Ensures the process and UI threads are attached to the interactive user desktop (WinSta0\\Default).
+    This guarantees the pet window appears on the user's physical monitor even when spawned from isolated agent shells or background services.
+    """
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            h_winsta = user32.OpenWindowStationW("WinSta0", False, 0x037F)
+            if h_winsta:
+                user32.SetProcessWindowStation(h_winsta)
+            h_desk = user32.OpenDesktopW("Default", 0, False, 0x01FF)
+            if h_desk:
+                user32.SetThreadDesktop(h_desk)
+        except Exception:
+            pass
+
+
+ensure_default_desktop_session()
 
 # Attempt to load pet_engine backend if available
 try:
@@ -849,6 +882,20 @@ def main():
     tray_controller = PetTrayController(bridge, window_holder)
     tray_controller.start()
 
+    # Calculate initial right-bottom screen position (above taskbar)
+    init_x = None
+    init_y = None
+    try:
+        import win32api
+        import win32con
+        screen_w = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
+        screen_h = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
+        if screen_w > 400 and screen_h > 400:
+            init_x = max(20, screen_w - 340)
+            init_y = max(20, screen_h - 480)
+    except Exception:
+        pass
+
     # Create Transparent Frameless Window
     url = index_html.as_uri()
     window = webview.create_window(
@@ -856,6 +903,8 @@ def main():
         url=url,
         width=320,
         height=380,
+        x=init_x,
+        y=init_y,
         resizable=False,
         frameless=True,
         transparent=True,
@@ -885,8 +934,11 @@ def main():
 
     threading.Thread(target=_background_version_monitor, daemon=True).start()
 
+    storage_dir = pathlib.Path.home() / ".gemini" / "pet_webview_data"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+
     print("[Runner] Launching Antigravity Desktop Pet...")
-    webview.start(debug=args.debug)
+    webview.start(debug=args.debug, storage_path=str(storage_dir))
 
 
 if __name__ == "__main__":
