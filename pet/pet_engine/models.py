@@ -557,6 +557,9 @@ class QuotaStatus:
     status: str
     reset_time_utc: Optional[str] = None
     models: List[Dict[str, Any]] = field(default_factory=list)
+    groups: List[Dict[str, Any]] = field(default_factory=list)
+    user_name: str = ""
+    user_picture: str = ""
     fetched_at: str = field(default_factory=now_utc_iso)
     remaining_basis_points: int = 10000
     schema_version: int = 1

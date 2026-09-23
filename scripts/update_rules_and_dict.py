@@ -121,22 +121,23 @@ def audit_and_update_rules():
         [r"^全部 定时任务 run as (.+?)\.?$", "所有定时任务均以 $1 运行。"],
 
         # 快捷操作与按钮
-        [r"^Cancel\s*\((Ctrl\+D)\)$", "取消 ($1)"],
+        [r"^Cancel\s*\((?:Ctrl\+D|Ctrl\s*\+\s*D)\)$", "取消 (Ctrl+D)"],
         [r"^Cancel\s*\((.+?)\)$", "取消 ($1)"],
-        [r"^Delete [Pp]lugin\??$", "删除插件"],
+        [r"^Delete\s+[Pp]lugin(?:\.{3})?\??$", "删除插件"],
 
-        # 筛选与视图模式
-        [r"^Only Unread$", "仅未读"],
-        [r"^Scheduled$", "已计划"],
-        [r"^Project \+ Worktree$", "项目 + 工作树"],
-        [r"^Subtitle$", "副标题"],
-        [r"^Subtitles$", "字幕"],
+        # 筛选与视图模式（支持右侧带勾选标记 ✓ / ✔ 的选中国态）
+        [r"^Project\s*\+\s*Worktree(\s*[✓✔])?$", "项目 + 工作树$1"],
+        [r"^Only\s+Unread(\s*[✓✔])?$", "仅未读$1"],
+        [r"^Scheduled(\s*[✓✔])?$", "已计划$1"],
+        [r"^Archived(\s*[✓✔])?$", "已归档$1"],
+        [r"^Unread(\s*[✓✔])?$", "未读$1"],
+        [r"^Subtitle(\s*[✓✔])?$", "副标题$1"],
+        [r"^Subtitles(\s*[✓✔])?$", "字幕$1"],
 
-        # 插件详情描述
-        [r"^Reliable automation, in-depth debugging, and performance analysis in Chrome using Chrome DevTools and Puppeteer\.?$", "使用 Chrome DevTools 和 Puppeteer 在 Chrome 中进行可靠的自动化、深度调试和性能分析。"],
-        [r"^Keep your coding agent up to date with the latest web best practices\.?$", "让您的编程智能体始终掌握最新的 Web 最佳实践。"],
-        [r"^Universal TypeSafe Jev \(System One\) Coprocessor for rapid micro-decisions, risk gating, multi-criteria scoring, and intent classification across all coding and researc\.\.\.$", "通用的 TypeSafe Jev (系统一) 协处理器，用于在所有编程和研究任务中进行快速微决策、风险门禁、多维度评分及意图分类..."],
-        [r"^Universal TypeSafe Jev \(System One\) Coprocessor for rapid micro-decisions, risk gating, multi-criteria scoring, and intent classification across all coding and research tasks\.?$", "通用的 TypeSafe Jev (系统一) 协处理器，用于在所有编程和研究任务中进行快速微决策、风险门禁、多维度评分及意图分类。"],
+        # 插件详情描述（前缀模糊通配，彻底防御字符截断与 CSS 省略号）
+        [r"^Reliable automation, in-depth debugging.*$", "使用 Chrome DevTools 和 Puppeteer 在 Chrome 中进行可靠的自动化、深度调试和性能分析。"],
+        [r"^Keep your coding agent up to date.*$", "让您的编程智能体始终掌握最新的 Web 最佳实践。"],
+        [r"^Universal TypeSafe Jev \(System One\) Coprocessor.*$", "通用的 TypeSafe Jev (系统一) 协处理器，用于在所有编程和研究任务中进行快速微决策、风险门禁、多维度评分及意图分类。"],
 
         # 项目修改数扩展
         [r"^Modified in\s+(\d+)\s+(?:projects?|项目列表|个项目)$", "在 $1 个项目中已修改"],

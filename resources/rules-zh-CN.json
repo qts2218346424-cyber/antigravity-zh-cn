@@ -1030,5 +1030,53 @@
   [
     "^Modified in\\s+(\\d+)\\s+(?:items?|项)$",
     "在 $1 个项目中已修改"
+  ],
+  [
+    "^Cancel\\s*\\((?:Ctrl\\+D|Ctrl\\s*\\+\\s*D)\\)$",
+    "取消 (Ctrl+D)"
+  ],
+  [
+    "^Delete\\s+[Pp]lugin(?:\\.{3})?\\??$",
+    "删除插件"
+  ],
+  [
+    "^Project\\s*\\+\\s*Worktree(\\s*[✓✔])?$",
+    "项目 + 工作树$1"
+  ],
+  [
+    "^Only\\s+Unread(\\s*[✓✔])?$",
+    "仅未读$1"
+  ],
+  [
+    "^Scheduled(\\s*[✓✔])?$",
+    "已计划$1"
+  ],
+  [
+    "^Archived(\\s*[✓✔])?$",
+    "已归档$1"
+  ],
+  [
+    "^Unread(\\s*[✓✔])?$",
+    "未读$1"
+  ],
+  [
+    "^Subtitle(\\s*[✓✔])?$",
+    "副标题$1"
+  ],
+  [
+    "^Subtitles(\\s*[✓✔])?$",
+    "字幕$1"
+  ],
+  [
+    "^Reliable automation, in-depth debugging.*$",
+    "使用 Chrome DevTools 和 Puppeteer 在 Chrome 中进行可靠的自动化、深度调试和性能分析。"
+  ],
+  [
+    "^Keep your coding agent up to date.*$",
+    "让您的编程智能体始终掌握最新的 Web 最佳实践。"
+  ],
+  [
+    "^Universal TypeSafe Jev \\(System One\\) Coprocessor.*$",
+    "通用的 TypeSafe Jev (系统一) 协处理器，用于在所有编程和研究任务中进行快速微决策、风险门禁、多维度评分及意图分类。"
   ]
 ]

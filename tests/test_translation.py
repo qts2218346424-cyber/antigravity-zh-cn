@@ -224,6 +224,16 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Cancel (Ctrl+D)") !== "取消 (Ctrl+D)") process.exit(83);
         if (!translate("Keep your coding agent up to date with the latest web best practices.").includes("Web 最佳实践")) process.exit(84);
         if (!translate("Reliable automation, in-depth debugging, and performance analysis in Chrome using Chrome DevTools and Puppeteer").includes("性能分析")) process.exit(85);
+        if (translate("Project + Worktree ✓") !== "项目 + 工作树 ✓") {
+            console.error("Project + Worktree checkmark failed:", translate("Project + Worktree ✓"));
+            process.exit(86);
+        }
+        if (translate("Scheduled ✓") !== "已计划 ✓") process.exit(87);
+        if (translate("Only Unread ✓") !== "仅未读 ✓") process.exit(88);
+        if (!translate("Universal TypeSafe Jev (System One) Coprocessor for rapid micro-decisions, risk gating, multi-criteria scoring, and intent classification across all coding and researc...").includes("协处理器")) {
+            console.error("Jev description prefix failed:", translate("Universal TypeSafe Jev (System One) Coprocessor for rapid micro-decisions, risk gating, multi-criteria scoring, and intent classification across all coding and researc..."));
+            process.exit(89);
+        }
 
         console.log("SUCCESS");
         """
