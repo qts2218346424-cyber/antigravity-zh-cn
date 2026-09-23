@@ -54,128 +54,21 @@
 
     <!-- 宠物展示主区域（支持全域拖拽） -->
     <div id="mascot-viewport" class="mascot-viewport pywebview-drag-region" data-tauri-drag-region>
+      <!-- 互动对话气泡（点击或状态变化时弹出） -->
+      <div id="pet-speech-bubble" class="pet-speech-bubble">
+        <span id="speech-bubble-text">主人，我在！额度还很充足~</span>
+      </div>
+
       <div id="mascot-container" class="mascot-container pywebview-drag-region" data-tauri-drag-region>
-        
-        <!-- 原生 Gemini 动态星灵 SVG -->
-        <div id="svg-mascot-wrapper" data-tauri-drag-region>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%" id="gemini-mascot-svg">
-            <defs>
-              <linearGradient id="geminiCoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#4E80FF" />
-                <stop offset="45%" stop-color="#7B2CBF" />
-                <stop offset="85%" stop-color="#B5179E" />
-                <stop offset="100%" stop-color="#F72585" />
-              </linearGradient>
-
-              <linearGradient id="orbitalRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.85" />
-                <stop offset="50%" stop-color="#7209B7" stop-opacity="0.2" />
-                <stop offset="100%" stop-color="#FF007A" stop-opacity="0.9" />
-              </linearGradient>
-
-              <radialGradient id="celestialGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.45" />
-                <stop offset="55%" stop-color="#7000FF" stop-opacity="0.2" />
-                <stop offset="100%" stop-color="#0B0E17" stop-opacity="0" />
-              </radialGradient>
-
-              <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-
-              <filter id="intenseGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="10" result="blur1" />
-                <feGaussianBlur stdDeviation="4" result="blur2" />
-                <feMerge>
-                  <feMergeNode in="blur1" />
-                  <feMergeNode in="blur2" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <!-- 呼吸星环与灵能轨道 -->
-            <circle cx="120" cy="120" r="95" fill="url(#celestialGlow)" class="mascot-aura" />
-
-            <g class="orbital-system" transform="rotate(-20 120 120)">
-              <ellipse cx="120" cy="120" rx="90" ry="32" fill="none" stroke="url(#orbitalRingGrad)" stroke-width="2.5" stroke-dasharray="8 6" opacity="0.75" class="orbital-ring" />
-              <circle cx="210" cy="120" r="4.5" fill="#00F0FF" filter="url(#glowFilter)" class="satellite-spark">
-                <animateTransform attributeName="transform" type="rotate" from="0 120 120" to="360 120 120" dur="6s" repeatCount="indefinite" />
-              </circle>
-            </g>
-
-            <!-- 星灵本体核心 -->
-            <g class="mascot-star-body" id="mascot-star-group">
-              <path d="M 120,25 Q 120,120 25,120 Q 120,120 120,215 Q 120,120 215,120 Q 120,120 120,25 Z"
-                    fill="url(#geminiCoreGrad)"
-                    filter="url(#glowFilter)"
-                    class="gemini-star-shape" />
-
-              <path d="M 120,45 Q 120,120 45,120 Q 120,120 120,195 Q 120,120 195,120 Q 120,120 120,45 Z"
-                    fill="#FFFFFF"
-                    opacity="0.18"
-                    class="inner-highlight" />
-
-              <!-- 灵能星芒触角 -->
-              <circle cx="120" cy="22" r="3.5" fill="#00F0FF" filter="url(#glowFilter)" />
-              <circle cx="218" cy="120" r="3.5" fill="#FF007A" filter="url(#glowFilter)" />
-              <circle cx="120" cy="218" r="3.5" fill="#7B2CBF" filter="url(#glowFilter)" />
-              <circle cx="22" cy="120" r="3.5" fill="#00F0FF" filter="url(#glowFilter)" />
-
-              <!-- 灵动面部表情与眨眼 -->
-              <g class="mascot-face" id="mascot-face">
-                <ellipse cx="88" cy="132" rx="7" ry="4" fill="#FF4081" opacity="0.65" filter="url(#glowFilter)" class="blush blush-left" />
-                <ellipse cx="152" cy="132" rx="7" ry="4" fill="#FF4081" opacity="0.65" filter="url(#glowFilter)" class="blush blush-right" />
-
-                <g id="mascot-eye-left" class="mascot-eye eye-left" transform="translate(94, 114)">
-                  <ellipse cx="0" cy="0" rx="8" ry="11" fill="#FFFFFF" />
-                  <ellipse cx="0" cy="0" rx="6" ry="9" fill="#0A0F24" />
-                  <circle cx="-2" cy="-3" r="3" fill="#00F0FF" />
-                  <circle cx="2" cy="3" r="1.5" fill="#FFFFFF" />
-                  <rect x="-9" y="-12" width="18" height="0" fill="#7B2CBF" class="eye-lid eyelid-left" />
-                </g>
-
-                <g id="mascot-eye-right" class="mascot-eye eye-right" transform="translate(146, 114)">
-                  <ellipse cx="0" cy="0" rx="8" ry="11" fill="#FFFFFF" />
-                  <ellipse cx="0" cy="0" rx="6" ry="9" fill="#0A0F24" />
-                  <circle cx="-2" cy="-3" r="3" fill="#00F0FF" />
-                  <circle cx="2" cy="3" r="1.5" fill="#FFFFFF" />
-                  <rect x="-9" y="-12" width="18" height="0" fill="#7B2CBF" class="eye-lid eyelid-right" />
-                </g>
-
-                <path id="mascot-mouth" d="M 112,130 Q 120,138 128,130" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" class="mouth" />
-              </g>
-
-              <!-- 状态光效层 -->
-              <g class="state-overlay thinking-sparks" opacity="0" id="thinking-indicator">
-                <circle cx="120" cy="65" r="4" fill="#00F0FF" filter="url(#intenseGlow)" />
-                <circle cx="70" cy="85" r="3" fill="#7000FF" filter="url(#intenseGlow)" />
-                <circle cx="170" cy="85" r="3" fill="#00F0FF" filter="url(#intenseGlow)" />
-              </g>
-
-              <g class="state-overlay celebration-stars" opacity="0" id="celebration-indicator">
-                <polygon points="120,4 124,14 135,15 127,22 129,33 120,27 111,33 113,22 105,15 116,14" fill="#FFD700" filter="url(#intenseGlow)" />
-                <circle cx="95" cy="20" r="3" fill="#FFE066" filter="url(#glowFilter)" />
-                <circle cx="145" cy="20" r="3" fill="#FFE066" filter="url(#glowFilter)" />
-              </g>
-
-              <g class="state-overlay quota-warning" opacity="0" id="warning-indicator" transform="translate(120, 60)">
-                <polygon points="0,-16 14,10 -14,10" fill="#FF3366" stroke="#FFFFFF" stroke-width="1.5" filter="url(#glowFilter)" />
-                <text x="0" y="7" font-size="14" font-weight="900" text-anchor="middle" fill="#FFFFFF">!</text>
-              </g>
-            </g>
-          </svg>
+        <!-- 默认灵动像素桌面宠物（完全透明桌面浮动，零背景框，极速渲染） -->
+        <div id="svg-mascot-wrapper" class="mascot-sprite-wrapper" data-tauri-drag-region>
+          <img id="mascot-sprite-img" class="mascot-sprite-img" src="assets/pet_idle.gif" alt="Gemini 桌面萌宠" draggable="false" />
         </div>
 
         <!-- 自定义形象渲染层（支持导入 PNG, GIF, WebP, SVG） -->
         <div id="custom-avatar-wrapper" style="display: none;" data-tauri-drag-region>
-          <img id="custom-avatar-img" alt="自定义宠物形象" />
+          <img id="custom-avatar-img" class="mascot-sprite-img" alt="自定义宠物形象" draggable="false" />
         </div>
-
       </div>
     </div>
 

@@ -15,48 +15,87 @@
     const RULES = window.__AGY_ZH_RULES__ || [];
     const LANG = window.__AGY_ZH_LANG__ || 'zh-CN';
 
-    // 格式化与查词工具
-    const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+    // 构建小写不敏感字典索引，提升各类样式大小写与动态拼接场景的容错率
+    const LOWER_DICT = {};
+    for (const k in DICT) {
+      const lk = k.toLowerCase();
+      if (!LOWER_DICT[lk]) LOWER_DICT[lk] = DICT[k];
+    }
+
+    // 格式化与查词工具：去除零宽字符，合并连续空白
+    const norm = (s) => (s || '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
 
     const translate = (raw) => {
       if (!raw) return null;
+
+      // 0. 多行文本逐行翻译（如快捷键提示浮层、复合说明）
+      if (typeof raw === 'string' && raw.includes('\n')) {
+        const lines = raw.split('\n');
+        let anyTranslated = false;
+        const translatedLines = lines.map(line => {
+          const trimmed = line.trim();
+          if (!trimmed) return line;
+          const tr = translate(trimmed);
+          if (tr) {
+            anyTranslated = true;
+            const lead = (line.match(/^\s*/) || [''])[0];
+            const trail = (line.match(/\s*$/) || [''])[0];
+            return lead + tr + trail;
+          }
+          return line;
+        });
+        if (anyTranslated) {
+          return translatedLines.join('\n');
+        }
+      }
+
       const text = norm(raw);
       if (!text) return null;
 
-      // 1. 精确匹配字典
+      // 1. 精确匹配字典（含小写兜底）
       if (DICT[text]) {
         return DICT[text];
       }
+      const lower = text.toLowerCase();
+      if (LOWER_DICT[lower]) {
+        return LOWER_DICT[lower];
+      }
 
-      // 1.1 标点与后缀容错（冒号、省略号、句号、问号、箭头、括号）
-      if (text.endsWith(':') && DICT[text.slice(0, -1).trim()]) {
-        return DICT[text.slice(0, -1).trim()] + '：';
+      // 1.1 标点与后缀容错（冒号、省略号、句号、问号、箭头、括号、勾选标记）
+      if (text.endsWith(':') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '：';
       }
-      if (text.endsWith('...') && DICT[text.slice(0, -3).trim()]) {
-        return DICT[text.slice(0, -3).trim()] + '...';
+      if (text.endsWith('...') && (DICT[text.slice(0, -3).trim()] || LOWER_DICT[lower.slice(0, -3).trim()])) {
+        return (DICT[text.slice(0, -3).trim()] || LOWER_DICT[lower.slice(0, -3).trim()]) + '...';
       }
-      if (text.endsWith('…') && DICT[text.slice(0, -1).trim()]) {
-        return DICT[text.slice(0, -1).trim()] + '...';
+      if (text.endsWith('…') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '...';
       }
-      if (text.endsWith('.') && DICT[text.slice(0, -1).trim()]) {
-        return DICT[text.slice(0, -1).trim()] + '。';
+      if (text.endsWith('.') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '。';
       }
-      if (text.endsWith('?') && DICT[text.slice(0, -1).trim()]) {
-        return DICT[text.slice(0, -1).trim()] + '？';
+      if (text.endsWith('?') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '？';
       }
-      if (text.endsWith('>') && DICT[text.slice(0, -1).trim()]) {
-        return DICT[text.slice(0, -1).trim()] + ' >';
+      if (text.endsWith('>') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' >';
       }
-      if (text.startsWith('(') && text.endsWith(')') && DICT[text.slice(1, -1).trim()]) {
-        return '（' + DICT[text.slice(1, -1).trim()] + '）';
+      if ((text.endsWith('✓') || text.endsWith('✔')) && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' ' + text.slice(-1);
+      }
+      if ((text.startsWith('✓') || text.startsWith('✔')) && (DICT[text.slice(1).trim()] || LOWER_DICT[lower.slice(1).trim()])) {
+        return text.charAt(0) + ' ' + (DICT[text.slice(1).trim()] || LOWER_DICT[lower.slice(1).trim()]);
+      }
+      if (text.startsWith('(') && text.endsWith(')') && (DICT[text.slice(1, -1).trim()] || LOWER_DICT[lower.slice(1, -1).trim()])) {
+        return '（' + (DICT[text.slice(1, -1).trim()] || LOWER_DICT[lower.slice(1, -1).trim()]) + '）';
       }
       const countMatch = text.match(/^(.+?)\s*\(([0-9]+)\)$/);
-      if (countMatch && DICT[countMatch[1].trim()]) {
-        return DICT[countMatch[1].trim()] + ' (' + countMatch[2] + ')';
+      if (countMatch && (DICT[countMatch[1].trim()] || LOWER_DICT[countMatch[1].trim().toLowerCase()])) {
+        return (DICT[countMatch[1].trim()] || LOWER_DICT[countMatch[1].trim().toLowerCase()]) + ' (' + countMatch[2] + ')';
       }
       const modelTagMatch = text.match(/^(.+?)\s*\((Thinking|Fast|Medium|High|Low)\)$/i);
-      if (modelTagMatch && DICT[modelTagMatch[2]]) {
-        return modelTagMatch[1] + '（' + DICT[modelTagMatch[2]] + '）';
+      if (modelTagMatch && (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()])) {
+        return modelTagMatch[1] + '（' + (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()]) + '）';
       }
 
       // 2. 正则动态匹配
@@ -99,7 +138,7 @@
         }
 
         // 2. 浮层菜单、列表框、弹出浮层、提示框与斜杠命令自动补全一律允许汉化
-        if (el.closest('[role="listbox"], [role="menu"], [role="tooltip"], [class*="typeahead"], [class*="popover"], [class*="dropdown"], [class*="menu-item"]')) {
+        if (el.closest('[role="listbox"], [role="menu"], [role="tooltip"], [class*="tooltip"], [class*="typeahead"], [class*="popover"], [class*="dropdown"], [class*="menu-item"], [data-radix-popper-content-wrapper], [data-floating-ui-portal]')) {
           return false;
         }
 

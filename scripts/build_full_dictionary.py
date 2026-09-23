@@ -14,6 +14,51 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 NEW_TRANSLATIONS = {
+    # 语音录制 (Audio & Voice Recording)
+    "Record Audio": "录制音频",
+    "Record Audio Ctrl+M": "录制音频 Ctrl+M",
+    "Record audio": "录制音频",
+    "Record audio Ctrl+M": "录制音频 Ctrl+M",
+    "Stop Recording": "停止录制",
+    "Start Recording": "开始录制",
+    "Cancel Recording": "取消录制",
+    "Record Voice": "录制语音",
+    "Voice Input": "语音输入",
+    "Audio Input": "音频输入",
+    "Audio input": "音频输入",
+    "Audio recording": "音频录制",
+    "Recording audio...": "正在录制音频...",
+    "Recording...": "正在录制...",
+    "Stop recording": "停止录制",
+    "Start recording": "开始录制",
+    "Cancel recording": "取消录制",
+
+    # 快捷键提示与排队发送 (Keyboard Shortcuts & Message Queueing)
+    "Enter Queues after the turn": "Enter：本轮结束后排队",
+    "Enter: Queues after the turn": "Enter：本轮结束后排队",
+    "Alt+Enter Sends immediately": "Alt+Enter：立即发送",
+    "Alt+Enter: Sends immediately": "Alt+Enter：立即发送",
+    "Alt+Enter On empty prompt, sends next in queue": "Alt+Enter：若输入为空，发送队列中下一条",
+    "Alt+Enter: On empty prompt, sends next in queue": "Alt+Enter：若输入为空，发送队列中下一条",
+    "Enter Queues after the turn\nAlt+Enter Sends immediately\nAlt+Enter On empty prompt, sends next in queue": "Enter：本轮结束后排队\nAlt+Enter：立即发送\nAlt+Enter：若输入为空，发送队列中下一条",
+    "Enter Queues after the turn Alt+Enter Sends immediately Alt+Enter On empty prompt, sends next in queue": "Enter：本轮结束后排队\nAlt+Enter：立即发送\nAlt+Enter：若输入为空，发送队列中下一条",
+    "Queues after the turn": "本轮结束后排队",
+    "Queue after the turn": "本轮结束后排队",
+    "Sends immediately": "立即发送",
+    "Send immediately": "立即发送",
+    "On empty prompt, sends next in queue": "若输入为空，发送队列中下一条",
+    "On empty prompt": "若输入为空",
+    "sends next in queue": "发送队列中下一条",
+    "Sends next in queue": "发送队列中下一条",
+    "Next in queue": "队列中下一条",
+    "Send next in queue": "发送队列中下一条",
+
+    # 模型选择器 / 限时体验勾选容错
+    "Limited time ✓": "限时体验 ✓",
+    "Limited time ✔": "限时体验 ✔",
+    "Limited Time ✓": "限时体验 ✓",
+    "Limited Time ✔": "限时体验 ✔",
+
     # 定时任务 (Scheduled Tasks)
     "New Scheduled Task": "新建定时任务",
     "New scheduled task": "新建定时任务",

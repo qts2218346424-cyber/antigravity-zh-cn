@@ -11,25 +11,61 @@ class TestRuntimeTranslation(unittest.TestCase):
         const DICT = JSON.parse(fs.readFileSync('__REPO_ROOT__/resources/antigravity-zh-CN.json', 'utf-8'));
         const RULES = JSON.parse(fs.readFileSync('__REPO_ROOT__/resources/rules-zh-CN.json', 'utf-8'));
 
-        const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+        const LOWER_DICT = {};
+        for (const k in DICT) {
+            const lk = k.toLowerCase();
+            if (!LOWER_DICT[lk]) LOWER_DICT[lk] = DICT[k];
+        }
+
+        const norm = (s) => (s || '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
 
         const translate = (raw) => {
             if (!raw) return null;
+
+            if (typeof raw === 'string' && raw.includes('\n')) {
+                const lines = raw.split('\n');
+                let anyTranslated = false;
+                const translatedLines = lines.map(line => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return line;
+                    const tr = translate(trimmed);
+                    if (tr) {
+                        anyTranslated = true;
+                        const lead = (line.match(/^\s*/) || [''])[0];
+                        const trail = (line.match(/\s*$/) || [''])[0];
+                        return lead + tr + trail;
+                    }
+                    return line;
+                });
+                if (anyTranslated) {
+                    return translatedLines.join('\n');
+                }
+            }
+
             const text = norm(raw);
             if (!text) return null;
             if (DICT[text]) return DICT[text];
-            if (text.endsWith(':') && DICT[text.slice(0, -1).trim()]) return DICT[text.slice(0, -1).trim()] + '：';
-            if (text.endsWith('...') && DICT[text.slice(0, -3).trim()]) return DICT[text.slice(0, -3).trim()] + '...';
-            if (text.endsWith('…') && DICT[text.slice(0, -1).trim()]) return DICT[text.slice(0, -1).trim()] + '...';
-            if (text.endsWith('.') && DICT[text.slice(0, -1).trim()]) return DICT[text.slice(0, -1).trim()] + '。';
-            if (text.endsWith('?') && DICT[text.slice(0, -1).trim()]) return DICT[text.slice(0, -1).trim()] + '？';
+            const lower = text.toLowerCase();
+            if (LOWER_DICT[lower]) return LOWER_DICT[lower];
 
-            if (text.endsWith('>') && DICT[text.slice(0, -1).trim()]) return DICT[text.slice(0, -1).trim()] + ' >';
-            if (text.startsWith('(') && text.endsWith(')') && DICT[text.slice(1, -1).trim()]) return '（' + DICT[text.slice(1, -1).trim()] + '）';
+            if (text.endsWith(':') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '：';
+            if (text.endsWith('...') && (DICT[text.slice(0, -3).trim()] || LOWER_DICT[lower.slice(0, -3).trim()])) return (DICT[text.slice(0, -3).trim()] || LOWER_DICT[lower.slice(0, -3).trim()]) + '...';
+            if (text.endsWith('…') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '...';
+            if (text.endsWith('.') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '。';
+            if (text.endsWith('?') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '？';
+
+            if (text.endsWith('>') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' >';
+            if ((text.endsWith('✓') || text.endsWith('✔')) && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+                return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' ' + text.slice(-1);
+            }
+            if ((text.startsWith('✓') || text.startsWith('✔')) && (DICT[text.slice(1).trim()] || LOWER_DICT[lower.slice(1).trim()])) {
+                return text.charAt(0) + ' ' + (DICT[text.slice(1).trim()] || LOWER_DICT[lower.slice(1).trim()]);
+            }
+            if (text.startsWith('(') && text.endsWith(')') && (DICT[text.slice(1, -1).trim()] || LOWER_DICT[lower.slice(1, -1).trim()])) return '（' + (DICT[text.slice(1, -1).trim()] || LOWER_DICT[lower.slice(1, -1).trim()]) + '）';
             const countMatch = text.match(/^(.+?)\s*\(([0-9]+)\)$/);
-            if (countMatch && DICT[countMatch[1].trim()]) return DICT[countMatch[1].trim()] + ' (' + countMatch[2] + ')';
+            if (countMatch && (DICT[countMatch[1].trim()] || LOWER_DICT[countMatch[1].trim().toLowerCase()])) return (DICT[countMatch[1].trim()] || LOWER_DICT[countMatch[1].trim().toLowerCase()]) + ' (' + countMatch[2] + ')';
             const modelTagMatch = text.match(/^(.+?)\s*\((Thinking|Fast|Medium|High|Low)\)$/i);
-            if (modelTagMatch && DICT[modelTagMatch[2]]) return modelTagMatch[1] + '（' + DICT[modelTagMatch[2]] + '）';
+            if (modelTagMatch && (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()])) return modelTagMatch[1] + '（' + (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()]) + '）';
 
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
@@ -112,6 +148,26 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (!translate("Claude Sonnet 4.6 (Thinking)").includes("思考")) process.exit(36);
         if (translate("GPT-OSS 120B (Medium)") !== "GPT-OSS 120B（中等）") process.exit(37);
         if (translate("Tool Calls (3)") !== "工具调用 (3)") process.exit(38);
+
+        // 9. Audio, message queueing shortcuts and limited time
+        if (translate("Limited time") !== "限时体验") process.exit(39);
+        if (translate("Limited time ✓") !== "限时体验 ✓") process.exit(40);
+        if (translate("Record Audio") !== "录制音频") process.exit(41);
+        if (translate("Record Audio Ctrl+M") !== "录制音频 Ctrl+M") process.exit(42);
+        if (translate("Enter Queues after the turn") !== "Enter：本轮结束后排队") process.exit(43);
+        if (translate("Alt+Enter Sends immediately") !== "Alt+Enter：立即发送") process.exit(44);
+        if (translate("Alt+Enter On empty prompt, sends next in queue") !== "Alt+Enter：若输入为空，发送队列中下一条") process.exit(45);
+        if (translate("Queues after the turn") !== "本轮结束后排队") process.exit(46);
+        if (translate("Sends immediately") !== "立即发送") process.exit(47);
+        if (translate("On empty prompt, sends next in queue") !== "若输入为空，发送队列中下一条") process.exit(48);
+
+        // Multiline tooltip test
+        const multilineTooltip = "Enter Queues after the turn\nAlt+Enter Sends immediately\nAlt+Enter On empty prompt, sends next in queue";
+        const expectedMultiline = "Enter：本轮结束后排队\nAlt+Enter：立即发送\nAlt+Enter：若输入为空，发送队列中下一条";
+        if (translate(multilineTooltip) !== expectedMultiline) {
+            console.error("Multiline tooltip test failed:\nExpected:\n" + expectedMultiline + "\nGot:\n" + translate(multilineTooltip));
+            process.exit(49);
+        }
 
         console.log("SUCCESS");
         """

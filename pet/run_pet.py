@@ -299,6 +299,20 @@ class JsBridge:
         apply_win32_window_styles(self.always_on_top, self.click_through)
         return {"success": True, "click_through": self.click_through}
 
+    def start_drag(self, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Initiates smooth native OS window drag using Win32 WM_NCLBUTTONDOWN."""
+        try:
+            import win32gui
+            import win32con
+            hwnd = get_pet_hwnd()
+            if hwnd:
+                win32gui.ReleaseCapture()
+                win32gui.SendMessage(hwnd, win32con.WM_NCLBUTTONDOWN, win32con.HTCAPTION, 0)
+                return {"success": True}
+        except Exception as e:
+            pass
+        return {"success": False}
+
     def set_pet_state(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Contract: set_pet_state(state, message?) -> { success, current_state }"""
         st = payload.get("state", "idle")

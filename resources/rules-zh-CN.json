@@ -686,5 +686,69 @@
   [
     "^No scheduled tasks(?: configured)?\\\\.?$",
     "尚未配置任何定时任务。"
+  ],
+  [
+    "^[Ll]imited[\\s-]+[Tt]ime(?:\\s*[✓✔])?$",
+    "限时体验"
+  ],
+  [
+    "^[Ll]imited[\\s-]+[Tt]ime(\\s*[✓✔])$",
+    "限时体验"
+  ],
+  [
+    "^Record\\s+[Aa]udio(?:\\s*(?:Ctrl|Cmd)\\+M)?$",
+    "录制音频 Ctrl+M"
+  ],
+  [
+    "^Record\\s+[Aa]udio$",
+    "录制音频"
+  ],
+  [
+    "^Record\\s+[Aa]udio\\s+(.+)$",
+    "录制音频 "
+  ],
+  [
+    "^Enter\\s*[:：]?\\s*Queues after the turn$",
+    "Enter：本轮结束后排队"
+  ],
+  [
+    "^(?:Alt|Ctrl|Cmd)\\+Enter\\s*[:：]?\\s*Sends immediately$",
+    "Alt+Enter：立即发送"
+  ],
+  [
+    "^(?:Alt|Ctrl|Cmd)\\+Enter\\s*[:：]?\\s*On empty prompt,\\s*sends next in queue$",
+    "Alt+Enter：若输入为空，发送队列中下一条"
+  ],
+  [
+    "^Queues after the turn$",
+    "本轮结束后排队"
+  ],
+  [
+    "^Queue after the turn$",
+    "本轮结束后排队"
+  ],
+  [
+    "^Sends immediately$",
+    "立即发送"
+  ],
+  [
+    "^Send immediately$",
+    "立即发送"
+  ],
+  [
+    "^On empty prompt,\\s*sends next in queue$",
+    "若输入为空，发送队列中下一条"
+  ],
+  [
+    "^On empty prompt$",
+    "若输入为空"
+  ],
+  [
+    "^[sS]ends next in queue$",
+    "发送队列中下一条"
+  ],
+  [
+    "^Next in queue$",
+    "队列中下一条"
   ]
 ]
