@@ -72,13 +72,13 @@ html, body {
   transition: opacity 0.3s ease;
 }
 
-/* Tauri Drag Region */
-[data-tauri-drag-region] {
+/* Tauri & pywebview Drag Region */
+[data-tauri-drag-region], .pywebview-drag-region {
   -webkit-app-region: drag;
   cursor: grab;
 }
 
-[data-tauri-drag-region]:active {
+[data-tauri-drag-region]:active, .pywebview-drag-region:active {
   cursor: grabbing;
 }
 

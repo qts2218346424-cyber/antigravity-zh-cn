@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="pet-app" class="state-idle" data-tauri-drag-region>
+  <div id="pet-app" class="state-idle pywebview-drag-region" data-tauri-drag-region>
     
     <!-- 顶部悬浮控制栏（鼠标移入宠物时轻柔淡入，平时隐藏） -->
     <div class="top-toolbar interactive" data-tauri-drag-region>
@@ -53,8 +53,8 @@
     </div>
 
     <!-- 宠物展示主区域（支持全域拖拽） -->
-    <div id="mascot-viewport" class="mascot-viewport" data-tauri-drag-region>
-      <div id="mascot-container" class="mascot-container" data-tauri-drag-region>
+    <div id="mascot-viewport" class="mascot-viewport pywebview-drag-region" data-tauri-drag-region>
+      <div id="mascot-container" class="mascot-container pywebview-drag-region" data-tauri-drag-region>
         
         <!-- 原生 Gemini 动态星灵 SVG -->
         <div id="svg-mascot-wrapper" data-tauri-drag-region>

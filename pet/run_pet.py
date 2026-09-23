@@ -753,10 +753,11 @@ def main():
     )
     window_holder["window"] = window
 
-    # Apply initial Win32 styles after brief composition delay
+    # Apply true glass transparency and Win32 styles after composition
     def _delayed_win32_init():
-        time.sleep(1.0)
-        apply_win32_window_styles(always_on_top=True, click_through=False)
+        for delay in [0.4, 1.0, 2.0]:
+            time.sleep(delay)
+            configure_true_desktop_transparency(always_on_top=True, click_through=False)
 
     threading.Thread(target=_delayed_win32_init, daemon=True).start()
 

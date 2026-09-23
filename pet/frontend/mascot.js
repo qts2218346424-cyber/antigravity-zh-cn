@@ -281,8 +281,8 @@
         this.customImg.onerror = () => {
           console.error('Failed to render custom avatar. Reverting to default mascot.');
           toastManager.showToast({
-            title: 'Avatar Load Error',
-            body: 'Custom avatar failed to render, reverted to default Gemini mascot.',
+            title: '形象渲染失败',
+            body: '自定义形象无法渲染，已自动恢复至默认 Gemini 星灵形象。',
             level: 'warning'
           });
           this.setAvatarMode('default');
@@ -319,7 +319,7 @@
       this.container = document.getElementById('toast-container');
     }
 
-    showToast({ title = 'Antigravity Alert', body = '', level = 'info', duration_ms = 5000, action_url = '', action_text = '' }) {
+    showToast({ title = '反重力桌面提醒', body = '', level = 'info', duration_ms = 5000, action_url = '', action_text = '' }) {
       // E5 Boundary & Deduplication check
       const hash = `${title}:${body}:${level}:${action_url}`;
       const now = Date.now();
@@ -475,31 +475,36 @@
       this.badge.classList.remove('healthy', 'warning', 'critical');
       let statusClass = 'healthy';
       let fillColor = 'var(--quota-healthy)';
+      let statusTextZh = '额度充足';
 
       if (percentage <= 0) {
         statusClass = 'critical';
+        statusTextZh = '已耗尽';
         fillColor = 'var(--quota-critical)';
-        this.text.textContent = '0% EXHAUSTED';
+        this.text.textContent = '0% 已耗尽';
       } else if (percentage < 20) {
         statusClass = 'critical';
+        statusTextZh = '告急';
         fillColor = 'var(--quota-critical)';
-        this.text.textContent = `${percentage}% LOW`;
+        this.text.textContent = `${percentage}% 告急`;
       } else if (percentage <= 50) {
         statusClass = 'warning';
+        statusTextZh = '适中';
         fillColor = 'var(--quota-warning)';
         this.text.textContent = `${percentage}%`;
       } else {
         statusClass = 'healthy';
+        statusTextZh = '充足';
         fillColor = 'var(--quota-healthy)';
         this.text.textContent = `${percentage}%`;
       }
 
       this.badge.classList.add(statusClass);
-      this.profileLabel.textContent = quota.account_email ? quota.account_email.split('@')[0] : 'Profile';
+      this.profileLabel.textContent = quota.account_email ? quota.account_email.split('@')[0] : '当前账号';
 
       // Detailed Card Content
-      this.cardTitle.textContent = `Antigravity Quota (${statusClass.toUpperCase()})`;
-      this.cardEmail.textContent = quota.account_email || 'Active Account';
+      this.cardTitle.textContent = `反重力模型额度 (${statusTextZh})`;
+      this.cardEmail.textContent = quota.account_email || '当前活跃账号';
       this.tokensUsed.textContent = (quota.used_tokens || 0).toLocaleString();
       this.tokensTotal.textContent = (quota.total_tokens || 0).toLocaleString();
 
@@ -514,7 +519,7 @@
           this.resetTime.textContent = quota.reset_time_utc;
         }
       } else {
-        this.resetTime.textContent = 'Unknown';
+        this.resetTime.textContent = '暂无记录';
       }
 
       // Models breakdown
@@ -523,11 +528,11 @@
           .map(([model, info]) => `
             <div class="model-item">
               <span>${model}</span>
-              <span>${info.remaining_requests}/${info.total_requests} reqs (${info.percentage}%)</span>
+              <span>${info.remaining_requests}/${info.total_requests} 请求 (${info.percentage}%)</span>
             </div>
           `).join('');
       } else {
-        this.modelsList.innerHTML = '<div class="model-item"><span>Status</span><span>Standard Tier</span></div>';
+        this.modelsList.innerHTML = '<div class="model-item"><span>状态</span><span>标准配额</span></div>';
       }
     }
 
@@ -540,8 +545,8 @@
           appState.lastQuotaAlertTimestamp = now;
           this.mascotCtrl.setState('quota_low');
           this.toastMgr.showToast({
-            title: 'Low Quota Warning',
-            body: `Antigravity quota is running low (${pct.toFixed(1)}% remaining). Consider switching profiles.`,
+            title: '额度告急提醒',
+            body: `反重力模型额度已不足 (${pct.toFixed(1)}%)，建议及时切换账号备用。`,
             level: 'warning',
             duration_ms: 7000
           });
@@ -612,11 +617,11 @@
             <div class="profile-info">
               <div class="profile-label-row">
                 <span class="profile-label-text">${this._escape(p.label)}</span>
-                ${isActive ? '<span class="active-pill">ACTIVE</span>' : ''}
+                ${isActive ? '<span class="active-pill">当前使用</span>' : ''}
               </div>
               <div class="profile-email-text">${this._escape(p.email)}</div>
             </div>
-            ${!isActive ? `<button class="btn-switch-profile" data-profile-id="${p.id}">Switch</button>` : ''}
+            ${!isActive ? `<button class="btn-switch-profile" data-profile-id="${p.id}">切换</button>` : ''}
           </div>
         `;
       }).join('');
@@ -632,8 +637,8 @@
 
     async executeSwitch(profileId) {
       this.toastMgr.showToast({
-        title: 'Switching Profile...',
-        body: `Atomically switching to profile ${profileId}`,
+        title: '正在切换账号...',
+        body: `正在无缝切换至配置：${profileId}`,
         level: 'info',
         duration_ms: 2500
       });
@@ -643,8 +648,8 @@
         if (res && res.success) {
           appState.activeProfileId = profileId;
           this.toastMgr.showToast({
-            title: 'Profile Switched!',
-            body: `Now active: ${res.email || profileId}`,
+            title: '账号切换成功！',
+            body: `已生效新账号：${res.email || profileId}`,
             level: 'success',
             duration_ms: 4000
           });
@@ -654,15 +659,15 @@
           this.mascotCtrl.setState('task_finished', 3000);
         } else {
           this.toastMgr.showToast({
-            title: 'Switch Failed',
-            body: res.error || 'Could not complete atomic switch',
+            title: '切换失败',
+            body: res.error || '无法完成原子级凭据切换',
             level: 'error'
           });
         }
       } catch (err) {
         this.toastMgr.showToast({
-          title: 'Switch Error',
-          body: err.message || 'Exception during profile switch',
+          title: '切换发生异常',
+          body: err.message || '账号切换执行异常',
           level: 'error'
         });
       }
@@ -762,7 +767,7 @@
 
       if (presetName === 'default') {
         this.mascotCtrl.setAvatarMode('default');
-        this.toastMgr.showToast({ title: 'Default Mascot', body: 'Restored animated Gemini mascot.', level: 'info' });
+        this.toastMgr.showToast({ title: '默认星灵', body: '已恢复原生 Gemini 动态星灵形象。', level: 'info' });
         this.close();
       } else {
         const presetPath = `assets/presets/${presetName}.svg`;
@@ -771,11 +776,11 @@
           .then(svgText => {
             const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
             this.mascotCtrl.setAvatarMode('preset', dataUrl);
-            this.toastMgr.showToast({ title: 'Preset Applied', body: `Switched avatar to ${presetName}`, level: 'success' });
+            this.toastMgr.showToast({ title: '形象已应用', body: `已切换形象预设：${presetName}`, level: 'success' });
             this.close();
           })
           .catch(err => {
-            this.toastMgr.showToast({ title: 'Preset Error', body: 'Could not load preset avatar.', level: 'error' });
+            this.toastMgr.showToast({ title: '预设加载失败', body: '无法读取预设形象文件。', level: 'error' });
           });
       }
     }
@@ -785,11 +790,11 @@
 
       // 1. Check size guard (10MB limit, E6)
       if (file.size === 0) {
-        this.toastMgr.showToast({ title: 'Invalid File', body: 'The selected file is empty (0 bytes).', level: 'error' });
+        this.toastMgr.showToast({ title: '无效文件', body: '所选文件为空 (0 字节)。', level: 'error' });
         return;
       }
       if (file.size > MAX_AVATAR_SIZE_BYTES) {
-        this.toastMgr.showToast({ title: 'File Too Large', body: 'Avatar image must be under 10MB.', level: 'error' });
+        this.toastMgr.showToast({ title: '文件过大', body: '形象图片大小不得超过 10MB。', level: 'error' });
         return;
       }
 
@@ -801,8 +806,8 @@
 
         if (!validation.valid) {
           this.toastMgr.showToast({
-            title: 'Unsupported Format',
-            body: `File failed magic-byte validation (${validation.error}). Please use PNG, GIF, WebP, or SVG.`,
+            title: '不支持的文件格式',
+            body: `文件魔数校验未通过 (${validation.error})。请选用 PNG、GIF、WebP 或 SVG。`,
             level: 'error'
           });
           return;
@@ -822,15 +827,15 @@
         }
 
         this.toastMgr.showToast({
-          title: 'Avatar Updated!',
-          body: `Successfully imported custom ${validation.format.toUpperCase()} avatar.`,
+          title: '形象更新成功！',
+          body: `已成功导入自定义 ${validation.format.toUpperCase()} 形象。`,
           level: 'success'
         });
         this.close();
       };
 
       reader.onerror = () => {
-        this.toastMgr.showToast({ title: 'Read Error', body: 'Could not read image file.', level: 'error' });
+        this.toastMgr.showToast({ title: '读取异常', body: '无法读取所选图片文件。', level: 'error' });
       };
 
       reader.readAsArrayBuffer(file);
@@ -864,7 +869,13 @@
         btn.addEventListener('click', (e) => {
           const state = e.currentTarget.getAttribute('data-state');
           this.mascotCtrl.setState(state);
-          this.toastMgr.showToast({ title: 'State Transition', body: `Mascot transitioned to "${state}"`, level: 'info' });
+          const stateNamesZh = {
+            idle: '空闲待机',
+            thinking: '深度思考',
+            task_finished: '任务完成',
+            quota_low: '额度告急'
+          };
+          this.toastMgr.showToast({ title: '动作状态切换', body: `宠物已切换至状态：“${stateNamesZh[state] || state}”`, level: 'info' });
           this.backdrop.classList.remove('open');
         });
       });
@@ -873,8 +884,8 @@
       document.getElementById('sim-task-complete').addEventListener('click', () => {
         this.mascotCtrl.setState('task_finished', 5000);
         this.toastMgr.showToast({
-          title: 'Task Finished!',
-          body: 'Agent task "Build Refactor" completed successfully in 12.4s.',
+          title: '智能体任务已完成！',
+          body: '代码构建与汉化审查任务已成功执行完毕（耗时 12.4 秒）。',
           level: 'success',
           duration_ms: 5000
         });
@@ -885,8 +896,8 @@
       document.getElementById('sim-task-failed').addEventListener('click', () => {
         this.mascotCtrl.setState('quota_low', 4000);
         this.toastMgr.showToast({
-          title: 'Task Failed',
-          body: 'Agent task failed: Network socket timeout.',
+          title: '任务执行失败',
+          body: '智能体执行异常：网络连接超时或上游服务拒绝。',
           level: 'error',
           duration_ms: 5000
         });
@@ -897,7 +908,7 @@
       document.getElementById('sim-quota-drop').addEventListener('click', () => {
         const simulatedQuota = {
           success: true,
-          account_email: 'test@antigravity.io',
+          account_email: 'qts2218346424@gmail.com',
           total_tokens: 1000000,
           used_tokens: 880000,
           remaining_tokens: 120000,
@@ -911,8 +922,8 @@
         this.quotaTracker.render(simulatedQuota);
         this.mascotCtrl.setState('quota_low');
         this.toastMgr.showToast({
-          title: 'Low Quota Warning',
-          body: 'Antigravity quota dropped to 12.0% (Critical).',
+          title: '额度告急提醒',
+          body: '反重力模型额度已降至 12.0%（已触发黄色紧急告警）。',
           level: 'warning',
           duration_ms: 6000
         });
@@ -946,8 +957,8 @@
             appState.isAlwaysOnTop = res.always_on_top;
             this.btnPin.classList.toggle('active', res.always_on_top);
             this.toastMgr.showToast({
-              title: 'Pin Window',
-              body: res.always_on_top ? 'Always on Top: ON' : 'Always on Top: OFF',
+              title: '窗口置顶',
+              body: res.always_on_top ? '始终置顶：已开启' : '始终置顶：已关闭',
               level: 'info',
               duration_ms: 2000
             });
@@ -969,7 +980,7 @@
         } else if (window.pywebview && window.pywebview.api && window.pywebview.api.hide_window) {
           window.pywebview.api.hide_window();
         } else {
-          this.toastMgr.showToast({ title: 'Minimize to Tray', body: 'Running in preview mode.', level: 'info' });
+          this.toastMgr.showToast({ title: '隐藏至托盘', body: '已最小化至右下角系统托盘。', level: 'info' });
         }
       });
     }
@@ -983,8 +994,8 @@
 
         if (appState.isClickThrough) {
           this.toastMgr.showToast({
-            title: 'Click-Through Active',
-            body: 'Cursor passes through pet. Press Ctrl+Alt+P or click Tray icon to restore.',
+            title: '鼠标穿透模式已开启',
+            body: '光标已穿透宠物。按快捷键 Ctrl+Alt+P 或右键托盘图标可恢复交互。',
             level: 'info',
             duration_ms: 4000
           });
@@ -995,21 +1006,55 @@
     }
 
     _setupMouseDragFallback() {
-      // Fallback dragging for browser preview mode when Tauri drag region isn't active
-      let isDragging = false;
+      let isMouseDown = false;
       let startX = 0, startY = 0;
+      let hasMoved = false;
 
       const mascotViewport = document.getElementById('mascot-viewport');
       mascotViewport.addEventListener('mousedown', async (e) => {
         if (e.button === 0 && !e.target.closest('.no-drag, button, input, a')) {
+          isMouseDown = true;
+          hasMoved = false;
+          startX = e.clientX;
+          startY = e.clientY;
+
           if (window.__TAURI__ && window.__TAURI__.window) {
             try {
               await window.__TAURI__.window.getCurrentWindow().startDragging();
               return;
-            } catch (err) {
-              // fall through to manual drag
+            } catch (err) {}
+          }
+        }
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (isMouseDown) {
+          if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+            hasMoved = true;
+          }
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isMouseDown && !hasMoved) {
+          // Click mascot: playful happy reaction!
+          if (window.__ANTIGRAVITY_PET__) {
+            const cur = window.__ANTIGRAVITY_PET__.getAppState().currentState;
+            if (cur === 'idle') {
+              window.__ANTIGRAVITY_PET__.setState('task_finished', 1800);
             }
           }
+        }
+        isMouseDown = false;
+      });
+
+      // Right-click mascot: toggle thinking/idle state
+      mascotViewport.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (window.__ANTIGRAVITY_PET__) {
+          const cur = window.__ANTIGRAVITY_PET__.getAppState().currentState;
+          const next = cur === 'idle' ? 'thinking' : 'idle';
+          window.__ANTIGRAVITY_PET__.setState(next, next === 'thinking' ? 3000 : 0);
         }
       });
     }
