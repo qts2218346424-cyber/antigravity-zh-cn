@@ -221,24 +221,60 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
 
     print("[3/4] 正在原位修补原生菜单、托盘及注入 DOM 翻译引擎...")
 
-    # (1) 修补 dist/menu.js
+    # 构建运行时注入脚本
+    injection_code = f"""
+(function() {{
+  try {{
+    window.__AGY_ZH_LANG__ = {json.dumps(lang)};
+    window.__AGY_ZH_DICT__ = {json.dumps(lang_dict, ensure_ascii=False)};
+    window.__AGY_ZH_RULES__ = {json.dumps(rules_list, ensure_ascii=False)};
+    {runtime_js_code}
+  }} catch(e) {{
+    console.error("[AGY-ZH] Failed to bootstrap translation:", e);
+  }}
+}})();
+"""
+
+    # (1) 修补 dist/menu.js (深度递归翻译菜单 + 开放开发者工具)
     try:
         menu_content = read_asar_file_content(asar_data, "dist/menu.js").decode("utf-8")
-        for en, zh in desktop_dict.get("menu", {}).items():
-            menu_content = menu_content.replace(f"'{en}'", f"'{zh}'")
-            menu_content = menu_content.replace(f'"{en}"', f'"{zh}"')
-        asar_data = replace_asar_file_content(asar_data, "dist/menu.js", menu_content.encode("utf-8"))
-        print("  [OK] 原生菜单 (dist/menu.js) 修补完成")
+        menu_dict_json = json.dumps(desktop_dict.get("menu", {}), ensure_ascii=False)
+        menu_patch = f"""
+{PATCH_MARKER}
+const __AGY_MENU_DICT__ = {menu_dict_json};
+function __agyTranslateMenu(m) {{
+    if (!m) return;
+    if (m.items) {{
+        m.items.forEach(item => {{
+            if (item.label && __AGY_MENU_DICT__[item.label]) {{
+                item.label = __AGY_MENU_DICT__[item.label];
+            }}
+            if (item.submenu) {{
+                __agyTranslateMenu(item.submenu);
+            }}
+        }});
+    }}
+}}
+"""
+        if PATCH_MARKER not in menu_content:
+            menu_content = menu_patch + "\n" + menu_content
+            menu_content = menu_content.replace(
+                "electron_1.Menu.setApplicationMenu(menu);",
+                "__agyTranslateMenu(menu); electron_1.Menu.setApplicationMenu(menu);"
+            )
+            menu_content = menu_content.replace("item.visible = false;", "item.visible = true;")
+            asar_data = replace_asar_file_content(asar_data, "dist/menu.js", menu_content.encode("utf-8"))
+            print("  [OK] 原生菜单 (dist/menu.js) 递归汉化与调试支持修补完成")
     except Exception as e:
         print(f"  [!] 忽略非致命项 dist/menu.js: {e}")
 
     # (2) 修补 dist/tray.js
     try:
         tray_content = read_asar_file_content(asar_data, "dist/tray.js").decode("utf-8")
-        tray_content = tray_content.replace("'No agents running'", "'无运行中的代理'")
-        tray_content = tray_content.replace('"No agents running"', '"无运行中的代理"')
-        tray_content = tray_content.replace("'Quit'", "'退出'")
-        tray_content = tray_content.replace('"Quit"', '"退出"')
+        tray_dict = desktop_dict.get("tray", {})
+        for en, zh in tray_dict.items():
+            tray_content = tray_content.replace(f"'{en}'", f"'{zh}'")
+            tray_content = tray_content.replace(f'"{en}"', f'"{zh}"')
         tray_content = tray_content.replace("`Open ${electron_1.app.getName()}`", "`打开 ${electron_1.app.getName()}`")
         tray_content = tray_content.replace("' agent'", "' 个代理'")
         tray_content = tray_content.replace("' agents'", "' 个代理'")
@@ -260,35 +296,69 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
     except Exception as e:
         print(f"  [!] 忽略非致命项 dist/updater.js: {e}")
 
-    # (4) 修补 dist/preload.js (注入 DOM 翻译引擎)
+    # (4) 修补 dist/preload.js (预加载阶段 DOM 翻译引擎)
     try:
         preload_content = read_asar_file_content(asar_data, "dist/preload.js").decode("utf-8")
         if PATCH_MARKER not in preload_content:
-            injection = f"""
-{PATCH_MARKER}
-(function() {{
-  try {{
-    window.__AGY_ZH_LANG__ = {json.dumps(lang)};
-    window.__AGY_ZH_DICT__ = {json.dumps(lang_dict, ensure_ascii=False)};
-    window.__AGY_ZH_RULES__ = {json.dumps(rules_list, ensure_ascii=False)};
-    {runtime_js_code}
-  }} catch(e) {{
-    console.error("[antigravity-zh-cn] Failed to bootstrap translation:", e);
-  }}
-}})();
-"""
-            preload_content += injection
+            preload_content += f"\n{PATCH_MARKER}\n{injection_code}\n"
             asar_data = replace_asar_file_content(asar_data, "dist/preload.js", preload_content.encode("utf-8"))
-            print("  [OK] DOM 翻译引擎成功注入至预加载环境 (dist/preload.js)")
+            print("  [OK] DOM 翻译引擎预加载通道注入完成 (dist/preload.js)")
     except Exception as e:
         print(f"  [!] 预加载环境注入失败: {e}")
         raise
 
+    # (5) 修补 dist/utils.js (主世界 executeJavaScript 强保通道 + DevTools + 日志回传)
+    try:
+        utils_content = read_asar_file_content(asar_data, "dist/utils.js").decode("utf-8")
+        if PATCH_MARKER not in utils_content:
+            utils_content = utils_content.replace(
+                "devTools: !electron_1.app.isPackaged,",
+                "devTools: true,"
+            )
+            js_raw = json.dumps(injection_code)
+            hook_code = f"""
+/* __ANTIGRAVITY_ZH_CN_PATCHED__ */
+const __AGY_ZH_CODE__ = {js_raw};
+"""
+            utils_content = hook_code + "\n" + utils_content
+
+            target_str = "void win.loadURL(url);"
+            replacement_str = """
+    win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+        console.log(`[Renderer L${level}] ${message}`);
+    });
+    const __agyTriggerInject = () => {
+        win.webContents.executeJavaScript(__AGY_ZH_CODE__).catch((err) => {
+            console.log('[AGY-ZH] executeJavaScript error:', err);
+        });
+    };
+    win.webContents.on('dom-ready', __agyTriggerInject);
+    win.webContents.on('did-finish-load', __agyTriggerInject);
+    void win.loadURL(url);
+"""
+            if target_str in utils_content:
+                utils_content = utils_content.replace(target_str, replacement_str, 1)
+                asar_data = replace_asar_file_content(asar_data, "dist/utils.js", utils_content.encode("utf-8"))
+                print("  [OK] 主世界注入通道与日志回传系统挂载完成 (dist/utils.js)")
+            else:
+                print("  [!] 未在 dist/utils.js 中找到 void win.loadURL(url); 锚点")
+    except Exception as e:
+        print(f"  [!] 主世界注入通道修补失败: {e}")
+
+
     # 4. 安全写入目标文件
     print(f"[4/4] 正在安全写入汉化文件: {asar_path.name}...")
     temp_dest = asar_path.with_suffix('.asar.tmp')
-    temp_dest.write_bytes(asar_data)
-    shutil.move(str(temp_dest), str(asar_path))
+    try:
+        temp_dest.write_bytes(asar_data)
+        shutil.move(str(temp_dest), str(asar_path))
+    except Exception:
+        asar_path.write_bytes(asar_data)
+        if temp_dest.exists():
+            try:
+                temp_dest.unlink(missing_ok=True)
+            except Exception:
+                pass
 
     print("[OK] Antigravity 汉化补丁无损安装成功！所有解包索引 100% 保留！")
 

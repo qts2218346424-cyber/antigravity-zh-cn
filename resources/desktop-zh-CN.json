@@ -2,9 +2,13 @@
   "menu": {
     "File": "文件",
     "Edit": "编辑",
-    "View": "查看",
+    "View": "视图",
     "Window": "窗口",
     "Help": "帮助",
+    "Selection": "选择",
+    "Go": "前往",
+    "Run": "运行",
+    "Terminal": "终端",
     "New Window": "新建窗口",
     "Check for Updates": "检查更新",
     "Checking for Updates...": "正在检查更新...",
@@ -12,6 +16,7 @@
     "Restart to Update": "重启以更新",
     "Docs": "官方文档",
     "Connect to WSL": "连接到 WSL",
+    "Reopen Locally": "在本地重新打开",
     "Reopen locally": "在本地重新打开",
     "Undo": "撤消",
     "Redo": "重做",
@@ -29,7 +34,8 @@
     "Reset Zoom": "重置缩放",
     "Minimize": "最小化",
     "Zoom": "缩放",
-    "Close": "关闭"
+    "Close": "关闭",
+    "Close Window": "关闭窗口"
   },
   "tray": {
     "No agents running": "无运行中的代理",
@@ -38,6 +44,7 @@
     "Open Antigravity": "打开 Antigravity",
     "Quit": "退出",
     "Connect to WSL": "连接到 WSL",
+    "Reopen Locally": "在本地重新打开",
     "Reopen locally": "在本地重新打开"
   },
   "dialog": {
