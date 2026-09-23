@@ -14,6 +14,30 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 NEW_TRANSLATIONS = {
+    # 项目删除与确认提示
+    "Are you sure you want to delete the project": "确定要删除项目",
+    "Are you sure you want to delete the project ": "确定要删除项目 ",
+    "Are you sure you want to delete this project?": "确定要删除此项目吗？",
+    "Are you sure you want to delete this project": "确定要删除此项目",
+    "Are you sure you want to delete": "确定要删除",
+
+    # AI 积分与模型配额
+    "When toggled on, Antigravity will use your AI credits to fulfill model requests once you're out of model quota. Antigravity will always use your model quota first before using AI credits.": "启用后，当您的模型配额用尽时，Antigravity 将使用您的 AI 积分来响应模型请求。在消耗 AI 积分之前，Antigravity 始终会优先使用您的模型配额。",
+    "When toggled on, Antigravity will use your AI credits to fulfill model requests once you're out of model quota.": "启用后，当您的模型配额用尽时，Antigravity 将使用您的 AI 积分来响应模型请求。",
+    "Antigravity will always use your model quota first before using AI credits.": "在消耗 AI 积分之前，Antigravity 始终会优先使用您的模型配额。",
+    "AI credits": "AI 积分",
+    "AI Credits": "AI 积分",
+    "model quota": "模型配额",
+    "Model quota": "模型配额",
+
+    # 主题选择
+    "Default Light": "默认浅色",
+    "Default light": "默认浅色",
+    "Default Dark": "默认深色",
+    "Default dark": "默认深色",
+    "Default High Contrast": "默认高对比度",
+    "Default High Contrast Light": "默认高对比度浅色",
+
     # 对话操作、固定置顶与归档
     "Pin": "固定",
     "Unpin": "取消固定",

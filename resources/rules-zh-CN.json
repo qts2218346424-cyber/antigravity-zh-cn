@@ -626,5 +626,45 @@
   [
     "^(\\\\d+)y$",
     " 年"
+  ],
+  [
+    "^Are you sure you want to delete the project\\\\s*(.+)?$",
+    "确定要删除项目 "
+  ],
+  [
+    "^Are you sure you want to delete the project\\\\s*$",
+    "确定要删除项目"
+  ],
+  [
+    "^When toggled on, Antigravity will use your AI credits[\\\\s\\\\S]*?model quota.*$",
+    "启用后，当您的模型配额用尽时，Antigravity 将使用您的 AI 积分来响应模型请求。在消耗 AI 积分之前，Antigravity 始终会优先使用您的模型配额。"
+  ],
+  [
+    "^The breakdown below shows token usage[\\\\s\\\\S]*?([0-9.]+)%\\\\s+of the customization budget is available\\\\.?$",
+    "下方明细显示了来自技能 (Skills)、规则 (Rules) 和 MCP 等自定义配置的 Token 使用量。如果超出预算，大型自定义配置将被自动截断。\n\n可用自定义配置预算剩余 %。"
+  ],
+  [
+    "The breakdown below shows token usage from customizations like skills, rules, and MCP\\\\.\\\\s*If the budget is exceeded, large customizations will be truncated automatically\\\\.",
+    "下方明细显示了来自技能 (Skills)、规则 (Rules) 和 MCP 等自定义配置的 Token 使用量。如果超出预算，大型自定义配置将被自动截断。"
+  ],
+  [
+    "([0-9.]+)%\\\\s+of the customization budget is available\\\\.?",
+    "可用自定义配置预算剩余 %。"
+  ],
+  [
+    "^Default Light$",
+    "默认浅色"
+  ],
+  [
+    "^Default Dark$",
+    "默认深色"
+  ],
+  [
+    "^Queue$",
+    "排队"
+  ],
+  [
+    "^Send Immediately$",
+    "立即发送"
   ]
 ]
