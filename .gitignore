@@ -27,5 +27,6 @@ tmp/
 resources/untranslated.json
 resources/untranslated_all.json
 resources/untranslated_settings.json
+.agents/
 
 

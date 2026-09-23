@@ -185,6 +185,26 @@ NEW_TRANSLATIONS = {
     "Terms of Service": "服务条款",
     "Terms of Service & Data Use": "服务条款与数据使用说明",
 
+    # Interactive Questions (ask_question)
+    "Multi-select": "多选",
+    "Single-select": "单选",
+    "Other (write your answer)": "其他（填写您的回答）",
+    "Previous question": "上一题",
+    "Next question": "下一题",
+
+    # Chat Input Placeholders
+    "Ask anything, @ to mention, / for actions": "随时提问，按 @ 提及，按 / 执行操作",
+    "Ask anything, @ to mention": "随时提问，按 @ 提及引用",
+    "Ask anything": "随时提问",
+    ", / for actions": "，按 / 执行操作",
+    "@ to mention": "按 @ 提及引用",
+
+    # Step Trajectory & Thought
+    "Thought Process": "思考过程",
+    "Prompt Draft": "提示词草稿",
+    "Auto-Open Edited Files": "自动打开编辑过的文件",
+    "Open files in the background if the agent creates or edits them": "当 Agent 创建或编辑文件时在后台静默打开",
+
     # 2. Extracted UI Strings
     "(Optional)": "(可选)",
     "(Optional, defaults to main)": "(可选，默认主分支)",
