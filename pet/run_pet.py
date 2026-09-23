@@ -129,7 +129,7 @@ class JsBridge:
                 self.mock_mode = True
 
     @property
-    def window(self):
+    def _window(self):
         return self._holder.get("window")
 
     def get_quota_status(self, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -268,9 +268,9 @@ class JsBridge:
         else:
             self.always_on_top = not self.always_on_top
 
-        if self.window:
+        if self._window:
             try:
-                self.window.on_top = self.always_on_top
+                self._window.on_top = self.always_on_top
             except Exception:
                 pass
 
@@ -292,9 +292,9 @@ class JsBridge:
         """Contract: set_pet_state(state, message?) -> { success, current_state }"""
         st = payload.get("state", "idle")
         self.pet_state = st
-        if self.window:
+        if self._window:
             try:
-                self.window.evaluate_js(f"window.__ANTIGRAVITY_PET__.setState('{st}');")
+                self._window.evaluate_js(f"window.__ANTIGRAVITY_PET__.setState('{st}');")
             except Exception:
                 pass
         return {"success": True, "current_state": st}
@@ -302,19 +302,19 @@ class JsBridge:
     def send_notification(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Contract: send_notification(req) -> { success, notification_id }"""
         notif_id = f"notif-{int(time.time() * 1000)}"
-        if self.window:
+        if self._window:
             try:
                 opts = json.dumps(payload)
-                self.window.evaluate_js(f"window.__ANTIGRAVITY_PET__.showToast({opts});")
+                self._window.evaluate_js(f"window.__ANTIGRAVITY_PET__.showToast({opts});")
             except Exception:
                 pass
         return {"success": True, "notification_id": notif_id}
 
     def hide_window(self, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Hides the pet window to system tray."""
-        if self.window:
+        if self._window:
             try:
-                self.window.hide()
+                self._window.hide()
             except Exception:
                 pass
         return {"success": True}
