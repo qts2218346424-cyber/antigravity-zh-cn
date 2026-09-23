@@ -335,6 +335,19 @@ def audit_and_update_rules():
         [r"^[Cc]opy\s+link$", "复制链接"],
         [r"^[Cc]opy\s+path$", "复制路径"],
         [r"^[Cc]opy\s+relative\s+path$", "复制相对路径"],
+
+        # 权限与配置下拉项 (包含单选勾选标记 ✓ / ✔)
+        [r"^[Aa]sk(\s*[✓✔])?$", "询问$1"],
+        [r"^[Aa]llow(\s*[✓✔])?$", "允许$1"],
+        [r"^[Dd]eny(\s*[✓✔])?$", "拒绝$1"],
+        [r"^[Bb]lock(\s*[✓✔])?$", "阻止$1"],
+        [r"^[Aa]lways\s+[Aa]sk(\s*[✓✔])?$", "总是询问$1"],
+        [r"^[Aa]sk\s+every\s+time(\s*[✓✔])?$", "每次询问$1"],
+        [r"^[Aa]lways\s+[Aa]llow(\s*[✓✔])?$", "总是允许$1"],
+        [r"^[Aa]lways\s+[Dd]eny(\s*[✓✔])?$", "总是拒绝$1"],
+        [r"^[Aa]sk\s+first(\s*[✓✔])?$", "先询问$1"],
+        [r"^[Aa]sk\s+before\s+(?:running|executing)(\s*[✓✔])?$", "执行前询问$1"],
+        [r"^[Aa]sk\s+(?:for\s+)?confirmation(\s*[✓✔])?$", "请求确认$1"],
     ]
 
     for pattern, repl in additional_rules:

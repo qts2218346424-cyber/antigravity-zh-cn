@@ -324,6 +324,20 @@ class TestRuntimeTranslation(unittest.TestCase):
         }
         if (translate("Copied!") !== "已复制！") process.exit(121);
 
+        // 18. Permission choices and dropdown options (ask / ask ✓ / always ask / allow / deny)
+        if (translate("ask") !== "询问") {
+            console.error("ask failed:", translate("ask"));
+            process.exit(122);
+        }
+        if (translate("Ask") !== "询问") process.exit(123);
+        if (translate("ask ✓") !== "询问 ✓") {
+            console.error("ask checkmark failed:", translate("ask ✓"));
+            process.exit(124);
+        }
+        if (translate("always ask") !== "总是询问") process.exit(125);
+        if (translate("Always ask") !== "总是询问") process.exit(126);
+        if (translate("Ask first") !== "先询问") process.exit(127);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
