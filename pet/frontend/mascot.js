@@ -422,24 +422,31 @@
   class ToastManager {
     constructor() {
       this.container = document.getElementById('toast-container');
+      this.currentToast = null;
+      this._toastSeq = 0;
     }
 
-    showToast({ title = '反重力桌面提醒', body = '', level = 'info', duration_ms = 5000, action_url = '', action_text = '' }) {
-      // E5 Boundary & Deduplication check
+    showToast({ title = '反重力桌面提醒', body = '', level = 'info', duration_ms = 2200, action_url = '', action_text = '' }) {
       const hash = `${title}:${body}:${level}:${action_url}`;
       const now = Date.now();
-      if (appState.lastNotificationHash === hash && (now - appState.lastNotificationTime < 3000)) {
+      if (appState.lastNotificationHash === hash && (now - appState.lastNotificationTime < 2000)) {
         return; // Suppress duplicate burst
       }
       appState.lastNotificationHash = hash;
       appState.lastNotificationTime = now;
 
-      // Limit concurrent toasts
-      if (this.container.children.length >= 3) {
-        const oldest = this.container.children[0];
-        if (oldest) oldest.remove();
+      // 1. Enforce strict single-toast constraint: immediately dismiss existing toast
+      if (this.currentToast && typeof this.currentToast.dismiss === 'function') {
+        this.currentToast.dismiss(true);
+        this.currentToast = null;
+      }
+      if (this.container) {
+        while (this.container.firstChild) {
+          this.container.removeChild(this.container.firstChild);
+        }
       }
 
+      const toastId = ++this._toastSeq;
       const card = document.createElement('div');
       card.className = `toast-card ${level}`;
 
@@ -474,14 +481,30 @@
       const actionBtn = card.querySelector('.toast-action-btn');
 
       let isDismissed = false;
-      const dismiss = () => {
+      let dismissTimer = null;
+      let hardTimeout = null;
+      let leaveTimer = null;
+
+      const dismiss = (immediate = false) => {
         if (isDismissed) return;
         isDismissed = true;
-        card.classList.add('dismissing');
-        setTimeout(() => card.remove(), 250);
+        if (dismissTimer) clearTimeout(dismissTimer);
+        if (hardTimeout) clearTimeout(hardTimeout);
+        if (leaveTimer) clearTimeout(leaveTimer);
+
+        if (this.currentToast && this.currentToast.id === toastId) {
+          this.currentToast = null;
+        }
+
+        if (immediate) {
+          card.remove();
+        } else {
+          card.classList.add('dismissing');
+          setTimeout(() => card.remove(), 200);
+        }
       };
 
-      closeBtn.addEventListener('click', dismiss);
+      closeBtn.addEventListener('click', () => dismiss(false));
 
       if (actionBtn && action_url) {
         actionBtn.addEventListener('click', (e) => {
@@ -490,20 +513,37 @@
         });
       }
 
-      // Auto-dismiss countdown
-      progressFill.style.transition = `transform ${duration_ms}ms linear`;
+      // Auto-dismiss countdown (clamped to 2.2s for clean disappearance)
+      const effectiveDuration = Math.min(Math.max(duration_ms, 1500), 3000);
+      progressFill.style.transition = `transform ${effectiveDuration}ms linear`;
       progressFill.style.transform = 'scaleX(1)';
       requestAnimationFrame(() => {
         progressFill.style.transform = 'scaleX(0)';
       });
 
-      const timer = setTimeout(dismiss, duration_ms);
+      dismissTimer = setTimeout(() => dismiss(false), effectiveDuration);
+      // Hard timeout fallback at 3.5s (never stay stuck)
+      hardTimeout = setTimeout(() => dismiss(true), 3500);
+
+      // Mouse enter pauses, mouse leave resumes with 400ms grace period
       card.addEventListener('mouseenter', () => {
-        clearTimeout(timer);
+        if (dismissTimer) clearTimeout(dismissTimer);
+        if (leaveTimer) clearTimeout(leaveTimer);
         progressFill.style.transition = 'none';
       });
 
-      this.container.appendChild(card);
+      card.addEventListener('mouseleave', () => {
+        if (isDismissed) return;
+        if (leaveTimer) clearTimeout(leaveTimer);
+        leaveTimer = setTimeout(() => {
+          dismiss(false);
+        }, 400);
+      });
+
+      this.currentToast = { id: toastId, dismiss };
+      if (this.container) {
+        this.container.appendChild(card);
+      }
     }
 
     _escapeHtml(str) {
@@ -1111,50 +1151,52 @@
 
     _setupMouseDragFallback() {
       let isMouseDown = false;
-      let startX = 0, startY = 0;
-      let hasMoved = false;
+      let startScreenX = 0, startScreenY = 0;
+      let hasDragged = false;
+      let dragInitiated = false;
 
       const mascotViewport = document.getElementById('mascot-viewport');
       if (!mascotViewport) return;
 
-      mascotViewport.addEventListener('mousedown', async (e) => {
+      mascotViewport.addEventListener('mousedown', (e) => {
         if (e.button === 0 && !e.target.closest('.no-drag, button, input, a')) {
           isMouseDown = true;
-          hasMoved = false;
-          startX = e.clientX;
-          startY = e.clientY;
-
-          // 1. Instant native Win32 window drag (144Hz zero-lag drag)
-          try {
-            bridge.invoke('start_drag');
-          } catch (err) {}
-
-          // 2. Tauri v2 fallback
-          if (window.__TAURI__ && window.__TAURI__.window) {
-            try {
-              await window.__TAURI__.window.getCurrentWindow().startDragging();
-              return;
-            } catch (err) {}
-          }
+          hasDragged = false;
+          dragInitiated = false;
+          startScreenX = e.screenX;
+          startScreenY = e.screenY;
+          // Decoupled: Never invoke Win32 start_drag inside mousedown to prevent rapid-click message loop crashes
         }
       });
 
       window.addEventListener('mousemove', (e) => {
-        if (isMouseDown) {
-          if (Math.abs(e.clientX - startX) > 4 || Math.abs(e.clientY - startY) > 4) {
-            hasMoved = true;
+        if (isMouseDown && !dragInitiated) {
+          const dx = e.screenX - startScreenX;
+          const dy = e.screenY - startScreenY;
+          if (Math.hypot(dx, dy) > 5) {
+            dragInitiated = true;
+            hasDragged = true;
+            try {
+              bridge.invoke('start_drag');
+            } catch (err) {}
+
+            if (window.__TAURI__ && window.__TAURI__.window) {
+              try {
+                window.__TAURI__.window.getCurrentWindow().startDragging();
+              } catch (err) {}
+            }
           }
         }
       });
 
       window.addEventListener('mouseup', () => {
-        if (isMouseDown && !hasMoved) {
-          // Click mascot: instant playful happy jump reaction + Chinese speech bubble!
+        if (isMouseDown && !hasDragged) {
+          // Pure click interaction: trigger playful animation & Chinese bubble without calling any OS drag APIs
           if (window.__ANTIGRAVITY_PET__) {
             const pet = window.__ANTIGRAVITY_PET__;
             const cur = pet.getAppState().currentState;
             if (cur === 'idle') {
-              pet.setState('task_finished', 2200);
+              pet.setState('task_finished', 1800);
             }
             if (pet.mascotCtrl && typeof pet.mascotCtrl.showSpeechBubble === 'function') {
               pet.mascotCtrl.showSpeechBubble();
@@ -1162,6 +1204,14 @@
           }
         }
         isMouseDown = false;
+        hasDragged = false;
+        dragInitiated = false;
+      });
+
+      window.addEventListener('blur', () => {
+        isMouseDown = false;
+        hasDragged = false;
+        dragInitiated = false;
       });
 
       // Hover over mascot triggers friendly speech bubble

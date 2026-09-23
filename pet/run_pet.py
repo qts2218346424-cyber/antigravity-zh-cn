@@ -126,6 +126,10 @@ class JsBridge:
         self.click_through = False
         self.active_profile_id = "profile-primary"
         self.pet_state = "idle"
+        self.auto_start_with_antigravity = True
+        self._drag_lock = threading.Lock()
+        self._last_drag_time = 0.0
+        self._load_pet_config()
 
         # Initialize backend engine if available
         self.version_checker = None
@@ -138,6 +142,16 @@ class JsBridge:
             except Exception as e:
                 print(f"[JsBridge] Backend init warning, falling back to mock: {e}")
                 self.mock_mode = True
+
+    def _load_pet_config(self):
+        cfg_path = pathlib.Path.home() / ".gemini" / "pet_config.json"
+        if cfg_path.exists():
+            try:
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.auto_start_with_antigravity = bool(data.get("auto_start_with_antigravity", True))
+            except Exception:
+                pass
 
     @property
     def _window(self):
@@ -300,18 +314,62 @@ class JsBridge:
         return {"success": True, "click_through": self.click_through}
 
     def start_drag(self, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Initiates smooth native OS window drag using Win32 WM_NCLBUTTONDOWN."""
+        """Initiates smooth native OS window drag using Win32 WM_NCLBUTTONDOWN with re-entrancy protection."""
+        now = time.monotonic()
+        if not self._drag_lock.acquire(blocking=False):
+            return {"success": False, "reason": "LOCKED"}
         try:
+            if now - self._last_drag_time < 0.2:
+                return {"success": False, "reason": "THROTTLED"}
+            self._last_drag_time = now
+
             import win32gui
             import win32con
             hwnd = get_pet_hwnd()
-            if hwnd:
+            if hwnd and win32gui.IsWindow(hwnd):
                 win32gui.ReleaseCapture()
                 win32gui.SendMessage(hwnd, win32con.WM_NCLBUTTONDOWN, win32con.HTCAPTION, 0)
                 return {"success": True}
         except Exception as e:
-            pass
+            return {"success": False, "error": str(e)}
+        finally:
+            self._drag_lock.release()
         return {"success": False}
+
+    def get_pet_config(self, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        cfg_path = pathlib.Path.home() / ".gemini" / "pet_config.json"
+        cfg = {"auto_start_with_antigravity": self.auto_start_with_antigravity, "always_on_top": self.always_on_top}
+        if cfg_path.exists():
+            try:
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    cfg.update(json.load(f))
+            except Exception:
+                pass
+        return {"success": True, "config": cfg}
+
+    def set_pet_config(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        cfg_path = pathlib.Path.home() / ".gemini" / "pet_config.json"
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        current = {"auto_start_with_antigravity": True, "always_on_top": self.always_on_top}
+        if cfg_path.exists():
+            try:
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    current.update(json.load(f))
+            except Exception:
+                pass
+
+        if "auto_start_with_antigravity" in payload:
+            self.auto_start_with_antigravity = bool(payload["auto_start_with_antigravity"])
+            current["auto_start_with_antigravity"] = self.auto_start_with_antigravity
+
+        tmp_path = cfg_path.parent / f"pet_config.tmp.{os.getpid()}"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(current, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_path, cfg_path)
+            return {"success": True, "config": current}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def set_pet_state(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Contract: set_pet_state(state, message?) -> { success, current_state }"""
@@ -496,6 +554,7 @@ class PetTrayController:
                 pystray.MenuItem("隐藏到托盘", self._on_hide),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("始终置顶显示", self._on_toggle_pin, checked=lambda item: self.bridge.always_on_top),
+                pystray.MenuItem("随 Antigravity 启动自动运行", self._on_toggle_autostart, checked=lambda item: self.bridge.auto_start_with_antigravity),
                 pystray.MenuItem("鼠标穿透模式 (Ctrl+Alt+P)", self._on_toggle_click_through, checked=lambda item: self.bridge.click_through),
                 pystray.MenuItem("检查汉化与客户端更新", self._on_check_updates),
                 pystray.Menu.SEPARATOR,
@@ -534,6 +593,14 @@ class PetTrayController:
 
     def _on_toggle_pin(self, icon=None, item=None):
         self.bridge.toggle_always_on_top()
+
+    def _on_toggle_autostart(self, icon=None, item=None):
+        new_val = not self.bridge.auto_start_with_antigravity
+        self.bridge.set_pet_config({"auto_start_with_antigravity": new_val})
+        win = self.holder.get("window")
+        if win:
+            st = "已开启" if new_val else "已关闭"
+            win.evaluate_js(f"window.__ANTIGRAVITY_PET__.showToast({{ title: '自启动设置', body: '随 Antigravity 启动自动运行{st}', level: 'info' }});")
 
     def _on_toggle_click_through(self, icon=None, item=None):
         self.bridge.toggle_click_through()
@@ -745,6 +812,24 @@ def main():
 
     if args.smoke:
         sys.exit(run_smoke_test())
+
+    # Ensure single instance via Windows Named Mutex
+    if sys.platform == "win32" and not args.smoke:
+        import ctypes
+        ERROR_ALREADY_EXISTS = 183
+        kernel32 = ctypes.windll.kernel32
+        mutex = kernel32.CreateMutexW(None, False, "Global\\AntigravityPet_SingleInstance_Mutex")
+        last_err = kernel32.GetLastError()
+        if last_err == ERROR_ALREADY_EXISTS:
+            print("[Runner] Another Antigravity Desktop Pet instance is already running.")
+            hwnd = get_pet_hwnd()
+            if hwnd:
+                try:
+                    import win32gui
+                    win32gui.SetForegroundWindow(hwnd)
+                except Exception:
+                    pass
+            sys.exit(0)
 
     import webview
 

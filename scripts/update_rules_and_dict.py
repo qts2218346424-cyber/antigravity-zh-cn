@@ -58,6 +58,10 @@ def audit_and_update_rules():
         r"^(\d+)\s+tasks?\s+running$": "$1 个任务运行中",
         r"^(\d+)\s+tasks?\s+completed$": "$1 个任务已完成",
         r"^(\d+)\s+tasks?\s+failed$": "$1 个任务失败",
+        r"^Thinking for (\d+)s$": "思考了 $1 秒",
+        r"^Thought for (\d+)s$": "思考了 $1 秒",
+        r"^[Tt]hought for (\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 秒",
+        r"^[Tt]hinking for (\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 秒",
         r"^(\d+)\s+tasks?\s+pending$": "$1 个任务等待中",
         r"^(\d+)d$": "$1 天",
         r"^(\d+)h$": "$1 小时",
@@ -82,6 +86,12 @@ def audit_and_update_rules():
     seen_patterns = set()
 
     for pattern, repl in rules:
+        if pattern == r"^Are you sure you want to delete (.+)\?$":
+            project_rule = r"^[Aa]re you sure you want to delete\s+(?:the\s+)?(?:projects?\s+|项目\s*)(.+?)[\?？]?$"
+            if project_rule not in seen_patterns:
+                seen_patterns.add(project_rule)
+                new_rules.append([project_rule, "确定要删除项目 $1 吗？"])
+
         if pattern in fix_map:
             repl = fix_map[pattern]
         if pattern not in seen_patterns:
@@ -161,6 +171,50 @@ def audit_and_update_rules():
         # 运行方式子短语与定时任务容错
         [r"^runs?\s+as\s+(.+?)\.?$", "以 $1 运行。"],
         [r"^crons?$", "定时任务"],
+
+        # 思考耗时标题与折叠 (Thinking for 3s ˇ)
+        [r"^[Tt]hinking for (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 秒"],
+        [r"^[Tt]hinking for (\d+)m (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 分 $2 秒"],
+        [r"^[Tt]hinking for (\d+)m(?:\s*[ˇ⌄▼])?$", "思考了 $1 分钟"],
+        [r"^[Tt]hinking for (.+?)(?:\s*[ˇ⌄▼])?$", "思考了 $1"],
+        [r"^[Tt]hought for (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 秒"],
+        [r"^[Tt]hought for (\d+)m (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 分 $2 秒"],
+        [r"^[Tt]hought for (.+?)(?:\s*[ˇ⌄▼])?$", "思考了 $1"],
+        [r"^[Tt]hought for\s*$", "思考耗时"],
+        [r"^[Tt]hinking for\s*$", "思考耗时"],
+
+        # 多操作组合折叠行 (Explored 16 files, ran 7 commands >)
+        [r"^[Ee]xplored\s+(\d+)\s+files?,\s*ran\s+(\d+)\s+commands?\s*(?:>|›)?$", "已探索 $1 个文件，执行了 $2 条命令"],
+        [r"^[Ee]xplored\s+(\d+)\s+files?,\s*edited\s+(\d+)\s+files?\s*(?:>|›)?$", "已探索 $1 个文件，编辑了 $2 个文件"],
+        [r"^[Ee]xploring\s+(\d+)\s+files?,\s*running\s+(\d+)\s+commands?\s*(?:>|›)?$", "正在探索 $1 个文件，正在执行 $2 条命令"],
+        [r"^[Ee]xplored\s+(\d+)\s+files?\s*(?:>|›)?$", "已探索 $1 个文件"],
+        [r"^[Ee]xploring\s+(\d+)\s+files?\s*(?:>|›)?$", "正在探索 $1 个文件"],
+        [r"^[Rr]an\s+(\d+)\s+commands?\s*(?:>|›)?$", "已执行 $1 条命令"],
+        [r"^[Rr]unning\s+(\d+)\s+commands?\s*(?:>|›)?$", "正在执行 $1 条命令"],
+        [r"^[Ee]dited\s+(\d+)\s+files?\s*(?:>|›)?$", "已编辑 $1 个文件"],
+        [r"^[Ee]diting\s+(\d+)\s+files?\s*(?:>|›)?$", "正在编辑 $1 个文件"],
+
+        # 独立动作状态标签 (Edited [icon] file +124 -0)
+        [r"^[Ee]dited$", "已编辑"],
+        [r"^[Ee]diting$", "正在编辑"],
+        [r"^[Cc]reated$", "已创建"],
+        [r"^[Cc]reating$", "正在创建"],
+        [r"^[Dd]eleted$", "已删除"],
+        [r"^[Dd]eleting$", "正在删除"],
+        [r"^[Ee]xplored$", "已探索"],
+        [r"^[Ee]xploring$", "正在探索"],
+        [r"^[Rr]an$", "已执行"],
+        [r"^[Rr]unning$", "正在执行"],
+        [r"^[Vv]iewed$", "已查看"],
+        [r"^[Vv]iewing$", "正在查看"],
+        [r"^[Rr]ead$", "已读取"],
+        [r"^[Rr]eading$", "正在读取"],
+
+        # 删除确认弹窗 (Are you sure you want to delete the 项目 从0开始学大模型开发?)
+        [r"^[Aa]re you sure you want to delete (?:the\s+)?(?:project\s+|项目\s*)?(.+?)[\?？]?$", "确定要删除项目 $1 吗？"],
+        [r"^[Aa]re you sure you want to delete (?:the\s+)?(.+?)[\?？]?$", "确定要删除 $1 吗？"],
+        [r"^[Aa]re you sure you want to delete the\??$", "确定要删除吗？"],
+        [r"^[Aa]re you sure you want to delete\??$", "确定要删除吗？"],
     ]
 
     for pattern, repl in additional_rules:

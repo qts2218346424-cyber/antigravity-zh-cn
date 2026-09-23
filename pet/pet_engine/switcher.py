@@ -31,6 +31,15 @@ from pet_engine.models import (
     validate_safe_identifier,
 )
 
+try:
+    from pet_engine.probe_account import read_system_credential, fetch_user_info
+except ImportError:
+    try:
+        from pet.pet_engine.probe_account import read_system_credential, fetch_user_info
+    except ImportError:
+        read_system_credential = None
+        fetch_user_info = None
+
 
 class FileLock:
     """Cross-process file lock using atomic file creation."""
@@ -199,6 +208,30 @@ class AccountSwitcher:
                                 profiles.append(prof)
                         except Exception:
                             pass
+
+            if not profiles and read_system_credential:
+                try:
+                    cred = read_system_credential()
+                    if cred and isinstance(cred, dict) and "token" in cred:
+                        t_data = cred.get("token", {})
+                        u_email = "user@antigravity.io"
+                        u_name = "Antigravity Active User"
+                        if fetch_user_info:
+                            info = fetch_user_info(t_data.get("access_token", ""))
+                            if info:
+                                u_email = info.get("email", u_email)
+                                u_name = info.get("name", u_name)
+                        prof = AccountProfile(
+                            id="system-active",
+                            label=u_name,
+                            email=u_email,
+                            tier="Google AI Pro",
+                            is_active=True,
+                        )
+                        profiles.append(prof)
+                        active_id = "system-active"
+                except Exception:
+                    pass
 
             return ProfileList(profiles, active_profile_id=active_id)
 

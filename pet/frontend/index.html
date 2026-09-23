@@ -23,6 +23,12 @@
             <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
           </svg>
         </button>
+        <button id="btn-settings" class="tool-btn" title="偏好与启动设置" aria-label="设置">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
         <button id="btn-state-sim" class="tool-btn" title="动作与通知调试" aria-label="状态模拟">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
@@ -80,24 +86,37 @@
         <span id="quota-profile-label" class="quota-profile-label">主账号</span>
       </div>
 
-      <!-- 额度明细弹出卡片 -->
+      <!-- 额度明细弹出卡片（支持真实 Antigravity 双轨配额） -->
       <div id="quota-details-card" class="quota-details-card">
         <div class="quota-card-header">
-          <span id="quota-card-title" class="quota-card-title">反重力额度剩余</span>
-          <span id="quota-card-email" class="quota-card-email">--</span>
+          <div class="quota-user-meta">
+            <span id="quota-user-avatar" class="quota-user-avatar">✦</span>
+            <div class="quota-user-info">
+              <span id="quota-card-title" class="quota-card-title">反重力真实配额</span>
+              <span id="quota-card-email" class="quota-card-email">--</span>
+            </div>
+          </div>
+          <button id="btn-refresh-quota" class="quota-refresh-icon-btn" title="立即刷新配额">↻</button>
         </div>
-        <div class="quota-row">
-          <span class="quota-row-label">已用 / 总可用 Token:</span>
-          <span><strong id="quota-tokens-used">0</strong> / <span id="quota-tokens-total">0</span></span>
+
+        <!-- 真实双轨配额列表容器 -->
+        <div id="quota-groups-container" class="quota-groups-container"></div>
+
+        <!-- 离线/兼容模式备用条 -->
+        <div id="quota-fallback-section" style="display: none;">
+          <div class="quota-row">
+            <span class="quota-row-label">已用 / 总可用 Token:</span>
+            <span><strong id="quota-tokens-used">0</strong> / <span id="quota-tokens-total">0</span></span>
+          </div>
+          <div class="quota-bar-track">
+            <div id="quota-bar-fill" class="quota-bar-fill" style="width: 0%;"></div>
+          </div>
+          <div class="quota-row">
+            <span class="quota-row-label">额度重置时间 (UTC):</span>
+            <span id="quota-reset-time">--</span>
+          </div>
+          <div class="quota-models-list" id="quota-models-list"></div>
         </div>
-        <div class="quota-bar-track">
-          <div id="quota-bar-fill" class="quota-bar-fill" style="width: 0%;"></div>
-        </div>
-        <div class="quota-row">
-          <span class="quota-row-label">额度重置时间 (UTC):</span>
-          <span id="quota-reset-time">--</span>
-        </div>
-        <div class="quota-models-list" id="quota-models-list"></div>
       </div>
     </div>
 
@@ -195,6 +214,50 @@
             <button class="sim-btn" id="sim-task-failed">✖ 任务失败通知</button>
           </div>
           <button class="sim-btn" id="sim-quota-drop" style="width: 100%; margin-top: 6px;">⚠ 模拟额度告急 (12%)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 模态框 4：启动与偏好设置 -->
+    <div id="modal-settings" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            偏好与启动设置
+          </div>
+          <button id="btn-close-settings" class="modal-close-btn" aria-label="关闭">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-item">
+            <div class="setting-meta">
+              <span class="setting-label">随 Antigravity 启动自动运行</span>
+              <span class="setting-desc">打开 Antigravity 时自动拉起桌面宠物</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-autostart" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-meta">
+              <span class="setting-label">始终置顶显示</span>
+              <span class="setting-desc">宠物保持悬浮在最上层窗口</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-pin-setting" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <button class="sim-btn" id="btn-manual-check-update" style="width: 100%;">✦ 检查汉化与客户端版本一致性</button>
+            <div id="settings-version-hint" style="font-size: 11px; color: var(--color-text-secondary); text-align: center;">已对齐 Antigravity 官方配额通道</div>
+          </div>
         </div>
       </div>
     </div>

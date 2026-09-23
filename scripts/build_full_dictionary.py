@@ -152,6 +152,27 @@ NEW_TRANSLATIONS = {
     "4 tools": "4 个工具",
     "5 tools": "5 个工具",
 
+    # 独立动作状态标签与执行统计 (Action State Badges & Execution Stats)
+    "Edited": "已编辑",
+    "Editing": "正在编辑",
+    "Created": "已创建",
+    "Creating": "正在创建",
+    "Deleted": "已删除",
+    "Deleting": "正在删除",
+    "Explored": "已探索",
+    "Exploring": "正在探索",
+    "Ran": "已执行",
+    "Running": "正在执行",
+    "Viewed": "已查看",
+    "Viewing": "正在查看",
+    "Read": "已读取",
+    "Reading": "正在读取",
+    "Thinking for": "思考耗时",
+    "Thought for": "思考耗时",
+    "Are you sure you want to delete": "确定要删除吗",
+    "Are you sure you want to delete the": "确定要删除",
+    "Are you sure you want to delete the project": "确定要删除项目",
+
     # 应用程序与设置 (Application & Plugin Settings)
     "Manage Antigravity app settings.": "管理 Antigravity 应用程序设置。",
     "Manage Antigravity app settings": "管理 Antigravity 应用程序设置",

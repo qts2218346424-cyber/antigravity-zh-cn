@@ -248,10 +248,29 @@ class TestRuntimeTranslation(unittest.TestCase):
         }
         if (translate("crons") !== "定时任务") process.exit(93);
 
+        // 14. Action combinations, Thinking for header, isolated action verbs, and Project deletion confirm
+        if (translate("Explored 16 files, ran 7 commands >") !== "已探索 16 个文件，执行了 7 条命令") {
+            console.error("Explored ran combination failed:", translate("Explored 16 files, ran 7 commands >"));
+            process.exit(94);
+        }
+        if (translate("Edited") !== "已编辑") process.exit(95);
+        if (translate("Thinking for 3s") !== "思考了 3 秒") {
+            console.error("Thinking for 3s failed:", translate("Thinking for 3s"));
+            process.exit(96);
+        }
+        if (translate("Thinking for 3s ˇ") !== "思考了 3 秒") {
+            console.error("Thinking for 3s dropdown failed:", translate("Thinking for 3s ˇ"));
+            process.exit(96);
+        }
+        if (translate("Are you sure you want to delete the 项目 从0开始学大模型开发?") !== "确定要删除项目 从0开始学大模型开发 吗？") {
+            console.error("Delete project confirm failed:", translate("Are you sure you want to delete the 项目 从0开始学大模型开发?"));
+            process.exit(97);
+        }
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
-        proc = subprocess.run(["node", "-e", js_code], capture_output=True, text=True)
+        proc = subprocess.run(["node", "-e", js_code], capture_output=True, text=True, encoding='utf-8')
         self.assertEqual(proc.returncode, 0, f"Node script failed: {proc.stderr}")
         self.assertIn("SUCCESS", proc.stdout)
 

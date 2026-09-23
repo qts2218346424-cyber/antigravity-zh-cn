@@ -68,6 +68,10 @@
     "删除 $1 个对话"
   ],
   [
+    "^[Aa]re you sure you want to delete\\s+(?:the\\s+)?(?:projects?\\s+|项目\\s*)(.+?)[\\?？]?$",
+    "确定要删除项目 $1 吗？"
+  ],
+  [
     "^Are you sure you want to delete (.+)\\?$",
     "确定要删除 $1 吗？"
   ],
@@ -165,7 +169,7 @@
   ],
   [
     "^Thinking for (\\d+)s$",
-    "正在思考 $1 秒"
+    "思考了 $1 秒"
   ],
   [
     "^Thought Process$",
@@ -1126,5 +1130,149 @@
   [
     "^crons?$",
     "定时任务"
+  ],
+  [
+    "^[Tt]hinking for (\\d+)s(?:\\s*[ˇ⌄▼])?$",
+    "思考了 $1 秒"
+  ],
+  [
+    "^[Tt]hinking for (\\d+)m (\\d+)s(?:\\s*[ˇ⌄▼])?$",
+    "思考了 $1 分 $2 秒"
+  ],
+  [
+    "^[Tt]hinking for (\\d+)m(?:\\s*[ˇ⌄▼])?$",
+    "思考了 $1 分钟"
+  ],
+  [
+    "^[Tt]hinking for (.+?)(?:\\s*[ˇ⌄▼])?$",
+    "思考了 $1"
+  ],
+  [
+    "^[Tt]hought for (\\d+)s(?:\\s*[ˇ⌄▼])?$",
+    "思考了 $1 秒"
+  ],
+  [
+    "^[Tt]hought for (\\d+)m (\\d+)s(?:\\s*[ˇ⌄▼])?$",
+    "思考了 $1 分 $2 秒"
+  ],
+  [
+    "^[Tt]hought for (.+?)(?:\\s*[ˇ⌄▼])?$",
+    "思考了 $1"
+  ],
+  [
+    "^[Tt]hought for\\s*$",
+    "思考耗时"
+  ],
+  [
+    "^[Tt]hinking for\\s*$",
+    "思考耗时"
+  ],
+  [
+    "^[Ee]xplored\\s+(\\d+)\\s+files?,\\s*ran\\s+(\\d+)\\s+commands?\\s*(?:>|›)?$",
+    "已探索 $1 个文件，执行了 $2 条命令"
+  ],
+  [
+    "^[Ee]xplored\\s+(\\d+)\\s+files?,\\s*edited\\s+(\\d+)\\s+files?\\s*(?:>|›)?$",
+    "已探索 $1 个文件，编辑了 $2 个文件"
+  ],
+  [
+    "^[Ee]xploring\\s+(\\d+)\\s+files?,\\s*running\\s+(\\d+)\\s+commands?\\s*(?:>|›)?$",
+    "正在探索 $1 个文件，正在执行 $2 条命令"
+  ],
+  [
+    "^[Ee]xplored\\s+(\\d+)\\s+files?\\s*(?:>|›)?$",
+    "已探索 $1 个文件"
+  ],
+  [
+    "^[Ee]xploring\\s+(\\d+)\\s+files?\\s*(?:>|›)?$",
+    "正在探索 $1 个文件"
+  ],
+  [
+    "^[Rr]an\\s+(\\d+)\\s+commands?\\s*(?:>|›)?$",
+    "已执行 $1 条命令"
+  ],
+  [
+    "^[Rr]unning\\s+(\\d+)\\s+commands?\\s*(?:>|›)?$",
+    "正在执行 $1 条命令"
+  ],
+  [
+    "^[Ee]dited\\s+(\\d+)\\s+files?\\s*(?:>|›)?$",
+    "已编辑 $1 个文件"
+  ],
+  [
+    "^[Ee]diting\\s+(\\d+)\\s+files?\\s*(?:>|›)?$",
+    "正在编辑 $1 个文件"
+  ],
+  [
+    "^[Ee]dited$",
+    "已编辑"
+  ],
+  [
+    "^[Ee]diting$",
+    "正在编辑"
+  ],
+  [
+    "^[Cc]reated$",
+    "已创建"
+  ],
+  [
+    "^[Cc]reating$",
+    "正在创建"
+  ],
+  [
+    "^[Dd]eleted$",
+    "已删除"
+  ],
+  [
+    "^[Dd]eleting$",
+    "正在删除"
+  ],
+  [
+    "^[Ee]xplored$",
+    "已探索"
+  ],
+  [
+    "^[Ee]xploring$",
+    "正在探索"
+  ],
+  [
+    "^[Rr]an$",
+    "已执行"
+  ],
+  [
+    "^[Rr]unning$",
+    "正在执行"
+  ],
+  [
+    "^[Vv]iewed$",
+    "已查看"
+  ],
+  [
+    "^[Vv]iewing$",
+    "正在查看"
+  ],
+  [
+    "^[Rr]ead$",
+    "已读取"
+  ],
+  [
+    "^[Rr]eading$",
+    "正在读取"
+  ],
+  [
+    "^[Aa]re you sure you want to delete (?:the\\s+)?(?:project\\s+|项目\\s*)?(.+?)[\\?？]?$",
+    "确定要删除项目 $1 吗？"
+  ],
+  [
+    "^[Aa]re you sure you want to delete (?:the\\s+)?(.+?)[\\?？]?$",
+    "确定要删除 $1 吗？"
+  ],
+  [
+    "^[Aa]re you sure you want to delete the\\??$",
+    "确定要删除吗？"
+  ],
+  [
+    "^[Aa]re you sure you want to delete\\??$",
+    "确定要删除吗？"
   ]
 ]
