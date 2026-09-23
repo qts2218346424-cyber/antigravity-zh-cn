@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Antigravity Windows 简体中文汉化补丁安装/管理脚本
 .DESCRIPTION
@@ -19,7 +19,16 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+
+# 兼容各种 Windows 控制台环境的编码配置
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
+try { [Console]::InputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
+try { $OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
+try { chcp 65001 >$null } catch {}
+
+try {
+    $Host.UI.RawUI.WindowTitle = "Antigravity 简体中文汉化补丁管理器"
+} catch {}
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
@@ -30,7 +39,7 @@ function Write-Color([string]$text, [ConsoleColor]$color = [ConsoleColor]::White
 }
 
 function Show-Header {
-    Clear-Host
+    try { Clear-Host } catch {}
     Write-Color "============================================================" Cyan
     Write-Color "         Antigravity 简体中文汉化补丁管理器                 " Cyan
     Write-Color "         (参考 claude-desktop-zh-cn 设计架构)                " DarkGray
@@ -64,7 +73,7 @@ function Stop-AntigravityProcesses {
         Write-Color "检测到 Antigravity 或后台语言服务正在运行，正在安全关闭..." Yellow
         $processes | Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 2
-        Write-Color "✔ 进程已关闭。" Green
+        Write-Color "[OK] 进程已关闭。" Green
     }
 }
 
@@ -76,7 +85,7 @@ function Check-PythonEnvironment {
         }
     } catch {}
 
-    Write-Color "❌ 错误: 未检测到系统 Python 3 环境！" Red
+    Write-Color "[!] 错误: 未检测到系统 Python 3 环境！" Red
     Write-Color "请先安装 Python 3 (https://www.python.org/downloads/) 并勾选 Add Python to PATH。" Yellow
     return $false
 }
@@ -99,10 +108,10 @@ function Invoke-PatchAction([string]$op, [string]$lang = "zh-CN", [string]$dir =
     $exitCode = $LASTEXITCODE
 
     if ($exitCode -eq 0) {
-        Write-Color "`n✔ 操作完成！" Green
+        Write-Color "`n[OK] 操作完成！" Green
         return $true
     } else {
-        Write-Color "`n❌ 操作执行遇到错误 (退出码: $exitCode)。" Red
+        Write-Color "`n[!] 操作执行遇到错误 (退出码: $exitCode)。" Red
         return $false
     }
 }

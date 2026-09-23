@@ -1,22 +1,29 @@
 @echo off
-chcp 65001 >nul
-title Antigravity 简体中文汉化补丁安装器
+setlocal EnableExtensions
+set "AGY_DIR=%~dp0"
 
-:: 检查管理员提权
+title Antigravity Chinese Localization Installer
+
+:: Check for administrator privileges
 net session >nul 2>&1
 if %errorLevel% == 0 (
-    goto :RunScript
-) else (
-    echo 正在请求管理员权限以修改程序文件...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
-    exit /b
+    goto :RunDirect
 )
 
-:RunScript
-cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install_windows.ps1"
+echo Requesting administrator privileges...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$src = $env:AGY_DIR; $script = Join-Path $src 'scripts\install_windows.ps1'; $arg = '-NoProfile -ExecutionPolicy Bypass -File ' + [char]34 + $script + [char]34; try { Start-Process powershell.exe -ArgumentList $arg -WorkingDirectory $src -Verb RunAs -ErrorAction Stop; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
 if %errorLevel% neq 0 (
     echo.
-    echo 执行过程中出现提示或错误，请按任意键退出...
-    pause >nul
+    echo Failed to request administrator privileges.
+    echo Please right-click install-windows.bat and select 'Run as administrator'.
+    pause
+)
+exit /b
+
+:RunDirect
+cd /d "%~dp0"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install_windows.ps1"
+if %errorLevel% neq 0 (
+    echo.
+    pause
 )
