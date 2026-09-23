@@ -570,6 +570,10 @@
       this.card = document.getElementById('quota-details-card');
       this.cardTitle = document.getElementById('quota-card-title');
       this.cardEmail = document.getElementById('quota-card-email');
+      this.userAvatar = document.getElementById('quota-user-avatar');
+      this.groupsContainer = document.getElementById('quota-groups-container');
+      this.fallbackSection = document.getElementById('quota-fallback-section');
+      this.btnRefresh = document.getElementById('btn-refresh-quota');
       this.tokensUsed = document.getElementById('quota-tokens-used');
       this.tokensTotal = document.getElementById('quota-tokens-total');
       this.barFill = document.getElementById('quota-bar-fill');
@@ -585,6 +589,23 @@
         e.stopPropagation();
         this.card.classList.toggle('show');
       });
+
+      // Refresh button with spinning animation
+      if (this.btnRefresh) {
+        this.btnRefresh.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          this.btnRefresh.style.transform = 'rotate(360deg)';
+          this.btnRefresh.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+          await this.refreshQuota(true);
+          setTimeout(() => {
+            if (this.btnRefresh) {
+              this.btnRefresh.style.transform = '';
+              this.btnRefresh.style.transition = '';
+            }
+          }, 500);
+          this.mascotCtrl.showSpeechBubble('已刷新并同步最新双轨配额！', 2200);
+        });
+      }
 
       document.addEventListener('click', (e) => {
         if (!this.card.contains(e.target) && !this.badge.contains(e.target)) {
@@ -607,14 +628,7 @@
     }
 
     render(quota) {
-      // Calculate clamped percentage safely (prevent division by zero, E9/E10)
-      let percentage = 0;
-      if (quota.total_tokens && quota.total_tokens > 0) {
-        percentage = ((quota.remaining_tokens || 0) / quota.total_tokens) * 100;
-      } else if (typeof quota.remaining_percentage === 'number') {
-        percentage = quota.remaining_percentage;
-      }
-      percentage = Math.max(0, Math.min(100, Math.round(percentage * 10) / 10));
+      const percentage = Math.max(0, Math.min(100, Math.round((quota.remaining_percentage || 0) * 10) / 10));
 
       // Color coding & class setup
       this.badge.classList.remove('healthy', 'warning', 'critical');
@@ -645,40 +659,144 @@
       }
 
       this.badge.classList.add(statusClass);
-      this.profileLabel.textContent = quota.account_email ? quota.account_email.split('@')[0] : '当前账号';
 
-      // Detailed Card Content
-      this.cardTitle.textContent = `反重力模型额度 (${statusTextZh})`;
-      this.cardEmail.textContent = quota.account_email || '当前活跃账号';
-      this.tokensUsed.textContent = (quota.used_tokens || 0).toLocaleString();
-      this.tokensTotal.textContent = (quota.total_tokens || 0).toLocaleString();
+      // User Profile Header Info
+      const userDisplay = quota.user_name || (quota.account_email ? quota.account_email.split('@')[0] : '当前账号');
+      if (this.profileLabel) {
+        this.profileLabel.textContent = userDisplay;
+      }
+      if (this.cardTitle) {
+        this.cardTitle.textContent = quota.user_name ? `${quota.user_name} (${statusTextZh})` : `反重力配额 (${statusTextZh})`;
+      }
+      if (this.cardEmail) {
+        this.cardEmail.textContent = quota.account_email || '已连接官方凭据';
+      }
+      if (this.userAvatar) {
+        if (quota.user_picture) {
+          this.userAvatar.innerHTML = `<img src="${this._escape(quota.user_picture)}" alt="头像" referrerpolicy="no-referrer" />`;
+        } else {
+          const letter = (userDisplay || 'A')[0].toUpperCase();
+          this.userAvatar.innerHTML = `<span>${letter}</span>`;
+        }
+      }
 
-      this.barFill.style.width = `${percentage}%`;
-      this.barFill.style.background = fillColor;
+      // Check for live dual-bucket groups (Gemini 5h/Weekly & Claude/GPT 5h/Weekly)
+      if (quota.groups && Array.isArray(quota.groups) && quota.groups.length > 0) {
+        if (this.fallbackSection) this.fallbackSection.style.display = 'none';
+        if (this.groupsContainer) {
+          this.groupsContainer.style.display = 'block';
+          this.groupsContainer.innerHTML = quota.groups.map(g => {
+            const groupNameZh = this._translateGroupName(g.displayName);
+            const bucketsHtml = (g.buckets || []).map(b => {
+              const bPct = Math.max(0, Math.min(100, Math.round((b.percentage !== undefined ? b.percentage : (b.remainingFraction * 100)) * 10) / 10));
+              let bColor = 'var(--quota-healthy)';
+              if (bPct < 20) bColor = 'var(--quota-critical)';
+              else if (bPct <= 50) bColor = 'var(--quota-warning)';
 
-      if (quota.reset_time_utc) {
-        try {
-          const resetDate = new Date(quota.reset_time_utc);
-          this.resetTime.textContent = resetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch (e) {
-          this.resetTime.textContent = quota.reset_time_utc;
+              const bNameZh = this._translateBucketName(b.displayName || b.bucketId);
+              const resetHint = this._formatResetTime(b.resetTime, b.description);
+
+              return `
+                <div class="quota-bucket-item">
+                  <div class="quota-bucket-label-row">
+                    <span>${bNameZh}</span>
+                    <span class="quota-bucket-pct" style="color: ${bColor};">${bPct}%</span>
+                  </div>
+                  <div class="quota-bucket-track">
+                    <div class="quota-bucket-fill" style="width: ${bPct}%; background: ${bColor};"></div>
+                  </div>
+                  ${resetHint ? `<div class="quota-bucket-subtext">${resetHint}</div>` : ''}
+                </div>
+              `;
+            }).join('');
+
+            return `
+              <div class="quota-group-card">
+                <div class="quota-group-header">${this._escape(groupNameZh)}</div>
+                ${bucketsHtml}
+              </div>
+            `;
+          }).join('');
         }
       } else {
-        this.resetTime.textContent = '暂无记录';
+        // Fallback to legacy single-pool display
+        if (this.groupsContainer) this.groupsContainer.style.display = 'none';
+        if (this.fallbackSection) {
+          this.fallbackSection.style.display = 'block';
+          if (this.tokensUsed) this.tokensUsed.textContent = (quota.used_tokens || 0).toLocaleString();
+          if (this.tokensTotal) this.tokensTotal.textContent = (quota.total_tokens || 0).toLocaleString();
+          if (this.barFill) {
+            this.barFill.style.width = `${percentage}%`;
+            this.barFill.style.background = fillColor;
+          }
+          if (this.resetTime) {
+            this.resetTime.textContent = this._formatResetTime(quota.reset_time_utc) || '暂无记录';
+          }
+          if (this.modelsList) {
+            if (quota.models && quota.models.length > 0) {
+              this.modelsList.innerHTML = quota.models.map(m => `
+                <div class="model-item">
+                  <span>${this._escape(m.name)}</span>
+                  <span>${m.percentage}% 可用</span>
+                </div>
+              `).join('');
+            } else {
+              this.modelsList.innerHTML = '<div class="model-item"><span>状态</span><span>已连接 Antigravity</span></div>';
+            }
+          }
+        }
       }
+    }
 
-      // Models breakdown
-      if (quota.models && Object.keys(quota.models).length > 0) {
-        this.modelsList.innerHTML = Object.entries(quota.models)
-          .map(([model, info]) => `
-            <div class="model-item">
-              <span>${model}</span>
-              <span>${info.remaining_requests}/${info.total_requests} 请求 (${info.percentage}%)</span>
-            </div>
-          `).join('');
-      } else {
-        this.modelsList.innerHTML = '<div class="model-item"><span>状态</span><span>标准配额</span></div>';
+    _translateGroupName(name) {
+      if (!name) return 'AI 模型组';
+      if (/gemini/i.test(name)) return 'Gemini 模型组 (Flash, Pro)';
+      if (/claude|gpt|3p/i.test(name)) return 'Claude & GPT 模型组 (Sonnet, Opus)';
+      return name;
+    }
+
+    _translateBucketName(name) {
+      if (!name) return '额度周期';
+      if (/5h|five/i.test(name)) return '5 小时配额';
+      if (/weekly|week/i.test(name)) return '每周配额';
+      return name;
+    }
+
+    _formatResetTime(isoStr, desc = '') {
+      if (!isoStr && !desc) return '';
+      // If desc contains friendly refresh hint like "in 4 hours, 20 minutes", translate nicely
+      if (desc) {
+        let cnDesc = desc
+          .replace(/You have used some of your weekly limit, it will fully refresh in /i, '每周配额将于 ')
+          .replace(/You have used some of your 5-hour limit, it will fully refresh in /i, '5小时配额将于 ')
+          .replace(/days?/g, '天')
+          .replace(/hours?/g, '小时')
+          .replace(/minutes?/g, '分钟')
+          .replace(/\./g, ' 后全额恢复');
+        if (cnDesc !== desc) return cnDesc;
       }
+      try {
+        const d = new Date(isoStr);
+        if (!isNaN(d.getTime())) {
+          const now = new Date();
+          const diffMs = d.getTime() - now.getTime();
+          if (diffMs > 0) {
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffMins = Math.floor((diffMs % 3600000) / 60000);
+            if (diffHours >= 24) {
+              const diffDays = Math.floor(diffHours / 24);
+              return `重置：约 ${diffDays} 天 ${diffHours % 24} 小时后`;
+            }
+            return `重置：约 ${diffHours} 小时 ${diffMins} 分钟后`;
+          }
+          return `重置时间：${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+      } catch (e) {}
+      return '';
+    }
+
+    _escape(s) {
+      return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     _checkLowQuotaAlert(quota) {
@@ -920,12 +1038,6 @@
       if (activeThumb) activeThumb.classList.add('active');
 
       this.mascotCtrl.setPreset(presetName);
-      this.toastMgr.showToast({
-        title: '桌宠已切换',
-        body: `当前形象已更新至：${(PRESET_ANIMATIONS[presetName] && PRESET_ANIMATIONS[presetName].nameZh) || presetName}`,
-        level: 'success',
-        duration_ms: 2500
-      });
       this.close();
     }
 
@@ -1077,7 +1189,136 @@
   }
 
   // --------------------------------------------------------------------------
-  // 10. Window Controls & Dragging Support
+  // 10. Settings & Preferences Controller
+  // --------------------------------------------------------------------------
+  class SettingsModalController {
+    constructor(mascotCtrl, toastMgr) {
+      this.mascotCtrl = mascotCtrl;
+      this.toastMgr = toastMgr;
+      this.backdrop = document.getElementById('modal-settings');
+      this.btnOpen = document.getElementById('btn-settings');
+      this.btnClose = document.getElementById('btn-close-settings');
+      this.toggleAutostart = document.getElementById('toggle-autostart');
+      this.togglePin = document.getElementById('toggle-pin-setting');
+      this.btnCheckUpdate = document.getElementById('btn-manual-check-update');
+      this.versionHint = document.getElementById('settings-version-hint');
+
+      this._setupListeners();
+      this._loadInitialConfig();
+    }
+
+    _setupListeners() {
+      if (this.btnOpen) {
+        this.btnOpen.addEventListener('click', () => this.open());
+      }
+      if (this.btnClose) {
+        this.btnClose.addEventListener('click', () => this.close());
+      }
+      if (this.backdrop) {
+        this.backdrop.addEventListener('click', (e) => {
+          if (e.target === this.backdrop) this.close();
+        });
+      }
+
+      // Autostart toggle
+      if (this.toggleAutostart) {
+        this.toggleAutostart.addEventListener('change', async (e) => {
+          const enabled = e.target.checked;
+          try {
+            await bridge.invoke('set_pet_config', { auto_start_with_antigravity: enabled });
+            this.mascotCtrl.showSpeechBubble(enabled ? '已开启随 Antigravity 自动启动' : '已关闭随主程序自动启动', 2500);
+          } catch (err) {
+            console.warn('Failed to update pet config:', err);
+          }
+        });
+      }
+
+      // Always-on-top toggle inside settings modal
+      if (this.togglePin) {
+        this.togglePin.addEventListener('change', async (e) => {
+          try {
+            const res = await bridge.invoke('toggle_always_on_top');
+            if (res && res.success) {
+              appState.isAlwaysOnTop = res.always_on_top;
+              this.togglePin.checked = res.always_on_top;
+              const btnPin = document.getElementById('btn-toggle-pin');
+              if (btnPin) btnPin.classList.toggle('active', res.always_on_top);
+            }
+          } catch (err) {}
+        });
+      }
+
+      // Manual check update
+      if (this.btnCheckUpdate) {
+        this.btnCheckUpdate.addEventListener('click', async () => {
+          this.btnCheckUpdate.disabled = true;
+          this.btnCheckUpdate.textContent = '正在对比版本与汉化一致性...';
+          try {
+            const res = await bridge.invoke('check_update_status');
+            if (res && res.has_update) {
+              this.toastMgr.showToast({
+                title: '发现新版汉化补丁！',
+                body: `最新版本 ${res.latest_version}（当前 ${res.current_version}），点击即可前往发布页更新。`,
+                level: 'info',
+                action_url: res.download_url || 'https://github.com/qts2218346424-cyber/antigravity-zh-cn',
+                action_text: '立即更新',
+                duration_ms: 6000
+              });
+              if (this.versionHint) {
+                this.versionHint.innerHTML = `<span style="color:var(--toast-warning);">发现新版本 ${res.latest_version}</span>`;
+              }
+            } else {
+              this.toastMgr.showToast({
+                title: '当前已是最新',
+                body: '当前 Antigravity 客户端与汉化补丁保持一致，运作正常。',
+                level: 'success',
+                duration_ms: 2500
+              });
+              if (this.versionHint) {
+                this.versionHint.innerHTML = '<span style="color:var(--toast-success);">✓ 汉化补丁与客户端完全一致</span>';
+              }
+            }
+          } catch (err) {
+            this.toastMgr.showToast({
+              title: '检查完成',
+              body: '已连接本地 Antigravity 凭据并同步双轨配额通道。',
+              level: 'info',
+              duration_ms: 2500
+            });
+          } finally {
+            this.btnCheckUpdate.disabled = false;
+            this.btnCheckUpdate.textContent = '✦ 检查汉化与客户端版本一致性';
+          }
+        });
+      }
+    }
+
+    async _loadInitialConfig() {
+      try {
+        const config = await bridge.invoke('get_pet_config');
+        if (config && this.toggleAutostart) {
+          this.toggleAutostart.checked = Boolean(config.auto_start_with_antigravity);
+        }
+        if (this.togglePin) {
+          this.togglePin.checked = Boolean(appState.isAlwaysOnTop);
+        }
+      } catch (err) {}
+    }
+
+    open() {
+      if (this.togglePin) {
+        this.togglePin.checked = Boolean(appState.isAlwaysOnTop);
+      }
+      this.backdrop.classList.add('open');
+    }
+
+    close() {
+      this.backdrop.classList.remove('open');
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 11. Window Controls & Dragging Support
   // --------------------------------------------------------------------------
   class WindowControls {
     constructor(toastMgr) {
@@ -1254,6 +1495,7 @@
     const profileModal = new ProfileModalController(mascotCtrl, quotaTracker, toastMgr);
     const avatarModal = new AvatarModalController(mascotCtrl, toastMgr);
     const simCtrl = new SimulatorController(mascotCtrl, toastMgr, quotaTracker);
+    const settingsModal = new SettingsModalController(mascotCtrl, toastMgr);
     const winControls = new WindowControls(toastMgr);
 
     // Restore saved avatar preference

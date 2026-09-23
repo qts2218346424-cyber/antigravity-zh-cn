@@ -324,6 +324,50 @@
     "查看全部 ($1)"
   ],
   [
+    "^[Rr]an for (\\d+)\\s*(?:mins?|m)\\s*(?:>|›)?$",
+    "已运行 $1 分钟"
+  ],
+  [
+    "^[Rr]an for (\\d+)h\\s*(\\d+)m\\s*(?:>|›)?$",
+    "已运行 $1 小时 $2 分钟"
+  ],
+  [
+    "^[Rr]an for (\\d+)m\\s*(\\d+)s\\s*(?:>|›)?$",
+    "已运行 $1 分钟 $2 秒"
+  ],
+  [
+    "^[Rr]an for (\\d+)s\\s*(?:>|›)?$",
+    "已运行 $1 秒"
+  ],
+  [
+    "^[Ww]orked for (\\d+)\\s*(?:mins?|m)\\s*(?:>|›)?$",
+    "已运行 $1 分钟"
+  ],
+  [
+    "^[Ww]orked for (\\d+)h\\s*(\\d+)m\\s*(?:>|›)?$",
+    "已运行 $1 小时 $2 分钟"
+  ],
+  [
+    "^[Ww]orked for (\\d+)m\\s*(\\d+)s\\s*(?:>|›)?$",
+    "已运行 $1 分钟 $2 秒"
+  ],
+  [
+    "^[Ww]orked for (\\d+)h\\s*(?:>|›)?$",
+    "已运行 $1 小时"
+  ],
+  [
+    "^[Ww]orked for (\\d+)s\\s*(?:>|›)?$",
+    "已运行 $1 秒"
+  ],
+  [
+    "^[Rr]an for\\s+(.+?)\\s*(?:>|›)?$",
+    "已运行 $1"
+  ],
+  [
+    "^[Ww]orked for\\s+(.+?)\\s*(?:>|›)?$",
+    "已运行 $1"
+  ],
+  [
     "^Ran\\s+(.+)$",
     "已运行 $1"
   ],
@@ -1274,5 +1318,81 @@
   [
     "^[Aa]re you sure you want to delete\\??$",
     "确定要删除吗？"
+  ],
+  [
+    "^[Ss]top hook blocked termination:\\s*The user has automatically\\.{3}\\s*(?:>|›)?$",
+    "停止钩子已阻止终止：用户已自动..."
+  ],
+  [
+    "^[Ss]top hook blocked termination:\\s*(.+?)\\s*(?:>|›)?$",
+    "停止钩子已阻止终止：$1"
+  ],
+  [
+    "^[Ss]top hook blocked termination:\\s*$",
+    "停止钩子已阻止终止："
+  ],
+  [
+    "^[Ss]top hook blocked termination$",
+    "停止钩子已阻止终止"
+  ],
+  [
+    "^The user has automatically\\.{3}$",
+    "用户已自动..."
+  ],
+  [
+    "^已运行\\s+分钟\\s*(?:>|›)?$",
+    "已运行数分钟"
+  ],
+  [
+    "^[Mm]essage from (.+?)\\s*(?:>|›)?$",
+    "来自 $1 的消息"
+  ],
+  [
+    "^[Hh]eartbeat check confirmed:\\s*(.+)$",
+    "心跳检测确认：$1"
+  ],
+  [
+    "^[Bb]rowser settings have moved to the Browser section of General settings\\.\\s*Go to General settings$",
+    "浏览器设置已移至通用设置中的“浏览器”部分。前往通用设置"
+  ],
+  [
+    "^[Bb]rowser settings have moved to the Browser section of General settings\\.?$",
+    "浏览器设置已移至通用设置中的“浏览器”部分。"
+  ],
+  [
+    "^[Bb]rowser settings have moved\\.?$",
+    "浏览器设置已移动。"
+  ],
+  [
+    "^Go to General settings\\.?$",
+    "前往通用设置"
+  ],
+  [
+    "^To modify notification settings, open your operating system's system preferences\\.?$",
+    "如需修改通知设置，请打开您操作系统的系统偏好设置。"
+  ],
+  [
+    "^Connect$",
+    "连接"
+  ],
+  [
+    "^Connecting\\.{0,3}$",
+    "正在连接..."
+  ],
+  [
+    "^Connected$",
+    "已连接"
+  ],
+  [
+    "^Disconnect$",
+    "断开连接"
+  ],
+  [
+    "^Models?\\s*&\\s*Usage$",
+    "模型与用量"
+  ],
+  [
+    "^Models?\\s+and\\s+Usage$",
+    "模型与用量"
   ]
 ]

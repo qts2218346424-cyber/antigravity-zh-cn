@@ -92,6 +92,25 @@ def audit_and_update_rules():
                 seen_patterns.add(project_rule)
                 new_rules.append([project_rule, "确定要删除项目 $1 吗？"])
 
+        if pattern == r"^Ran\s+(.+)$":
+            time_rules = [
+                [r"^[Rr]an for (\d+)\s*(?:mins?|m)\s*(?:>|›)?$", "已运行 $1 分钟"],
+                [r"^[Rr]an for (\d+)h\s*(\d+)m\s*(?:>|›)?$", "已运行 $1 小时 $2 分钟"],
+                [r"^[Rr]an for (\d+)m\s*(\d+)s\s*(?:>|›)?$", "已运行 $1 分钟 $2 秒"],
+                [r"^[Rr]an for (\d+)s\s*(?:>|›)?$", "已运行 $1 秒"],
+                [r"^[Ww]orked for (\d+)\s*(?:mins?|m)\s*(?:>|›)?$", "已运行 $1 分钟"],
+                [r"^[Ww]orked for (\d+)h\s*(\d+)m\s*(?:>|›)?$", "已运行 $1 小时 $2 分钟"],
+                [r"^[Ww]orked for (\d+)m\s*(\d+)s\s*(?:>|›)?$", "已运行 $1 分钟 $2 秒"],
+                [r"^[Ww]orked for (\d+)h\s*(?:>|›)?$", "已运行 $1 小时"],
+                [r"^[Ww]orked for (\d+)s\s*(?:>|›)?$", "已运行 $1 秒"],
+                [r"^[Rr]an for\s+(.+?)\s*(?:>|›)?$", "已运行 $1"],
+                [r"^[Ww]orked for\s+(.+?)\s*(?:>|›)?$", "已运行 $1"],
+            ]
+            for tr_pat, tr_repl in time_rules:
+                if tr_pat not in seen_patterns:
+                    seen_patterns.add(tr_pat)
+                    new_rules.append([tr_pat, tr_repl])
+
         if pattern in fix_map:
             repl = fix_map[pattern]
         if pattern not in seen_patterns:
@@ -215,6 +234,46 @@ def audit_and_update_rules():
         [r"^[Aa]re you sure you want to delete (?:the\s+)?(.+?)[\?？]?$", "确定要删除 $1 吗？"],
         [r"^[Aa]re you sure you want to delete the\??$", "确定要删除吗？"],
         [r"^[Aa]re you sure you want to delete\??$", "确定要删除吗？"],
+
+        # 停止钩子阻断 (Stop hook blocked termination: The user has automatically... >)
+        [r"^[Ss]top hook blocked termination:\s*The user has automatically\.{3}\s*(?:>|›)?$", "停止钩子已阻止终止：用户已自动..."],
+        [r"^[Ss]top hook blocked termination:\s*(.+?)\s*(?:>|›)?$", "停止钩子已阻止终止：$1"],
+        [r"^[Ss]top hook blocked termination:\s*$", "停止钩子已阻止终止："],
+        [r"^[Ss]top hook blocked termination$", "停止钩子已阻止终止"],
+        [r"^The user has automatically\.{3}$", "用户已自动..."],
+
+        # Subagent 运行耗时防丢数字与消息来源 (Worked for / Ran for)
+        [r"^[Ww]orked for (\d+)\s*(?:mins?|m)\s*(?:>|›)?$", "已运行 $1 分钟"],
+        [r"^[Ww]orked for (\d+)h\s*(\d+)m\s*(?:>|›)?$", "已运行 $1 小时 $2 分钟"],
+        [r"^[Ww]orked for (\d+)m\s*(\d+)s\s*(?:>|›)?$", "已运行 $1 分钟 $2 秒"],
+        [r"^[Ww]orked for (\d+)h\s*(?:>|›)?$", "已运行 $1 小时"],
+        [r"^[Ww]orked for (\d+)s\s*(?:>|›)?$", "已运行 $1 秒"],
+        [r"^[Rr]an for (\d+)\s*(?:mins?|m)\s*(?:>|›)?$", "已运行 $1 分钟"],
+        [r"^[Rr]an for (\d+)h\s*(\d+)m\s*(?:>|›)?$", "已运行 $1 小时 $2 分钟"],
+        [r"^[Rr]an for (\d+)m\s*(\d+)s\s*(?:>|›)?$", "已运行 $1 分钟 $2 秒"],
+        [r"^[Rr]an for (\d+)s\s*(?:>|›)?$", "已运行 $1 秒"],
+        [r"^[Ww]orked for\s+(.+?)\s*(?:>|›)?$", "已运行 $1"],
+        [r"^[Rr]an for\s+(.+?)\s*(?:>|›)?$", "已运行 $1"],
+        [r"^已运行\s+分钟\s*(?:>|›)?$", "已运行数分钟"],
+        [r"^[Mm]essage from (.+?)\s*(?:>|›)?$", "来自 $1 的消息"],
+        [r"^[Hh]eartbeat check confirmed:\s*(.+)$", "心跳检测确认：$1"],
+
+        # 浏览器设置迁移卡片 (Browser settings have moved)
+        [r"^[Bb]rowser settings have moved to the Browser section of General settings\.\s*Go to General settings$", "浏览器设置已移至通用设置中的“浏览器”部分。前往通用设置"],
+        [r"^[Bb]rowser settings have moved to the Browser section of General settings\.?$", "浏览器设置已移至通用设置中的“浏览器”部分。"],
+        [r"^[Bb]rowser settings have moved\.?$", "浏览器设置已移动。"],
+        [r"^Go to General settings\.?$", "前往通用设置"],
+
+        # 系统设置与 WSL 连接按钮
+        [r"^To modify notification settings, open your operating system's system preferences\.?$", "如需修改通知设置，请打开您操作系统的系统偏好设置。"],
+        [r"^Connect$", "连接"],
+        [r"^Connecting\.{0,3}$", "正在连接..."],
+        [r"^Connected$", "已连接"],
+        [r"^Disconnect$", "断开连接"],
+
+        # 模型与用量大标题 (Models & Usage)
+        [r"^Models?\s*&\s*Usage$", "模型与用量"],
+        [r"^Models?\s+and\s+Usage$", "模型与用量"],
     ]
 
     for pattern, repl in additional_rules:

@@ -188,6 +188,37 @@ NEW_TRANSLATIONS = {
     "Select environment (Ctrl+.)": "选择运行环境 (Ctrl+.)",
     "Select environment": "选择运行环境",
 
+    # 停止钩子与流程中断 (Stop Hook & Interruption)
+    "Stop hook blocked termination": "停止钩子已阻止终止",
+    "Stop hook blocked termination:": "停止钩子已阻止终止：",
+    "Stop hook blocked termination: The user has automatically": "停止钩子已阻止终止：用户已自动",
+
+    # 浏览器设置迁移提示 (Browser Settings Moved Notice)
+    "Browser settings have moved": "浏览器设置已移动",
+    "Browser settings have moved.": "浏览器设置已移动。",
+    "Browser settings have moved to the Browser section of General settings.": "浏览器设置已移至通用设置中的“浏览器”部分。",
+    "Browser settings have moved to the Browser section of General settings": "浏览器设置已移至通用设置中的“浏览器”部分",
+    "Browser settings have moved to the Browser section of General settings. Go to General settings": "浏览器设置已移至通用设置中的“浏览器”部分。前往通用设置",
+    "Go to General settings": "前往通用设置",
+    "Go to General settings.": "前往通用设置。",
+
+    # 通知偏好与 WSL 环境连接 (System Notifications & WSL Connect)
+    "To modify notification settings, open your operating system's system preferences.": "如需修改通知设置，请打开您操作系统的系统偏好设置。",
+    "To modify notification settings, open your operating system's system preferences": "如需修改通知设置，请打开您操作系统的系统偏好设置",
+    "Connect": "连接",
+    "Connecting": "正在连接",
+    "Connected": "已连接",
+    "Disconnect": "断开连接",
+
+    # 模型与用量大标题 (Models & Usage Header)
+    "Models & Usage": "模型与用量",
+    "Models and Usage": "模型与用量",
+    "Model & Usage": "模型与用量",
+    "Model and Usage": "模型与用量",
+    "Message from": "来自以下对象的消息",
+    "Heartbeat check confirmed": "心跳检测确认",
+    "Heartbeat check confirmed:": "心跳检测确认：",
+
     # 会话变更与项目统计 (Project Modification Stats)
     "Modified in": "修改于",
     "Modified in ": "修改于 ",

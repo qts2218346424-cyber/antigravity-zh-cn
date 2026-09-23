@@ -214,6 +214,26 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
     with open(res_dir / "runtime-zh.js", "r", encoding="utf-8") as f:
         runtime_js_code = f.read()
 
+    # 记录桌宠脚本路径与默认自启配置
+    pet_script_file = repo_root / "pet" / "run_pet.py"
+    if pet_script_file.is_file():
+        try:
+            config_dir = Path.home() / ".gemini"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            cfg_path = config_dir / "pet_config.json"
+            cfg_data = {}
+            if cfg_path.is_file():
+                try:
+                    cfg_data = json.loads(cfg_path.read_text(encoding="utf-8"))
+                except Exception:
+                    cfg_data = {}
+            cfg_data["pet_script_path"] = str(pet_script_file.resolve())
+            if "auto_start_with_antigravity" not in cfg_data:
+                cfg_data["auto_start_with_antigravity"] = True
+            cfg_path.write_text(json.dumps(cfg_data, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception as e:
+            print(f"  [!] 记录桌宠自启配置失败 (非致命): {e}")
+
     # 始终基于纯净备份读取，确保多次重复运行不受影响
     source_asar = backup_path if backup_path.exists() else asar_path
     print(f"[2/4] 正在读取并解析 ASAR 索引 (源: {source_asar.name})...")
@@ -328,6 +348,30 @@ function __agyTranslateMenu(m) {{
             hook_code = f"""
 /* __ANTIGRAVITY_ZH_CN_PATCHED__ */
 const __AGY_ZH_CODE__ = {js_raw};
+
+// 自动随 Antigravity 启动桌面宠物守护进程（可随时在宠物设置或托盘关闭）
+(function() {{
+  try {{
+    const _fs = require('fs');
+    const _path = require('path');
+    const _os = require('os');
+    const _cp = require('child_process');
+    const _cfgPath = _path.join(_os.homedir(), '.gemini', 'pet_config.json');
+    if (!_fs.existsSync(_cfgPath)) return;
+    const _cfg = JSON.parse(_fs.readFileSync(_cfgPath, 'utf8'));
+    if (!_cfg || _cfg.auto_start_with_antigravity === false) return;
+    const _pyScript = _cfg.pet_script_path;
+    if (!_pyScript || !_fs.existsSync(_pyScript)) return;
+
+    const _pythonBin = process.platform === 'win32' ? 'pythonw' : 'python3';
+    const _child = _cp.spawn(_pythonBin, [_pyScript], {{
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    }});
+    _child.unref();
+  }} catch (_e) {{}}
+}})();
 """
             utils_content = hook_code + "\n" + utils_content
 

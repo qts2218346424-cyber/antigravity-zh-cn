@@ -267,6 +267,23 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(97);
         }
 
+        // 15. Stop hook, Subagent runtime with arrow, browser moved notice, notification pref, WSL connect, and Models & Usage
+        if (translate("Stop hook blocked termination: The user has automatically... >") !== "停止钩子已阻止终止：用户已自动...") {
+            console.error("Stop hook failed:", translate("Stop hook blocked termination: The user has automatically... >"));
+            process.exit(98);
+        }
+        if (translate("Ran for 3m >") !== "已运行 3 分钟") {
+            console.error("Ran for 3m failed:", translate("Ran for 3m >"));
+            process.exit(99);
+        }
+        if (translate("Browser settings have moved to the Browser section of General settings. Go to General settings") !== "浏览器设置已移至通用设置中的“浏览器”部分。前往通用设置") {
+            console.error("Browser moved failed:", translate("Browser settings have moved to the Browser section of General settings. Go to General settings"));
+            process.exit(100);
+        }
+        if (!translate("To modify notification settings, open your operating system's system preferences.").includes("系统偏好设置")) process.exit(101);
+        if (translate("Connect") !== "连接") process.exit(102);
+        if (translate("Models & Usage") !== "模型与用量") process.exit(103);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
