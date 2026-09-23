@@ -404,8 +404,8 @@
     "以该身份发送反馈"
   ],
   [
-    "^([0-9.]+)%\\s+of the customization budget is available\\.?$",
-    "可用自定义配置预算剩余 $1%。"
+    "([0-9.]+)%\\s+of the customization budget is available\\.?",
+    "自定义预算剩余 $1%"
   ],
   [
     "^([0-9.]+)%\\s+of the (.+?) budget is available\\.?$",
@@ -484,56 +484,56 @@
     "通用 TypeSafe Jev（快思考/系统一）直觉协处理器。"
   ],
   [
-    "^Media\\\\s*\\\\(Today\\\\s+(.+)\\\\)$",
-    "媒体 (今天 )"
+    "^Media\\s*\\(Today\\s+(.+)\\)$",
+    "媒体 (今天 $1)"
   ],
   [
-    "^Media\\\\s*\\\\(Yesterday\\\\s+(.+)\\\\)$",
-    "媒体 (昨天 )"
+    "^Media\\s*\\(Yesterday\\s+(.+)\\)$",
+    "媒体 (昨天 $1)"
   ],
   [
-    "^Media\\\\s*\\\\((.+)\\\\)$",
-    "媒体 ()"
+    "^Media\\s*\\((.+)\\)$",
+    "媒体 ($1)"
   ],
   [
-    "^Media\\\\s+(\\\\d+)$",
-    "媒体 "
+    "^Media\\s+(\\d+)$",
+    "媒体 $1"
   ],
   [
-    "\\\\((\\\\d+)\\\\s+subagents?\\\\)",
-    "( 个子智能体)"
+    "\\((\\d+)\\s+subagents?\\)",
+    "($1 个子代理)"
   ],
   [
     "^Worked for (\\d+)h (\\d+)m$",
-    "已运行  小时  分钟"
+    "已工作 $1 小时 $2 分钟"
   ],
   [
     "^Worked for (\\d+)m (\\d+)s$",
-    "已运行  分钟  秒"
+    "已工作 $1 分钟 $2 秒"
   ],
   [
     "^Worked for (\\d+)h$",
-    "已运行  小时"
+    "已工作 $1 小时"
   ],
   [
     "^Worked for (\\d+)m$",
-    "已运行  分钟"
+    "已工作 $1 分钟"
   ],
   [
     "^Worked for (\\d+)s$",
-    "已运行  秒"
+    "已工作 $1 秒"
   ],
   [
     "^Worked for (.+)$",
-    "已运行 "
+    "已工作 $1"
   ],
   [
     "^Skills Used\\s+(\\d+)$",
-    "已使用技能 "
+    "已使用技能 $1"
   ],
   [
     "^Skills used\\s+(\\d+)$",
-    "已使用技能 "
+    "已使用技能 $1"
   ],
   [
     "^Skills Used$",
@@ -581,7 +581,7 @@
   ],
   [
     "^(\\d+)\\s+tasks?\\s+running$",
-    " 个任务运行中"
+    "$1 个任务运行中"
   ],
   [
     "^No tasks running$",
@@ -589,67 +589,55 @@
   ],
   [
     "^(\\d+)\\s+tasks?\\s+completed$",
-    " 个任务已完成"
+    "$1 个任务已完成"
   ],
   [
     "^(\\d+)\\s+tasks?\\s+failed$",
-    " 个任务已失败"
+    "$1 个任务失败"
   ],
   [
     "^(\\d+)\\s+tasks?\\s+pending$",
-    " 个任务等待中"
+    "$1 个任务等待中"
   ],
   [
-    "^(\\\\d+)d$",
-    " 天"
+    "^(\\d+)d$",
+    "$1 天"
   ],
   [
-    "^(\\\\d+)h$",
-    " 小时"
+    "^(\\d+)h$",
+    "$1 小时"
   ],
   [
-    "^(\\\\d+)m$",
-    " 分钟"
+    "^(\\d+)m$",
+    "$1 分钟"
   ],
   [
-    "^(\\\\d+)s$",
-    " 秒"
+    "^(\\d+)s$",
+    "$1 秒"
   ],
   [
-    "^(\\\\d+)w$",
-    " 周"
+    "^(\\d+)w$",
+    "$1 周"
   ],
   [
-    "^(\\\\d+)mo$",
-    " 个月"
+    "^(\\d+)mo$",
+    "$1 个月"
   ],
   [
-    "^(\\\\d+)y$",
-    " 年"
+    "^(\\d+)y$",
+    "$1 年"
   ],
   [
-    "^Are you sure you want to delete the project\\\\s*(.+)?$",
-    "确定要删除项目 "
+    "^Are you sure you want to delete the project\\s*(.+)?$",
+    "确定要删除项目 $1 吗？"
   ],
   [
-    "^Are you sure you want to delete the project\\\\s*$",
-    "确定要删除项目"
-  ],
-  [
-    "^When toggled on, Antigravity will use your AI credits[\\\\s\\\\S]*?model quota.*$",
+    "^When toggled on, Antigravity will use your AI credits[\\s\\S]*?model quota.*$",
     "启用后，当您的模型配额用尽时，Antigravity 将使用您的 AI 积分来响应模型请求。在消耗 AI 积分之前，Antigravity 始终会优先使用您的模型配额。"
   ],
   [
-    "^The breakdown below shows token usage[\\\\s\\\\S]*?([0-9.]+)%\\\\s+of the customization budget is available\\\\.?$",
-    "下方明细显示了来自技能 (Skills)、规则 (Rules) 和 MCP 等自定义配置的 Token 使用量。如果超出预算，大型自定义配置将被自动截断。\n\n可用自定义配置预算剩余 %。"
-  ],
-  [
-    "The breakdown below shows token usage from customizations like skills, rules, and MCP\\\\.\\\\s*If the budget is exceeded, large customizations will be truncated automatically\\\\.",
+    "The breakdown below shows token usage from customizations like skills, rules, and MCP\\.\\s*If the budget is exceeded, large customizations will be truncated automatically\\.",
     "下方明细显示了来自技能 (Skills)、规则 (Rules) 和 MCP 等自定义配置的 Token 使用量。如果超出预算，大型自定义配置将被自动截断。"
-  ],
-  [
-    "([0-9.]+)%\\\\s+of the customization budget is available\\\\.?",
-    "可用自定义配置预算剩余 %。"
   ],
   [
     "^Default Light$",
@@ -676,15 +664,11 @@
     "刚刚"
   ],
   [
-    "^(?:全部|所有|All)?\\\\s*scheduled tasks run as (.+?)\\\\.?$",
-    "所有定时任务均以  模型运行。"
+    "^(?:全部|所有|All)?\\s*scheduled tasks run as (.+?)\\.?$",
+    "所有定时任务均以 $1 运行。"
   ],
   [
-    "^scheduled tasks run as (.+?)\\\\.?$",
-    "定时任务均以  模型运行。"
-  ],
-  [
-    "^No scheduled tasks(?: configured)?\\\\.?$",
+    "^No scheduled tasks(?: configured)?\\.?$",
     "尚未配置任何定时任务。"
   ],
   [
@@ -693,7 +677,7 @@
   ],
   [
     "^[Ll]imited[\\s-]+[Tt]ime(\\s*[✓✔])$",
-    "限时体验"
+    "限时体验$1"
   ],
   [
     "^Record\\s+[Aa]udio(?:\\s*(?:Ctrl|Cmd)\\+M)?$",
@@ -705,7 +689,7 @@
   ],
   [
     "^Record\\s+[Aa]udio\\s+(.+)$",
-    "录制音频 "
+    "录制音频 $1"
   ],
   [
     "^Enter\\s*[:：]?\\s*Queues after the turn$",
@@ -761,7 +745,7 @@
   ],
   [
     "^[iI]mage\\.(png|jpe?g|gif|webp|svg)$",
-    "图片."
+    "图片.$1"
   ],
   [
     "^[uU]ndo\\s+to\\s+this\\s+(?:point|step|message)$",
@@ -797,15 +781,15 @@
   ],
   [
     "^[aA]ll\\s+changes\\s+since\\s+(.+)$",
-    "自  以来的所有更改"
+    "自 $1 以来的所有更改"
   ],
   [
     "^[cC]hanges\\s+since\\s+(.+)$",
-    "自  以来的更改"
+    "自 $1 以来的更改"
   ],
   [
     "^[cC]ompare\\s+with\\s+(.+)$",
-    "与  进行对比"
+    "与 $1 进行对比"
   ],
   [
     "^[mM]aximize\\s+[pP]ane$",
@@ -837,7 +821,7 @@
   ],
   [
     "^[eE]nabled(\\s*[✓✔])$",
-    "已启用"
+    "已启用$1"
   ],
   [
     "^[dD]isabled(?:\\s*[✓✔])?$",
@@ -845,7 +829,7 @@
   ],
   [
     "^[dD]isabled(\\s*[✓✔])$",
-    "已禁用"
+    "已禁用$1"
   ],
   [
     "^Configure the browser subagent\\.\\s*It requires$",
@@ -861,35 +845,35 @@
   ],
   [
     "^You have used some of your weekly limit,\\s*it will fully refresh in (.+?)\\.?$",
-    "您已使用部分每周配额，将在  后完全刷新。"
+    "您已使用部分每周配额，将在 $1 后完全刷新。"
   ],
   [
     "^You have used some of your five hour limit,\\s*it will fully refresh in (.+?)\\.?$",
-    "您已使用部分 5 小时配额，将在  后完全刷新。"
+    "您已使用部分 5 小时配额，将在 $1 后完全刷新。"
   ],
   [
     "^You have used all of your weekly limit,\\s*it will fully refresh in (.+?)\\.?$",
-    "您的每周配额已用尽，将在  后完全刷新。"
+    "您的每周配额已用尽，将在 $1 后完全刷新。"
   ],
   [
     "^You have used all of your five hour limit,\\s*it will fully refresh in (.+?)\\.?$",
-    "您的 5 小时配额已用尽，将在  后完全刷新。"
+    "您的 5 小时配额已用尽，将在 $1 后完全刷新。"
   ],
   [
     "^it will fully refresh in (.+?)\\.?$",
-    "将在  后完全刷新。"
+    "将在 $1 后完全刷新。"
   ],
   [
     "^will fully refresh in (.+?)\\.?$",
-    "将在  后完全刷新。"
+    "将在 $1 后完全刷新。"
   ],
   [
     "^(\\d+)\\s*days?,\\s*(\\d+)\\s*hours?$",
-    " 天  小时"
+    "$1 天 $2 小时"
   ],
   [
     "^(\\d+)\\s*hours?,\\s*(\\d+)\\s*minutes?$",
-    " 小时  分钟"
+    "$1 小时 $2 分钟"
   ],
   [
     "^Thought Process\\.{0,3}$",
@@ -898,5 +882,153 @@
   [
     "^Thinking Process\\.{0,3}$",
     "思考过程"
+  ],
+  [
+    "^Modified in\\s+(\\d+)\\s+projects?$",
+    "在 $1 个项目中已修改"
+  ],
+  [
+    "^Modified in\\s+(\\d+)\\s+files?$",
+    "在 $1 个文件中已修改"
+  ],
+  [
+    "^Modified in\\s+(\\d+)\\s+items?$",
+    "在 $1 个项目中已修改"
+  ],
+  [
+    "^Modified in\\s+(\\d+)\\s+项目列表$",
+    "在 $1 个项目中已修改"
+  ],
+  [
+    "^Modified in\\s+(.+)$",
+    "修改于 $1"
+  ],
+  [
+    "^Modified in$",
+    "修改于"
+  ],
+  [
+    "^Manage Antigravity app settings\\.?$",
+    "管理 Antigravity 应用程序设置。"
+  ],
+  [
+    "^Select Environment(?:\\s*\\((.+)\\))?$",
+    "选择运行环境 ($1)"
+  ],
+  [
+    "^Select Environment$",
+    "选择运行环境"
+  ],
+  [
+    "^Alphabetical\\s*\\((.+)\\)$",
+    "按字母排序 ($1)"
+  ],
+  [
+    "^Date Added$",
+    "添加日期"
+  ],
+  [
+    "^Last Prompt$",
+    "最新提示词"
+  ],
+  [
+    "^Model unavailable, retrying in (\\d+)s \\(attempt (\\d+)/(\\d+)\\)\\.?$",
+    "模型不可用，将在 $1 秒后重试 (第 $2/$3 次尝试)。"
+  ],
+  [
+    "^Model unavailable, retrying in (\\d+)s\\.?$",
+    "模型不可用，将在 $1 秒后重试。"
+  ],
+  [
+    "^Model unavailable, retrying in (.+?)\\.?$",
+    "模型不可用，将在 $1 后重试。"
+  ],
+  [
+    "^Model unavailable\\.?$",
+    "模型不可用。"
+  ],
+  [
+    "^retrying in (\\d+)s \\(attempt (\\d+)/(\\d+)\\)\\.?$",
+    "将在 $1 秒后重试 (第 $2/$3 次尝试)。"
+  ],
+  [
+    "^retrying in (\\d+)s\\.?$",
+    "将在 $1 秒后重试。"
+  ],
+  [
+    "^\\(attempt (\\d+)/(\\d+)\\)$",
+    "(第 $1/$2 次尝试)"
+  ],
+  [
+    "^All crons run as (.+?)\\.?$",
+    "所有定时任务均以 $1 运行。"
+  ],
+  [
+    "^全部 定时任务s? run as (.+?)\\.?$",
+    "所有定时任务均以 $1 运行。"
+  ],
+  [
+    "^全部 定时任务 run as (.+?)\\.?$",
+    "所有定时任务均以 $1 运行。"
+  ],
+  [
+    "^Cancel\\s*\\((Ctrl\\+D)\\)$",
+    "取消 ($1)"
+  ],
+  [
+    "^Cancel\\s*\\((.+?)\\)$",
+    "取消 ($1)"
+  ],
+  [
+    "^Delete [Pp]lugin\\??$",
+    "删除插件"
+  ],
+  [
+    "^Only Unread$",
+    "仅未读"
+  ],
+  [
+    "^Scheduled$",
+    "已计划"
+  ],
+  [
+    "^Project \\+ Worktree$",
+    "项目 + 工作树"
+  ],
+  [
+    "^Subtitle$",
+    "副标题"
+  ],
+  [
+    "^Subtitles$",
+    "字幕"
+  ],
+  [
+    "^Reliable automation, in-depth debugging, and performance analysis in Chrome using Chrome DevTools and Puppeteer\\.?$",
+    "使用 Chrome DevTools 和 Puppeteer 在 Chrome 中进行可靠的自动化、深度调试和性能分析。"
+  ],
+  [
+    "^Keep your coding agent up to date with the latest web best practices\\.?$",
+    "让您的编程智能体始终掌握最新的 Web 最佳实践。"
+  ],
+  [
+    "^Universal TypeSafe Jev \\(System One\\) Coprocessor for rapid micro-decisions, risk gating, multi-criteria scoring, and intent classification across all coding and researc\\.\\.\\.$",
+    "通用的 TypeSafe Jev (系统一) 协处理器，用于在所有编程和研究任务中进行快速微决策、风险门禁、多维度评分及意图分类..."
+  ],
+  [
+    "^Universal TypeSafe Jev \\(System One\\) Coprocessor for rapid micro-decisions, risk gating, multi-criteria scoring, and intent classification across all coding and research tasks\\.?$",
+    "通用的 TypeSafe Jev (系统一) 协处理器，用于在所有编程和研究任务中进行快速微决策、风险门禁、多维度评分及意图分类。"
+  ],
+  [
+    "^Modified in\\s+(\\d+)\\s+(?:projects?|项目列表|个项目)$",
+    "在 $1 个项目中已修改"
+  ],
+  [
+    "^Modified in\\s+(\\d+)\\s+(?:files?|文件)$",
+    "在 $1 个文件中已修改"
+  ],
+  [
+    "^Modified in\\s+(\\d+)\\s+(?:items?|项)$",
+    "在 $1 个项目中已修改"
   ]
 ]

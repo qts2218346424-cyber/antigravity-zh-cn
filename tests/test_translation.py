@@ -190,6 +190,41 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Working") !== "正在处理") process.exit(66);
         if (!translate("You have used some of your weekly limit, it will fully refresh in 6 days, 22 hours.").includes("您已使用部分每周配额")) process.exit(67);
 
+        // 13. Media date, Modified stats, Settings descriptions, Sort & Filters, and Retry notices
+        if (translate("Media (Today 4:59 AM)") !== "媒体 (今天 4:59 AM)") {
+            console.error("Media Today test failed:", translate("Media (Today 4:59 AM)"));
+            process.exit(68);
+        }
+        if (translate("Media (Yesterday 10:20 PM)") !== "媒体 (昨天 10:20 PM)") {
+            console.error("Media Yesterday test failed:", translate("Media (Yesterday 10:20 PM)"));
+            process.exit(69);
+        }
+        if (translate("Modified in 3 项目列表") !== "在 3 个项目中已修改") {
+            console.error("Modified in 3 项目列表 failed:", translate("Modified in 3 项目列表"));
+            process.exit(70);
+        }
+        if (translate("Modified in 1 project") !== "在 1 个项目中已修改") process.exit(71);
+        if (translate("Manage Antigravity app settings.") !== "管理 Antigravity 应用程序设置。") process.exit(72);
+        if (translate("Last Prompt") !== "最新提示词") process.exit(73);
+        if (translate("Alphabetical (A-Z)") !== "按字母排序 (A-Z)") process.exit(74);
+        if (translate("Date Added") !== "添加日期") process.exit(75);
+        if (translate("Select Environment (Ctrl+.)") !== "选择运行环境 (Ctrl+.)") process.exit(76);
+        if (translate("Model unavailable, retrying in 34s (attempt 5/9).") !== "模型不可用，将在 34 秒后重试 (第 5/9 次尝试)。") {
+            console.error("Model unavailable failed:", translate("Model unavailable, retrying in 34s (attempt 5/9)."));
+            process.exit(77);
+        }
+        if (translate("All crons run as Flash.") !== "所有定时任务均以 Flash 运行。") {
+            console.error("All crons run as Flash failed:", translate("All crons run as Flash."));
+            process.exit(78);
+        }
+        if (translate("Only Unread") !== "仅未读") process.exit(79);
+        if (translate("Scheduled") !== "已计划") process.exit(80);
+        if (translate("Project + Worktree") !== "项目 + 工作树") process.exit(81);
+        if (translate("Delete plugin") !== "删除插件") process.exit(82);
+        if (translate("Cancel (Ctrl+D)") !== "取消 (Ctrl+D)") process.exit(83);
+        if (!translate("Keep your coding agent up to date with the latest web best practices.").includes("Web 最佳实践")) process.exit(84);
+        if (!translate("Reliable automation, in-depth debugging, and performance analysis in Chrome using Chrome DevTools and Puppeteer").includes("性能分析")) process.exit(85);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
