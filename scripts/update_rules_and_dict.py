@@ -62,12 +62,18 @@ def audit_and_update_rules():
         r"^Thought for (\d+)s$": "思考了 $1 秒",
         r"^[Tt]hought for (\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 秒",
         r"^[Tt]hinking for (\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 秒",
+        r"^[Tt]hinking for (\d+)m (\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟 $2 秒",
+        r"^[Tt]hought for (\d+)m (\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟 $2 秒",
+        r"^[Tt]hinking for (\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟 $2 秒",
+        r"^[Tt]hought for (\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟 $2 秒",
+        r"^[Tt]hinking for (\d+)m(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟",
+        r"^[Tt]hought for (\d+)m(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟",
         r"^Thinking for (\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟 $2 秒",
         r"^Thought for (\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟 $2 秒",
         r"^Thinking for (\d+)m(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟",
         r"^Thought for (\d+)m(?:\s*[ˇ⌄▼])?$": "思考了 $1 分钟",
-        r"^Thinking for (.+)$": "思考了 $1",
-        r"^Thought for (.+)$": "思考了 $1",
+        r"^[Tt]hinking for (.+)$": "思考了 $1",
+        r"^[Tt]hought for (.+)$": "思考了 $1",
         r"^Ran for (.+)$": "已运行 $1",
         r"^Ran command:\s*(.+)$": "执行了命令：$1",
         r"^Viewed file:\s*(.+)$": "查看了文件：$1",
@@ -106,6 +112,8 @@ def audit_and_update_rules():
     for pattern, repl in rules:
         if pattern == r"^\(?(\d+)\s*(?:subagents?|子智能体s?)\)?$":
             continue
+        if "hinking for (.+?)" in pattern or "hought for (.+?)" in pattern:
+            continue
         if pattern == r"^Are you sure you want to delete (.+)\?$":
             project_rule = r"^[Aa]re you sure you want to delete\s+(?:the\s+)?(?:projects?\s+|项目\s*)(.+?)[\?？]?$"
             if project_rule not in seen_patterns:
@@ -113,6 +121,39 @@ def audit_and_update_rules():
                 new_rules.append([project_rule, "确定要删除项目 $1 吗？"])
 
         if pattern == r"^Ran\s+(.+)$":
+            tool_action_rules = [
+                [r"^[Rr]an\s+command:\s*(.+)$", "执行了命令：$1"],
+                [r"^[Rr]un\s+command:\s*(.+)$", "执行命令：$1"],
+                [r"^[Rr]unning\s+command:\s*(.+)$", "正在执行命令：$1"],
+                [r"^[Rr]an\s+(\d+)\s+commands?\s*(?:>|›)?$", "已执行 $1 条命令"],
+                [r"^[Rr]unning\s+(\d+)\s+commands?\s*(?:>|›)?$", "正在执行 $1 条命令"],
+                [r"^[Vv]iewed\s+file:\s*(.+)$", "查看了文件：$1"],
+                [r"^[Vv]iewing\s+file:\s*(.+)$", "正在查看文件：$1"],
+                [r"^[Vv]iew\s+file:\s*(.+)$", "查看文件：$1"],
+                [r"^[Rr]ead\s+file:\s*(.+)$", "读取了文件：$1"],
+                [r"^[Rr]eading\s+file:\s*(.+)$", "正在读取文件：$1"],
+                [r"^[Ee]dited\s+file:\s*(.+)$", "编辑了文件：$1"],
+                [r"^[Ee]diting\s+file:\s*(.+)$", "正在编辑文件：$1"],
+                [r"^[Cc]reated\s+file:\s*(.+)$", "创建了文件：$1"],
+                [r"^[Cc]reating\s+file:\s*(.+)$", "正在创建文件：$1"],
+                [r"^[Dd]eleted\s+file:\s*(.+)$", "删除了文件：$1"],
+                [r"^[Dd]eleting\s+file:\s*(.+)$", "正在删除文件：$1"],
+                [r"^[Ss]earching\s+codebase:\s*(.+)$", "正在搜索代码库：$1"],
+                [r"^[Ss]earched\s+codebase:\s*(.+)$", "已搜索代码库：$1"],
+                [r"^[Ss]earching\s+(?:in\s+)?workspace:\s*(.+)$", "正在工作区中搜索：$1"],
+                [r"^[Ss]earched\s+(?:in\s+)?workspace:\s*(.+)$", "已在工作区中搜索：$1"],
+                [r"^[Ee]xploring\s+directory:\s*(.+)$", "正在探索目录：$1"],
+                [r"^[Ee]xplored\s+directory:\s*(.+)$", "已探索目录：$1"],
+                [r"^[Cc]alling\s+tool:\s*(.+)$", "正在调用工具：$1"],
+                [r"^[Cc]alled\s+tool:\s*(.+)$", "已调用工具：$1"],
+                [r"^[Tt]ool\s+result:\s*(.+)$", "工具返回结果：$1"],
+                [r"^[Tt]ool\s+call:\s*(.+)$", "工具调用：$1"],
+            ]
+            for ta_pat, ta_repl in tool_action_rules:
+                if ta_pat not in seen_patterns:
+                    seen_patterns.add(ta_pat)
+                    new_rules.append([ta_pat, ta_repl])
+
             time_rules = [
                 [r"^[Rr]an for (\d+)\s*(?:mins?|m)\s*(?:>|›)?$", "已运行 $1 分钟"],
                 [r"^[Rr]an for (\d+)h\s*(\d+)m\s*(?:>|›)?$", "已运行 $1 小时 $2 分钟"],
@@ -131,7 +172,11 @@ def audit_and_update_rules():
                     seen_patterns.add(tr_pat)
                     new_rules.append([tr_pat, tr_repl])
 
-        if pattern in fix_map:
+        if "hinking for" in pattern and ")m (" in pattern and ")s" in pattern:
+            repl = "思考了 $1 分钟 $2 秒"
+        elif "hought for" in pattern and ")m (" in pattern and ")s" in pattern:
+            repl = "思考了 $1 分钟 $2 秒"
+        elif pattern in fix_map:
             repl = fix_map[pattern]
         if pattern not in seen_patterns:
             seen_patterns.add(pattern)
@@ -211,14 +256,27 @@ def audit_and_update_rules():
         [r"^runs?\s+as\s+(.+?)\.?$", "以 $1 运行。"],
         [r"^crons?$", "定时任务"],
 
-        # 思考耗时标题与折叠 (Thinking for 3s ˇ)
-        [r"^[Tt]hinking for (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 秒"],
-        [r"^[Tt]hinking for (\d+)m (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 分 $2 秒"],
-        [r"^[Tt]hinking for (\d+)m(?:\s*[ˇ⌄▼])?$", "思考了 $1 分钟"],
-        [r"^[Tt]hinking for (.+?)(?:\s*[ˇ⌄▼])?$", "思考了 $1"],
-        [r"^[Tt]hought for (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 秒"],
-        [r"^[Tt]hought for (\d+)m (\d+)s(?:\s*[ˇ⌄▼])?$", "思考了 $1 分 $2 秒"],
-        [r"^[Tt]hought for (.+?)(?:\s*[ˇ⌄▼])?$", "思考了 $1"],
+        # 思考耗时标题与折叠 (Thinking for / Thought for All Combinations)
+        [r"^[Tt]hinking for (\d+)h\s*(\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 小时 $2 分钟 $3 秒"],
+        [r"^[Tt]hought for (\d+)h\s*(\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 小时 $2 分钟 $3 秒"],
+        [r"^[Tt]hinking for (\d+)h\s*(\d+)m(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 小时 $2 分钟"],
+        [r"^[Tt]hought for (\d+)h\s*(\d+)m(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 小时 $2 分钟"],
+        [r"^[Tt]hinking for (\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 分钟 $2 秒"],
+        [r"^[Tt]hought for (\d+)m\s*(\d+)s(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 分钟 $2 秒"],
+        [r"^[Tt]hinking for (\d+)m(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 分钟"],
+        [r"^[Tt]hought for (\d+)m(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 分钟"],
+        [r"^[Tt]hinking for (\d+)s(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 秒"],
+        [r"^[Tt]hought for (\d+)s(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 秒"],
+        [r"^[Tt]hinking for (\d+)\s*(?:mins?|minutes?)(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 分钟"],
+        [r"^[Tt]hought for (\d+)\s*(?:mins?|minutes?)(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 分钟"],
+        [r"^[Tt]hinking for (\d+)\s*(?:secs?|seconds?)(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 秒"],
+        [r"^[Tt]hought for (\d+)\s*(?:secs?|seconds?)(?:\s*[ˇ⌄▼>›])?$", "思考了 $1 秒"],
+        [r"^[Tt]hinking for a few seconds(?:\s*[ˇ⌄▼>›])?$", "思考了数秒"],
+        [r"^[Tt]hought for a few seconds(?:\s*[ˇ⌄▼>›])?$", "思考了数秒"],
+        [r"^[Tt]hinking for a moment(?:\s*[ˇ⌄▼>›])?$", "思考了片刻"],
+        [r"^[Tt]hought for a moment(?:\s*[ˇ⌄▼>›])?$", "思考了片刻"],
+        [r"^[Tt]hinking for\s+(.+?)(?:\s*[ˇ⌄▼>›])?$", "思考了 $1"],
+        [r"^[Tt]hought for\s+(.+?)(?:\s*[ˇ⌄▼>›])?$", "思考了 $1"],
         [r"^[Tt]hought for\s*$", "思考耗时"],
         [r"^[Tt]hinking for\s*$", "思考耗时"],
 
@@ -578,6 +636,16 @@ def audit_and_update_rules():
             for item in new_rules:
                 if item[0] == pattern:
                     item[1] = repl
+
+    # 终极规则清洗：确保所有思考与运行耗时一律采用完整规范的“分钟”和“秒”
+    for item in new_rules:
+        pat = item[0]
+        if ("hinking for" in pat or "hought for" in pat) and ")m" in pat and ")s" in pat:
+            item[1] = "思考了 $1 分钟 $2 秒"
+        elif ("hinking for" in pat or "hought for" in pat) and ")m" in pat and ")s" not in pat:
+            item[1] = "思考了 $1 分钟"
+        elif ("hinking for" in pat or "hought for" in pat) and ")s" in pat and ")m" not in pat:
+            item[1] = "思考了 $1 秒"
 
     # 保存
     with open(RULES_PATH, 'w', encoding='utf-8') as f:

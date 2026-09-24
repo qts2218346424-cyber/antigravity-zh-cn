@@ -434,6 +434,23 @@ class TestRuntimeTranslation(unittest.TestCase):
         }
         if (translate("Confirm Undo") !== "确认撤销") process.exit(162);
 
+        // 25. Thinking duration combinations, pure time spans, tool calls, and thought steps
+        if (translate("Thinking for 1m 24s") !== "思考了 1 分钟 24 秒") {
+            console.error("Thinking 1m 24s failed:", translate("Thinking for 1m 24s"));
+            process.exit(163);
+        }
+        if (translate("Thought for 2m 5s >") !== "思考了 2 分钟 5 秒") {
+            console.error("Thought 2m 5s failed:", translate("Thought for 2m 5s >"));
+            process.exit(164);
+        }
+        if (translate("1m 24s") !== "1 分钟 24 秒") process.exit(165);
+        if (translate("Explored 16 files, edited 3 files >") !== "已探索 16 个文件，编辑了 3 个文件") process.exit(166);
+        if (translate("Ran command: python test.py") !== "执行了命令：python test.py") process.exit(167);
+        if (translate("Viewed file: src/app.tsx") !== "查看了文件：src/app.tsx") process.exit(168);
+        if (translate("Searching codebase: get_user") !== "正在搜索代码库：get_user") process.exit(169);
+        if (translate("Thought Process (32 steps)") !== "思考过程 (32 个步骤)") process.exit(170);
+        if (translate("Collapse Thoughts") !== "折叠思考过程") process.exit(171);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
