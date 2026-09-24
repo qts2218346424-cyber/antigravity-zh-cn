@@ -605,6 +605,7 @@ class PetTrayController:
                     pystray.MenuItem("额度告急 (Low Quota)", lambda: self.bridge.set_pet_state({"state": "quota_low"})),
                 )),
                 pystray.Menu.SEPARATOR,
+                pystray.MenuItem("彻底退出并关闭自启动", self._on_exit_and_disable_autostart),
                 pystray.MenuItem("退出桌面宠物", self._on_exit)
             )
 
@@ -661,6 +662,18 @@ class PetTrayController:
                     "duration_ms": 4000
                 })
         threading.Thread(target=_run_check, daemon=True).start()
+
+    def _on_exit_and_disable_autostart(self, icon=None, item=None):
+        try:
+            self.bridge.set_pet_config({"auto_start_with_antigravity": False})
+        except Exception:
+            pass
+        if self.tray:
+            self.tray.stop()
+        win = self.holder.get("window")
+        if win:
+            win.destroy()
+        sys.exit(0)
 
     def _on_exit(self, icon=None, item=None):
         if self.tray:

@@ -49,6 +49,7 @@ class TestRuntimeTranslation(unittest.TestCase):
                 const cleaned = text
                     .replace(/\((\d+)\s*子智能体s\)/g, '($1 个子智能体)')
                     .replace(/(\d+)\s*子智能体s/g, '$1 个子智能体')
+                    .replace(/(\d+)\s*个(?:代理|智能体)s\s*正在运行/g, '$1 个智能体正在运行')
                     .replace(/(子智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1')
                     .replace(/([\u4e00-\u9fa5])s(?=[^\w]|$)/g, '$1');
                 if (cleaned !== text) return cleaned;
@@ -373,6 +374,65 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(137);
         }
         if (translate("Allow using this MCP tool") !== "允许使用此 MCP 工具") process.exit(138);
+
+        // 21. System tray menu and WSL entries
+        if (translate("Connect to WSL") !== "连接到 WSL") process.exit(139);
+        if (translate("Open Antigravity") !== "打开 Antigravity") process.exit(140);
+        if (translate("Quit") !== "退出") process.exit(141);
+        if (translate("2 个代理s 正在运行") !== "2 个智能体正在运行") {
+            console.error("Tray agent plural s failed:", translate("2 个代理s 正在运行"));
+            process.exit(142);
+        }
+        if (translate("2 agents running") !== "2 个智能体正在运行") process.exit(143);
+        if (translate("1 agent running") !== "1 个智能体正在运行") process.exit(144);
+        if (translate("No agents running") !== "无正在运行的智能体") process.exit(145);
+
+        // 22. /plan command prompt cards, Thinking depth labels (Medium/High/Low)
+        if (translate("Plan carefully before executing a task.") !== "在执行任务前周密制定计划。") {
+            console.error("Plan command bubble failed:", translate("Plan carefully before executing a task."));
+            process.exit(146);
+        }
+        if (translate("Try Planning with /plan") !== "尝试使用 /plan 制定计划") {
+            console.error("Try Planning with /plan failed:", translate("Try Planning with /plan"));
+            process.exit(147);
+        }
+        if (translate("Add /plan to explicitly ask your agent to generate a structured plan before implementation.") !== "添加 /plan 以明确要求您的智能体在开始实现前生成结构化的执行计划。") {
+            console.error("Add /plan description failed:", translate("Add /plan to explicitly ask your agent to generate a structured plan before implementation."));
+            process.exit(148);
+        }
+        if (translate("Gemini Flash Medium") !== "Gemini Flash (中等)") process.exit(149);
+        if (translate("Medium") !== "中等") process.exit(150);
+
+        // 23. Edit Conversation Title, grill-me command, and all Subagent role names from latest screenshot
+        if (translate("Edit Conversation Title") !== "编辑会话标题") {
+            console.error("Edit Conversation Title failed:", translate("Edit Conversation Title"));
+            process.exit(151);
+        }
+        if (translate("Interview me to align on a plan.") !== "通过人机交互访谈对齐设计与技术方案。") {
+            console.error("Interview me to align on a plan failed:", translate("Interview me to align on a plan."));
+            process.exit(152);
+        }
+        if (translate("Remediation and Hardening Worker") !== "修复与加固工作人员") process.exit(153);
+        if (translate("Forensic Integrity Auditor") !== "司法取证与完整性审计员") process.exit(154);
+        if (translate("Boundary and Payload Challenger") !== "边界与有效载荷挑战员") process.exit(155);
+        if (translate("Concurrency and Swap Challenger") !== "并发与切换挑战员") process.exit(156);
+        if (translate("Architecture Reviewer 2") !== "架构审查员 2") {
+            console.error("Architecture Reviewer 2 failed:", translate("Architecture Reviewer 2"));
+            process.exit(157);
+        }
+        if (translate("Codebase Reviewer 1") !== "代码库审查员 1") {
+            console.error("Codebase Reviewer 1 failed:", translate("Codebase Reviewer 1"));
+            process.exit(158);
+        }
+        if (translate("Frontend and Window Shell Worker") !== "前端与窗口外壳工作人员") process.exit(159);
+        if (translate("Backend and Switcher Worker") !== "后端与切换器工作人员") process.exit(160);
+
+        // 24. Confirm Undo dialog description
+        if (translate("This undo action will not make any code changes.") !== "此撤销操作不会产生任何代码更改。") {
+            console.error("Undo prompt failed:", translate("This undo action will not make any code changes."));
+            process.exit(161);
+        }
+        if (translate("Confirm Undo") !== "确认撤销") process.exit(162);
 
         console.log("SUCCESS");
         """

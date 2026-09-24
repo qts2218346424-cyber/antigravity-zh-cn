@@ -8,7 +8,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("interactive", "install", "restore", "disable-updates", "enable-updates")]
+    [ValidateSet("interactive", "install", "restore", "disable-updates", "enable-updates", "uninstall-pet")]
     [string]$Action = "interactive",
 
     [Parameter(Position = 1)]
@@ -90,7 +90,7 @@ function Check-PythonEnvironment {
     return $false
 }
 
-function Invoke-PatchAction([string]$op, [string]$lang = "zh-CN", [string]$dir = "") {
+function Invoke-PatchAction([string]$op, [string]$lang = "zh-CN", [string]$dir = "", [bool]$withPet = $false) {
     if (-not (Check-PythonEnvironment)) {
         return $false
     }
@@ -100,6 +100,13 @@ function Invoke-PatchAction([string]$op, [string]$lang = "zh-CN", [string]$dir =
     $argsList = @($PatcherPy, $op, "--lang", $lang)
     if ($dir) {
         $argsList += @("--dir", $dir)
+    }
+    if ($op -eq "install") {
+        if ($withPet) {
+            $argsList += @("--with-pet")
+        } else {
+            $argsList += @("--no-pet")
+        }
     }
 
     Write-Host ""
@@ -188,7 +195,7 @@ function Ask-DesktopPet {
     }
 }
 
-function Start-AntigravityApp([string]$installDir) {
+function Start-AntigravityApp([string]$installDir, [bool]$promptPet = $false) {
     $exePath = Join-Path $installDir "Antigravity.exe"
     if (Test-Path -LiteralPath $exePath) {
         $ans = (Read-Host "是否立即启动 Antigravity？[y/n]").Trim().ToLower()
@@ -197,7 +204,9 @@ function Start-AntigravityApp([string]$installDir) {
             Start-Process -FilePath $exePath
         }
     }
-    Ask-DesktopPet
+    if ($promptPet) {
+        Ask-DesktopPet
+    }
 }
 
 function Run-InteractiveMenu {
@@ -218,51 +227,57 @@ function Run-InteractiveMenu {
         Show-Header
         Write-Color "检测到安装路径: $installDir" DarkCyan
         Write-Host ""
-        Write-Color "[1] 安装简体中文补丁 (zh-CN)" Green
-        Write-Color "[2] 安装繁体中文补丁 (zh-TW - 台湾)" Green
-        Write-Color "[3] 安装繁体中文补丁 (zh-HK - 香港)" Green
-        Write-Color "[4] 还原原版 / 卸载补丁 (Restore)" Yellow
-        Write-Color "[5] 禁止自动更新 (锁定当前版本)" Magenta
-        Write-Color "[6] 恢复自动更新" Magenta
-        Write-Color "[7] 查看 Antigravity IDE 汉化指引" Gray
-        Write-Color "[8] 开启/配置 版本更新自动维护看门狗 (Auto-Maintainer & GitHub 同步)" Cyan
-        Write-Color "[9] 启动 / 管理 Antigravity 灵动桌面小宠物 (额度感知 / 任务弹窗 / 一键换号)" Yellow
-        Write-Color "[Q] 退出" DarkGray
+        Write-Color "[1]  安装简体中文纯净补丁 (zh-CN，仅汉化，不附带桌面宠物)" Green
+        Write-Color "[2]  安装简体中文全能补丁 (zh-CN，汉化 + 灵动桌面小宠物)" Green
+        Write-Color "[3]  安装繁体中文纯净补丁 (zh-TW - 台湾)" Green
+        Write-Color "[4]  安装繁体中文纯净补丁 (zh-HK - 香港)" Green
+        Write-Color "[5]  还原原版 / 卸载补丁 (Restore)" Yellow
+        Write-Color "[6]  禁止自动更新 (锁定当前版本)" Magenta
+        Write-Color "[7]  恢复自动更新" Magenta
+        Write-Color "[8]  查看 Antigravity IDE 汉化指引" Gray
+        Write-Color "[9]  开启/配置 版本更新自动维护看门狗 (Auto-Maintainer & GitHub 同步)" Cyan
+        Write-Color "[10] 桌面宠物专区 (启动 / 创建快捷方式 / 彻底卸载与清理)" Yellow
+        Write-Color "[Q]  退出" DarkGray
         Write-Host ""
 
-        $choice = (Read-Host "请选择操作 [1-9 / Q]").Trim().ToUpper()
+        $choice = (Read-Host "请选择操作 [1-10 / Q]").Trim().ToUpper()
         switch ($choice) {
             '1' {
-                $ok = Invoke-PatchAction "install" "zh-CN" $installDir
-                if ($ok) { Start-AntigravityApp $installDir }
+                $ok = Invoke-PatchAction "install" "zh-CN" $installDir $false
+                if ($ok) { Start-AntigravityApp $installDir $false }
                 Pause
             }
             '2' {
-                $ok = Invoke-PatchAction "install" "zh-TW" $installDir
-                if ($ok) { Start-AntigravityApp $installDir }
+                $ok = Invoke-PatchAction "install" "zh-CN" $installDir $true
+                if ($ok) { Start-AntigravityApp $installDir $true }
                 Pause
             }
             '3' {
-                $ok = Invoke-PatchAction "install" "zh-HK" $installDir
-                if ($ok) { Start-AntigravityApp $installDir }
+                $ok = Invoke-PatchAction "install" "zh-TW" $installDir $false
+                if ($ok) { Start-AntigravityApp $installDir $false }
                 Pause
             }
             '4' {
-                Invoke-PatchAction "restore" "zh-CN" $installDir
+                $ok = Invoke-PatchAction "install" "zh-HK" $installDir $false
+                if ($ok) { Start-AntigravityApp $installDir $false }
                 Pause
             }
             '5' {
-                Invoke-PatchAction "disable-updates" "zh-CN" $installDir
+                Invoke-PatchAction "restore" "zh-CN" $installDir
                 Pause
             }
             '6' {
-                Invoke-PatchAction "enable-updates" "zh-CN" $installDir
+                Invoke-PatchAction "disable-updates" "zh-CN" $installDir
                 Pause
             }
             '7' {
-                Show-IdeGuidance
+                Invoke-PatchAction "enable-updates" "zh-CN" $installDir
+                Pause
             }
             '8' {
+                Show-IdeGuidance
+            }
+            '9' {
                 $watchdogBat = Join-Path $ScriptDir "setup_watchdog.bat"
                 if (Test-Path $watchdogBat) {
                     Start-Process cmd.exe -ArgumentList "/c `"$watchdogBat`"" -Wait
@@ -271,19 +286,23 @@ function Run-InteractiveMenu {
                     Pause
                 }
             }
-            '9' {
-                Write-Color "`n--- Antigravity 灵动桌面小宠物管理 ---" Cyan
+            '10' {
+                Write-Color "`n--- Antigravity 灵动桌面小宠物专区 ---" Cyan
                 Write-Color "[1] 立即在后台启动小宠物" Green
                 Write-Color "[2] 在桌面创建一键启动快捷方式" Green
-                Write-Color "[3] 运行 30 项自检冒烟测试 (Smoke Test)" Yellow
+                Write-Color "[3] 运行 57 项完整自检与回归测试" Yellow
+                Write-Color "[4] 彻底卸载桌面宠物 (清除自启 Hook、关闭后台进程、删除快捷方式与沙盒)" Red
                 Write-Color "[B] 返回主菜单" Gray
-                $sub = (Read-Host "请选择操作 [1/2/3/B]").Trim().ToUpper()
+                $sub = (Read-Host "请选择操作 [1/2/3/4/B]").Trim().ToUpper()
                 switch ($sub) {
                     '1' { Start-DesktopPet }
                     '2' { Create-PetShortcut }
                     '3' {
                         $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
                         & python $petPy --smoke
+                    }
+                    '4' {
+                        Invoke-PatchAction "uninstall-pet" "zh-CN" $installDir
                     }
                 }
                 Pause

@@ -57,6 +57,7 @@
         const cleaned = text
           .replace(/\((\d+)\s*子智能体s\)/g, '($1 个子智能体)')
           .replace(/(\d+)\s*子智能体s/g, '$1 个子智能体')
+          .replace(/(\d+)\s*个(?:代理|智能体)s\s*正在运行/g, '$1 个智能体正在运行')
           .replace(/(子智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1')
           .replace(/([\u4e00-\u9fa5])s(?=[^\w]|$)/g, '$1');
         if (cleaned !== text) {
@@ -307,12 +308,97 @@
       } catch (_) {}
     });
 
+    // 原生 DOM 属性透明拦截器：从根源上消灭英文向 DOM 树的写入，实现物理 0ms 纯中文直出
+    try {
+      const origTextContentDesc = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+      if (origTextContentDesc && origTextContentDesc.set) {
+        const origTextContentSet = origTextContentDesc.set;
+        Object.defineProperty(Node.prototype, 'textContent', {
+          set(val) {
+            try {
+              if (typeof val === 'string' && val.length > 0 && val.length < 500) {
+                if (!isProtectedTextNode(this)) {
+                  const tr = translate(val);
+                  if (tr && norm(val) !== norm(tr)) {
+                    const lead = (val.match(/^\s*/) || [''])[0];
+                    const trail = (val.match(/\s*$/) || [''])[0];
+                    return origTextContentSet.call(this, lead + tr + trail);
+                  }
+                }
+              }
+            } catch (_) {}
+            return origTextContentSet.call(this, val);
+          },
+          get: origTextContentDesc.get,
+          configurable: true,
+          enumerable: origTextContentDesc.enumerable
+        });
+      }
+
+      const origNodeValueDesc = Object.getOwnPropertyDescriptor(Node.prototype, 'nodeValue');
+      if (origNodeValueDesc && origNodeValueDesc.set) {
+        const origNodeValueSet = origNodeValueDesc.set;
+        Object.defineProperty(Node.prototype, 'nodeValue', {
+          set(val) {
+            try {
+              if (this.nodeType === 3 && typeof val === 'string' && val.length > 0 && val.length < 500) {
+                if (!isProtectedTextNode(this)) {
+                  const tr = translate(val);
+                  if (tr && norm(val) !== norm(tr)) {
+                    const lead = (val.match(/^\s*/) || [''])[0];
+                    const trail = (val.match(/\s*$/) || [''])[0];
+                    return origNodeValueSet.call(this, lead + tr + trail);
+                  }
+                }
+              }
+            } catch (_) {}
+            return origNodeValueSet.call(this, val);
+          },
+          get: origNodeValueDesc.get,
+          configurable: true,
+          enumerable: origNodeValueDesc.enumerable
+        });
+      }
+    } catch (_) {}
+
+    // 自动重组并翻译被搜索高亮（highlight span）打碎的富文本标签容器
+    const translateHighlightedContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const highlightElements = root.querySelectorAll('.highlight, [class*="highlight"], mark');
+        if (highlightElements.length === 0) return 0;
+
+        const processedContainers = new Set();
+        for (let i = 0; i < highlightElements.length; i++) {
+          const hl = highlightElements[i];
+          const container = hl.parentElement;
+          if (!container || processedContainers.has(container) || translatedNodeSet.has(container)) continue;
+          processedContainers.add(container);
+
+          if (isProtectedTextNode(container)) continue;
+          const fullText = (container.textContent || '').trim();
+          if (!fullText || fullText.length > 300) continue;
+
+          const translated = translate(fullText);
+          if (translated && norm(translated) !== norm(fullText)) {
+            const leading = (container.textContent.match(/^\s*/) || [''])[0];
+            const trailing = (container.textContent.match(/\s*$/) || [''])[0];
+            container.textContent = leading + translated + trailing;
+            translatedNodeSet.add(container);
+            count++;
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
     // 已翻译文本节点弱引用集合，彻底阻断活锁与重复处理
     const translatedNodeSet = new WeakSet();
 
     // 监听 DOM 树变化并根据交互场景智能分流：
-    // 1. 用户交互期：微任务同步增量直出（抢在浏览器首帧 Paint 绘制前完成，0ms 消除英文闪烁）
-    // 2. 非交互期（如流式打字）：平滑防抖批量扫描，确保主线程与渲染流绝对不卡顿
+    // 默认在当前微任务中同步增量直出（先于浏览器 Paint 绘制完成，彻底根除英文闪烁），
+    // 超过 4ms 保险丝的超大型长列表变更，安全移交后台轻量防抖处理。
     let mutationTimer = null;
     let maxWaitDeadline = 0;
 
@@ -323,18 +409,27 @@
 
     const observer = new MutationObserver((mutations) => {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      const shouldSync = isUserInteracting && now < interactExpiry;
+      let syncCount = 0;
+      let exceededBudget = false;
 
-      if (shouldSync && mutations && mutations.length > 0) {
-        let syncCount = 0;
+      if (mutations && mutations.length > 0) {
+        const syncStart = now;
+        const MAX_SYNC_BUDGET_MS = 4; // 严格锁死单次微任务在 4ms 内，绝不侵占 16.6ms 帧预算
+
         for (let i = 0; i < mutations.length; i++) {
+          // 超出 4ms 预算时立即熔断让出主线程，剩余节点由后续后台防抖队列平滑处理，绝对不卡死渲染
+          if (typeof performance !== 'undefined' && performance.now() - syncStart > MAX_SYNC_BUDGET_MS) {
+            exceededBudget = true;
+            break;
+          }
           const m = mutations[i];
           if (m.type === 'childList') {
             for (let j = 0; j < m.addedNodes.length; j++) {
               const node = m.addedNodes[j];
               if (node.nodeType === 1) { // 元素节点
+                syncCount += translateHighlightedContainers(node);
                 syncCount += translateTextNodes(node);
-                translateAttributes(node);
+                syncCount += translateAttributes(node);
               } else if (node.nodeType === 3) { // 文本节点
                 if (!translatedNodeSet.has(node)) {
                   const orig = node.nodeValue;
@@ -349,23 +444,38 @@
                 }
               }
             }
+          } else if (m.type === 'characterData') {
+            const node = m.target;
+            if (node && node.nodeType === 3 && !translatedNodeSet.has(node)) {
+              const orig = node.nodeValue;
+              const tr = translate(orig);
+              if (tr && norm(orig) !== norm(tr)) {
+                const lead = (orig.match(/^\s*/) || [''])[0];
+                const trail = (orig.match(/\s*$/) || [''])[0];
+                node.nodeValue = lead + tr + trail;
+                translatedNodeSet.add(node);
+                syncCount++;
+              }
+            }
           } else if (m.type === 'attributes') {
             if (m.target && m.target.nodeType === 1) {
-              translateAttributes(m.target);
+              syncCount += translateAttributes(m.target);
             }
           }
         }
-        if (syncCount > 0) {
-          return; // 同步增量直出已完成，第一帧即为纯正中文，直接返回无需等待宏任务！
+
+        // 若在 4ms 预算内全部增量翻译完毕，直接返回！首帧即为纯正中文，0ms 零延迟！
+        if (!exceededBudget) {
+          return;
         }
       }
 
-      // 非用户点击期间（如后台流式推理输出）：采用轻量防抖调度
+      // 超出 4ms 帧预算的极端海量 DOM 节点挂载：采用轻量后台平滑调度
       if (!maxWaitDeadline) {
-        maxWaitDeadline = now + 150;
+        maxWaitDeadline = now + 60;
       }
       clearTimeout(mutationTimer);
-      const delay = Math.max(0, Math.min(25, maxWaitDeadline - now));
+      const delay = Math.max(0, Math.min(16, maxWaitDeadline - now));
       mutationTimer = setTimeout(handleMutations, delay);
     });
 

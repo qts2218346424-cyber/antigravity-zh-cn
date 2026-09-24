@@ -76,10 +76,12 @@ def audit_and_update_rules():
         r"^[iI]mage\.(png|jpe?g|gif|webp|svg)$": "图片.$1",
         r"^[aA]ll\s+changes\s+since\s+(.+)$": "自 $1 以来的所有更改",
         r"^[cC]hanges\s+since\s+(.+)$": "自 $1 以来的更改",
-        r"^[cC]ompare\s+with\s+(.+)$": "与 $1 进行对比",
         r"^[eE]nabled(\s*[✓✔])$": "已启用$1",
         r"^[dD]isabled(\s*[✓✔])$": "已禁用$1",
         r"^(?:全部|所有|All)?\s*scheduled tasks run as (.+?)\.?$": "所有定时任务均以 $1 运行。",
+        r"^(\d+) agents? running$": "$1 个智能体正在运行",
+        r"^No agents? running$": "无正在运行的智能体",
+        r"^No agents running$": "无正在运行的智能体",
     }
 
     new_rules = []
@@ -313,6 +315,30 @@ def audit_and_update_rules():
         [r"^Requirements and Spec Miner$", "需求与规范挖掘员"],
         [r"^Auth and Quota Explorer$", "鉴权与配额探索员"],
         [r"^Toolchain and Window Explorer$", "工具链与窗口探索员"],
+        [r"^Remediation and Hardening Worker$", "修复与加固工作人员"],
+        [r"^Forensic Integrity Auditor$", "司法取证与完整性审计员"],
+        [r"^Boundary and Payload Challenger$", "边界与有效载荷挑战员"],
+        [r"^Concurrency and Swap Challenger$", "并发与切换挑战员"],
+        [r"^Architecture Reviewer (\d+)$", "架构审查员 $1"],
+        [r"^Architecture Reviewer$", "架构审查员"],
+        [r"^Codebase Reviewer (\d+)$", "代码库审查员 $1"],
+        [r"^Codebase Reviewer$", "代码库审查员"],
+        [r"^Frontend and Window Shell Worker$", "前端与窗口外壳工作人员"],
+        [r"^Backend and Switcher Worker$", "后端与切换器工作人员"],
+        [r"^Reviewer (\d+)$", "审查员 $1"],
+        [r"^Worker (\d+)$", "工作人员 $1"],
+        [r"^Auditor (\d+)$", "审计员 $1"],
+        [r"^Challenger (\d+)$", "挑战员 $1"],
+        [r"^(.+?)\s+Reviewer\s+(\d+)$", "$1 审查员 $2"],
+        [r"^(.+?)\s+Reviewer$", "$1 审查员"],
+        [r"^(.+?)\s+Worker\s+(\d+)$", "$1 工作人员 $2"],
+        [r"^(.+?)\s+Worker$", "$1 工作人员"],
+        [r"^(.+?)\s+Auditor\s+(\d+)$", "$1 审计员 $2"],
+        [r"^(.+?)\s+Auditor$", "$1 审计员"],
+        [r"^(.+?)\s+Challenger\s+(\d+)$", "$1 挑战员 $2"],
+        [r"^(.+?)\s+Challenger$", "$1 挑战员"],
+        [r"^(.+?)\s+Specialist\s+(\d+)$", "$1 专家 $2"],
+        [r"^(.+?)\s+Specialist$", "$1 专家"],
         [r"^(.+?)\s+Explorer$", "$1 探索员"],
         [r"^(.+?)\s+Writer$", "$1 编写员"],
         [r"^(.+?)\s+Miner$", "$1 挖掘员"],
@@ -403,6 +429,43 @@ def audit_and_update_rules():
         [r"^[Aa]llow using this (.+?) tool[\?？]?$", "允许使用此 $1 工具吗？"],
         [r"^[Aa]llow using this tool[\?？]?$", "允许使用此工具吗？"],
         [r"^[Aa]llow using MCP tool[\?？]?$", "允许使用 MCP 工具吗？"],
+
+        # /plan 计划命令、推荐卡片与提示 (Try Planning with /plan)
+        [r"^[Pp]lan carefully before executing a task\.?$", "在执行任务前周密制定计划。"],
+        [r"^[Tt]ry [Pp]lanning with /plan\.?$", "尝试使用 /plan 制定计划"],
+        [r"^[Aa]dd /plan to explicitly ask your agent to generate a structured plan before implementation\.?$", "添加 /plan 以明确要求您的智能体在开始实现前生成结构化的执行计划。"],
+        [r"^[Aa]dd /plan to explicitly ask your agent to generate a (.+?) plan before implementation\.?$", "添加 /plan 以明确要求您的智能体在开始实现前生成 $1 计划。"],
+        [r"^[Tt]ry [Pp]lanning with (.+?)$", "尝试使用 $1 制定计划"],
+
+        # 模型思考深度标签 (Medium / High / Low) 与托盘菜单
+        [r"^Gemini Flash Medium$", "Gemini Flash (中等)"],
+        [r"^Gemini Flash High$", "Gemini Flash (高)"],
+        [r"^Gemini Flash Low$", "Gemini Flash (低)"],
+        [r"^[Mm]edium$", "中等"],
+        [r"^[Hh]igh$", "高"],
+        [r"^[Ll]ow$", "低"],
+        [r"^Connect to WSL$", "连接到 WSL"],
+        [r"^Open Antigravity$", "打开 Antigravity"],
+        [r"^Quit$", "退出"],
+        [r"^(\d+)\s+agent(?:s)?\s+running$", "$1 个智能体正在运行"],
+        [r"^(\d+)\s*个(?:代理|智能体)s?\s*正在运行$", "$1 个智能体正在运行"],
+        [r"^No agents? running$", "无正在运行的智能体"],
+
+        # 会话标题编辑与重命名 (Edit Conversation Title)
+        [r"^[Ee]dit [Cc]onversation [Tt]itle$", "编辑会话标题"],
+        [r"^[Ee]dit [Tt]itle$", "编辑标题"],
+        [r"^[Cc]onversation [Tt]itle$", "会话标题"],
+        [r"^[Rr]ename [Cc]onversation$", "重命名会话"],
+
+        # 斜杠命令描述与交互 (grill-me / plan)
+        [r"^[Ii]nterview me to align on a plan\.?$", "通过人机交互访谈对齐设计与技术方案。"],
+        [r"^[Ii]nterview me to align on a plan$", "通过人机交互访谈对齐设计与技术方案"],
+
+        # 对话撤销与回滚提示 (Confirm Undo Action Dialog)
+        [r"^[Tt]his undo action will not make any code changes\.?$", "此撤销操作不会产生任何代码更改。"],
+        [r"^[Tt]his undo action will not make any changes\.?$", "此撤销操作不会产生任何更改。"],
+        [r"^[Tt]his action will not make any code changes\.?$", "此操作不会产生任何代码更改。"],
+        [r"^[Tt]his action will not make any changes\.?$", "此操作不会产生任何更改。"],
     ]
 
     for pattern, repl in additional_rules:
