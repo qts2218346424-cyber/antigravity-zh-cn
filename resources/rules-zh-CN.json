@@ -2370,5 +2370,41 @@
   [
     "^[Nn]o active conversations?$",
     "无活跃会话"
+  ],
+  [
+    "^[Ee]dit [Cc]onversation [Tt]itle[\\.\\s]*$",
+    "编辑会话标题"
+  ],
+  [
+    "^[Tt]ests?$",
+    "测试"
+  ],
+  [
+    "^[Dd]elete [Ss]erver[\\.\\s]*$",
+    "删除服务器"
+  ],
+  [
+    "^[Oo]utside of [Pp]roject$",
+    "项目之外"
+  ],
+  [
+    "^[Oo]utside of [Ww]orkspace$",
+    "工作区之外"
+  ],
+  [
+    "^[Cc]reate\\s+(.+?)\\s+[Pp]roject$",
+    "创建 $1 项目"
+  ],
+  [
+    "^Antigravity Translation Project$",
+    "Antigravity 汉化项目"
+  ],
+  [
+    "^Antigravity Translation$",
+    "Antigravity 汉化"
+  ],
+  [
+    "^Translation Project$",
+    "汉化项目"
   ]
 ]

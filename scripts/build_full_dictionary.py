@@ -260,6 +260,23 @@ NEW_TRANSLATIONS = {
     "No active conversations.": "无活跃会话。",
     "No active conversations": "无活跃会话",
 
+    # 最新批次词条：测试标签、删除服务器、项目之外与会话生成标题
+    "tests": "测试",
+    "Tests": "测试",
+    "Delete server": "删除服务器",
+    "Delete Server": "删除服务器",
+    "delete server": "删除服务器",
+    "Delete server?": "确定删除服务器吗？",
+    "Outside of Project": "项目之外",
+    "Outside of project": "项目之外",
+    "outside of project": "项目之外",
+    "Outside of Workspace": "工作区之外",
+    "Outside of workspace": "工作区之外",
+    "Create Antigravity Translation Project": "创建 Antigravity 汉化项目",
+    "Antigravity Translation Project": "Antigravity 汉化项目",
+    "Antigravity Translation": "Antigravity 汉化",
+    "Translation Project": "汉化项目",
+
     "Are you sure you want to delete": "确定要删除吗",
     "Are you sure you want to delete the": "确定要删除",
     "Are you sure you want to delete the project": "确定要删除项目",

@@ -142,7 +142,7 @@
     const isProtectedTextNode = (node) => {
       try {
         const el = node.nodeType === 1 ? node : node.parentElement;
-        if (!el || !el.closest) return true;
+        if (!el || !el.closest) return false;
         if (IGNORED_TAGS.has(el.tagName)) return true;
 
         // 1. 占位符、浮层提示、禁用指针或不可编辑嵌入组件的 UI 描述文本一律允许汉化（如 Lexical placeholder / 附件芯片）
@@ -178,7 +178,7 @@
 
     const isProtectedAttrNode = (el) => {
       try {
-        if (!el || !el.closest) return true;
+        if (!el || !el.closest) return false;
         if (IGNORED_TAGS.has(el.tagName)) return true;
         // 允许 input 与 textarea 的 placeholder/title/aria-label 进行汉化，仅严格保护代码编辑器核心与终端
         if (el.closest('.monaco-editor, .cm-editor, .xterm, .code-block-content')) return true;

@@ -658,6 +658,17 @@ def audit_and_update_rules():
         [r"^(\d+)\s+active\s+conversations?$", "$1 个活跃会话"],
         [r"^[Nn]o active conversations?\.?$", "无活跃会话。"],
         [r"^[Nn]o active conversations?$", "无活跃会话"],
+
+        # 最新批次截图规则：会话标题编辑、测试标签、删除服务器、项目之外与会话生成标题
+        [r"^[Ee]dit [Cc]onversation [Tt]itle[\.\s]*$", "编辑会话标题"],
+        [r"^[Tt]ests?$", "测试"],
+        [r"^[Dd]elete [Ss]erver[\.\s]*$", "删除服务器"],
+        [r"^[Oo]utside of [Pp]roject$", "项目之外"],
+        [r"^[Oo]utside of [Ww]orkspace$", "工作区之外"],
+        [r"^[Cc]reate\s+(.+?)\s+[Pp]roject$", "创建 $1 项目"],
+        [r"^Antigravity Translation Project$", "Antigravity 汉化项目"],
+        [r"^Antigravity Translation$", "Antigravity 汉化"],
+        [r"^Translation Project$", "汉化项目"],
     ]
 
     for pattern, repl in additional_rules:

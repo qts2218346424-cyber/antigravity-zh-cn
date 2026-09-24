@@ -464,6 +464,13 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("1 active conversation.") !== "1 个活跃会话。") process.exit(178);
         if (translate("3 active conversations.") !== "3 个活跃会话。") process.exit(179);
 
+        // 27. Latest 5 images: Edit Conversation Title, tests, Delete server, Outside of Project, Create Project
+        if (translate("Edit Conversation Title") !== "编辑会话标题") process.exit(180);
+        if (translate("tests") !== "测试") process.exit(181);
+        if (translate("Delete server") !== "删除服务器") process.exit(182);
+        if (translate("Outside of Project") !== "项目之外") process.exit(183);
+        if (translate("Create Antigravity Translation Project") !== "创建 Antigravity 汉化项目") process.exit(184);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
