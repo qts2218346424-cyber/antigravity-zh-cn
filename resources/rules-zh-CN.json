@@ -2564,48 +2564,8 @@
     "已完成的 $1 总结"
   ],
   [
-    "^[Dd]irectory Traversal Protection in\\s+(.+)$",
-    "$1 中的目录遍历防护"
-  ],
-  [
-    "^[Dd]irectory Traversal Protection$",
-    "目录遍历防护"
-  ],
-  [
-    "^[Ee]liminated Rollback Self-Deadlock & Latency Penalty$",
-    "消除回滚自死锁与延迟损耗"
-  ],
-  [
-    "^[Ee]liminated Rollback Self-Deadlock / FileLock Latency Penalty.*$",
-    "消除回滚自死锁与文件锁延迟损耗"
-  ],
-  [
     "^[Ee]liminated (.+)$",
     "已消除 $1"
-  ],
-  [
-    "^[Aa]dded validation with\\s+(.+)$",
-    "添加了使用 $1 进行的校验"
-  ],
-  [
-    "^[Aa]dded validation with$",
-    "添加校验："
-  ],
-  [
-    "^[Ee]xplicitly rejected path separators.*$",
-    "显式拒绝路径分隔符（/、\\、..）与 Windows 保留设备名称"
-  ],
-  [
-    "^[Rr]esolved canonical target path and asserted.*$",
-    "解析规范目标路径并断言验证"
-  ],
-  [
-    "^[Cc]onfirmed prefix search fallback cannot escape the backups directory.*$",
-    "确认前缀搜索回退无法逃逸备份目录"
-  ],
-  [
-    "^[Ee]xtracted core restore logic into private.*$",
-    "将核心恢复逻辑提取至私有方法"
   ],
   [
     "^[Ii] have remediated all (\\d+) adversarial findings reported by (.+) across (.+)\\.?$",
@@ -2646,6 +2606,10 @@
   [
     "^Worker Remediation$",
     "修复专员"
+  ],
+  [
+    "^A modern, ultra-light.*$",
+    "现代超轻量级桌面宠物项目"
   ],
   [
     "^[Uu]pdated\\s+(\\d+)\\s+seconds?\\s+ago$",
@@ -2734,5 +2698,125 @@
   [
     "^[Uu]pdated:\\s*(.+)$",
     "更新于：$1"
+  ],
+  [
+    "^(\\d+)\\.\\s*[Dd]irectory Traversal Protection in\\s+(.+?)\\s*\\((.+?)\\):$",
+    "$1. $2 中的目录遍历防护 ($3)："
+  ],
+  [
+    "^(\\d+)\\.\\s*[Dd]irectory Traversal Protection in\\s+(.+?)\\s*\\((.+?)\\)$",
+    "$1. $2 中的目录遍历防护 ($3)"
+  ],
+  [
+    "^[Dd]irectory Traversal Protection in\\s+(.+?)\\s*\\((.+?)\\):$",
+    "$1 中的目录遍历防护 ($2)："
+  ],
+  [
+    "^[Dd]irectory Traversal Protection in\\s+(.+?)\\s*\\((.+?)\\)$",
+    "$1 中的目录遍历防护 ($2)"
+  ],
+  [
+    "^(\\d+)\\.\\s*[Dd]irectory Traversal Protection in\\s+(.+?):$",
+    "$1. $2 中的目录遍历防护："
+  ],
+  [
+    "^(\\d+)\\.\\s*[Dd]irectory Traversal Protection in\\s+(.+)$",
+    "$1. $2 中的目录遍历防护"
+  ],
+  [
+    "^[Dd]irectory Traversal Protection in\\s+(.+?):$",
+    "$1 中的目录遍历防护："
+  ],
+  [
+    "^[Dd]irectory Traversal Protection in\\s+(.+)$",
+    "$1 中的目录遍历防护"
+  ],
+  [
+    "^[Dd]irectory Traversal Protection$",
+    "目录遍历防护"
+  ],
+  [
+    "^(\\d+)\\.\\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty\\s*\\((.+?)\\):$",
+    "$1. 消除回滚自死锁与延迟损耗 ($2)："
+  ],
+  [
+    "^(\\d+)\\.\\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty\\s*\\((.+?)\\)$",
+    "$1. 消除回滚自死锁与延迟损耗 ($2)"
+  ],
+  [
+    "^[Ee]liminated Rollback Self-Deadlock & Latency Penalty\\s*\\((.+?)\\):$",
+    "消除回滚自死锁与延迟损耗 ($1)："
+  ],
+  [
+    "^[Ee]liminated Rollback Self-Deadlock & Latency Penalty\\s*\\((.+?)\\)$",
+    "消除回滚自死锁与延迟损耗 ($1)"
+  ],
+  [
+    "^(\\d+)\\.\\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty:$",
+    "$1. 消除回滚自死锁与延迟损耗："
+  ],
+  [
+    "^(\\d+)\\.\\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty$",
+    "$1. 消除回滚自死锁与延迟损耗"
+  ],
+  [
+    "^[Ee]liminated Rollback Self-Deadlock & Latency Penalty:$",
+    "消除回滚自死锁与延迟损耗："
+  ],
+  [
+    "^[Ee]liminated Rollback Self-Deadlock & Latency Penalty$",
+    "消除回滚自死锁与延迟损耗"
+  ],
+  [
+    "^[Ee]liminated Rollback Self-Deadlock / FileLock Latency Penalty.*$",
+    "消除回滚自死锁与文件锁延迟损耗"
+  ],
+  [
+    "^[Aa]dded validation with\\s+(.+?)\\.?$",
+    "添加了使用 $1 进行的校验。"
+  ],
+  [
+    "^[Aa]dded validation with\\s+(.+)$",
+    "添加了使用 $1 进行的校验"
+  ],
+  [
+    "^[Aa]dded validation with$",
+    "添加校验："
+  ],
+  [
+    "^[Ee]xplicitly rejected path separators\\s*\\((.+?)\\)\\s*and Windows reserved device names\\s*\\((.+?)\\)\\.?$",
+    "显式拒绝路径分隔符（$1）与 Windows 保留设备名称（$2）。"
+  ],
+  [
+    "^[Ee]xplicitly rejected path separators.*$",
+    "显式拒绝路径分隔符（/、\\、..）与 Windows 保留设备名称"
+  ],
+  [
+    "^[Rr]esolved canonical target path and asserted\\s+(.+?)\\.?$",
+    "解析规范目标路径并断言验证 $1。"
+  ],
+  [
+    "^[Rr]esolved canonical target path and asserted.*$",
+    "解析规范目标路径并断言验证"
+  ],
+  [
+    "^[Cc]onfirmed prefix search fallback cannot escape the (.+?) directory\\.?$",
+    "确认前缀搜索回退无法逃逸 $1 目录。"
+  ],
+  [
+    "^[Cc]onfirmed prefix search fallback cannot escape the backups directory.*$",
+    "确认前缀搜索回退无法逃逸备份目录"
+  ],
+  [
+    "^[Ee]xtracted core restore logic into private\\s+(.+?)\\.?$",
+    "将核心恢复逻辑提取至私有方法 $1。"
+  ],
+  [
+    "^[Ee]xtracted core restore logic into private.*$",
+    "将核心恢复逻辑提取至私有方法"
+  ],
+  [
+    "^[Uu]pdated\\s+(?:in\\s+)?(.+?)\\s+to synchronize with\\s+(.+?)\\s+before delegating\\s+(.+?)\\.?$",
+    "更新了 $1，在委托给 $3 之前与 $2 进行同步。"
   ]
 ]

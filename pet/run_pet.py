@@ -70,26 +70,40 @@ if "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS" in os.environ:
             del os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"]
 
 
-def ensure_default_desktop_session():
+
+def init_windows_environment():
     """
-    Ensures the process and UI threads are attached to the interactive user desktop (WinSta0\\Default).
-    This guarantees the pet window appears on the user's physical monitor even when spawned from isolated agent shells or background services.
+    初始化 Windows 运行环境：
+    1. 声明 Per-Monitor DPI Awareness (V2)，统一坐标语义为真实物理像素，彻底消除坐标漂移；
+    2. 安全检查物理交互桌面关联。
     """
     if sys.platform == "win32":
+        import ctypes
+        # 1. 设置 Per-Monitor DPI Awareness
         try:
-            import ctypes
+            ctypes.windll.shcore.SetProcessDpiAwareness(2) # PROCESS_PER_MONITOR_DPI_AWARE
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except Exception:
+                pass
+
+        # 2. 安全检查物理交互桌面关联
+        try:
             user32 = ctypes.windll.user32
-            h_winsta = user32.OpenWindowStationW("WinSta0", False, 0x037F)
-            if h_winsta:
-                user32.SetProcessWindowStation(h_winsta)
-            h_desk = user32.OpenDesktopW("Default", 0, False, 0x01FF)
-            if h_desk:
-                user32.SetThreadDesktop(h_desk)
+            h_desk = user32.GetThreadDesktop(user32.GetCurrentThreadId())
+            if not h_desk:
+                h_winsta = user32.OpenWindowStationW("WinSta0", False, 0x037F)
+                if h_winsta:
+                    user32.SetProcessWindowStation(h_winsta)
+                h_target_desk = user32.OpenDesktopW("Default", 0, False, 0x01FF)
+                if h_target_desk:
+                    user32.SetThreadDesktop(h_target_desk)
         except Exception:
             pass
 
 
-ensure_default_desktop_session()
+init_windows_environment()
 
 # Attempt to load pet_engine backend if available
 try:
@@ -521,7 +535,36 @@ _GLOBAL_WINDOW_HOLDER: Dict[str, Any] = {}
 
 
 def get_pet_hwnd() -> Optional[int]:
-    """Finds the HWND for the Antigravity Desktop Pet window."""
+    """
+    精准定位桌面宠物顶层窗口 HWND：
+    1. 优先从当前进程 PID 遍历顶级顶层窗口（GW_OWNER == 0）；
+    2. 回退检查 pywebview 内部 native 句柄；
+    3. 兜底标题匹配。
+    """
+    my_pid = os.getpid()
+    found_hwnd = None
+    try:
+        import win32gui
+        import win32con
+        import win32process
+
+        def _enum(h, _):
+            nonlocal found_hwnd
+            if win32gui.GetWindow(h, win32con.GW_OWNER) == 0:
+                _, p = win32process.GetWindowThreadProcessId(h)
+                if p == my_pid:
+                    cls = win32gui.GetClassName(h)
+                    if "WindowsForms" in cls or "Chrome_WidgetWin" in cls:
+                        found_hwnd = h
+                        return False
+            return True
+
+        win32gui.EnumWindows(_enum, None)
+        if found_hwnd:
+            return found_hwnd
+    except Exception:
+        pass
+
     try:
         win = _GLOBAL_WINDOW_HOLDER.get("window")
         if win and hasattr(win, "native") and win.native:
@@ -530,6 +573,7 @@ def get_pet_hwnd() -> Optional[int]:
                 return int(handle.ToString())
     except Exception:
         pass
+
     try:
         import win32gui
         hwnd = win32gui.FindWindow(None, "Antigravity 桌面宠物")
@@ -538,26 +582,16 @@ def get_pet_hwnd() -> Optional[int]:
         hwnd = win32gui.FindWindow(None, "Antigravity Desktop Pet")
         if hwnd and win32gui.IsWindow(hwnd):
             return hwnd
-        # 兜底：枚举当前桌面所有顶层窗口，寻找包含桌面宠物或 Antigravity 的窗口
-        target_hwnd = None
-        def _enum_cb(h, _):
-            nonlocal target_hwnd
-            if win32gui.IsWindow(h):
-                txt = win32gui.GetWindowText(h)
-                if ("Antigravity" in txt or "桌面宠物" in txt) and ("Pet" in txt or "桌面宠物" in txt):
-                    target_hwnd = h
-                    return False
-            return True
-        win32gui.EnumWindows(_enum_cb, None)
-        return target_hwnd
     except Exception:
-        return None
+        pass
+
+    return None
 
 
 def get_safe_screen_position(width: int = 320, height: int = 380) -> tuple:
     """
-    智能获取主显示器真实可用工作区（排除任务栏），并计算安全逻辑坐标与物理坐标。
-    彻底避免高 DPI 缩放或多显示器环境下窗口飞出屏幕的问题。
+    基于主显示器真实物理工作区与目标 DPI，严密计算物理与逻辑坐标。
+    彻底根除高 DPI 缩放下窗口飞出物理屏幕外或被任务栏遮挡的问题。
     返回: (logical_x, logical_y, physical_x, physical_y, physical_w, physical_h)
     """
     try:
@@ -566,28 +600,42 @@ def get_safe_screen_position(width: int = 320, height: int = 380) -> tuple:
         import ctypes
 
         user32 = ctypes.windll.user32
+        h_mon = win32api.MonitorFromPoint((0, 0), win32con.MONITOR_DEFAULTTOPRIMARY)
+        mon_info = win32api.GetMonitorInfo(h_mon)
+        work = mon_info.get("Work", (0, 0, 1920, 1080))  # (left, top, right, bottom)
+
         try:
-            dpi = user32.GetDpiForSystem()
+            dpi_x = ctypes.c_uint()
+            dpi_y = ctypes.c_uint()
+            ctypes.windll.shcore.GetDpiForMonitor(
+                h_mon.handle if hasattr(h_mon, 'handle') else int(h_mon),
+                0,
+                ctypes.byref(dpi_x),
+                ctypes.byref(dpi_y)
+            )
+            dpi = dpi_x.value
         except Exception:
-            dpi = 96
+            try:
+                dpi = user32.GetDpiForSystem()
+            except Exception:
+                dpi = 96
+
         scale = max(1.0, dpi / 96.0)
 
-        mon_info = win32api.GetMonitorInfo(win32api.MonitorFromPoint((0, 0), win32con.MONITOR_DEFAULTTOPRIMARY))
-        work_rect = mon_info.get('Work', (0, 0, 1920, 1080))  # (left, top, right, bottom)
-        work_w = max(400, work_rect[2] - work_rect[0])
-        work_h = max(400, work_rect[3] - work_rect[1])
+        # 动态计算随 DPI 缩放的安全边距（约 24~30 逻辑像素）
+        margin_x = int(round(24 * scale))
+        margin_y = int(round(24 * scale))
 
-        # pywebview.create_window 接收的是逻辑像素 (Logical Pixels)
-        logical_work_w = work_w / scale
-        logical_work_h = work_h / scale
-        logical_x = max(20, int(logical_work_w - width - 15))
-        logical_y = max(20, int(logical_work_h - height - 15))
+        physical_w = int(round(width * scale))
+        physical_h = int(round(height * scale))
 
-        # Win32 原生物理像素坐标 (Physical Pixels)
-        physical_x = int(logical_x * scale) + work_rect[0]
-        physical_y = int(logical_y * scale) + work_rect[1]
-        physical_w = int(width * scale)
-        physical_h = int(height * scale)
+        # 物理坐标：紧贴主屏幕右下角（任务栏上方，留出舒适边距）
+        physical_x = max(work[0] + 10, work[2] - physical_w - margin_x)
+        physical_y = max(work[1] + 10, work[3] - physical_h - margin_y)
+
+        # 逻辑坐标：抵消 pywebview 内部 Location = Point(initial_x * scale) 的二次乘法
+        logical_x = int(round(physical_x / scale))
+        logical_y = int(round(physical_y / scale))
 
         return (logical_x, logical_y, physical_x, physical_y, physical_w, physical_h)
     except Exception:
@@ -596,44 +644,45 @@ def get_safe_screen_position(width: int = 320, height: int = 380) -> tuple:
 
 def configure_true_desktop_transparency(always_on_top: bool = True, click_through: bool = False):
     """
-    Enforces true glass/alpha transparency on Windows 10/11:
-    1. Extends DWM glass frame across entire client area (-1, -1, -1, -1).
-    2. Configures click-through and topmost flags.
-    3. Forces visibility and topmost activation on Windows desktop.
+    施加真正的 Windows 桌面无边框透明与置顶特性（不掠夺用户焦点）：
+    1. 扩展 DWM 客户区全域玻璃边框 (-1, -1, -1, -1)；
+    2. 设置穿透与分层样式；
+    3. 使用 SW_SHOWNOACTIVATE 与 SWP_NOACTIVATE 确保平稳唤醒且不抢前台焦点。
     """
     try:
         import win32gui
         import win32con
 
         hwnd = get_pet_hwnd()
-        if not hwnd:
+        if not hwnd or not win32gui.IsWindow(hwnd):
             return
 
-        # 1. Full DWM frame extension (-1 margins)
+        # 1. DWM 客户区玻璃边框全量扩展
         m = _MARGINS(-1, -1, -1, -1)
         ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
 
-        # 2. Configure Layered & TopMost
+        # 2. 配置鼠标穿透样式
         ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-        ex_style |= win32con.WS_EX_LAYERED
         if click_through:
-            ex_style |= win32con.WS_EX_TRANSPARENT
+            ex_style |= (win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
         else:
             ex_style &= ~win32con.WS_EX_TRANSPARENT
 
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
 
+        # 3. 温和置顶与显示（SW_SHOWNOACTIVATE = 4，绝不抢前台焦点）
+        SW_SHOWNOACTIVATE = 4
+        SWP_NOACTIVATE = 0x0010
+        SWP_SHOWWINDOW = 0x0040
+
         insert_after = win32con.HWND_TOPMOST if always_on_top else win32con.HWND_NOTOPMOST
-        win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+        win32gui.ShowWindow(hwnd, SW_SHOWNOACTIVATE)
         win32gui.SetWindowPos(
             hwnd,
             insert_after,
             0, 0, 0, 0,
-            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW
         )
-
-        win32gui.InvalidateRect(hwnd, None, True)
-        win32gui.UpdateWindow(hwnd)
     except Exception:
         pass
 
@@ -1010,47 +1059,61 @@ def main():
         frameless=True,
         transparent=True,
         on_top=True,
-        background_color="#000000",
         js_api=bridge
     )
     window_holder["window"] = window
 
-    # Apply true glass transparency and Win32 styles after composition
-    def _delayed_win32_init():
-        for delay in [0.2, 0.6, 1.5]:
-            time.sleep(delay)
-            # 彻底移除白色背景幕布：将底层 Form 背景色设为纯黑并透明，让 DWM 100% 掏空穿透
-            win = window_holder.get("window")
-            if win and hasattr(win, "native") and win.native:
-                try:
-                    import clr
-                    clr.AddReference('System.Drawing')
-                    import System.Drawing
-                    win.native.BackColor = System.Drawing.Color.Black
-                    win.native.TransparencyKey = System.Drawing.Color.Black
-                except Exception:
-                    pass
+    # 启动全生命周期守护线程（破除 pywebview 隐藏魔咒、锁死物理可视坐标、防抢焦）
+    def _guardian_window_thread():
+        my_pid = os.getpid()
+        calibrated = False
+        start_time = time.monotonic()
 
+        # 阶段一：启动高频校准（前 4 秒，每 150ms 巡检，快速破除 Hide 态）
+        while time.monotonic() - start_time < 4.0:
+            time.sleep(0.15)
             hwnd = get_pet_hwnd()
             if hwnd:
                 try:
                     import win32gui
                     import win32con
-                    win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                    SW_SHOWNOACTIVATE = 4
+                    SWP_NOACTIVATE = 0x0010
+                    SWP_SHOWWINDOW = 0x0040
+
+                    # 强制破除 pywebview 的 browser.Hide() 隐藏态，且绝不抢前台焦点
+                    win32gui.ShowWindow(hwnd, SW_SHOWNOACTIVATE)
                     win32gui.SetWindowPos(
                         hwnd,
                         win32con.HWND_TOPMOST,
                         physical_x, physical_y, physical_w, physical_h,
-                        win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
+                        SWP_NOACTIVATE | SWP_SHOWWINDOW
                     )
-                    win32gui.SetForegroundWindow(hwnd)
-                    win32gui.BringWindowToTop(hwnd)
-                    win32gui.UpdateWindow(hwnd)
+                    configure_true_desktop_transparency(always_on_top=True, click_through=False)
+                    calibrated = True
                 except Exception:
                     pass
-            configure_true_desktop_transparency(always_on_top=True, click_through=False)
 
-    threading.Thread(target=_delayed_win32_init, daemon=True).start()
+        # 阶段二：平稳保活巡检（4 秒到 20 秒，每 2 秒一次，确认窗口持续保持在可视区）
+        while time.monotonic() - start_time < 20.0:
+            time.sleep(2.0)
+            hwnd = get_pet_hwnd()
+            if hwnd:
+                try:
+                    import win32gui
+                    import win32con
+                    if not win32gui.IsWindowVisible(hwnd):
+                        win32gui.ShowWindow(hwnd, 4) # SW_SHOWNOACTIVATE
+                        win32gui.SetWindowPos(
+                            hwnd,
+                            win32con.HWND_TOPMOST,
+                            physical_x, physical_y, physical_w, physical_h,
+                            0x0010 | 0x0040
+                        )
+                except Exception:
+                    pass
+
+    threading.Thread(target=_guardian_window_thread, daemon=True).start()
 
     # Start background version consistency monitor (5s delay, then every 2 hours)
     def _background_version_monitor():

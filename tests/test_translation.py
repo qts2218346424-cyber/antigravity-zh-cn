@@ -505,10 +505,35 @@ class TestRuntimeTranslation(unittest.TestCase):
         // 验证去除了贪婪 ^Updated (.+)$，技术句子不再产生半中半英怪胎，而时间更新正常翻译
         if (translate("Updated 5 minutes ago") !== "更新于 5 分钟前") process.exit(201);
         if (translate("Updated just now") !== "刚刚更新") process.exit(202);
-        const codeSentence = "Updated in restore_backup to synchronize with _thread_lock";
-        if (translate(codeSentence) && translate(codeSentence).startsWith("更新于 in restore_backup")) {
-            console.error("Greedy Updated leaked:", translate(codeSentence));
-            process.exit(203);
+
+        // 30. 子代理工作报告展示文本逐句汉化断言
+        const s1 = "1. Directory Traversal Protection in restore_backup (pet_engine/switcher.py):";
+        if (translate(s1) !== "1. restore_backup 中的目录遍历防护 (pet_engine/switcher.py)：") {
+            console.error("s1 failed:", translate(s1));
+            process.exit(204);
+        }
+        const s2 = "Added validation with validate_safe_identifier.";
+        if (translate(s2) !== "添加了使用 validate_safe_identifier 进行的校验。") process.exit(205);
+
+        const s3 = "Explicitly rejected path separators (/, \\, ..) and Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9).";
+        if (translate(s3) !== "显式拒绝路径分隔符（/, \\, ..）与 Windows 保留设备名称（CON, PRN, AUX, NUL, COM1-9, LPT1-9）。") {
+            console.error("s3 failed:", translate(s3));
+            process.exit(206);
+        }
+
+        const s4 = "Confirmed prefix search fallback cannot escape the backups directory.";
+        if (translate(s4) !== "确认前缀搜索回退无法逃逸备份目录。") {
+            console.error("s4 failed:", translate(s4));
+            process.exit(207);
+        }
+
+        const s5 = "2. Eliminated Rollback Self-Deadlock & Latency Penalty (pet_engine/switcher.py):";
+        if (translate(s5) !== "2. 消除回滚自死锁与延迟损耗 (pet_engine/switcher.py)：") process.exit(208);
+
+        const s6 = "Updated in restore_backup to synchronize with _thread_lock and FileLock before delegating _restore_backup_unlocked.";
+        if (translate(s6) !== "更新了 restore_backup，在委托给 _restore_backup_unlocked 之前与 _thread_lock and FileLock 进行同步。") {
+            console.error("s6 failed:", translate(s6));
+            process.exit(209);
         }
 
         console.log("SUCCESS");

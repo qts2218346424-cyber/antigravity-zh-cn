@@ -118,6 +118,8 @@ def audit_and_update_rules():
             continue
         if "pdated" in pattern:
             continue
+        if any(k in pattern for k in ["dded validation with", "irectory Traversal", "liminated Rollback", "xplicitly rejected", "esolved canonical", "onfirmed prefix", "xtracted core restore"]):
+            continue
         if pattern == r"^Are you sure you want to delete (.+)\?$":
             project_rule = r"^[Aa]re you sure you want to delete\s+(?:the\s+)?(?:projects?\s+|项目\s*)(.+?)[\?？]?$"
             if project_rule not in seen_patterns:
@@ -743,17 +745,37 @@ def audit_and_update_rules():
         # 子代理汇报总结与加固用语 (Subagent Handoff & Remediation Summaries)
         [r"^[Ss]ummary of Completed Remediation$", "已完成的修复总结"],
         [r"^[Ss]ummary of Completed (.+)$", "已完成的 $1 总结"],
+        [r"^(\d+)\.\s*[Dd]irectory Traversal Protection in\s+(.+?)\s*\((.+?)\):$", "$1. $2 中的目录遍历防护 ($3)："],
+        [r"^(\d+)\.\s*[Dd]irectory Traversal Protection in\s+(.+?)\s*\((.+?)\)$", "$1. $2 中的目录遍历防护 ($3)"],
+        [r"^[Dd]irectory Traversal Protection in\s+(.+?)\s*\((.+?)\):$", "$1 中的目录遍历防护 ($2)："],
+        [r"^[Dd]irectory Traversal Protection in\s+(.+?)\s*\((.+?)\)$", "$1 中的目录遍历防护 ($2)"],
+        [r"^(\d+)\.\s*[Dd]irectory Traversal Protection in\s+(.+?):$", "$1. $2 中的目录遍历防护："],
+        [r"^(\d+)\.\s*[Dd]irectory Traversal Protection in\s+(.+)$", "$1. $2 中的目录遍历防护"],
+        [r"^[Dd]irectory Traversal Protection in\s+(.+?):$", "$1 中的目录遍历防护："],
         [r"^[Dd]irectory Traversal Protection in\s+(.+)$", "$1 中的目录遍历防护"],
         [r"^[Dd]irectory Traversal Protection$", "目录遍历防护"],
+        [r"^(\d+)\.\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty\s*\((.+?)\):$", "$1. 消除回滚自死锁与延迟损耗 ($2)："],
+        [r"^(\d+)\.\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty\s*\((.+?)\)$", "$1. 消除回滚自死锁与延迟损耗 ($2)"],
+        [r"^[Ee]liminated Rollback Self-Deadlock & Latency Penalty\s*\((.+?)\):$", "消除回滚自死锁与延迟损耗 ($1)："],
+        [r"^[Ee]liminated Rollback Self-Deadlock & Latency Penalty\s*\((.+?)\)$", "消除回滚自死锁与延迟损耗 ($1)"],
+        [r"^(\d+)\.\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty:$", "$1. 消除回滚自死锁与延迟损耗："],
+        [r"^(\d+)\.\s*[Ee]liminated Rollback Self-Deadlock & Latency Penalty$", "$1. 消除回滚自死锁与延迟损耗"],
+        [r"^[Ee]liminated Rollback Self-Deadlock & Latency Penalty:$", "消除回滚自死锁与延迟损耗："],
         [r"^[Ee]liminated Rollback Self-Deadlock & Latency Penalty$", "消除回滚自死锁与延迟损耗"],
         [r"^[Ee]liminated Rollback Self-Deadlock / FileLock Latency Penalty.*$", "消除回滚自死锁与文件锁延迟损耗"],
         [r"^[Ee]liminated (.+)$", "已消除 $1"],
+        [r"^[Aa]dded validation with\s+(.+?)\.?$", "添加了使用 $1 进行的校验。"],
         [r"^[Aa]dded validation with\s+(.+)$", "添加了使用 $1 进行的校验"],
         [r"^[Aa]dded validation with$", "添加校验："],
+        [r"^[Ee]xplicitly rejected path separators\s*\((.+?)\)\s*and Windows reserved device names\s*\((.+?)\)\.?$", "显式拒绝路径分隔符（$1）与 Windows 保留设备名称（$2）。"],
         [r"^[Ee]xplicitly rejected path separators.*$", "显式拒绝路径分隔符（/、\\、..）与 Windows 保留设备名称"],
+        [r"^[Rr]esolved canonical target path and asserted\s+(.+?)\.?$", "解析规范目标路径并断言验证 $1。"],
         [r"^[Rr]esolved canonical target path and asserted.*$", "解析规范目标路径并断言验证"],
+        [r"^[Cc]onfirmed prefix search fallback cannot escape the (.+?) directory\.?$", "确认前缀搜索回退无法逃逸 $1 目录。"],
         [r"^[Cc]onfirmed prefix search fallback cannot escape the backups directory.*$", "确认前缀搜索回退无法逃逸备份目录"],
+        [r"^[Ee]xtracted core restore logic into private\s+(.+?)\.?$", "将核心恢复逻辑提取至私有方法 $1。"],
         [r"^[Ee]xtracted core restore logic into private.*$", "将核心恢复逻辑提取至私有方法"],
+        [r"^[Uu]pdated\s+(?:in\s+)?(.+?)\s+to synchronize with\s+(.+?)\s+before delegating\s+(.+?)\.?$", "更新了 $1，在委托给 $3 之前与 $2 进行同步。"],
         [r"^[Ii] have remediated all (\d+) adversarial findings reported by (.+) across (.+)\.?$", "我已修复了 $2 在 $3 中报告的全部 $1 项对抗性问题。"],
         [r"^[Ii] have remediated all (.+)\.?$", "我已修复所有 $1。"],
         [r"^[Mm]ANDATORY READING:?$", "强制必读清单："],
@@ -765,6 +787,7 @@ def audit_and_update_rules():
         [r"^Remediation and Hardening Worker$", "修复与加固专员"],
         [r"^Remediation and Hardening$", "修复与加固"],
         [r"^Worker Remediation$", "修复专员"],
+        [r"^A modern, ultra-light.*$", "现代超轻量级桌面宠物项目"],
     ]
 
     for pattern, repl in additional_rules:
