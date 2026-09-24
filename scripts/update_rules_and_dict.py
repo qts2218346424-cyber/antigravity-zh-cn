@@ -116,7 +116,7 @@ def audit_and_update_rules():
             continue
         if pattern == r"^Updated (.+)$":
             continue
-        if "minutes?|hours?|days?" in pattern and "[Uu]pdated" in pattern:
+        if "pdated" in pattern:
             continue
         if pattern == r"^Are you sure you want to delete (.+)\?$":
             project_rule = r"^[Aa]re you sure you want to delete\s+(?:the\s+)?(?:projects?\s+|项目\s*)(.+?)[\?？]?$"

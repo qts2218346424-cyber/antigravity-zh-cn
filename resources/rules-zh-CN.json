@@ -2520,34 +2520,6 @@
     "未添加任何内容至提交，但存在未跟踪文件（使用 \"git add\" 进行跟踪）"
   ],
   [
-    "^[Uu]pdated\\s+(\\d+\\s+(?:seconds?|minutes?|hours?|days?|months?|years?)\\s+ago)$",
-    "更新于 $1 前"
-  ],
-  [
-    "^[Uu]pdated\\s+just\\s+now$",
-    "刚刚更新"
-  ],
-  [
-    "^[Uu]pdated\\s+today$",
-    "今天更新"
-  ],
-  [
-    "^[Uu]pdated\\s+yesterday$",
-    "昨天更新"
-  ],
-  [
-    "^[Uu]pdated\\s+at\\s+(.+)$",
-    "更新于 $1"
-  ],
-  [
-    "^[Uu]pdated\\s+on\\s+(.+)$",
-    "更新于 $1"
-  ],
-  [
-    "^[Uu]pdated:\\s*(.+)$",
-    "更新于：$1"
-  ],
-  [
     "^[Yy]ou are Worker (.+) for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
     "您是 $2 项目的 $1 专员。您的工作目录为：$3"
   ],
@@ -2676,30 +2648,6 @@
     "修复专员"
   ],
   [
-    "^[Uu]pdated\\s+recently$",
-    "最近更新"
-  ],
-  [
-    "^[Uu]pdated\\s+(\\d+[\\u4e00-\\u9fa5].*)$",
-    "更新于 $1"
-  ],
-  [
-    "^[Uu]pdated\\s+([\\u4e00-\\u9fa5].*)$",
-    "更新于 $1"
-  ],
-  [
-    "^[Uu]pdated\\s+(\\d{1,4}[-/年]\\d{1,2}.*)$",
-    "更新于 $1"
-  ],
-  [
-    "^[Uu]pdated\\s+(\\d+:\\d+.*)$",
-    "更新于 $1"
-  ],
-  [
-    "^[Uu]pdated\\s+(\\d+.*)$",
-    "更新于 $1"
-  ],
-  [
     "^[Uu]pdated\\s+(\\d+)\\s+seconds?\\s+ago$",
     "更新于 $1 秒前"
   ],
@@ -2738,5 +2686,53 @@
   [
     "^[Uu]pdated\\s+(\\d+)\\s*(?:days?|d)\\s+ago$",
     "更新于 $1 天前"
+  ],
+  [
+    "^[Uu]pdated\\s+just\\s+now$",
+    "刚刚更新"
+  ],
+  [
+    "^[Uu]pdated\\s+today$",
+    "今天更新"
+  ],
+  [
+    "^[Uu]pdated\\s+yesterday$",
+    "昨天更新"
+  ],
+  [
+    "^[Uu]pdated\\s+recently$",
+    "最近更新"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+[\\u4e00-\\u9fa5].*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+([\\u4e00-\\u9fa5].*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d{1,4}[-/年]\\d{1,2}.*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+:\\d+.*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+.*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+at\\s+(.+)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+on\\s+(.+)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated:\\s*(.+)$",
+    "更新于：$1"
   ]
 ]
