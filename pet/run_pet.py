@@ -1044,10 +1044,6 @@ def main():
     window_holder.clear()
     bridge = JsBridge(window_holder, mock_mode=args.mock)
 
-    # Initialize System Tray
-    tray_controller = PetTrayController(bridge, window_holder)
-    tray_controller.start()
-
     # Calculate safe right-bottom screen position (above taskbar, considering DPI scale)
     logical_x, logical_y, physical_x, physical_y, physical_w, physical_h = get_safe_screen_position(320, 380)
 
@@ -1068,11 +1064,16 @@ def main():
     )
     window_holder["window"] = window
 
+    # Initialize System Tray
+    tray_controller = PetTrayController(bridge, window_holder)
+    tray_controller.start()
+
     # 启动全生命周期守护线程（破除 pywebview 隐藏魔咒、锁死物理可视坐标、防抢焦）
     def _guardian_window_thread():
         my_pid = os.getpid()
         calibrated = False
         start_time = time.monotonic()
+        print(f"[Guardian] 守护线程已激活 (PID={my_pid})，正在锁定安全可视坐标: phys=({physical_x}, {physical_y}, {physical_w}, {physical_h})")
 
         # 阶段一：启动高频校准（前 4 秒，每 150ms 巡检，快速破除 Hide 态）
         while time.monotonic() - start_time < 4.0:
@@ -1101,7 +1102,7 @@ def main():
                         rect = win32gui.GetWindowRect(hwnd)
                         print(f"[Guardian] 窗口成功校准呈现: HWND={hex(hwnd)}, Visible={vis}, Rect={rect}")
                 except Exception as e:
-                    pass
+                    print(f"[Guardian] 校准告警: {e}")
 
         # 阶段二：平稳保活巡检（4 秒到 20 秒，每 2 秒一次，确认窗口持续保持在可视区）
         while time.monotonic() - start_time < 20.0:
