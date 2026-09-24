@@ -7,12 +7,23 @@ Provides frameless transparent desktop window, system tray menu, and IPC bridge.
 
 import sys
 import os
+import pathlib
 
-# Guard against pythonw.exe NoneType stdout/stderr crashes
+# Guard against pythonw.exe NoneType stdout/stderr crashes & persist runtime log
+_runtime_log_dir = pathlib.Path.home() / ".gemini"
+_runtime_log_dir.mkdir(parents=True, exist_ok=True)
+_runtime_log_file = _runtime_log_dir / "pet_runtime.log"
+
 if sys.stdout is None:
-    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    try:
+        sys.stdout = open(_runtime_log_file, "a", encoding="utf-8")
+    except Exception:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
 if sys.stderr is None:
-    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+    try:
+        sys.stderr = open(_runtime_log_file, "a", encoding="utf-8")
+    except Exception:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
 import json
 import time
@@ -501,13 +512,52 @@ def get_pet_hwnd() -> Optional[int]:
         return None
 
 
+def get_safe_screen_position(width: int = 320, height: int = 380) -> tuple:
+    """
+    智能获取主显示器真实可用工作区（排除任务栏），并计算安全逻辑坐标与物理坐标。
+    彻底避免高 DPI 缩放或多显示器环境下窗口飞出屏幕的问题。
+    返回: (logical_x, logical_y, physical_x, physical_y, physical_w, physical_h)
+    """
+    try:
+        import win32api
+        import win32con
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        try:
+            dpi = user32.GetDpiForSystem()
+        except Exception:
+            dpi = 96
+        scale = max(1.0, dpi / 96.0)
+
+        mon_info = win32api.GetMonitorInfo(win32api.MonitorFromPoint((0, 0), win32con.MONITOR_DEFAULTTOPRIMARY))
+        work_rect = mon_info.get('Work', (0, 0, 1920, 1080))  # (left, top, right, bottom)
+        work_w = max(400, work_rect[2] - work_rect[0])
+        work_h = max(400, work_rect[3] - work_rect[1])
+
+        # pywebview.create_window 接收的是逻辑像素 (Logical Pixels)
+        logical_work_w = work_w / scale
+        logical_work_h = work_h / scale
+        logical_x = max(20, int(logical_work_w - width - 15))
+        logical_y = max(20, int(logical_work_h - height - 15))
+
+        # Win32 原生物理像素坐标 (Physical Pixels)
+        physical_x = int(logical_x * scale) + work_rect[0]
+        physical_y = int(logical_y * scale) + work_rect[1]
+        physical_w = int(width * scale)
+        physical_h = int(height * scale)
+
+        return (logical_x, logical_y, physical_x, physical_y, physical_w, physical_h)
+    except Exception:
+        return (1000, 500, 1000, 500, width, height)
+
+
 def configure_true_desktop_transparency(always_on_top: bool = True, click_through: bool = False):
     """
     Enforces true glass/alpha transparency on Windows 10/11:
     1. Extends DWM glass frame across entire client area (-1, -1, -1, -1).
-    2. Sets Form BackColor to Color.Black on UI thread (in DWM composition, black is 100% transparent).
-    3. Sets Win32 class background brush to BLACK_BRUSH.
-    4. Applies HWND_TOPMOST and click-through flags.
+    2. Configures click-through and topmost flags.
+    3. Forces visibility and topmost activation on Windows desktop.
     """
     try:
         import win32gui
@@ -521,29 +571,7 @@ def configure_true_desktop_transparency(always_on_top: bool = True, click_throug
         m = _MARGINS(-1, -1, -1, -1)
         ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
 
-        # 2. Set WinForms Form BackColor to Black via Control.FromHandle
-        try:
-            import clr
-            clr.AddReference('System.Windows.Forms')
-            clr.AddReference('System.Drawing')
-            from System import IntPtr, Action
-            from System.Windows.Forms import Control
-            from System.Drawing import Color
-
-            form = Control.FromHandle(IntPtr(hwnd))
-            if form:
-                form.Invoke(Action(lambda: setattr(form, 'BackColor', Color.Black)))
-        except Exception:
-            pass
-
-        # 3. Set Win32 Class Brush to BLACK_BRUSH (4)
-        try:
-            h_black_brush = ctypes.windll.gdi32.GetStockObject(4)
-            ctypes.windll.user32.SetClassLongPtrW(hwnd, -10, h_black_brush)
-        except Exception:
-            pass
-
-        # 4. Configure Layered & TopMost
+        # 2. Configure Layered & TopMost
         ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
         if click_through:
             ex_style |= (win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
@@ -553,11 +581,12 @@ def configure_true_desktop_transparency(always_on_top: bool = True, click_throug
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
 
         insert_after = win32con.HWND_TOPMOST if always_on_top else win32con.HWND_NOTOPMOST
+        win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
         win32gui.SetWindowPos(
             hwnd,
             insert_after,
             0, 0, 0, 0,
-            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE | win32con.SWP_FRAMECHANGED
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
         )
 
         win32gui.InvalidateRect(hwnd, None, True)
@@ -866,7 +895,7 @@ def main():
     if args.smoke:
         sys.exit(run_smoke_test())
 
-    # Ensure single instance via Windows Named Mutex
+    # 智能单实例管理：如果已存在桌宠进程且窗口真实可见，则唤醒置顶并退出；否则接管并继续启动
     if sys.platform == "win32" and not args.smoke:
         import ctypes
         ERROR_ALREADY_EXISTS = 183
@@ -874,15 +903,24 @@ def main():
         mutex = kernel32.CreateMutexW(None, False, "Global\\AntigravityPet_SingleInstance_Mutex")
         last_err = kernel32.GetLastError()
         if last_err == ERROR_ALREADY_EXISTS:
-            print("[Runner] Another Antigravity Desktop Pet instance is already running.")
             hwnd = get_pet_hwnd()
             if hwnd:
                 try:
                     import win32gui
-                    win32gui.SetForegroundWindow(hwnd)
+                    import win32con
+                    if win32gui.IsWindow(hwnd) and win32gui.IsWindowVisible(hwnd):
+                        print("[Runner] Antigravity 灵动桌面小宠物已在运行中，正在为您唤醒并置顶...")
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                        win32gui.SetWindowPos(
+                            hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+                            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+                        )
+                        win32gui.SetForegroundWindow(hwnd)
+                        win32gui.BringWindowToTop(hwnd)
+                        sys.exit(0)
                 except Exception:
                     pass
-            sys.exit(0)
+            print("[Runner] 检测到历史残留，正在重置并启动新实例...")
 
     import webview
 
@@ -902,19 +940,8 @@ def main():
     tray_controller = PetTrayController(bridge, window_holder)
     tray_controller.start()
 
-    # Calculate initial right-bottom screen position (above taskbar)
-    init_x = None
-    init_y = None
-    try:
-        import win32api
-        import win32con
-        screen_w = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
-        screen_h = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
-        if screen_w > 400 and screen_h > 400:
-            init_x = max(20, screen_w - 340)
-            init_y = max(20, screen_h - 480)
-    except Exception:
-        pass
+    # Calculate safe right-bottom screen position (above taskbar, considering DPI scale)
+    logical_x, logical_y, physical_x, physical_y, physical_w, physical_h = get_safe_screen_position(320, 380)
 
     # Create Transparent Frameless Window
     url = index_html.as_uri()
@@ -923,8 +950,8 @@ def main():
         url=url,
         width=320,
         height=380,
-        x=init_x,
-        y=init_y,
+        x=logical_x,
+        y=logical_y,
         resizable=False,
         frameless=True,
         transparent=True,
@@ -935,8 +962,25 @@ def main():
 
     # Apply true glass transparency and Win32 styles after composition
     def _delayed_win32_init():
-        for delay in [0.4, 1.0, 2.0]:
+        for delay in [0.2, 0.6, 1.5]:
             time.sleep(delay)
+            hwnd = get_pet_hwnd()
+            if hwnd:
+                try:
+                    import win32gui
+                    import win32con
+                    win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                    win32gui.SetWindowPos(
+                        hwnd,
+                        win32con.HWND_TOPMOST,
+                        physical_x, physical_y, physical_w, physical_h,
+                        win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
+                    )
+                    win32gui.SetForegroundWindow(hwnd)
+                    win32gui.BringWindowToTop(hwnd)
+                    win32gui.UpdateWindow(hwnd)
+                except Exception:
+                    pass
             configure_true_desktop_transparency(always_on_top=True, click_through=False)
 
     threading.Thread(target=_delayed_win32_init, daemon=True).start()
