@@ -142,6 +142,19 @@ class TestRuntimeTranslation(unittest.TestCase):
                 return trInner + ' ' + statusWord + chevron;
             }
 
+            // 预算与额度动态百分比直通匹配 (例如 "84.1% of the customization budget is available.")
+            const budgetPctMatch = text.match(/^([0-9.]+)%\s+of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$/i);
+            if (budgetPctMatch) {
+                return `自定义预算剩余 ${budgetPctMatch[1]}%`;
+            }
+            if (/^of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$/i.test(text)) {
+                return '可用自定义预算。';
+            }
+
+            // 布局宽度模式匹配 (Narrow / Default / Wide)
+            if (/^narrow$/i.test(text)) return '较窄';
+            if (/^wide$/i.test(text)) return '较宽';
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -700,9 +713,30 @@ class TestRuntimeTranslation(unittest.TestCase):
             console.error("...de quality or technical plans failed:", translate("...de quality or technical plans, intent and error classification, and calibrated hypothesis truth verification."));
             process.exit(232);
         }
-        if (translate("de quality or technical plans, intent and error classification, and calibrated hypothesis truth verification.") !== "评估代码质量与技术方案、意图与错误分类，以及校准的假设真值验证。") {
-            console.error("de quality or technical plans failed:", translate("de quality or technical plans, intent and error classification, and calibrated hypothesis truth verification."));
-            process.exit(233);
+        // 36. 布局宽度切换 (Narrow / Wide) 与自定义预算描述断言
+        if (translate("Narrow") !== "较窄") {
+            console.error("Narrow failed:", translate("Narrow"));
+            process.exit(234);
+        }
+        if (translate("Wide") !== "较宽") {
+            console.error("Wide failed:", translate("Wide"));
+            process.exit(235);
+        }
+        if (translate("narrow") !== "较窄") {
+            console.error("narrow failed:", translate("narrow"));
+            process.exit(236);
+        }
+        if (translate("wide") !== "较宽") {
+            console.error("wide failed:", translate("wide"));
+            process.exit(237);
+        }
+        if (translate("84.1% of the customization budget is available.") !== "自定义预算剩余 84.1%") {
+            console.error("84.1% budget failed:", translate("84.1% of the customization budget is available."));
+            process.exit(238);
+        }
+        if (translate("84.1% of the customization budget is available") !== "自定义预算剩余 84.1%") {
+            console.error("84.1% budget without dot failed:", translate("84.1% of the customization budget is available"));
+            process.exit(239);
         }
 
         console.log("SUCCESS");

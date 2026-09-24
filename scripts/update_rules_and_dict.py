@@ -887,6 +887,13 @@ def audit_and_update_rules():
         [r"^Interact\s+with\s+web\s+pages,\s*search\s+the\s+web,\s*and\s+extract\s+data\s+from\s+websites\.?$", "与网页交互、搜索网络并从网站提取数据。"],
         [r"^Enable\s+multi-agent\s+collaboration\s+with\s+specialized\s+autonomous\s+agents\.?$", "启用多智能体协作与专业自主子代理。"],
         [r"^Teach\s+Antigravity\s+new\s+skills,\s*workflows,\s*and\s+behavioral\s+preferences\.?$", "教 Antigravity 掌握新技能、工作流与偏好规范。"],
+
+        # 布局宽度与模式切换 (Narrow / Wide / Budget)
+        [r"^[Nn]arrow$", "较窄"],
+        [r"^[Ww]ide$", "较宽"],
+        [r"^[Dd]efault$", "默认"],
+        [r"^([0-9.]+)%\s+of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$", "自定义预算剩余 $1%"],
+        [r"^of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$", "可用自定义预算。"],
     ]
 
     for pattern, repl in additional_rules:

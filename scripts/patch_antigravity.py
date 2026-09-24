@@ -499,6 +499,10 @@ function __agyTranslateMenu(m) {{
                 "devTools: !electron_1.app.isPackaged,",
                 "devTools: true,"
             )
+            utils_content = utils_content.replace(
+                "contextIsolation: true,",
+                "contextIsolation: true,\n            allFrames: true,"
+            )
             js_raw = json.dumps(injection_code)
             pet_hook_str = ("\n" + generate_pet_autostart_hook() + "\n") if with_pet else ""
             hook_code = f"""
@@ -519,6 +523,12 @@ const __AGY_ZH_CODE__ = {js_raw};
     };
     win.webContents.on('dom-ready', __agyTriggerInject);
     win.webContents.on('did-finish-load', __agyTriggerInject);
+    win.webContents.on('did-attach-webview', (_event, webContents) => {
+        webContents.executeJavaScript(__AGY_ZH_CODE__).catch(() => {});
+        webContents.on('dom-ready', () => {
+            webContents.executeJavaScript(__AGY_ZH_CODE__).catch(() => {});
+        });
+    });
     void win.loadURL(url);
 """
             if target_str in utils_content:

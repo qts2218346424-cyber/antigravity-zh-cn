@@ -176,6 +176,19 @@
         return trInner + ' ' + statusWord + chevron;
       }
 
+      // 1.16 预算与额度动态百分比直通匹配 (例如 "84.1% of the customization budget is available.")
+      const budgetPctMatch = text.match(/^([0-9.]+)%\s+of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$/i);
+      if (budgetPctMatch) {
+        return `自定义预算剩余 ${budgetPctMatch[1]}%`;
+      }
+      if (/^of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$/i.test(text)) {
+        return '可用自定义预算。';
+      }
+
+      // 1.17 布局宽度模式匹配 (Narrow / Default / Wide)
+      if (/^narrow$/i.test(text)) return '较窄';
+      if (/^wide$/i.test(text)) return '较宽';
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -191,15 +204,18 @@
       return null;
     };
 
-    // 排除的容器标签
-    const IGNORED_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG', 'PATH', 'IFRAME']);
+    // 排除的非文本或纯图形容器标签（注意：保留 SVG <text> 与 <tspan> 文本节点通道）
+    const IGNORED_TAGS = new Set([
+      'SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME',
+      'PATH', 'RECT', 'CIRCLE', 'ELLIPSE', 'LINE', 'POLYLINE', 'POLYGON', 'DEFS', 'CLIPPATH', 'MASK', 'PATTERN', 'USE'
+    ]);
 
-    // 严格代码与终端保护选择器：绝对不要篡改专业代码编辑器核心、终端输出与代码高亮块
+    // 严格代码与终端保护选择器：绝对保护专业代码编辑器核心行与终端输出
     const CODE_PROTECT_SELECTOR = [
       'pre', 'code', 'kbd', 'samp', 'var',
       '[data-language]',
-      '.cm-editor', '.cm-content', '.cm-line',
-      '.monaco-editor',
+      '.cm-editor .cm-content', '.cm-line',
+      '.monaco-editor .view-lines', '.monaco-editor .lines-content',
       '.xterm', '.terminal-container',
       '.code-block-content'
     ].join(',');
@@ -225,17 +241,22 @@
           return false;
         }
 
+        // 2.2 自定义预算面板、进度条、徽章、控制开关与辅助卡片一律允许汉化
+        if (el.closest('[class*="customization"], [class*="budget"], [class*="progress"], [class*="widget"], [class*="overlay"], [class*="card"], [class*="banner"], [class*="dialog"], [class*="modal"], [class*="pill"], [class*="toggle"], [class*="segmented"], [class*="badge"], [role="dialog"], [role="status"], [role="progressbar"], [role="region"], [role="presentation"]')) {
+          return false;
+        }
+
         // 3. 严格保护专业代码编辑器核心与终端容器
         if (el.closest(CODE_PROTECT_SELECTOR)) {
           return true;
         }
 
-        // 3. 保护用户已发送的聊天历史消息正文
+        // 4. 保护用户已发送的聊天历史消息正文
         if (el.closest('[data-testid="user-message"]')) {
           return true;
         }
 
-        // 4. 保护正在编辑中的用户真实输入内容（注意：非占位符）
+        // 5. 保护正在编辑中的用户真实输入内容（注意：非占位符）
         if (el.closest('[contenteditable="true"], textarea, input:not([type="button"]):not([type="submit"])')) {
           return true;
         }
@@ -250,10 +271,10 @@
       try {
         if (!el || !el.closest) return false;
         if (IGNORED_TAGS.has(el.tagName)) return true;
-        // 允许查找替换面板与输入框的 placeholder/title/aria-label 进行汉化
-        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"]')) return false;
-        // 允许 input 与 textarea 的 placeholder/title/aria-label 进行汉化，仅严格保护代码编辑器核心与终端
-        if (el.closest('.monaco-editor, .cm-editor, .xterm, .code-block-content')) return true;
+        // 允许查找替换面板、自定义预算与交互控件的 placeholder/title/aria-label 进行汉化
+        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"], [class*="customization"], [class*="budget"], [class*="progress"], [class*="segmented"], [class*="toggle"], [class*="badge"], [role="tooltip"], [class*="tooltip"]')) return false;
+        // 严格保护代码编辑器核心与终端
+        if (el.closest(CODE_PROTECT_SELECTOR)) return true;
         return false;
       } catch (_) {
         return true;
@@ -381,7 +402,87 @@
       return count;
     };
 
-    // 全量执行单次翻译
+    // 专治预算描述、进度百分比被拆解或动态计算的容器复合汉化
+    const translateBudgetContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const candidates = root.querySelectorAll('[class*="budget"], [class*="customization"], [class*="progress"], [role="progressbar"], div, span, p');
+        for (let i = 0; i < candidates.length; i++) {
+          const el = candidates[i];
+          if (translatedNodeSet.has(el) || isProtectedTextNode(el)) continue;
+          const text = (el.textContent || '').trim();
+          if (!text || text.length > 200) continue;
+
+          // 匹配 "84.1% of the customization budget is available." 等拆分场景
+          const budgetMatch = text.match(/^([0-9.]+)%\s+of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$/i);
+          if (budgetMatch) {
+            // 确保只处理包含文本的最内层匹配容器
+            if (el.children.length > 0) {
+              let childMatched = false;
+              for (let c = 0; c < el.children.length; c++) {
+                if (el.children[c].textContent && /of\s+the\s+(?:customization\s+)?budget\s+is\s+available/i.test(el.children[c].textContent)) {
+                  childMatched = true;
+                  break;
+                }
+              }
+              if (childMatched) continue;
+            }
+            el.textContent = `自定义预算剩余 ${budgetMatch[1]}%`;
+            try { translatedNodeSet.add(el); } catch (_) {}
+            count++;
+            continue;
+          }
+
+          // 匹配拆开后单独呈现的 "of the customization budget is available."
+          const segMatch = text.match(/^of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$/i);
+          if (segMatch) {
+            el.textContent = '可用自定义预算。';
+            try { translatedNodeSet.add(el); } catch (_) {}
+            count++;
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
+    // 弱引用记录已挂载 MutationObserver 的根节点与 ShadowRoot
+    const observedRoots = new WeakSet();
+
+    // 统一 MutationObserver 挂载器
+    let observer = null;
+    const observeRoot = (target) => {
+      if (!target || !target.nodeType || observedRoots.has(target) || !observer) return;
+      try {
+        observer.observe(target, {
+          subtree: true,
+          childList: true,
+          characterData: true,
+          attributes: true,
+          attributeFilter: ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value']
+        });
+        observedRoots.add(target);
+      } catch (_) {}
+    };
+
+    // 递归发现并遍历包含 ShadowRoot 在内的所有 DOM 根
+    const forAllRoots = (root, callback) => {
+      if (!root) return;
+      callback(root);
+      try {
+        if (root.querySelectorAll) {
+          const allDescendants = root.querySelectorAll('*');
+          for (let i = 0; i < allDescendants.length; i++) {
+            const el = allDescendants[i];
+            if (el.shadowRoot) {
+              forAllRoots(el.shadowRoot, callback);
+            }
+          }
+        }
+      } catch (_) {}
+    };
+
+    // 全量执行单次翻译（穿透所有 Shadow DOM 与挂载根）
     const runTranslation = () => {
       try {
         const root = document.body || document.documentElement;
@@ -389,11 +490,21 @@
         if (document.documentElement && document.documentElement.getAttribute('lang') !== LANG) {
           document.documentElement.setAttribute('lang', LANG);
         }
-        const textCount = translateTextNodes(root);
-        const attrCount = translateAttributes(root);
-        const hlCount = translateHighlightedContainers(root);
-        if (textCount > 0 || attrCount > 0 || hlCount > 0) {
-          console.log(`[AGY-ZH] Translated ${textCount} text nodes, ${attrCount} attributes, and ${hlCount} highlighted containers.`);
+        let textCount = 0;
+        let attrCount = 0;
+        let hlCount = 0;
+        let budgetCount = 0;
+
+        forAllRoots(root, (currentRoot) => {
+          observeRoot(currentRoot);
+          budgetCount += translateBudgetContainers(currentRoot);
+          hlCount += translateHighlightedContainers(currentRoot);
+          textCount += translateTextNodes(currentRoot);
+          attrCount += translateAttributes(currentRoot);
+        });
+
+        if (textCount > 0 || attrCount > 0 || hlCount > 0 || budgetCount > 0) {
+          console.log(`[AGY-ZH] Translated ${textCount} text nodes, ${attrCount} attributes, ${hlCount} highlighted containers, and ${budgetCount} budget containers.`);
         }
       } catch (err) {
         console.warn('[AGY-ZH] Error during runTranslation:', err);
@@ -526,7 +637,7 @@
       runTranslation();
     };
 
-    const observer = new MutationObserver((mutations) => {
+    observer = new MutationObserver((mutations) => {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       let syncCount = 0;
       let exceededBudget = false;
@@ -546,9 +657,19 @@
             for (let j = 0; j < m.addedNodes.length; j++) {
               const node = m.addedNodes[j];
               if (node.nodeType === 1) { // 元素节点
+                syncCount += translateBudgetContainers(node);
                 syncCount += translateHighlightedContainers(node);
                 syncCount += translateTextNodes(node);
                 syncCount += translateAttributes(node);
+                if (node.shadowRoot) {
+                  forAllRoots(node.shadowRoot, (sr) => {
+                    observeRoot(sr);
+                    syncCount += translateBudgetContainers(sr);
+                    syncCount += translateHighlightedContainers(sr);
+                    syncCount += translateTextNodes(sr);
+                    syncCount += translateAttributes(sr);
+                  });
+                }
               } else if (node.nodeType === 3) { // 文本节点
                 if (!translatedNodeSet.has(node)) {
                   const orig = node.nodeValue;
@@ -598,18 +719,32 @@
       mutationTimer = setTimeout(handleMutations, delay);
     });
 
+    // 拦截 Element.prototype.attachShadow，实现 Shadow DOM 的首帧即时汉化与动态监听
+    try {
+      const origAttachShadow = Element.prototype.attachShadow;
+      if (origAttachShadow) {
+        Element.prototype.attachShadow = function(init) {
+          const shadowRoot = origAttachShadow.call(this, init);
+          try {
+            observeRoot(shadowRoot);
+            setTimeout(() => {
+              translateBudgetContainers(shadowRoot);
+              translateHighlightedContainers(shadowRoot);
+              translateTextNodes(shadowRoot);
+              translateAttributes(shadowRoot);
+            }, 0);
+          } catch (_) {}
+          return shadowRoot;
+        };
+      }
+    } catch (_) {}
+
     // 安全挂载 MutationObserver
     const attachObserver = () => {
       const target = document.documentElement || document.body || document;
       if (target && target.nodeType) {
         try {
-          observer.observe(target, {
-            subtree: true,
-            childList: true,
-            characterData: true,
-            attributes: true,
-            attributeFilter: ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value']
-          });
+          observeRoot(target);
           console.log('[AGY-ZH] MutationObserver attached successfully with zero-fouc sync channel.');
         } catch (obsErr) {
           console.warn('[AGY-ZH] Failed to attach MutationObserver:', obsErr);

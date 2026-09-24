@@ -1787,7 +1787,23 @@ NEW_TRANSLATIONS = {
     "Zoom Level": "界面缩放比例",
     "drawing line preview": "线条绘制预览",
     "drawing rectangle preview": "矩形绘制预览",
-    "view full search results": "查看全部搜索结果"
+    "view full search results": "查看全部搜索结果",
+
+    # 布局宽度与模式切换 (Width & Layout Toggles)
+    "Narrow": "较窄",
+    "narrow": "较窄",
+    "Wide": "较宽",
+    "wide": "较宽",
+    "Default": "默认",
+    "default": "默认",
+    "Strong": "强",
+    "strong": "强",
+    "默认 Strong": "默认 强",
+    "Strong (Default)": "强 (默认)",
+    "84.1% of the customization budget is available.": "自定义预算剩余 84.1%",
+    "84.1% of the customization budget is available": "自定义预算剩余 84.1%",
+    "of the customization budget is available.": "可用自定义预算。",
+    "of the customization budget is available": "可用自定义预算"
 }
 
 def main():
