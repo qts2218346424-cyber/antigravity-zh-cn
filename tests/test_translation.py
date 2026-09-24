@@ -471,6 +471,22 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Outside of Project") !== "项目之外") process.exit(183);
         if (translate("Create Antigravity Translation Project") !== "创建 Antigravity 汉化项目") process.exit(184);
 
+        // 28. Git status localization preserving identifiers, branches and paths
+        if (translate("On branch main") !== "位于分支 main") process.exit(185);
+        if (translate("Your branch is up to date with 'origin/main'.") !== "您的分支已与 'origin/main' 保持同步。") process.exit(186);
+        if (translate("Changes not staged for commit:") !== "未暂存以备提交的更改：") process.exit(187);
+        if (translate('(use "git add <file>..." to update what will be committed)') !== '（使用 "git add <file>..." 更新要提交的内容）') process.exit(188);
+        if (translate('(use "git restore <file>..." to discard changes in working directory)') !== '（使用 "git restore <file>..." 放弃工作目录中的更改）') process.exit(189);
+        if (translate("modified:   pet/run_pet.py") !== "已修改:   pet/run_pet.py") process.exit(190);
+
+        // 验证多行整段 Git status 复合结构逐行汉化
+        const multilineGit = `On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges not staged for commit:\n  (use "git add <file>..." to update what will be committed)\n  (use "git restore <file>..." to discard changes in working directory)\n\tmodified:   pet/run_pet.py\n\tmodified:   resources/antigravity-zh-CN.json`;
+        const translatedMulti = translate(multilineGit);
+        if (!translatedMulti.includes("位于分支 main")) process.exit(191);
+        if (!translatedMulti.includes("您的分支已与 'origin/main' 保持同步。")) process.exit(192);
+        if (!translatedMulti.includes("未暂存以备提交的更改：")) process.exit(193);
+        if (!translatedMulti.includes("已修改:   pet/run_pet.py")) process.exit(194);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
