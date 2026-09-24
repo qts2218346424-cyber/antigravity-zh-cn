@@ -1,8 +1,8 @@
-<#
+﻿<#
 .SYNOPSIS
     Antigravity Windows 简体中文汉化补丁安装/管理脚本
 .DESCRIPTION
-    参考 claude-desktop-zh-cn 架构设计的 Antigravity 交互式汉化与管理工具。
+    Antigravity 交互式汉化与管理工具。
 #>
 
 [CmdletBinding()]
@@ -42,7 +42,6 @@ function Show-Header {
     try { Clear-Host } catch {}
     Write-Color "============================================================" Cyan
     Write-Color "         Antigravity 简体中文汉化补丁管理器                 " Cyan
-    Write-Color "         (参考 claude-desktop-zh-cn 设计架构)                " DarkGray
     Write-Color "============================================================" Cyan
     Write-Host ""
 }
@@ -136,15 +135,34 @@ function Show-IdeGuidance {
     Read-Host "按回车键返回主菜单..." | Out-Null
 }
 
+function Get-PetExecutable {
+    $candidates = @(
+        (Join-Path $ProjectRoot "pet\pet.exe"),
+        (Join-Path $ProjectRoot "pet-wails\build\bin\pet.exe"),
+        (Join-Path $ProjectRoot "pet.exe")
+    )
+    foreach ($c in $candidates) {
+        if (Test-Path -LiteralPath $c) { return $c }
+    }
+    return $null
+}
+
 function Start-DesktopPet {
-    $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
-    $launcherBat = Join-Path $ProjectRoot "launch-pet.bat"
-    if (-not (Test-Path -LiteralPath $petPy)) {
-        Write-Color "[!] 未找到 pet\run_pet.py，无法启动桌面小宠物。" Red
+    $petExe = Get-PetExecutable
+    if ($petExe) {
+        Write-Color "`n正在以 Go 原生秒开引擎唤醒 Antigravity 灵动桌面小宠物..." Green
+        Start-Process -FilePath $petExe
+        Write-Color "[OK] 桌面小宠物已在后台极速启动！DirectComposition 硬件级透明已就绪。" Green
         return
     }
 
-    Write-Color "`n正在唤醒 Antigravity 灵动桌面小宠物..." Cyan
+    $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
+    if (-not (Test-Path -LiteralPath $petPy)) {
+        Write-Color "[!] 未找到 pet.exe 或 pet\run_pet.py，无法启动桌面小宠物。" Red
+        return
+    }
+
+    Write-Color "`n正在唤醒 Antigravity 灵动桌面小宠物 (Python 回退模式)..." Cyan
     $pyw = Get-Command pythonw -ErrorAction SilentlyContinue
     if ($pyw) {
         Start-Process -FilePath "pythonw" -ArgumentList "`"$petPy`""
@@ -155,6 +173,7 @@ function Start-DesktopPet {
 }
 
 function Create-PetShortcut {
+    $petExe = Get-PetExecutable
     $launcherBat = Join-Path $ProjectRoot "launch-pet.bat"
     $desktopPath = [Environment]::GetFolderPath("Desktop")
     $shortcutPath = Join-Path $desktopPath "Antigravity 桌面宠物.lnk"
@@ -162,13 +181,19 @@ function Create-PetShortcut {
     try {
         $wshShell = New-Object -ComObject WScript.Shell
         $shortcut = $wshShell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = $launcherBat
-        $shortcut.WorkingDirectory = $ProjectRoot
-        $shortcut.Description = "Antigravity 灵动桌面小宠物 (额度感知 / 任务弹窗 / 一键换号)"
-        $iconCandidate = Join-Path $ProjectRoot "pet\src-tauri\icons\icon.png"
-        if (Test-Path $iconCandidate) {
-            $shortcut.IconLocation = $iconCandidate
+        if ($petExe) {
+            $shortcut.TargetPath = $petExe
+            $shortcut.WorkingDirectory = Split-Path -Parent $petExe
+            $shortcut.IconLocation = "$petExe,0"
+        } else {
+            $shortcut.TargetPath = $launcherBat
+            $shortcut.WorkingDirectory = $ProjectRoot
+            $iconCandidate = Join-Path $ProjectRoot "pet\src-tauri\icons\icon.png"
+            if (Test-Path $iconCandidate) {
+                $shortcut.IconLocation = $iconCandidate
+            }
         }
+        $shortcut.Description = "Antigravity 灵动桌面小宠物 (额度感知 / 任务弹窗 / 一键换号)"
         $shortcut.Save()
         Write-Color "[OK] 已成功在桌面创建快捷方式: $shortcutPath" Green
     } catch {
@@ -177,8 +202,9 @@ function Create-PetShortcut {
 }
 
 function Ask-DesktopPet {
+    $petExe = Get-PetExecutable
     $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
-    if (-not (Test-Path -LiteralPath $petPy)) { return }
+    if ((-not $petExe) -and (-not (Test-Path -LiteralPath $petPy))) { return }
 
     Write-Host ""
     Write-Color "------------------------------------------------------------" DarkCyan
@@ -209,6 +235,18 @@ function Start-AntigravityApp([string]$installDir, [bool]$promptPet = $false) {
     }
 }
 
+function Ask-PetOption {
+    Write-Host ""
+    Write-Color "请选择桌面宠物安装配置:" Cyan
+    Write-Color "  [1] 安装汉化 + Go 原生灵动桌面小宠物 (推荐全能版，秒开硬件级透明)" Green
+    Write-Color "  [2] 仅安装纯净汉化补丁 (不包含桌面小宠物)" Gray
+    $ans = (Read-Host "请选择 [1/2] (直接回车默认: 1)").Trim()
+    if ($ans -eq "2") {
+        return $false
+    }
+    return $true
+}
+
 function Run-InteractiveMenu {
     $installDir = Find-AntigravityDirectory
     if (-not $installDir) {
@@ -227,39 +265,45 @@ function Run-InteractiveMenu {
         Show-Header
         Write-Color "检测到安装路径: $installDir" DarkCyan
         Write-Host ""
-        Write-Color "[1]  安装简体中文纯净补丁 (zh-CN，仅汉化，不附带桌面宠物)" Green
-        Write-Color "[2]  安装简体中文全能补丁 (zh-CN，汉化 + 灵动桌面小宠物)" Green
-        Write-Color "[3]  安装繁体中文纯净补丁 (zh-TW - 台湾)" Green
-        Write-Color "[4]  安装繁体中文纯净补丁 (zh-HK - 香港)" Green
+        Write-Color "[1]  安装简体中文补丁 (zh-CN，支持选择纯净版或全能桌宠版)" Green
+        Write-Color "[2]  安装繁体中文补丁 (zh-TW - 台湾，支持选择桌宠)" Green
+        Write-Color "[3]  安装繁体中文补丁 (zh-HK - 香港，支持选择桌宠)" Green
+        Write-Color "[4]  单独安装/挂载桌面小宠物到 Antigravity (开启伴随自启，免重装)" Cyan
         Write-Color "[5]  还原原版 / 卸载补丁 (Restore)" Yellow
         Write-Color "[6]  禁止自动更新 (锁定当前版本)" Magenta
         Write-Color "[7]  恢复自动更新" Magenta
         Write-Color "[8]  查看 Antigravity IDE 汉化指引" Gray
         Write-Color "[9]  开启/配置 版本更新自动维护看门狗 (Auto-Maintainer & GitHub 同步)" Cyan
-        Write-Color "[10] 桌面宠物专区 (启动 / 创建快捷方式 / 彻底卸载与清理)" Yellow
+        Write-Color "[10] 桌面宠物专区 (启动 / 安装 / 快捷方式 / 重新编译 / 卸载)" Yellow
         Write-Color "[Q]  退出" DarkGray
         Write-Host ""
 
         $choice = (Read-Host "请选择操作 [1-10 / Q]").Trim().ToUpper()
         switch ($choice) {
             '1' {
-                $ok = Invoke-PatchAction "install" "zh-CN" $installDir $false
-                if ($ok) { Start-AntigravityApp $installDir $false }
+                $withPet = Ask-PetOption
+                $ok = Invoke-PatchAction "install" "zh-CN" $installDir $withPet
+                if ($ok) { Start-AntigravityApp $installDir $withPet }
                 Pause
             }
             '2' {
-                $ok = Invoke-PatchAction "install" "zh-CN" $installDir $true
-                if ($ok) { Start-AntigravityApp $installDir $true }
+                $withPet = Ask-PetOption
+                $ok = Invoke-PatchAction "install" "zh-TW" $installDir $withPet
+                if ($ok) { Start-AntigravityApp $installDir $withPet }
                 Pause
             }
             '3' {
-                $ok = Invoke-PatchAction "install" "zh-TW" $installDir $false
-                if ($ok) { Start-AntigravityApp $installDir $false }
+                $withPet = Ask-PetOption
+                $ok = Invoke-PatchAction "install" "zh-HK" $installDir $withPet
+                if ($ok) { Start-AntigravityApp $installDir $withPet }
                 Pause
             }
             '4' {
-                $ok = Invoke-PatchAction "install" "zh-HK" $installDir $false
-                if ($ok) { Start-AntigravityApp $installDir $false }
+                $ok = Invoke-PatchAction "install-pet" "zh-CN" $installDir $false
+                if ($ok) {
+                    Create-PetShortcut
+                    Start-DesktopPet
+                }
                 Pause
             }
             '5' {
@@ -287,21 +331,54 @@ function Run-InteractiveMenu {
                 }
             }
             '10' {
+                $petExe = Get-PetExecutable
                 Write-Color "`n--- Antigravity 灵动桌面小宠物专区 ---" Cyan
-                Write-Color "[1] 立即在后台启动小宠物" Green
-                Write-Color "[2] 在桌面创建一键启动快捷方式" Green
-                Write-Color "[3] 运行 57 项完整自检与回归测试" Yellow
-                Write-Color "[4] 彻底卸载桌面宠物 (清除自启 Hook、关闭后台进程、删除快捷方式与沙盒)" Red
+                if ($petExe) {
+                    Write-Color "当前引擎: Go 原生 DirectComposition 硬件透明加速 [就绪: $petExe]" Green
+                } else {
+                    Write-Color "当前引擎: Python 解释执行模式 (建议编译 Go 原生单文件)" Yellow
+                }
+                Write-Color "[1] 立即在后台启动小宠物 (优先原生引擎)" Green
+                Write-Color "[2] 安装并挂载桌面宠物自启 Hook 到 Antigravity (开启伴随自启)" Cyan
+                Write-Color "[3] 在桌面创建一键启动快捷方式" Green
+                Write-Color "[4] 重新编译生成 Go 原生单文件 pet.exe" Cyan
+                Write-Color "[5] 运行完整自检与回归测试" Yellow
+                Write-Color "[6] 彻底卸载桌面宠物 (清除自启 Hook、关闭后台进程、删除快捷方式与沙盒)" Red
                 Write-Color "[B] 返回主菜单" Gray
-                $sub = (Read-Host "请选择操作 [1/2/3/4/B]").Trim().ToUpper()
+                $sub = (Read-Host "请选择操作 [1/2/3/4/5/6/B]").Trim().ToUpper()
                 switch ($sub) {
                     '1' { Start-DesktopPet }
-                    '2' { Create-PetShortcut }
-                    '3' {
-                        $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
-                        & python $petPy --smoke
+                    '2' {
+                        $ok = Invoke-PatchAction "install-pet" "zh-CN" $installDir $false
+                        if ($ok) {
+                            Create-PetShortcut
+                            Start-DesktopPet
+                        }
                     }
+                    '3' { Create-PetShortcut }
                     '4' {
+                        $wailsDir = Join-Path $ProjectRoot "pet-wails"
+                        if (Test-Path $wailsDir) {
+                            Write-Color "`n正在调用 Wails 极速构建 Go 原生桌面小宠物..." Cyan
+                            Push-Location $wailsDir
+                            & wails build
+                            Pop-Location
+                            $builtExe = Join-Path $wailsDir "build\bin\pet.exe"
+                            if (Test-Path $builtExe) {
+                                Copy-Item -Path $builtExe -Destination (Join-Path $ProjectRoot "pet\pet.exe") -Force
+                                Write-Color "[OK] 编译并分发成功！已同步至 pet\pet.exe" Green
+                            }
+                        } else {
+                            Write-Color "未找到 pet-wails 源码目录。" Red
+                        }
+                    }
+                    '5' {
+                        $petPy = Join-Path $ProjectRoot "pet\run_pet.py"
+                        if (Test-Path $petPy) {
+                            & python $petPy --smoke
+                        }
+                    }
+                    '6' {
                         Invoke-PatchAction "uninstall-pet" "zh-CN" $installDir
                     }
                 }
