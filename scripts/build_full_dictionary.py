@@ -223,6 +223,10 @@ NEW_TRANSLATIONS = {
     "Tool call": "工具调用",
 
     # 图 1：自定义预算相关短语
+    "84.1% of the customization budget is available.": "自定义预算剩余 84.1%",
+    "84.1% of the customization budget is available": "自定义预算剩余 84.1%",
+    "89.7% of the customization budget is available.": "自定义预算剩余 89.7%",
+    "89.7% of the customization budget is available": "自定义预算剩余 89.7%",
     "of the customization budget is available.": "自定义预算可用。",
     "of the customization budget is available": "自定义预算可用",
     "customization budget is available.": "自定义预算可用。",
