@@ -979,6 +979,13 @@ html, body {
   color: var(--accent-cyan);
 }
 
+.sim-btn.active {
+  background: rgba(0, 240, 255, 0.28) !important;
+  border-color: var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
 /* --------------------------------------------------------------------------
    9. Click-Through Warning Banner
    -------------------------------------------------------------------------- */

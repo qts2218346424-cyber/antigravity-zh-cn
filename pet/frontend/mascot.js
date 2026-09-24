@@ -1125,14 +1125,18 @@
         btn.addEventListener('click', (e) => {
           const state = e.currentTarget.getAttribute('data-state');
           this.mascotCtrl.setState(state);
+          document.querySelectorAll('.btn-sim-state').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
           const stateNamesZh = {
             idle: '空闲待机',
-            thinking: '深度思考',
-            task_finished: '任务完成',
-            quota_low: '额度告急'
+            thinking: '思考旋转',
+            task_finished: '任务完成庆祝',
+            quota_low: '额度告急警报'
           };
-          this.toastMgr.showToast({ title: '动作状态切换', body: `宠物已切换至状态：“${stateNamesZh[state] || state}”`, level: 'info' });
-          this.backdrop.classList.remove('open');
+          const hint = document.getElementById('sim-status-hint');
+          if (hint) {
+            hint.textContent = `动作已切换至：“${stateNamesZh[state] || state}”`;
+          }
         });
       });
 
@@ -1143,9 +1147,10 @@
           title: '智能体任务已完成！',
           body: '代码构建与汉化审查任务已成功执行完毕（耗时 12.4 秒）。',
           level: 'success',
-          duration_ms: 5000
+          duration_ms: 3500
         });
-        this.backdrop.classList.remove('open');
+        const hint = document.getElementById('sim-status-hint');
+        if (hint) hint.textContent = '已触发“任务完成庆祝”动作与通知！';
       });
 
       // Task Failure Simulation
@@ -1155,9 +1160,10 @@
           title: '任务执行失败',
           body: '智能体执行异常：网络连接超时或上游服务拒绝。',
           level: 'error',
-          duration_ms: 5000
+          duration_ms: 3500
         });
-        this.backdrop.classList.remove('open');
+        const hint = document.getElementById('sim-status-hint');
+        if (hint) hint.textContent = '已触发“任务失败警报”动作与通知！';
       });
 
       // Low Quota Simulation
@@ -1181,9 +1187,10 @@
           title: '额度告急提醒',
           body: '反重力模型额度已降至 12.0%（已触发黄色紧急告警）。',
           level: 'warning',
-          duration_ms: 6000
+          duration_ms: 4000
         });
-        this.backdrop.classList.remove('open');
+        const hint = document.getElementById('sim-status-hint');
+        if (hint) hint.textContent = '已触发“额度告急”模拟状态！';
       });
     }
   }
