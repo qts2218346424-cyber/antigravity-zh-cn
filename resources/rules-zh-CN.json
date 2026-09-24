@@ -2406,5 +2406,121 @@
   [
     "^Translation Project$",
     "汉化项目"
+  ],
+  [
+    "^[Oo]n branch\\s+(.+)$",
+    "位于分支 $1"
+  ],
+  [
+    "^[Yy]our branch is up to date with\\s+['\\\"]?(.+?)['\\\"]?\\.?$",
+    "您的分支已与 '$1' 保持同步。"
+  ],
+  [
+    "^[Yy]our branch is ahead of\\s+['\\\"]?(.+?)['\\\"]?\\s+by\\s+(\\d+)\\s+commits?\\.?$",
+    "您的分支领先 '$1' $2 个提交。"
+  ],
+  [
+    "^[Yy]our branch is behind\\s+['\\\"]?(.+?)['\\\"]?\\s+by\\s+(\\d+)\\s+commits?\\.?$",
+    "您的分支落后 '$1' $2 个提交。"
+  ],
+  [
+    "^[Yy]our branch and\\s+['\\\"]?(.+?)['\\\"]?\\s+have diverged.*$",
+    "您的分支与 '$1' 出现偏离。"
+  ],
+  [
+    "^[Cc]hanges not staged for commit:?$",
+    "未暂存以备提交的更改："
+  ],
+  [
+    "^[Cc]hanges to be committed:?$",
+    "要提交的更改："
+  ],
+  [
+    "^[Uu]ntracked files:?$",
+    "未跟踪的文件："
+  ],
+  [
+    "^[Ii]gnored files:?$",
+    "已忽略的文件："
+  ],
+  [
+    "^[Uu]nmerged paths:?$",
+    "未合并的路径："
+  ],
+  [
+    "^\\(use \\\"git add <file>\\.\\.\\.\\\" to update what will be committed\\)$",
+    "（使用 \"git add <file>...\" 更新要提交的内容）"
+  ],
+  [
+    "^\\(use \\\"git restore <file>\\.\\.\\.\\\" to discard changes in working directory\\)$",
+    "（使用 \"git restore <file>...\" 放弃工作目录中的更改）"
+  ],
+  [
+    "^\\(use \\\"git restore --staged <file>\\.\\.\\.\\\" to unstage\\)$",
+    "（使用 \"git restore --staged <file>...\" 撤销暂存）"
+  ],
+  [
+    "^\\(use \\\"git reset HEAD <file>\\.\\.\\.\\\" to unstage\\)$",
+    "（使用 \"git reset HEAD <file>...\" 撤销暂存）"
+  ],
+  [
+    "^\\(use \\\"git add <file>\\.\\.\\.\\\" to include in what will be committed\\)$",
+    "（使用 \"git add <file>...\" 以包含在要提交的内容中）"
+  ],
+  [
+    "^\\(use \\\"git checkout -- <file>\\.\\.\\.\\\" to discard changes in working directory\\)$",
+    "（使用 \"git checkout -- <file>...\" 放弃工作目录中的更改）"
+  ],
+  [
+    "^\\(use \\\"git push\\\" to publish your local commits\\)$",
+    "（使用 \"git push\" 发布您的本地提交）"
+  ],
+  [
+    "^\\(use \\\"git pull\\\" to merge the remote branch into yours\\)$",
+    "（使用 \"git pull\" 将远程分支合并到本地）"
+  ],
+  [
+    "^\\(commit or discard the untracked or modified content in submodules\\)$",
+    "（提交或放弃子模块中未跟踪或已修改的内容）"
+  ],
+  [
+    "^modified:\\s+(.+)$",
+    "已修改:   $1"
+  ],
+  [
+    "^new file:\\s+(.+)$",
+    "新文件:   $1"
+  ],
+  [
+    "^deleted:\\s+(.+)$",
+    "已删除:   $1"
+  ],
+  [
+    "^renamed:\\s+(.+?)\\s*->\\s*(.+)$",
+    "重命名:   $1 -> $2"
+  ],
+  [
+    "^both modified:\\s+(.+)$",
+    "双方均修改: $1"
+  ],
+  [
+    "^both added:\\s+(.+)$",
+    "双方均添加: $1"
+  ],
+  [
+    "^[Nn]o changes added to commit\\s*\\(use \\\"git add\\\" and/or \\\"git commit -a\\\"\\)$",
+    "没有添加用于提交的更改（使用 \"git add\" 和/或 \"git commit -a\"）"
+  ],
+  [
+    "^[Nn]othing to commit,\\s*working tree clean$",
+    "无变更需要提交，工作区干净"
+  ],
+  [
+    "^[Nn]othing to commit,\\s*working directory clean$",
+    "无变更需要提交，工作目录干净"
+  ],
+  [
+    "^[Nn]othing added to commit but untracked files present\\s*\\(use \\\"git add\\\" to track\\)$",
+    "未添加任何内容至提交，但存在未跟踪文件（使用 \"git add\" 进行跟踪）"
   ]
 ]
