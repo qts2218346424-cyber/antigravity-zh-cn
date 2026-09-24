@@ -79,6 +79,25 @@ class TestRuntimeTranslation(unittest.TestCase):
             const modelTagMatch = text.match(/^(.+?)\s*\((Thinking|Fast|Medium|High|Low)\)$/i);
             if (modelTagMatch && (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()])) return modelTagMatch[1] + '（' + (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()]) + '）';
 
+            // 分类与排序模式匹配: e.g. "Projects (Status)", "Conversations (Date)"
+            const categoryMatch = text.match(/^(.+?)\s*\((Status|Name|Date|Recent|Alphabetical|Last Modified|All|None)\)$/i);
+            if (categoryMatch) {
+                const catMap = {
+                    status: '状态',
+                    name: '名称',
+                    date: '日期',
+                    recent: '最近',
+                    alphabetical: '按字母顺序',
+                    'last modified': '最后修改',
+                    all: '全部',
+                    none: '无'
+                };
+                const catWord = catMap[categoryMatch[2].toLowerCase()] || (DICT[categoryMatch[2]] || categoryMatch[2]);
+                const innerHead = categoryMatch[1].trim();
+                const trHead = DICT[innerHead] || LOWER_DICT[innerHead.toLowerCase()] || innerHead;
+                return (trHead === '项目列表' ? '项目' : trHead) + ' (' + catWord + ')';
+            }
+
             // 任务操作前缀与状态动态包裹 (Checked task ..., Checking task ..., Running task ...)
             const taskActionMatch = text.match(/^(Checked|Checking|Running|Started|Completed|Failed|Cancelled|Canceled|Killed)\s+task\s+(.+)$/i);
             if (taskActionMatch) {
@@ -630,6 +649,32 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("运行测试套件 finished >") !== "运行测试套件 已完成 >") {
             console.error("运行测试套件 finished > failed:", translate("运行测试套件 finished >"));
             process.exit(222);
+        }
+
+        // 34. 附件计数、正则查找切换、项目选择器与项目分类状态断言 (最新截图漏译)
+        if (translate("1 image attachment") !== "1 个图片附件") {
+            console.error("1 image attachment failed:", translate("1 image attachment"));
+            process.exit(223);
+        }
+        if (translate("2 image attachments") !== "2 个图片附件") {
+            console.error("2 image attachments failed:", translate("2 image attachments"));
+            process.exit(224);
+        }
+        if (translate("Use Regular Expression (.*)") !== "使用正则表达式 (.*)") {
+            console.error("Use Regular Expression (.*) failed:", translate("Use Regular Expression (.*)"));
+            process.exit(225);
+        }
+        if (translate("Open Project Picker") !== "打开项目选择器") {
+            console.error("Open Project Picker failed:", translate("Open Project Picker"));
+            process.exit(226);
+        }
+        if (translate("Projects (Status)") !== "项目 (状态)") {
+            console.error("Projects (Status) failed:", translate("Projects (Status)"));
+            process.exit(227);
+        }
+        if (translate("Projects (Name)") !== "项目 (名称)") {
+            console.error("Projects (Name) failed:", translate("Projects (Name)"));
+            process.exit(228);
         }
 
         console.log("SUCCESS");

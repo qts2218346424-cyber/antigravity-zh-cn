@@ -2680,6 +2680,82 @@
     "宽松"
   ],
   [
+    "^[Cc]hecked\\s+task\\s+(.+)$",
+    "已检查任务 $1"
+  ],
+  [
+    "^[Cc]hecking\\s+task\\s+(.+)$",
+    "正在检查任务 $1"
+  ],
+  [
+    "^[Rr]unning\\s+task\\s+(.+)$",
+    "正在执行任务 $1"
+  ],
+  [
+    "^[Ss]tarted\\s+task\\s+(.+)$",
+    "已启动任务 $1"
+  ],
+  [
+    "^[Cc]ompleted\\s+task\\s+(.+)$",
+    "已完成任务 $1"
+  ],
+  [
+    "^[Ff]ailed\\s+task\\s+(.+)$",
+    "任务执行失败 $1"
+  ],
+  [
+    "^[Cc]ancelled\\s+task\\s+(.+)$",
+    "已取消任务 $1"
+  ],
+  [
+    "^[Cc]anceled\\s+task\\s+(.+)$",
+    "已取消任务 $1"
+  ],
+  [
+    "^[Kk]illed\\s+task\\s+(.+)$",
+    "已终止任务 $1"
+  ],
+  [
+    "^Run\\s+pytest\\s+suite\\s+finished\\s*(?:>|›)?$",
+    "运行 pytest 测试套件 已完成 >"
+  ],
+  [
+    "^Run\\s+pytest\\s+suite\\s+finished$",
+    "运行 pytest 测试套件 已完成"
+  ],
+  [
+    "^Commit\\s+Strong\\s+localization\\s+finished\\s*(?:>|›)?$",
+    "提交 Strong 本地化 已完成 >"
+  ],
+  [
+    "^Commit\\s+Strong\\s+localization\\s+finished$",
+    "提交 Strong 本地化 已完成"
+  ],
+  [
+    "^([\\u4e00-\\u9fa5]+.*?)\\s+finished\\s*([>›])$",
+    "$1 已完成 $2"
+  ],
+  [
+    "^([\\u4e00-\\u9fa5]+.*?)\\s+finished$",
+    "$1 已完成"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+finished\\s*([>›])$",
+    "$1 已完成 $2"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+completed\\s*([>›])$",
+    "$1 已完成 $2"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+failed\\s*([>›])$",
+    "$1 失败 $2"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+running\\s*([>›])$",
+    "$1 运行中 $2"
+  ],
+  [
     "^[Uu]pdated\\s+(\\d+)\\s+seconds?\\s+ago$",
     "更新于 $1 秒前"
   ],
@@ -2888,79 +2964,151 @@
     "更新了 $1，在委托给 $3 之前与 $2 进行同步。"
   ],
   [
-    "^[Cc]hecked\\s+task\\s+(.+)$",
-    "已检查任务 $1"
+    "^(\\d+)\\s+image\\s+attachments?$",
+    "$1 个图片附件"
   ],
   [
-    "^[Cc]hecking\\s+task\\s+(.+)$",
-    "正在检查任务 $1"
+    "^(\\d+)\\s+file\\s+attachments?$",
+    "$1 个文件附件"
   ],
   [
-    "^[Rr]unning\\s+task\\s+(.+)$",
-    "正在执行任务 $1"
+    "^(\\d+)\\s+attachments?$",
+    "$1 个附件"
   ],
   [
-    "^[Ss]tarted\\s+task\\s+(.+)$",
-    "已启动任务 $1"
+    "^(\\d+)\\s+text\\s+attachments?$",
+    "$1 个文本附件"
   ],
   [
-    "^[Cc]ompleted\\s+task\\s+(.+)$",
-    "已完成任务 $1"
+    "^(\\d+)\\s+audio\\s+attachments?$",
+    "$1 个音频附件"
   ],
   [
-    "^[Ff]ailed\\s+task\\s+(.+)$",
-    "任务执行失败 $1"
+    "^(\\d+)\\s+video\\s+attachments?$",
+    "$1 个视频附件"
   ],
   [
-    "^[Cc]ancelled\\s+task\\s+(.+)$",
-    "已取消任务 $1"
+    "^(\\d+)\\s+pdf\\s+attachments?$",
+    "$1 个 PDF 附件"
   ],
   [
-    "^[Cc]anceled\\s+task\\s+(.+)$",
-    "已取消任务 $1"
+    "^[Ii]mage\\s+attachments?$",
+    "图片附件"
   ],
   [
-    "^[Kk]illed\\s+task\\s+(.+)$",
-    "已终止任务 $1"
+    "^[Ff]ile\\s+attachments?$",
+    "文件附件"
   ],
   [
-    "^Run\\s+pytest\\s+suite\\s+finished\\s*(?:>|›)?$",
-    "运行 pytest 测试套件 已完成 >"
+    "^[Uu]se\\s+[Rr]egular\\s+[Ee]xpression\\s*\\(\\.\\*\\)$",
+    "使用正则表达式 (.*)"
   ],
   [
-    "^Run\\s+pytest\\s+suite\\s+finished$",
-    "运行 pytest 测试套件 已完成"
+    "^[Uu]se\\s+[Rr]egular\\s+[Ee]xpression\\s*\\((.+?)\\)$",
+    "使用正则表达式 ($1)"
   ],
   [
-    "^Commit\\s+Strong\\s+localization\\s+finished\\s*(?:>|›)?$",
-    "提交 Strong 本地化 已完成 >"
+    "^[Uu]se\\s+[Rr]egular\\s+[Ee]xpression:?$",
+    "使用正则表达式"
   ],
   [
-    "^Commit\\s+Strong\\s+localization\\s+finished$",
-    "提交 Strong 本地化 已完成"
+    "^[Mm]atch\\s+[Cc]ase\\s*\\((.+?)\\)$",
+    "区分大小写 ($1)"
   ],
   [
-    "^([\\u4e00-\\u9fa5]+.*?)\\s+finished\\s*([>›])$",
-    "$1 已完成 $2"
+    "^[Mm]atch\\s+[Cc]ase:?$",
+    "区分大小写"
   ],
   [
-    "^([\\u4e00-\\u9fa5]+.*?)\\s+finished$",
-    "$1 已完成"
+    "^[Mm]atch\\s+[Ww]hole\\s+[Ww]ord\\s*\\((.+?)\\)$",
+    "全字匹配 ($1)"
   ],
   [
-    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+finished\\s*([>›])$",
-    "$1 已完成 $2"
+    "^[Mm]atch\\s+[Ww]hole\\s+[Ww]ord:?$",
+    "全字匹配"
   ],
   [
-    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+completed\\s*([>›])$",
-    "$1 已完成 $2"
+    "^[Pp]reserve\\s+[Cc]ase\\s*\\((.+?)\\)$",
+    "保留大小写 ($1)"
   ],
   [
-    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+failed\\s*([>›])$",
-    "$1 失败 $2"
+    "^[Pp]reserve\\s+[Cc]ase:?$",
+    "保留大小写"
   ],
   [
-    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+running\\s*([>›])$",
-    "$1 运行中 $2"
+    "^[Ff]ind\\s+in\\s+[Ss]election\\s*\\((.+?)\\)$",
+    "在选定内容中查找 ($1)"
+  ],
+  [
+    "^[Ff]ind\\s+in\\s+[Ss]election:?$",
+    "在选定内容中查找"
+  ],
+  [
+    "^[Oo]pen\\s+[Pp]roject\\s+[Pp]icker$",
+    "打开项目选择器"
+  ],
+  [
+    "^[Cc]lose\\s+[Pp]roject\\s+[Pp]icker$",
+    "关闭项目选择器"
+  ],
+  [
+    "^[Tt]oggle\\s+[Pp]roject\\s+[Pp]icker$",
+    "切换项目选择器"
+  ],
+  [
+    "^[Pp]roject\\s+[Pp]icker$",
+    "项目选择器"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(Status\\)$",
+    "项目 (状态)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(status\\)$",
+    "项目 (状态)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(Name\\)$",
+    "项目 (名称)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(name\\)$",
+    "项目 (名称)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(Recent\\)$",
+    "项目 (最近)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(recent\\)$",
+    "项目 (最近)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(Alphabetical\\)$",
+    "项目 (按字母顺序)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(Date\\)$",
+    "项目 (按日期)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\(Last Modified\\)$",
+    "项目 (最后修改)"
+  ],
+  [
+    "^[Pp]rojects\\s*\\((.+?)\\)$",
+    "项目 ($1)"
+  ],
+  [
+    "^[Cc]onversations\\s*\\((.+?)\\)$",
+    "会话 ($1)"
+  ],
+  [
+    "^[Ff]iles\\s*\\((.+?)\\)$",
+    "文件 ($1)"
+  ],
+  [
+    "^[Ww]orkspaces\\s*\\((.+?)\\)$",
+    "工作区 ($1)"
   ]
 ]

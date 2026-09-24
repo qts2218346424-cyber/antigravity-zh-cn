@@ -111,6 +111,25 @@
         return modelTagMatch[1] + '（' + (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()]) + '）';
       }
 
+      // 1.15 分类与排序模式匹配: e.g. "Projects (Status)", "Conversations (Date)"
+      const categoryMatch = text.match(/^(.+?)\s*\((Status|Name|Date|Recent|Alphabetical|Last Modified|All|None)\)$/i);
+      if (categoryMatch) {
+        const catMap = {
+          status: '状态',
+          name: '名称',
+          date: '日期',
+          recent: '最近',
+          alphabetical: '按字母顺序',
+          'last modified': '最后修改',
+          all: '全部',
+          none: '无'
+        };
+        const catWord = catMap[categoryMatch[2].toLowerCase()] || (DICT[categoryMatch[2]] || categoryMatch[2]);
+        const innerHead = categoryMatch[1].trim();
+        const trHead = DICT[innerHead] || LOWER_DICT[innerHead.toLowerCase()] || innerHead;
+        return (trHead === '项目列表' ? '项目' : trHead) + ' (' + catWord + ')';
+      }
+
       // 1.2 任务操作前缀与状态动态包裹 (Checked task ..., Checking task ..., Running task ...)
       const taskActionMatch = text.match(/^(Checked|Checking|Running|Started|Completed|Failed|Cancelled|Canceled|Killed)\s+task\s+(.+)$/i);
       if (taskActionMatch) {
@@ -193,6 +212,11 @@
           return false;
         }
 
+        // 2.1 查找替换面板与搜索栏控制组件一律允许汉化
+        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"]')) {
+          return false;
+        }
+
         // 3. 严格保护专业代码编辑器核心与终端容器
         if (el.closest(CODE_PROTECT_SELECTOR)) {
           return true;
@@ -218,6 +242,8 @@
       try {
         if (!el || !el.closest) return false;
         if (IGNORED_TAGS.has(el.tagName)) return true;
+        // 允许查找替换面板与输入框的 placeholder/title/aria-label 进行汉化
+        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"]')) return false;
         // 允许 input 与 textarea 的 placeholder/title/aria-label 进行汉化，仅严格保护代码编辑器核心与终端
         if (el.closest('.monaco-editor, .cm-editor, .xterm, .code-block-content')) return true;
         return false;

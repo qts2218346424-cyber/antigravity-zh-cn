@@ -832,6 +832,51 @@ def audit_and_update_rules():
         [r"^([A-Za-z0-9_\u4e00-\u9fa5\s\-\.\/]+?)\s+completed\s*([>›])$", "$1 已完成 $2"],
         [r"^([A-Za-z0-9_\u4e00-\u9fa5\s\-\.\/]+?)\s+failed\s*([>›])$", "$1 失败 $2"],
         [r"^([A-Za-z0-9_\u4e00-\u9fa5\s\-\.\/]+?)\s+running\s*([>›])$", "$1 运行中 $2"],
+
+        # 最新用户截图修复：附件计数、正则查找切换、项目选择器与项目分类状态
+        [r"^(\d+)\s+image\s+attachments?$", "$1 个图片附件"],
+        [r"^(\d+)\s+file\s+attachments?$", "$1 个文件附件"],
+        [r"^(\d+)\s+attachments?$", "$1 个附件"],
+        [r"^(\d+)\s+text\s+attachments?$", "$1 个文本附件"],
+        [r"^(\d+)\s+audio\s+attachments?$", "$1 个音频附件"],
+        [r"^(\d+)\s+video\s+attachments?$", "$1 个视频附件"],
+        [r"^(\d+)\s+pdf\s+attachments?$", "$1 个 PDF 附件"],
+        [r"^[Ii]mage\s+attachments?$", "图片附件"],
+        [r"^[Ff]ile\s+attachments?$", "文件附件"],
+
+        # 搜索框选项与正则查找 (Use Regular Expression (.*), Match Case, Match Whole Word)
+        [r"^[Uu]se\s+[Rr]egular\s+[Ee]xpression\s*\(\.\*\)$", "使用正则表达式 (.*)"],
+        [r"^[Uu]se\s+[Rr]egular\s+[Ee]xpression\s*\((.+?)\)$", "使用正则表达式 ($1)"],
+        [r"^[Uu]se\s+[Rr]egular\s+[Ee]xpression:?$", "使用正则表达式"],
+        [r"^[Mm]atch\s+[Cc]ase\s*\((.+?)\)$", "区分大小写 ($1)"],
+        [r"^[Mm]atch\s+[Cc]ase:?$", "区分大小写"],
+        [r"^[Mm]atch\s+[Ww]hole\s+[Ww]ord\s*\((.+?)\)$", "全字匹配 ($1)"],
+        [r"^[Mm]atch\s+[Ww]hole\s+[Ww]ord:?$", "全字匹配"],
+        [r"^[Pp]reserve\s+[Cc]ase\s*\((.+?)\)$", "保留大小写 ($1)"],
+        [r"^[Pp]reserve\s+[Cc]ase:?$", "保留大小写"],
+        [r"^[Ff]ind\s+in\s+[Ss]election\s*\((.+?)\)$", "在选定内容中查找 ($1)"],
+        [r"^[Ff]ind\s+in\s+[Ss]election:?$", "在选定内容中查找"],
+
+        # 项目选择器命令 (Open Project Picker)
+        [r"^[Oo]pen\s+[Pp]roject\s+[Pp]icker$", "打开项目选择器"],
+        [r"^[Cc]lose\s+[Pp]roject\s+[Pp]icker$", "关闭项目选择器"],
+        [r"^[Tt]oggle\s+[Pp]roject\s+[Pp]icker$", "切换项目选择器"],
+        [r"^[Pp]roject\s+[Pp]icker$", "项目选择器"],
+
+        # 项目/会话状态分类标题 (Projects (Status))
+        [r"^[Pp]rojects\s*\(Status\)$", "项目 (状态)"],
+        [r"^[Pp]rojects\s*\(status\)$", "项目 (状态)"],
+        [r"^[Pp]rojects\s*\(Name\)$", "项目 (名称)"],
+        [r"^[Pp]rojects\s*\(name\)$", "项目 (名称)"],
+        [r"^[Pp]rojects\s*\(Recent\)$", "项目 (最近)"],
+        [r"^[Pp]rojects\s*\(recent\)$", "项目 (最近)"],
+        [r"^[Pp]rojects\s*\(Alphabetical\)$", "项目 (按字母顺序)"],
+        [r"^[Pp]rojects\s*\(Date\)$", "项目 (按日期)"],
+        [r"^[Pp]rojects\s*\(Last Modified\)$", "项目 (最后修改)"],
+        [r"^[Pp]rojects\s*\((.+?)\)$", "项目 ($1)"],
+        [r"^[Cc]onversations\s*\((.+?)\)$", "会话 ($1)"],
+        [r"^[Ff]iles\s*\((.+?)\)$", "文件 ($1)"],
+        [r"^[Ww]orkspaces\s*\((.+?)\)$", "工作区 ($1)"],
     ]
 
     for pattern, repl in additional_rules:
