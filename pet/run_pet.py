@@ -664,12 +664,12 @@ def configure_true_desktop_transparency(always_on_top: bool = True, click_throug
         m = _MARGINS(-1, -1, -1, -1)
         ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
 
-        # 2. 配置鼠标穿透样式
+        # 2. 配置鼠标穿透样式：非穿透时彻底清理 WS_EX_LAYERED，防止 DWM 分层渲染产生泛白蒙版
         ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
         if click_through:
             ex_style |= (win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
         else:
-            ex_style &= ~win32con.WS_EX_TRANSPARENT
+            ex_style &= ~(win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
 
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
 
