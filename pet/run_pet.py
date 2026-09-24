@@ -536,41 +536,44 @@ _GLOBAL_WINDOW_HOLDER: Dict[str, Any] = {}
 
 def get_pet_hwnd() -> Optional[int]:
     """
-    精准定位桌面宠物顶层窗口 HWND：
-    1. 优先从当前进程 PID 遍历顶级顶层窗口（GW_OWNER == 0）；
-    2. 回退检查 pywebview 内部 native 句柄；
+    精准定位桌面宠物窗口 HWND：
+    1. 优先从 pywebview 原生 WinForms 实例提取 Handle；
+    2. 遍历当前进程 PID 的所有顶层窗口（过滤隐藏消息窗）；
     3. 兜底标题匹配。
     """
-    my_pid = os.getpid()
-    found_hwnd = None
-    try:
-        import win32gui
-        import win32con
-        import win32process
-
-        def _enum(h, _):
-            nonlocal found_hwnd
-            if win32gui.GetWindow(h, win32con.GW_OWNER) == 0:
-                _, p = win32process.GetWindowThreadProcessId(h)
-                if p == my_pid:
-                    cls = win32gui.GetClassName(h)
-                    if "WindowsForms" in cls or "Chrome_WidgetWin" in cls:
-                        found_hwnd = h
-                        return False
-            return True
-
-        win32gui.EnumWindows(_enum, None)
-        if found_hwnd:
-            return found_hwnd
-    except Exception:
-        pass
-
     try:
         win = _GLOBAL_WINDOW_HOLDER.get("window")
         if win and hasattr(win, "native") and win.native:
             handle = getattr(win.native, "Handle", None)
             if handle:
                 return int(handle.ToString())
+    except Exception:
+        pass
+
+    my_pid = os.getpid()
+    found_hwnd = None
+    try:
+        import win32gui
+        import win32process
+
+        def _enum(h, _):
+            nonlocal found_hwnd
+            if win32gui.IsWindow(h):
+                _, p = win32process.GetWindowThreadProcessId(h)
+                if p == my_pid:
+                    cls = win32gui.GetClassName(h)
+                    # 排除托盘通知图标自带的消息接收窗
+                    if cls not in ("tooltips_class32", "OleMainThreadWndClass"):
+                        rect = win32gui.GetWindowRect(h)
+                        # 窗口尺寸大于 50x50 必定是主展示窗
+                        if (rect[2] - rect[0] > 50) and (rect[3] - rect[1] > 50):
+                            found_hwnd = h
+                            return False
+            return True
+
+        win32gui.EnumWindows(_enum, None)
+        if found_hwnd:
+            return found_hwnd
     except Exception:
         pass
 
@@ -1092,8 +1095,12 @@ def main():
                         SWP_NOACTIVATE | SWP_SHOWWINDOW
                     )
                     configure_true_desktop_transparency(always_on_top=True, click_through=False)
-                    calibrated = True
-                except Exception:
+                    if not calibrated:
+                        calibrated = True
+                        vis = win32gui.IsWindowVisible(hwnd)
+                        rect = win32gui.GetWindowRect(hwnd)
+                        print(f"[Guardian] 窗口成功校准呈现: HWND={hex(hwnd)}, Visible={vis}, Rect={rect}")
+                except Exception as e:
                     pass
 
         # 阶段二：平稳保活巡检（4 秒到 20 秒，每 2 秒一次，确认窗口持续保持在可视区）
