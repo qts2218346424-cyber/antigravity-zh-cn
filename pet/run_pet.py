@@ -615,8 +615,9 @@ def configure_true_desktop_transparency(always_on_top: bool = True, click_throug
 
         # 2. Configure Layered & TopMost
         ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+        ex_style |= win32con.WS_EX_LAYERED
         if click_through:
-            ex_style |= (win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
+            ex_style |= win32con.WS_EX_TRANSPARENT
         else:
             ex_style &= ~win32con.WS_EX_TRANSPARENT
 
@@ -1009,6 +1010,7 @@ def main():
         frameless=True,
         transparent=True,
         on_top=True,
+        background_color="#000000",
         js_api=bridge
     )
     window_holder["window"] = window
@@ -1017,6 +1019,18 @@ def main():
     def _delayed_win32_init():
         for delay in [0.2, 0.6, 1.5]:
             time.sleep(delay)
+            # 彻底移除白色背景幕布：将底层 Form 背景色设为纯黑并透明，让 DWM 100% 掏空穿透
+            win = window_holder.get("window")
+            if win and hasattr(win, "native") and win.native:
+                try:
+                    import clr
+                    clr.AddReference('System.Drawing')
+                    import System.Drawing
+                    win.native.BackColor = System.Drawing.Color.Black
+                    win.native.TransparencyKey = System.Drawing.Color.Black
+                except Exception:
+                    pass
+
             hwnd = get_pet_hwnd()
             if hwnd:
                 try:
