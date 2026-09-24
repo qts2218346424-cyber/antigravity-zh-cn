@@ -606,11 +606,15 @@ def uninstall_pet(install_dir: Path, stop_host: bool = False):
     # 1. 终止桌宠进程（非单元测试临时目录且明确需要时才停止宿主，防止 IDE 闪退）
     print("[1/5] 正在停止桌面宠物后台进程...")
     stop_running_pet_processes()
-    if stop_host:
-        real_install_dir = find_antigravity_dir()
-        if real_install_dir and real_install_dir.resolve() == install_dir.resolve():
-            print("  正在安全停止 Antigravity 宿主进程以防文件锁定...")
-            stop_antigravity_processes()
+    # 宿主进程不强行杀除，避免正在对话的 IDE 窗口异常退出
+    if stop_host and not os.environ.get("ANTIGRAVITY_AGENT"):
+        try:
+            real_install_dir = get_default_install_path()
+            if real_install_dir and real_install_dir.resolve() == install_dir.resolve():
+                print("  正在安全停止 Antigravity 宿主进程以防文件锁定...")
+                stop_antigravity_processes()
+        except Exception:
+            pass
 
     # 2. 从 app.asar 循环幂等剥离自启 Hook
     print("[2/5] 正在检查并剥离 app.asar 中的桌面宠物自启 Hook...")
