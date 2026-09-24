@@ -799,6 +799,18 @@ def audit_and_update_rules():
         [r"^[Ss]elect\s+[Ee]nvironment\s*\((?:Ctrl\s*\+\s*\.|Ctrl\+\.)\)$", "选择运行环境 (Ctrl+.)"],
         [r"^[Ss]elect\s+[Ee]nvironment\s*\((.+?)\)$", "选择运行环境 ($1)"],
         [r"^[Ss]elect\s+[Ee]nvironment:?$", "选择运行环境"],
+
+        # 最新用户截图：强度与完整性等级模式 (Default Strong / Strong / Weak)
+        [r"^默认\s+Strong$", "默认 强"],
+        [r"^Default\s+Strong$", "默认 强"],
+        [r"^Strong\s*\(Default\)$", "强 (默认)"],
+        [r"^Strong\s*\(default\)$", "强 (默认)"],
+        [r"^Default:\s*Strong$", "默认：强"],
+        [r"^默认：\s*Strong$", "默认：强"],
+        [r"^Strong$", "强"],
+        [r"^Weak$", "弱"],
+        [r"^Strict$", "严格"],
+        [r"^Relaxed$", "宽松"],
     ]
 
     for pattern, repl in additional_rules:

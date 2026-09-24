@@ -664,12 +664,13 @@ def configure_true_desktop_transparency(always_on_top: bool = True, click_throug
         m = _MARGINS(-1, -1, -1, -1)
         ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
 
-        # 2. 配置鼠标穿透样式：非穿透时彻底清理 WS_EX_LAYERED，防止 DWM 分层渲染产生泛白蒙版
+        # 2. 保持 WS_EX_LAYERED 分层特性，确保 DirectComposition 硬件级真透明合成，彻底消灭白色矩形幕布
         ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+        ex_style |= win32con.WS_EX_LAYERED
         if click_through:
-            ex_style |= (win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
+            ex_style |= win32con.WS_EX_TRANSPARENT
         else:
-            ex_style &= ~(win32con.WS_EX_TRANSPARENT | win32con.WS_EX_LAYERED)
+            ex_style &= ~win32con.WS_EX_TRANSPARENT
 
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
 
@@ -1002,33 +1003,31 @@ def main():
     if args.smoke:
         sys.exit(run_smoke_test())
 
-    # 智能单实例管理：如果已存在桌宠进程且窗口真实可见，则唤醒置顶并退出；否则接管并继续启动
+    # 智能全局单实例管理：杜绝多开争抢 CPU 与置顶
+    global _GLOBAL_APP_MUTEX
+    _GLOBAL_APP_MUTEX = None
     if sys.platform == "win32" and not args.smoke:
         import ctypes
         ERROR_ALREADY_EXISTS = 183
         kernel32 = ctypes.windll.kernel32
-        mutex = kernel32.CreateMutexW(None, False, "Local\\AntigravityPet_SingleInstance_Mutex")
+        _GLOBAL_APP_MUTEX = kernel32.CreateMutexW(None, False, "Global\\AntigravityPet_SingleInstance_Mutex_v2")
         last_err = kernel32.GetLastError()
         if last_err == ERROR_ALREADY_EXISTS:
+            print("[Runner] Antigravity 灵动桌面小宠物已有活跃实例运行中，正在激活前置...")
             hwnd = get_pet_hwnd()
             if hwnd:
                 try:
                     import win32gui
                     import win32con
-                    if win32gui.IsWindow(hwnd) and win32gui.IsWindowVisible(hwnd):
-                        print("[Runner] Antigravity 灵动桌面小宠物已在运行中，正在为您唤醒并置顶...")
-                        _, _, px, py, pw, ph = get_safe_screen_position(320, 380)
+                    if win32gui.IsWindow(hwnd):
                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                         win32gui.SetWindowPos(
-                            hwnd, win32con.HWND_TOPMOST, px, py, pw, ph,
-                            win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
+                            hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+                            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
                         )
-                        win32gui.SetForegroundWindow(hwnd)
-                        win32gui.BringWindowToTop(hwnd)
-                        sys.exit(0)
                 except Exception:
                     pass
-            print("[Runner] 检测到无窗口历史残留，正在重置并启动新实例...")
+            sys.exit(0)
 
     import webview
 
@@ -1095,18 +1094,19 @@ def main():
                         physical_x, physical_y, physical_w, physical_h,
                         SWP_NOACTIVATE | SWP_SHOWWINDOW
                     )
-                    configure_true_desktop_transparency(always_on_top=True, click_through=False)
                     if not calibrated:
+                        configure_true_desktop_transparency(always_on_top=True, click_through=False)
                         calibrated = True
                         vis = win32gui.IsWindowVisible(hwnd)
                         rect = win32gui.GetWindowRect(hwnd)
-                        print(f"[Guardian] 窗口成功校准呈现: HWND={hex(hwnd)}, Visible={vis}, Rect={rect}")
+                        print(f"[Guardian] 窗口成功完成单次安全校准与透明呈现: HWND={hex(hwnd)}, Visible={vis}, Rect={rect}")
+                        break
                 except Exception as e:
                     print(f"[Guardian] 校准告警: {e}")
 
-        # 阶段二：平稳保活巡检（4 秒到 20 秒，每 2 秒一次，确认窗口持续保持在可视区）
-        while time.monotonic() - start_time < 20.0:
-            time.sleep(2.0)
+        # 阶段二：超低开销平稳巡检（每 5 秒轻量检查一次，绝不重复重置样式）
+        while True:
+            time.sleep(5.0)
             hwnd = get_pet_hwnd()
             if hwnd:
                 try:

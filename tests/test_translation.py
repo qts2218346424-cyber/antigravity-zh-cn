@@ -550,6 +550,20 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(212);
         }
 
+        // 32. Strong and 默认 Strong
+        if (translate("Strong") !== "强") {
+            console.error("Strong failed:", translate("Strong"));
+            process.exit(213);
+        }
+        if (translate("默认 Strong") !== "默认 强") {
+            console.error("默认 Strong failed:", translate("默认 Strong"));
+            process.exit(214);
+        }
+        if (translate("Strong (Default)") !== "强 (默认)") {
+            console.error("Strong (Default) failed:", translate("Strong (Default)"));
+            process.exit(215);
+        }
+
         console.log("SUCCESS");
         """
         import tempfile

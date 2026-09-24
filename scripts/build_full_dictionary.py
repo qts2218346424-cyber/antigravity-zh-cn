@@ -311,6 +311,20 @@ NEW_TRANSLATIONS = {
     "Select Environment (Ctrl + .)": "选择运行环境 (Ctrl+.)",
     "Select environment (Ctrl + .)": "选择运行环境 (Ctrl+.)",
 
+    # 强度与完整性等级模式
+    "Strong": "强",
+    "strong": "强",
+    "Weak": "弱",
+    "weak": "弱",
+    "Strict": "严格",
+    "strict": "严格",
+    "Relaxed": "宽松",
+    "relaxed": "宽松",
+    "默认 Strong": "默认 强",
+    "Default Strong": "默认 强",
+    "Strong (Default)": "强 (默认)",
+    "Strong (default)": "强 (默认)",
+
     # Git 控制台与源码管理状态静态词条
     "Changes not staged for commit:": "未暂存以备提交的更改：",
     "Changes not staged for commit": "未暂存以备提交的更改",

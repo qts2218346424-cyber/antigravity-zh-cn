@@ -116,10 +116,13 @@ class QuotaMonitor:
             if not quota_json or not isinstance(quota_json, dict):
                 return None
 
-            raw_groups = quota_json.get("groups", [])
+            raw_dict = quota_json.get("raw", {}) if "raw" in quota_json else quota_json
+            raw_groups = raw_dict.get("groups", [])
             parsed_groups = []
             models_list = []
-            primary_percentage = 100.0
+            
+            # 使用最受限模型桶的剩余比例（例如 Claude 5h 75.7%）作为真实综合可用额度
+            primary_percentage = float(quota_json.get("min_remaining_pct", 100.0))
             primary_reset_time = None
 
             for g in raw_groups:
@@ -143,11 +146,8 @@ class QuotaMonitor:
                         "description": b_desc,
                     })
 
-                    # If this is Gemini 5h bucket or 3p 5h bucket, use for health classification
-                    if "5h" in b_id.lower() or "rolling" in b_id.lower():
-                        if "gemini" in b_id.lower() or primary_percentage == 100.0:
-                            primary_percentage = b_pct
-                            primary_reset_time = b_reset
+                    if not primary_reset_time and b_reset:
+                        primary_reset_time = b_reset
 
                 parsed_groups.append({
                     "displayName": g_display,
@@ -155,11 +155,13 @@ class QuotaMonitor:
                     "buckets": parsed_buckets
                 })
 
+                # 计算该模型组的最低剩余配额
+                group_min_pct = min([bk["percentage"] for bk in parsed_buckets]) if parsed_buckets else 100.0
                 models_list.append({
                     "name": g_display,
                     "available": True,
-                    "percentage": primary_percentage,
-                    "remaining_requests": int(primary_percentage),
+                    "percentage": group_min_pct,
+                    "remaining_requests": int(group_min_pct),
                     "total_requests": 100,
                 })
 

@@ -2612,6 +2612,34 @@
     "现代超轻量级桌面宠物项目"
   ],
   [
+    "^[Ss]end\\s+[Mm]essage\\s+(?:Enter|回车)$",
+    "发送消息 (Enter)"
+  ],
+  [
+    "^[Ss]end\\s+[Mm]essage\\s*\\(Enter\\)$",
+    "发送消息 (Enter)"
+  ],
+  [
+    "^[Ss]end\\s+[Mm]essage\\s*Enter$",
+    "发送消息 (Enter)"
+  ],
+  [
+    "^[Ss]end\\s+[Mm]essage$",
+    "发送消息"
+  ],
+  [
+    "^[Ss]elect\\s+[Ee]nvironment\\s*\\((?:Ctrl\\s*\\+\\s*\\.|Ctrl\\+\\.)\\)$",
+    "选择运行环境 (Ctrl+.)"
+  ],
+  [
+    "^[Ss]elect\\s+[Ee]nvironment\\s*\\((.+?)\\)$",
+    "选择运行环境 ($1)"
+  ],
+  [
+    "^[Ss]elect\\s+[Ee]nvironment:?$",
+    "选择运行环境"
+  ],
+  [
     "^[Uu]pdated\\s+(\\d+)\\s+seconds?\\s+ago$",
     "更新于 $1 秒前"
   ],
@@ -2820,31 +2848,43 @@
     "更新了 $1，在委托给 $3 之前与 $2 进行同步。"
   ],
   [
-    "^[Ss]end\\s+[Mm]essage\\s+(?:Enter|回车)$",
-    "发送消息 (Enter)"
+    "^默认\\s+Strong$",
+    "默认 强"
   ],
   [
-    "^[Ss]end\\s+[Mm]essage\\s*\\(Enter\\)$",
-    "发送消息 (Enter)"
+    "^Default\\s+Strong$",
+    "默认 强"
   ],
   [
-    "^[Ss]end\\s+[Mm]essage\\s*Enter$",
-    "发送消息 (Enter)"
+    "^Strong\\s*\\(Default\\)$",
+    "强 (默认)"
   ],
   [
-    "^[Ss]end\\s+[Mm]essage$",
-    "发送消息"
+    "^Strong\\s*\\(default\\)$",
+    "强 (默认)"
   ],
   [
-    "^[Ss]elect\\s+[Ee]nvironment\\s*\\((?:Ctrl\\s*\\+\\s*\\.|Ctrl\\+\\.)\\)$",
-    "选择运行环境 (Ctrl+.)"
+    "^Default:\\s*Strong$",
+    "默认：强"
   ],
   [
-    "^[Ss]elect\\s+[Ee]nvironment\\s*\\((.+?)\\)$",
-    "选择运行环境 ($1)"
+    "^默认：\\s*Strong$",
+    "默认：强"
   ],
   [
-    "^[Ss]elect\\s+[Ee]nvironment:?$",
-    "选择运行环境"
+    "^Strong$",
+    "强"
+  ],
+  [
+    "^Weak$",
+    "弱"
+  ],
+  [
+    "^Strict$",
+    "严格"
+  ],
+  [
+    "^Relaxed$",
+    "宽松"
   ]
 ]
