@@ -63,6 +63,12 @@ class TestRuntimeTranslation(unittest.TestCase):
             if (text.endsWith(':') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '：';
             if (text.endsWith('...') && (DICT[text.slice(0, -3).trim()] || LOWER_DICT[lower.slice(0, -3).trim()])) return (DICT[text.slice(0, -3).trim()] || LOWER_DICT[lower.slice(0, -3).trim()]) + '...';
             if (text.endsWith('…') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '...';
+            if (text.startsWith('...') || text.startsWith('…')) {
+                const leadLen = text.startsWith('...') ? 3 : 1;
+                const inner = text.slice(leadLen).trim();
+                const tr = DICT[inner] || LOWER_DICT[inner.toLowerCase()] || translate(inner);
+                if (tr) return '...' + tr;
+            }
             if (text.endsWith('.') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '。';
             if (text.endsWith('?') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '？';
 
@@ -675,6 +681,28 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Projects (Name)") !== "项目 (名称)") {
             console.error("Projects (Name) failed:", translate("Projects (Name)"));
             process.exit(228);
+        }
+
+        // 35. 技能与斜杠命令下拉描述汉化断言 (最新截图漏译)
+        if (translate("Interview me to align on a plan.") !== "通过人机交互访谈对齐设计与技术方案。") {
+            console.error("Interview me to align on a plan failed:", translate("Interview me to align on a plan."));
+            process.exit(229);
+        }
+        if (translate("Run until the specified goal is completely finished.") !== "持续运行直至指定目标彻底完成。") {
+            console.error("Run until the specified goal is completely finished failed:", translate("Run until the specified goal is completely finished."));
+            process.exit(230);
+        }
+        if (translate("Invoke the Boost multi-agent orchestrator for complex tasks.") !== "调用 Boost 多智能体编排器处理复杂任务。") {
+            console.error("Invoke the Boost multi-agent orchestrator for complex tasks failed:", translate("Invoke the Boost multi-agent orchestrator for complex tasks."));
+            process.exit(231);
+        }
+        if (translate("...de quality or technical plans, intent and error classification, and calibrated hypothesis truth verification.") !== "...评估代码质量与技术方案、意图与错误分类，以及校准的假设真值验证。") {
+            console.error("...de quality or technical plans failed:", translate("...de quality or technical plans, intent and error classification, and calibrated hypothesis truth verification."));
+            process.exit(232);
+        }
+        if (translate("de quality or technical plans, intent and error classification, and calibrated hypothesis truth verification.") !== "评估代码质量与技术方案、意图与错误分类，以及校准的假设真值验证。") {
+            console.error("de quality or technical plans failed:", translate("de quality or technical plans, intent and error classification, and calibrated hypothesis truth verification."));
+            process.exit(233);
         }
 
         console.log("SUCCESS");

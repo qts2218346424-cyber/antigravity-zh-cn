@@ -84,6 +84,14 @@
       if (text.endsWith('…') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
         return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '...';
       }
+      if (text.startsWith('...') || text.startsWith('…')) {
+        const leadLen = text.startsWith('...') ? 3 : 1;
+        const inner = text.slice(leadLen).trim();
+        const tr = DICT[inner] || LOWER_DICT[inner.toLowerCase()] || translate(inner);
+        if (tr) {
+          return '...' + tr;
+        }
+      }
       if (text.endsWith('.') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
         return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '。';
       }
@@ -252,6 +260,9 @@
       }
     };
 
+    // 已翻译文本节点与容器弱引用集合，阻断重复翻译
+    const translatedNodeSet = new WeakSet();
+
     // 遍历翻译文本节点
     const translateTextNodes = (root) => {
       if (!root) return 0;
@@ -328,6 +339,48 @@
       return count;
     };
 
+    // 自动重组并翻译被搜索高亮（highlight/match span）打碎的富文本标签容器（如 slash command / skill 下拉菜单）
+    const translateHighlightedContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const highlightElements = root.querySelectorAll('.highlight, [class*="highlight"], mark, [class*="match"], .monaco-match, [class*="monaco-highlighted-label"], [class*="highlighted-label"]');
+        if (highlightElements.length === 0) return 0;
+
+        const processedContainers = new Set();
+        for (let i = 0; i < highlightElements.length; i++) {
+          const hl = highlightElements[i];
+          let container = (hl.matches && hl.matches('[class*="highlighted-label"]')) ? hl : hl.parentElement;
+          if (!container) continue;
+
+          // 若父级也是纯描述/标签容器（例如 .details-label / [class*="desc"]），尝试向上一级提升以获取完整描述句
+          if (container.parentElement && container.parentElement.matches && container.parentElement.matches('[class*="desc"], [class*="detail"], [class*="label"], [class*="secondary"]')) {
+            if (container.parentElement.children.length <= 3) {
+              container = container.parentElement;
+            }
+          }
+
+          if (processedContainers.has(container) || translatedNodeSet.has(container)) continue;
+          processedContainers.add(container);
+
+          if (isProtectedTextNode(container)) continue;
+          const rawText = container.textContent || '';
+          const fullText = norm(rawText);
+          if (!fullText || fullText.length < 3 || fullText.length > 400) continue;
+
+          const translated = translate(fullText);
+          if (translated && norm(translated) !== fullText) {
+            const leading = (rawText.match(/^\s*/) || [''])[0];
+            const trailing = (rawText.match(/\s*$/) || [''])[0];
+            container.textContent = leading + translated + trailing;
+            try { translatedNodeSet.add(container); } catch (_) {}
+            count++;
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
     // 全量执行单次翻译
     const runTranslation = () => {
       try {
@@ -338,8 +391,9 @@
         }
         const textCount = translateTextNodes(root);
         const attrCount = translateAttributes(root);
-        if (textCount > 0 || attrCount > 0) {
-          console.log(`[AGY-ZH] Translated ${textCount} text nodes and ${attrCount} attributes.`);
+        const hlCount = translateHighlightedContainers(root);
+        if (textCount > 0 || attrCount > 0 || hlCount > 0) {
+          console.log(`[AGY-ZH] Translated ${textCount} text nodes, ${attrCount} attributes, and ${hlCount} highlighted containers.`);
         }
       } catch (err) {
         console.warn('[AGY-ZH] Error during runTranslation:', err);
@@ -460,41 +514,6 @@
         };
       }
     } catch (_) {}
-
-    // 自动重组并翻译被搜索高亮（highlight span）打碎的富文本标签容器
-    const translateHighlightedContainers = (root) => {
-      if (!root || !root.querySelectorAll) return 0;
-      let count = 0;
-      try {
-        const highlightElements = root.querySelectorAll('.highlight, [class*="highlight"], mark');
-        if (highlightElements.length === 0) return 0;
-
-        const processedContainers = new Set();
-        for (let i = 0; i < highlightElements.length; i++) {
-          const hl = highlightElements[i];
-          const container = hl.parentElement;
-          if (!container || processedContainers.has(container) || translatedNodeSet.has(container)) continue;
-          processedContainers.add(container);
-
-          if (isProtectedTextNode(container)) continue;
-          const fullText = (container.textContent || '').trim();
-          if (!fullText || fullText.length > 300) continue;
-
-          const translated = translate(fullText);
-          if (translated && norm(translated) !== norm(fullText)) {
-            const leading = (container.textContent.match(/^\s*/) || [''])[0];
-            const trailing = (container.textContent.match(/\s*$/) || [''])[0];
-            container.textContent = leading + translated + trailing;
-            translatedNodeSet.add(container);
-            count++;
-          }
-        }
-      } catch (_) {}
-      return count;
-    };
-
-    // 已翻译文本节点弱引用集合，彻底阻断活锁与重复处理
-    const translatedNodeSet = new WeakSet();
 
     // 监听 DOM 树变化并根据交互场景智能分流：
     // 默认在当前微任务中同步增量直出（先于浏览器 Paint 绘制完成，彻底根除英文闪烁），

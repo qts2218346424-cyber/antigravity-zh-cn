@@ -877,6 +877,16 @@ def audit_and_update_rules():
         [r"^[Cc]onversations\s*\((.+?)\)$", "会话 ($1)"],
         [r"^[Ff]iles\s*\((.+?)\)$", "文件 ($1)"],
         [r"^[Ww]orkspaces\s*\((.+?)\)$", "工作区 ($1)"],
+
+        # 技能与斜杠命令下拉描述
+        [r"^[.…]*(?:code\s+|de\s+)?quality\s+or\s+technical\s+plans,\s*intent\s+and\s+error\s+classification,\s*and\s+calibrated\s+hypothesis\s+truth\s+verification\.?$", "...评估代码质量与技术方案、意图与错误分类，以及校准的假设真值验证。"],
+        [r"^Interview\s+me\s+to\s+align\s+on\s+a\s+plan\.?$", "通过人机交互访谈对齐设计与技术方案。"],
+        [r"^Run\s+until\s+the\s+specified\s+goal\s+is\s+completely\s+finished\.?$", "持续运行直至指定目标彻底完成。"],
+        [r"^Invoke\s+the\s+Boost\s+multi-agent\s+orchestrator\s+for\s+complex\s+tasks\.?$", "调用 Boost 多智能体编排器处理复杂任务。"],
+        [r"^Run\s+an\s+instruction\s+on\s+a\s+recurring\s+schedule\s+or\s+set\s+a\s+one-time\s+timer\.?$", "按循环计划运行指令或设置一次性定时器。"],
+        [r"^Interact\s+with\s+web\s+pages,\s*search\s+the\s+web,\s*and\s+extract\s+data\s+from\s+websites\.?$", "与网页交互、搜索网络并从网站提取数据。"],
+        [r"^Enable\s+multi-agent\s+collaboration\s+with\s+specialized\s+autonomous\s+agents\.?$", "启用多智能体协作与专业自主子代理。"],
+        [r"^Teach\s+Antigravity\s+new\s+skills,\s*workflows,\s*and\s+behavioral\s+preferences\.?$", "教 Antigravity 掌握新技能、工作流与偏好规范。"],
     ]
 
     for pattern, repl in additional_rules:
