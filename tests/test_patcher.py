@@ -74,9 +74,9 @@ class TestAntigravityZh(unittest.TestCase):
             rules = json.load(f)
 
         test_cases = [
-            ("1 agent running", "1 个代理正在运行"),
-            ("3 agents running", "3 个代理正在运行"),
-            ("No agents running", "无运行中的代理"),
+            ("1 agent running", "1 个智能体正在运行"),
+            ("3 agents running", "3 个智能体正在运行"),
+            ("No agents running", "无正在运行的智能体"),
             ("5 files changed", "5 个文件已修改"),
             ("12 additions, 3 deletions", "12 处添加，3 处删除"),
             ("Added 10 lines", "添加了 10 行"),
@@ -272,8 +272,8 @@ void win.loadURL(url);
             self.assertIn(PET_HOOK_END, utils_pet)
             self.assertIn("auto_start_with_antigravity", utils_pet)
 
-            # 3. 验证彻底卸载 (uninstall_pet)
-            uninstall_pet(install_dir)
+            # 3. 验证彻底卸载 (uninstall_pet，单测临时目录绝对不停止宿主)
+            uninstall_pet(install_dir, stop_host=False)
             data_uninstalled = bytearray(asar_path.read_bytes())
             utils_uninstalled = read_asar_file_content(data_uninstalled, "dist/utils.js").decode("utf-8")
             self.assertIn("__AGY_ZH_CODE__", utils_uninstalled, "卸载桌宠不应破坏原有汉化注入")

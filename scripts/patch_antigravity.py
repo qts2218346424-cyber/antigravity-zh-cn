@@ -580,10 +580,10 @@ const __AGY_ZH_CODE__ = {js_raw};
         print(f"  [!] 自动禁用更新提示: {e}")
 
 
-def uninstall_pet(install_dir: Path):
+def uninstall_pet(install_dir: Path, stop_host: bool = False):
     """
     彻底卸载桌面宠物：
-    1. 终止正在运行的 Antigravity 宿主进程与桌面宠物后台进程（防止文件锁定）；
+    1. 终止桌面宠物后台进程（若 stop_host=True 则可选终止 Antigravity 宿主）；
     2. 从 resources/app.asar (dist/utils.js) 中循环幂等剥离自启 Hook 代码（保留其他汉化逻辑）；
     3. 将 ~/.gemini/pet_config.json 中的 auto_start_with_antigravity 设置为 false；
     4. 删除桌面快捷方式与开机自启动项；
@@ -593,10 +593,14 @@ def uninstall_pet(install_dir: Path):
     print("        正在彻底卸载与清理 Antigravity 灵动桌面宠物         ")
     print("============================================================")
 
-    # 1. 终止宿主与桌宠进程，防止 Windows 文件锁定
-    print("[1/5] 正在停止运行中的 Antigravity 与桌面宠物后台进程...")
-    stop_antigravity_processes()
+    # 1. 终止桌宠进程（非单元测试临时目录且明确需要时才停止宿主，防止 IDE 闪退）
+    print("[1/5] 正在停止桌面宠物后台进程...")
     stop_running_pet_processes()
+    if stop_host:
+        real_install_dir = find_antigravity_dir()
+        if real_install_dir and real_install_dir.resolve() == install_dir.resolve():
+            print("  正在安全停止 Antigravity 宿主进程以防文件锁定...")
+            stop_antigravity_processes()
 
     # 2. 从 app.asar 循环幂等剥离自启 Hook
     print("[2/5] 正在检查并剥离 app.asar 中的桌面宠物自启 Hook...")
@@ -751,7 +755,7 @@ def main():
     if args.action == "install":
         apply_patch(install_dir, args.lang, repo_root, with_pet=args.with_pet)
     elif args.action == "uninstall-pet":
-        uninstall_pet(install_dir)
+        uninstall_pet(install_dir, stop_host=True)
     elif args.action == "restore":
         restore_backup(install_dir)
     elif args.action == "disable-updates":
