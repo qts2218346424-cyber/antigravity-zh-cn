@@ -744,15 +744,17 @@ class PetTrayController:
                 import win32gui
                 import win32con
                 hwnd = get_pet_hwnd()
-                if hwnd:
+                if hwnd and win32gui.IsWindow(hwnd):
                     _, _, px, py, pw, ph = get_safe_screen_position(320, 380)
                     win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
                     win32gui.SetWindowPos(
                         hwnd,
                         win32con.HWND_TOPMOST,
                         px, py, pw, ph,
-                        win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
+                        win32con.SWP_SHOWWINDOW
                     )
+                    configure_true_desktop_transparency(always_on_top=self.bridge.always_on_top, click_through=self.bridge.click_through)
                     win32gui.SetForegroundWindow(hwnd)
                     win32gui.BringWindowToTop(hwnd)
             except Exception:

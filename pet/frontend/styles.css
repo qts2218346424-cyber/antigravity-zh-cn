@@ -241,9 +241,7 @@ html, body {
   width: 140px;
   height: 140px;
   object-fit: contain;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: crisp-edges;
+  image-rendering: auto;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.38));
   transition: transform 0.15s ease-out;
   pointer-events: auto;
