@@ -359,6 +359,42 @@
           enumerable: origNodeValueDesc.enumerable
         });
       }
+
+      // 拦截 setAttribute (消灭 placeholder, aria-label, title 等的闪烁)
+      const origSetAttribute = Element.prototype.setAttribute;
+      if (origSetAttribute) {
+        Element.prototype.setAttribute = function(name, val) {
+          try {
+            if (['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].includes(name) && typeof val === 'string' && val.length > 0 && val.length < 500) {
+              if (!isProtectedAttrNode(this)) {
+                const tr = translate(val);
+                if (tr && norm(val) !== norm(tr)) {
+                  return origSetAttribute.call(this, name, tr);
+                }
+              }
+            }
+          } catch (_) {}
+          return origSetAttribute.call(this, name, val);
+        };
+      }
+
+      // 拦截 document.createTextNode (消灭 React 动态创建文本节点的闪烁)
+      const origCreateTextNode = document.createTextNode;
+      if (origCreateTextNode) {
+        document.createTextNode = function(data) {
+          try {
+            if (typeof data === 'string' && data.length > 0 && data.length < 500) {
+              const tr = translate(data);
+              if (tr && norm(data) !== norm(tr)) {
+                const lead = (data.match(/^\s*/) || [''])[0];
+                const trail = (data.match(/\s*$/) || [''])[0];
+                return origCreateTextNode.call(document, lead + tr + trail);
+              }
+            }
+          } catch (_) {}
+          return origCreateTextNode.call(document, data);
+        };
+      }
     } catch (_) {}
 
     // 自动重组并翻译被搜索高亮（highlight span）打碎的富文本标签容器
@@ -398,7 +434,7 @@
 
     // 监听 DOM 树变化并根据交互场景智能分流：
     // 默认在当前微任务中同步增量直出（先于浏览器 Paint 绘制完成，彻底根除英文闪烁），
-    // 超过 4ms 保险丝的超大型长列表变更，安全移交后台轻量防抖处理。
+    // 超过 15ms 保险丝的超大型长列表变更，安全移交后台轻量防抖处理。
     let mutationTimer = null;
     let maxWaitDeadline = 0;
 
@@ -414,10 +450,10 @@
 
       if (mutations && mutations.length > 0) {
         const syncStart = now;
-        const MAX_SYNC_BUDGET_MS = 4; // 严格锁死单次微任务在 4ms 内，绝不侵占 16.6ms 帧预算
+        const MAX_SYNC_BUDGET_MS = 15; // 放宽到 15ms，绝大部分 UI 组件 (如下拉框/弹窗) 都能在微任务中就地完成翻译，不出现闪烁
 
         for (let i = 0; i < mutations.length; i++) {
-          // 超出 4ms 预算时立即熔断让出主线程，剩余节点由后续后台防抖队列平滑处理，绝对不卡死渲染
+          // 超出 15ms 预算时立即熔断让出主线程，剩余节点由后续后台防抖队列平滑处理
           if (typeof performance !== 'undefined' && performance.now() - syncStart > MAX_SYNC_BUDGET_MS) {
             exceededBudget = true;
             break;
@@ -464,13 +500,13 @@
           }
         }
 
-        // 若在 4ms 预算内全部增量翻译完毕，直接返回！首帧即为纯正中文，0ms 零延迟！
+        // 若在 15ms 预算内全部增量翻译完毕，直接返回！首帧即为纯正中文，0ms 零延迟！
         if (!exceededBudget) {
           return;
         }
       }
 
-      // 超出 4ms 帧预算的极端海量 DOM 节点挂载：采用轻量后台平滑调度
+      // 超出帧预算的极端海量 DOM 节点挂载：采用轻量后台平滑调度
       if (!maxWaitDeadline) {
         maxWaitDeadline = now + 60;
       }
