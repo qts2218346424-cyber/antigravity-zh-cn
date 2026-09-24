@@ -1525,7 +1525,7 @@
   ],
   [
     "^of the customization budget is available\\.?$",
-    "可用自定义预算。"
+    "自定义预算可用。"
   ],
   [
     "^of the (.+?) budget is available\\.?$",
@@ -1533,7 +1533,7 @@
   ],
   [
     "^([0-9.]+)%\\s+of the customization budget is available\\.?$",
-    "自定义预算剩余 $1%"
+    "自定义预算剩余 $1%。"
   ],
   [
     "^[Kk]illed$",
@@ -2290,5 +2290,85 @@
   [
     "^[Ss]how\\s+[Tt]hinking$",
     "显示思考"
+  ],
+  [
+    "^([0-9.]+)%\\s+of the customization budget is available$",
+    "自定义预算剩余 $1%"
+  ],
+  [
+    "^of the customization budget is available$",
+    "自定义预算可用"
+  ],
+  [
+    "^[Cc]onfigure default behaviors,\\s*skills,\\s*and MCP servers\\.?$",
+    "配置默认行为、技能与 MCP 服务器。"
+  ],
+  [
+    "^[Cc]onfigure default behaviors,\\s*skills,\\s*and MCP servers$",
+    "配置默认行为、技能与 MCP 服务器"
+  ],
+  [
+    "^[Cc]onfigure default behaviors,\\s*skills,\\s*and MCP servers\\.\\s*了解详情\\.?$",
+    "配置默认行为、技能与 MCP 服务器。了解详情。"
+  ],
+  [
+    "^[Tt]he Cloud Audit Manager remote MCP server allows you to enroll projects,\\s*generate audit and scope reports,\\s*and check resource enrollment statuses.*$",
+    "Cloud Audit Manager 远程 MCP 服务器允许您登记项目、生成审计与范围报告，并检查资源登记状态。"
+  ],
+  [
+    "^[Ii]nvestigate and fix software issues using AI-powered root cause analysis\\..*$",
+    "使用基于 AI 的根本原因分析排查并修复软件问题。该 MCP 服务器连接到您的 Antimetal 账户以搜索问题、读取调查数据。"
+  ],
+  [
+    "^[Qq]uery and act on your marketing,\\s*analytics,\\s*CRM,\\s*e-commerce,\\s*and warehouse data across 325\\+\\s*connectors.*$",
+    "跨 325+ 个连接器（Meta 广告、Google 广告、TikTok 广告、GA4、HubSpot 等）查询并操作您的营销、分析、CRM、电子商务及数仓数据。"
+  ],
+  [
+    "^[Qq]uery your GitLab SDLC as a knowledge graph\\..*$",
+    "将您的 GitLab 软件开发生命周期 (SDLC) 作为知识图谱进行查询。Orbit 将群组、项目、源码、合并请求、流水线、工作项和安全发现编入索引。"
+  ],
+  [
+    "^[Ee]nable Antigravity to deploy apps to Google Cloud Run\\.?$",
+    "允许 Antigravity 将应用程序部署到 Google Cloud Run。"
+  ],
+  [
+    "^[Aa]sk questions\\.\\s*Get answers\\.\\s*The MCP is a server your coding agent talks to\\..*$",
+    "提出问题并获取解答。该 MCP 是代码智能体与之交互的服务器。使用自然语言提问，它将针对您的 PostHog 数据执行查询并返回分析结论。"
+  ],
+  [
+    "^[Bb]lock all browser JavaScript execution\\.?$",
+    "阻止所有浏览器 JavaScript 执行。"
+  ],
+  [
+    "^[Pp]rompt for approval before running browser scripts\\.?$",
+    "运行浏览器脚本前提示以获取批准。"
+  ],
+  [
+    "^[Aa]llow full browser script execution without prompting\\.?$",
+    "允许完全执行浏览器脚本，无需提示。"
+  ],
+  [
+    "^[Bb]lock all browser script execution\\.?$",
+    "阻止所有浏览器脚本执行。"
+  ],
+  [
+    "^[Aa]llow full browser script execution\\.?$",
+    "允许完全执行浏览器脚本。"
+  ],
+  [
+    "^(\\d+)\\s+active\\s+conversations?\\.?$",
+    "$1 个活跃会话。"
+  ],
+  [
+    "^(\\d+)\\s+active\\s+conversations?$",
+    "$1 个活跃会话"
+  ],
+  [
+    "^[Nn]o active conversations?\\.?$",
+    "无活跃会话。"
+  ],
+  [
+    "^[Nn]o active conversations?$",
+    "无活跃会话"
   ]
 ]

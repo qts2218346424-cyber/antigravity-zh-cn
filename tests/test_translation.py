@@ -451,6 +451,19 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Thought Process (32 steps)") !== "思考过程 (32 个步骤)") process.exit(170);
         if (translate("Collapse Thoughts") !== "折叠思考过程") process.exit(171);
 
+        // 26. New uploaded 5 images: Budget, Configuration desc, MCP descriptions, Script controls, Active conversations
+        if (translate("89.7% of the customization budget is available.") !== "自定义预算剩余 89.7%") {
+            console.error("Budget failed:", translate("89.7% of the customization budget is available."));
+            process.exit(172);
+        }
+        if (translate("Configure default behaviors, skills, and MCP servers.") !== "配置默认行为、技能与 MCP 服务器。") process.exit(173);
+        if (translate("Enable Antigravity to deploy apps to Google Cloud Run.") !== "允许 Antigravity 将应用程序部署到 Google Cloud Run。") process.exit(174);
+        if (translate("Block all browser JavaScript execution.") !== "阻止所有浏览器 JavaScript 执行。") process.exit(175);
+        if (translate("Prompt for approval before running browser scripts.") !== "运行浏览器脚本前提示以获取批准。") process.exit(176);
+        if (translate("Allow full browser script execution without prompting.") !== "允许完全执行浏览器脚本，无需提示。") process.exit(177);
+        if (translate("1 active conversation.") !== "1 个活跃会话。") process.exit(178);
+        if (translate("3 active conversations.") !== "3 个活跃会话。") process.exit(179);
+
         console.log("SUCCESS");
         """
         js_code = js_template.replace('__REPO_ROOT__', repo_root)

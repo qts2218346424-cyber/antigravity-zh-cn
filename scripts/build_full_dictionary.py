@@ -221,6 +221,45 @@ NEW_TRANSLATIONS = {
     "Called tool": "已调用工具",
     "Tool result": "工具返回结果",
     "Tool call": "工具调用",
+
+    # 图 1：自定义预算相关短语
+    "of the customization budget is available.": "自定义预算可用。",
+    "of the customization budget is available": "自定义预算可用",
+    "customization budget is available.": "自定义预算可用。",
+    "customization budget is available": "自定义预算可用",
+    "customization budget": "自定义预算",
+
+    # 图 2：配置默认行为、技能与 MCP 服务器
+    "Configure default behaviors, skills, and MCP servers.": "配置默认行为、技能与 MCP 服务器。",
+    "Configure default behaviors, skills, and MCP servers": "配置默认行为、技能与 MCP 服务器",
+    "Configure default behaviors, skills, and MCP servers. Learn more.": "配置默认行为、技能与 MCP 服务器。了解详情。",
+
+    # 图 3：官方推荐 MCP 服务器描述
+    "Enable Antigravity to deploy apps to Google Cloud Run.": "允许 Antigravity 将应用程序部署到 Google Cloud Run。",
+    "Enable Antigravity to deploy apps to Google Cloud Run": "允许 Antigravity 将应用程序部署到 Google Cloud Run",
+
+    # 图 4：浏览器脚本执行控制说明
+    "Block all browser JavaScript execution.": "阻止所有浏览器 JavaScript 执行。",
+    "Block all browser JavaScript execution": "阻止所有浏览器 JavaScript 执行",
+    "Prompt for approval before running browser scripts.": "运行浏览器脚本前提示以获取批准。",
+    "Prompt for approval before running browser scripts": "运行浏览器脚本前提示以获取批准",
+    "Allow full browser script execution without prompting.": "允许完全执行浏览器脚本，无需提示。",
+    "Allow full browser script execution without prompting": "允许完全执行浏览器脚本，无需提示",
+    "Block all browser script execution.": "阻止所有浏览器脚本执行。",
+    "Allow full browser script execution.": "允许完全执行浏览器脚本。",
+
+    # 图 5：活跃会话数量统计
+    "1 active conversation.": "1 个活跃会话。",
+    "1 active conversation": "1 个活跃会话",
+    "1 active conversations.": "1 个活跃会话。",
+    "1 active conversations": "1 个活跃会话",
+    "active conversation": "活跃会话",
+    "active conversations": "活跃会话",
+    "Active conversation": "活跃会话",
+    "Active conversations": "活跃会话",
+    "No active conversations.": "无活跃会话。",
+    "No active conversations": "无活跃会话",
+
     "Are you sure you want to delete": "确定要删除吗",
     "Are you sure you want to delete the": "确定要删除",
     "Are you sure you want to delete the project": "确定要删除项目",

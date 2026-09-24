@@ -14,16 +14,42 @@ _runtime_log_dir = pathlib.Path.home() / ".gemini"
 _runtime_log_dir.mkdir(parents=True, exist_ok=True)
 _runtime_log_file = _runtime_log_dir / "pet_runtime.log"
 
-if sys.stdout is None:
-    try:
-        sys.stdout = open(_runtime_log_file, "a", encoding="utf-8")
-    except Exception:
-        sys.stdout = open(os.devnull, "w", encoding="utf-8")
-if sys.stderr is None:
-    try:
-        sys.stderr = open(_runtime_log_file, "a", encoding="utf-8")
-    except Exception:
-        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+class _AutoFlushLogger:
+    def __init__(self, target_stream, log_file):
+        self.target = target_stream
+        self.log_file = log_file
+
+    def write(self, message):
+        if self.target:
+            try:
+                self.target.write(message)
+                self.target.flush()
+            except Exception:
+                pass
+        if self.log_file:
+            try:
+                with open(self.log_file, "a", encoding="utf-8", errors="replace") as f:
+                    f.write(message)
+            except Exception:
+                pass
+
+    def flush(self):
+        if self.target and hasattr(self.target, "flush"):
+            try:
+                self.target.flush()
+            except Exception:
+                pass
+
+sys.stdout = _AutoFlushLogger(sys.stdout, _runtime_log_file)
+sys.stderr = _AutoFlushLogger(sys.stderr, _runtime_log_file)
+
+def _global_exception_handler(exc_type, exc_value, exc_traceback):
+    import traceback
+    err_text = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    sys.stderr.write(f"\n[CRITICAL UNCAUGHT EXCEPTION] {time.strftime('%Y-%m-%d %H:%M:%S')}\n{err_text}\n")
+    sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+sys.excepthook = _global_exception_handler
 
 import json
 import time
@@ -506,8 +532,24 @@ def get_pet_hwnd() -> Optional[int]:
         pass
     try:
         import win32gui
+        hwnd = win32gui.FindWindow(None, "Antigravity 桌面宠物")
+        if hwnd and win32gui.IsWindow(hwnd):
+            return hwnd
         hwnd = win32gui.FindWindow(None, "Antigravity Desktop Pet")
-        return hwnd if hwnd else None
+        if hwnd and win32gui.IsWindow(hwnd):
+            return hwnd
+        # 兜底：枚举当前桌面所有顶层窗口，寻找包含桌面宠物或 Antigravity 的窗口
+        target_hwnd = None
+        def _enum_cb(h, _):
+            nonlocal target_hwnd
+            if win32gui.IsWindow(h):
+                txt = win32gui.GetWindowText(h)
+                if ("Antigravity" in txt or "桌面宠物" in txt) and ("Pet" in txt or "桌面宠物" in txt):
+                    target_hwnd = h
+                    return False
+            return True
+        win32gui.EnumWindows(_enum_cb, None)
+        return target_hwnd
     except Exception:
         return None
 
@@ -650,9 +692,19 @@ class PetTrayController:
             win.show()
             try:
                 import win32gui
+                import win32con
                 hwnd = get_pet_hwnd()
                 if hwnd:
+                    _, _, px, py, pw, ph = get_safe_screen_position(320, 380)
+                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    win32gui.SetWindowPos(
+                        hwnd,
+                        win32con.HWND_TOPMOST,
+                        px, py, pw, ph,
+                        win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
+                    )
                     win32gui.SetForegroundWindow(hwnd)
+                    win32gui.BringWindowToTop(hwnd)
             except Exception:
                 pass
 
@@ -900,7 +952,7 @@ def main():
         import ctypes
         ERROR_ALREADY_EXISTS = 183
         kernel32 = ctypes.windll.kernel32
-        mutex = kernel32.CreateMutexW(None, False, "Global\\AntigravityPet_SingleInstance_Mutex")
+        mutex = kernel32.CreateMutexW(None, False, "Local\\AntigravityPet_SingleInstance_Mutex")
         last_err = kernel32.GetLastError()
         if last_err == ERROR_ALREADY_EXISTS:
             hwnd = get_pet_hwnd()
@@ -910,17 +962,18 @@ def main():
                     import win32con
                     if win32gui.IsWindow(hwnd) and win32gui.IsWindowVisible(hwnd):
                         print("[Runner] Antigravity 灵动桌面小宠物已在运行中，正在为您唤醒并置顶...")
+                        _, _, px, py, pw, ph = get_safe_screen_position(320, 380)
                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                         win32gui.SetWindowPos(
-                            hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+                            hwnd, win32con.HWND_TOPMOST, px, py, pw, ph,
+                            win32con.SWP_SHOWWINDOW | win32con.SWP_FRAMECHANGED
                         )
                         win32gui.SetForegroundWindow(hwnd)
                         win32gui.BringWindowToTop(hwnd)
                         sys.exit(0)
                 except Exception:
                     pass
-            print("[Runner] 检测到历史残留，正在重置并启动新实例...")
+            print("[Runner] 检测到无窗口历史残留，正在重置并启动新实例...")
 
     import webview
 

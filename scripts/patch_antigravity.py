@@ -51,7 +51,10 @@ def generate_pet_autostart_hook() -> str:
     const _pyScript = _cfg.pet_script_path;
     if (!_pyScript || !_fs.existsSync(_pyScript)) return;
 
-    const _pythonBin = process.platform === 'win32' ? 'pythonw' : 'python3';
+    let _pythonBin = process.platform === 'win32' ? 'pythonw' : 'python3';
+    if (_cfg.python_bin_path && _fs.existsSync(_cfg.python_bin_path)) {{
+      _pythonBin = _cfg.python_bin_path;
+    }}
     const _child = _cp.spawn(_pythonBin, [_pyScript], {{
       detached: true,
       stdio: 'ignore',
@@ -349,6 +352,13 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
                         cfg_data = {}
                 cfg_data["pet_script_path"] = str(pet_script_file.resolve())
                 cfg_data["auto_start_with_antigravity"] = True
+                python_bin = sys.executable
+                if sys.platform == "win32":
+                    py_dir = Path(sys.executable).parent
+                    pythonw_cand = py_dir / "pythonw.exe"
+                    if pythonw_cand.is_file():
+                        python_bin = str(pythonw_cand.resolve())
+                cfg_data["python_bin_path"] = python_bin
                 cfg_path.write_text(json.dumps(cfg_data, indent=2, ensure_ascii=False), encoding="utf-8")
                 print("  [OK] 灵动桌面小宠物自启配置已记录 (~/.gemini/pet_config.json)")
             except Exception as e:
