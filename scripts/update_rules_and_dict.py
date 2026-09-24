@@ -114,6 +114,10 @@ def audit_and_update_rules():
             continue
         if "hinking for (.+?)" in pattern or "hought for (.+?)" in pattern:
             continue
+        if pattern == r"^Updated (.+)$":
+            continue
+        if "minutes?|hours?|days?" in pattern and "[Uu]pdated" in pattern:
+            continue
         if pattern == r"^Are you sure you want to delete (.+)\?$":
             project_rule = r"^[Aa]re you sure you want to delete\s+(?:the\s+)?(?:projects?\s+|项目\s*)(.+?)[\?？]?$"
             if project_rule not in seen_patterns:
@@ -700,6 +704,67 @@ def audit_and_update_rules():
         [r"^[Nn]othing to commit,\s*working tree clean$", "无变更需要提交，工作区干净"],
         [r"^[Nn]othing to commit,\s*working directory clean$", "无变更需要提交，工作目录干净"],
         [r"^[Nn]othing added to commit but untracked files present\s*\(use \"git add\" to track\)$", "未添加任何内容至提交，但存在未跟踪文件（使用 \"git add\" 进行跟踪）"],
+
+        # 精确更新提示（彻底废除 ^Updated (.+)$ 贪婪匹配，杜绝代码与长句被误伤为半中半英）
+        [r"^[Uu]pdated\s+(\d+)\s+seconds?\s+ago$", "更新于 $1 秒前"],
+        [r"^[Uu]pdated\s+(\d+)\s+minutes?\s+ago$", "更新于 $1 分钟前"],
+        [r"^[Uu]pdated\s+(\d+)\s+hours?\s+ago$", "更新于 $1 小时前"],
+        [r"^[Uu]pdated\s+(\d+)\s+days?\s+ago$", "更新于 $1 天前"],
+        [r"^[Uu]pdated\s+(\d+)\s+months?\s+ago$", "更新于 $1 个月前"],
+        [r"^[Uu]pdated\s+(\d+)\s+years?\s+ago$", "更新于 $1 年前"],
+        [r"^[Uu]pdated\s+(\d+)\s*(?:mins?|m)\s+ago$", "更新于 $1 分钟前"],
+        [r"^[Uu]pdated\s+(\d+)\s*(?:secs?|s)\s+ago$", "更新于 $1 秒前"],
+        [r"^[Uu]pdated\s+(\d+)\s*(?:hrs?|h)\s+ago$", "更新于 $1 小时前"],
+        [r"^[Uu]pdated\s+(\d+)\s*(?:days?|d)\s+ago$", "更新于 $1 天前"],
+        [r"^[Uu]pdated\s+just\s+now$", "刚刚更新"],
+        [r"^[Uu]pdated\s+today$", "今天更新"],
+        [r"^[Uu]pdated\s+yesterday$", "昨天更新"],
+        [r"^[Uu]pdated\s+recently$", "最近更新"],
+        [r"^[Uu]pdated\s+(\d+[\u4e00-\u9fa5].*)$", "更新于 $1"],
+        [r"^[Uu]pdated\s+([\u4e00-\u9fa5].*)$", "更新于 $1"],
+        [r"^[Uu]pdated\s+(\d{1,4}[-/年]\d{1,2}.*)$", "更新于 $1"],
+        [r"^[Uu]pdated\s+(\d+:\d+.*)$", "更新于 $1"],
+        [r"^[Uu]pdated\s+(\d+.*)$", "更新于 $1"],
+        [r"^[Uu]pdated\s+at\s+(.+)$", "更新于 $1"],
+        [r"^[Uu]pdated\s+on\s+(.+)$", "更新于 $1"],
+        [r"^[Uu]pdated:\s*(.+)$", "更新于：$1"],
+
+        # 子智能体系统引导词与气泡 (Subagent Initial System Prompt)
+        [r"^[Yy]ou are Worker (.+) for the (.+) project\.\s*Your working directory is:\s*(.+)$", "您是 $2 项目的 $1 专员。您的工作目录为：$3"],
+        [r"^[Yy]ou are Challenger (\d+) for the (.+) project\.\s*Your working directory is:\s*(.+)$", "您是 $2 项目的第 $1 挑战审查员。您的工作目录为：$3"],
+        [r"^[Yy]ou are Challenger for the (.+) project\.\s*Your working directory is:\s*(.+)$", "您是 $2 项目的挑战审查员。您的工作目录为：$3"],
+        [r"^[Yy]ou are Sentinel for the (.+) project\.\s*Your working directory is:\s*(.+)$", "您是 $2 项目的哨兵监测员。您的工作目录为：$3"],
+        [r"^[Yy]ou are Victory Auditor for the (.+) project\.\s*Your working directory is:\s*(.+)$", "您是 $2 项目的交付审核员。您的工作目录为：$3"],
+        [r"^[Yy]ou are Spec Miner Survey for the (.+) project\.\s*Your working directory is:\s*(.+)$", "您是 $2 项目的规范挖掘调查员。您的工作目录为：$3"],
+        [r"^[Yy]ou are (.+) for the (.+) project\.\s*Your working directory is:\s*(.+)$", "您是 $2 项目的 $1。您的工作目录为：$3"],
+        [r"^[Yy]ou are (.+) for the (.+) project\.?$", "您是 $2 项目的 $1。"],
+        [r"^[Yy]our working directory is:\s*(.+)$", "您的工作目录为：$1"],
+
+        # 子代理汇报总结与加固用语 (Subagent Handoff & Remediation Summaries)
+        [r"^[Ss]ummary of Completed Remediation$", "已完成的修复总结"],
+        [r"^[Ss]ummary of Completed (.+)$", "已完成的 $1 总结"],
+        [r"^[Dd]irectory Traversal Protection in\s+(.+)$", "$1 中的目录遍历防护"],
+        [r"^[Dd]irectory Traversal Protection$", "目录遍历防护"],
+        [r"^[Ee]liminated Rollback Self-Deadlock & Latency Penalty$", "消除回滚自死锁与延迟损耗"],
+        [r"^[Ee]liminated Rollback Self-Deadlock / FileLock Latency Penalty.*$", "消除回滚自死锁与文件锁延迟损耗"],
+        [r"^[Ee]liminated (.+)$", "已消除 $1"],
+        [r"^[Aa]dded validation with\s+(.+)$", "添加了使用 $1 进行的校验"],
+        [r"^[Aa]dded validation with$", "添加校验："],
+        [r"^[Ee]xplicitly rejected path separators.*$", "显式拒绝路径分隔符（/、\\、..）与 Windows 保留设备名称"],
+        [r"^[Rr]esolved canonical target path and asserted.*$", "解析规范目标路径并断言验证"],
+        [r"^[Cc]onfirmed prefix search fallback cannot escape the backups directory.*$", "确认前缀搜索回退无法逃逸备份目录"],
+        [r"^[Ee]xtracted core restore logic into private.*$", "将核心恢复逻辑提取至私有方法"],
+        [r"^[Ii] have remediated all (\d+) adversarial findings reported by (.+) across (.+)\.?$", "我已修复了 $2 在 $3 中报告的全部 $1 项对抗性问题。"],
+        [r"^[Ii] have remediated all (.+)\.?$", "我已修复所有 $1。"],
+        [r"^[Mm]ANDATORY READING:?$", "强制必读清单："],
+        [r"^[Mm]ANDATORY INTEGRITY WARNING:?$", "强制诚信与完整性警告："],
+        [r"^[Tt]ASK OBJECTIVE:?$", "任务目标："],
+        [r"^[Dd]ETAILED REMEDIATION REQUIREMENTS:?$", "详细修复要求："],
+        [r"^[Mm]ANDATORY VERIFICATION COMMANDS.*$", "强制验证命令："],
+        [r"^[Dd]ELIVERABLE:?$", "交付物："],
+        [r"^Remediation and Hardening Worker$", "修复与加固专员"],
+        [r"^Remediation and Hardening$", "修复与加固"],
+        [r"^Worker Remediation$", "修复专员"],
     ]
 
     for pattern, repl in additional_rules:

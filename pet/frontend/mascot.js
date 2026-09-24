@@ -229,11 +229,11 @@
   // --------------------------------------------------------------------------
   const PRESET_ANIMATIONS = {
     default: {
-      nameZh: 'Gemini 灵动星灵（动态像素）',
-      idle: 'assets/pet_idle.gif',
-      thinking: 'assets/pet_thinking.gif',
-      task_finished: 'assets/pet_celebrate.gif',
-      quota_low: 'assets/pet_worry.gif'
+      nameZh: '派蒙（Codex Pet 原神经典）',
+      idle: 'assets/presets/paimon/idle.webp',
+      thinking: 'assets/presets/paimon/waving.webp',
+      task_finished: 'assets/presets/paimon/jumping.webp',
+      quota_low: 'assets/presets/paimon/waving.webp'
     },
     paimon: {
       nameZh: '派蒙（Codex Pet 原神经典）',
@@ -397,7 +397,7 @@
         const saved = localStorage.getItem(STORAGE_KEY_AVATAR);
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed.preset && PRESET_ANIMATIONS[parsed.preset]) {
+          if (parsed.preset && PRESET_ANIMATIONS[parsed.preset] && parsed.preset !== 'default') {
             this.setPreset(parsed.preset);
             const thumb = document.querySelector(`[data-preset="${parsed.preset}"]`);
             if (thumb) {
@@ -412,7 +412,7 @@
           }
         }
       } catch (err) {}
-      this.setPreset('default');
+      this.setPreset('paimon');
     }
   }
 

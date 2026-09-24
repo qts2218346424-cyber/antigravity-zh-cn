@@ -88,10 +88,6 @@
     "监听于 $1"
   ],
   [
-    "^Updated (.+)$",
-    "更新于 $1"
-  ],
-  [
     "^Resets in (\\d+)d (\\d+)h$",
     "$1 天 $2 小时后重置"
   ],
@@ -1977,7 +1973,7 @@
   ],
   [
     "^Remediation and Hardening Worker$",
-    "修复与加固工作人员"
+    "修复与加固专员"
   ],
   [
     "^Forensic Integrity Auditor$",
@@ -2522,5 +2518,225 @@
   [
     "^[Nn]othing added to commit but untracked files present\\s*\\(use \\\"git add\\\" to track\\)$",
     "未添加任何内容至提交，但存在未跟踪文件（使用 \"git add\" 进行跟踪）"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+\\s+(?:seconds?|minutes?|hours?|days?|months?|years?)\\s+ago)$",
+    "更新于 $1 前"
+  ],
+  [
+    "^[Uu]pdated\\s+just\\s+now$",
+    "刚刚更新"
+  ],
+  [
+    "^[Uu]pdated\\s+today$",
+    "今天更新"
+  ],
+  [
+    "^[Uu]pdated\\s+yesterday$",
+    "昨天更新"
+  ],
+  [
+    "^[Uu]pdated\\s+at\\s+(.+)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+on\\s+(.+)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated:\\s*(.+)$",
+    "更新于：$1"
+  ],
+  [
+    "^[Yy]ou are Worker (.+) for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
+    "您是 $2 项目的 $1 专员。您的工作目录为：$3"
+  ],
+  [
+    "^[Yy]ou are Challenger (\\d+) for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
+    "您是 $2 项目的第 $1 挑战审查员。您的工作目录为：$3"
+  ],
+  [
+    "^[Yy]ou are Challenger for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
+    "您是 $2 项目的挑战审查员。您的工作目录为：$3"
+  ],
+  [
+    "^[Yy]ou are Sentinel for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
+    "您是 $2 项目的哨兵监测员。您的工作目录为：$3"
+  ],
+  [
+    "^[Yy]ou are Victory Auditor for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
+    "您是 $2 项目的交付审核员。您的工作目录为：$3"
+  ],
+  [
+    "^[Yy]ou are Spec Miner Survey for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
+    "您是 $2 项目的规范挖掘调查员。您的工作目录为：$3"
+  ],
+  [
+    "^[Yy]ou are (.+) for the (.+) project\\.\\s*Your working directory is:\\s*(.+)$",
+    "您是 $2 项目的 $1。您的工作目录为：$3"
+  ],
+  [
+    "^[Yy]ou are (.+) for the (.+) project\\.?$",
+    "您是 $2 项目的 $1。"
+  ],
+  [
+    "^[Yy]our working directory is:\\s*(.+)$",
+    "您的工作目录为：$1"
+  ],
+  [
+    "^[Ss]ummary of Completed Remediation$",
+    "已完成的修复总结"
+  ],
+  [
+    "^[Ss]ummary of Completed (.+)$",
+    "已完成的 $1 总结"
+  ],
+  [
+    "^[Dd]irectory Traversal Protection in\\s+(.+)$",
+    "$1 中的目录遍历防护"
+  ],
+  [
+    "^[Dd]irectory Traversal Protection$",
+    "目录遍历防护"
+  ],
+  [
+    "^[Ee]liminated Rollback Self-Deadlock & Latency Penalty$",
+    "消除回滚自死锁与延迟损耗"
+  ],
+  [
+    "^[Ee]liminated Rollback Self-Deadlock / FileLock Latency Penalty.*$",
+    "消除回滚自死锁与文件锁延迟损耗"
+  ],
+  [
+    "^[Ee]liminated (.+)$",
+    "已消除 $1"
+  ],
+  [
+    "^[Aa]dded validation with\\s+(.+)$",
+    "添加了使用 $1 进行的校验"
+  ],
+  [
+    "^[Aa]dded validation with$",
+    "添加校验："
+  ],
+  [
+    "^[Ee]xplicitly rejected path separators.*$",
+    "显式拒绝路径分隔符（/、\\、..）与 Windows 保留设备名称"
+  ],
+  [
+    "^[Rr]esolved canonical target path and asserted.*$",
+    "解析规范目标路径并断言验证"
+  ],
+  [
+    "^[Cc]onfirmed prefix search fallback cannot escape the backups directory.*$",
+    "确认前缀搜索回退无法逃逸备份目录"
+  ],
+  [
+    "^[Ee]xtracted core restore logic into private.*$",
+    "将核心恢复逻辑提取至私有方法"
+  ],
+  [
+    "^[Ii] have remediated all (\\d+) adversarial findings reported by (.+) across (.+)\\.?$",
+    "我已修复了 $2 在 $3 中报告的全部 $1 项对抗性问题。"
+  ],
+  [
+    "^[Ii] have remediated all (.+)\\.?$",
+    "我已修复所有 $1。"
+  ],
+  [
+    "^[Mm]ANDATORY READING:?$",
+    "强制必读清单："
+  ],
+  [
+    "^[Mm]ANDATORY INTEGRITY WARNING:?$",
+    "强制诚信与完整性警告："
+  ],
+  [
+    "^[Tt]ASK OBJECTIVE:?$",
+    "任务目标："
+  ],
+  [
+    "^[Dd]ETAILED REMEDIATION REQUIREMENTS:?$",
+    "详细修复要求："
+  ],
+  [
+    "^[Mm]ANDATORY VERIFICATION COMMANDS.*$",
+    "强制验证命令："
+  ],
+  [
+    "^[Dd]ELIVERABLE:?$",
+    "交付物："
+  ],
+  [
+    "^Remediation and Hardening$",
+    "修复与加固"
+  ],
+  [
+    "^Worker Remediation$",
+    "修复专员"
+  ],
+  [
+    "^[Uu]pdated\\s+recently$",
+    "最近更新"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+[\\u4e00-\\u9fa5].*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+([\\u4e00-\\u9fa5].*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d{1,4}[-/年]\\d{1,2}.*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+:\\d+.*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+.*)$",
+    "更新于 $1"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s+seconds?\\s+ago$",
+    "更新于 $1 秒前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s+minutes?\\s+ago$",
+    "更新于 $1 分钟前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s+hours?\\s+ago$",
+    "更新于 $1 小时前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s+days?\\s+ago$",
+    "更新于 $1 天前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s+months?\\s+ago$",
+    "更新于 $1 个月前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s+years?\\s+ago$",
+    "更新于 $1 年前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s*(?:mins?|m)\\s+ago$",
+    "更新于 $1 分钟前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s*(?:secs?|s)\\s+ago$",
+    "更新于 $1 秒前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s*(?:hrs?|h)\\s+ago$",
+    "更新于 $1 小时前"
+  ],
+  [
+    "^[Uu]pdated\\s+(\\d+)\\s*(?:days?|d)\\s+ago$",
+    "更新于 $1 天前"
   ]
 ]

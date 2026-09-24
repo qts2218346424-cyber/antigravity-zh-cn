@@ -1,5 +1,6 @@
 import unittest
 import subprocess
+import os
 from pathlib import Path
 
 class TestRuntimeTranslation(unittest.TestCase):
@@ -487,12 +488,44 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (!translatedMulti.includes("未暂存以备提交的更改：")) process.exit(193);
         if (!translatedMulti.includes("已修改:   pet/run_pet.py")) process.exit(194);
 
+        // 29. Subagent UI, System Initial Prompt, and Precision Updated rules
+        const subagentPrompt = "You are Worker Remediation for the Antigravity Desktop Pet project. Your working directory is: C:\\\\Users\\\\worker";
+        const translatedPrompt = translate(subagentPrompt);
+        if (!translatedPrompt || !translatedPrompt.includes("您是 Antigravity Desktop Pet 项目的 Remediation 专员。您的工作目录为：")) {
+            console.error("Subagent prompt translation failed:", translatedPrompt);
+            process.exit(195);
+        }
+
+        if (translate("Summary of Completed Remediation") !== "已完成的修复总结") process.exit(196);
+        if (translate("Directory Traversal Protection in switcher.py") !== "switcher.py 中的目录遍历防护") process.exit(197);
+        if (translate("Eliminated Rollback Self-Deadlock & Latency Penalty") !== "消除回滚自死锁与延迟损耗") process.exit(198);
+        if (translate("Worker Remediation") !== "修复专员") process.exit(199);
+        if (translate("Remediation and Hardening Worker") !== "修复与加固工作人员") process.exit(200);
+
+        // 验证去除了贪婪 ^Updated (.+)$，技术句子不再产生半中半英怪胎，而时间更新正常翻译
+        if (translate("Updated 5 minutes ago") !== "更新于 5 分钟前") process.exit(201);
+        if (translate("Updated just now") !== "刚刚更新") process.exit(202);
+        const codeSentence = "Updated in restore_backup to synchronize with _thread_lock";
+        if (translate(codeSentence) && translate(codeSentence).startsWith("更新于 in restore_backup")) {
+            console.error("Greedy Updated leaked:", translate(codeSentence));
+            process.exit(203);
+        }
+
         console.log("SUCCESS");
         """
+        import tempfile
         js_code = js_template.replace('__REPO_ROOT__', repo_root)
-        proc = subprocess.run(["node", "-e", js_code], capture_output=True, text=True, encoding='utf-8')
-        self.assertEqual(proc.returncode, 0, f"Node script failed: {proc.stderr}")
-        self.assertIn("SUCCESS", proc.stdout)
+        with tempfile.NamedTemporaryFile('w', suffix='.js', encoding='utf-8', delete=False) as tf:
+            tf.write(js_code)
+            temp_path = tf.name
+
+        try:
+            proc = subprocess.run(["node", temp_path], capture_output=True, text=True, encoding='utf-8')
+            self.assertEqual(proc.returncode, 0, f"Node script failed: {proc.stderr}")
+            self.assertIn("SUCCESS", proc.stdout)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
 if __name__ == '__main__':
     unittest.main()
