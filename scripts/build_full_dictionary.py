@@ -1803,7 +1803,32 @@ NEW_TRANSLATIONS = {
     "84.1% of the customization budget is available.": "自定义预算剩余 84.1%",
     "84.1% of the customization budget is available": "自定义预算剩余 84.1%",
     "of the customization budget is available.": "可用自定义预算。",
-    "of the customization budget is available": "可用自定义预算"
+    "of the customization budget is available": "可用自定义预算",
+
+    # 常用操作按钮与配置入口 (Common Action Buttons & Settings)
+    "Customize": "自定义",
+    "customize": "自定义",
+    "Customize...": "自定义...",
+    "customize...": "自定义...",
+    "Customize >": "自定义 >",
+    "customize >": "自定义 >",
+    "Customized": "已自定义",
+    "customized": "已自定义",
+    "Customizing": "正在自定义",
+    "customizing": "正在自定义",
+    "Browse": "浏览",
+    "browse": "浏览",
+    "Explore": "探索",
+    "explore": "探索",
+    "Apply": "应用",
+    "apply": "应用",
+    "Apply Changes": "应用更改",
+    "apply changes": "应用更改",
+    "Apply changes": "应用更改",
+    "Discard": "放弃",
+    "discard": "放弃",
+    "Discard Changes": "放弃更改",
+    "discard changes": "放弃更改"
 }
 
 def main():

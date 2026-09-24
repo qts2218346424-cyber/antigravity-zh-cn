@@ -155,6 +155,13 @@ class TestRuntimeTranslation(unittest.TestCase):
             if (/^narrow$/i.test(text)) return '较窄';
             if (/^wide$/i.test(text)) return '较宽';
 
+            // 常用配置与操作动作模式匹配 (Customize / Browse / Apply)
+            if (/^customize(?:\.\.\.|…)?$/i.test(text)) return '自定义';
+            if (/^customize\s*>$/i.test(text)) return '自定义 >';
+            if (/^browse(?:\.\.\.|…)?$/i.test(text)) return '浏览';
+            if (/^apply$/i.test(text)) return '应用';
+            if (/^discard$/i.test(text)) return '放弃';
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -737,6 +744,24 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("84.1% of the customization budget is available") !== "自定义预算剩余 84.1%") {
             console.error("84.1% budget without dot failed:", translate("84.1% of the customization budget is available"));
             process.exit(239);
+        }
+
+        // 37. 插件与通用操作按钮 (Customize / Browse / Apply)
+        if (translate("Customize") !== "自定义") {
+            console.error("Customize failed:", translate("Customize"));
+            process.exit(240);
+        }
+        if (translate("customize") !== "自定义") {
+            console.error("customize failed:", translate("customize"));
+            process.exit(241);
+        }
+        if (translate("Browse") !== "浏览") {
+            console.error("Browse failed:", translate("Browse"));
+            process.exit(242);
+        }
+        if (translate("Apply") !== "应用") {
+            console.error("Apply failed:", translate("Apply"));
+            process.exit(243);
         }
 
         console.log("SUCCESS");

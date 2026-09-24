@@ -894,6 +894,17 @@ def audit_and_update_rules():
         [r"^[Dd]efault$", "默认"],
         [r"^([0-9.]+)%\s+of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$", "自定义预算剩余 $1%"],
         [r"^of\s+the\s+(?:customization\s+)?budget\s+is\s+available\.?$", "可用自定义预算。"],
+
+        # 通用操作按钮与配置入口 (Customize / Browse / Apply / Discard)
+        [r"^[Cc]ustomize(?:\.\.\.|…)?$", "自定义"],
+        [r"^[Cc]ustomize\s*>$", "自定义 >"],
+        [r"^[Cc]ustomize$", "自定义"],
+        [r"^[Bb]rowse(?:\.\.\.|…)?$", "浏览"],
+        [r"^[Ee]xplore(?:\.\.\.|…)?$", "探索"],
+        [r"^[Aa]pply$", "应用"],
+        [r"^[Aa]pply\s+[Cc]hanges$", "应用更改"],
+        [r"^[Dd]iscard$", "放弃"],
+        [r"^[Dd]iscard\s+[Cc]hanges$", "放弃更改"],
     ]
 
     for pattern, repl in additional_rules:

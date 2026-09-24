@@ -3162,5 +3162,41 @@
   [
     "^[Uu]pdated\\s+(?:in\\s+)?(.+?)\\s+to synchronize with\\s+(.+?)\\s+before delegating\\s+(.+?)\\.?$",
     "更新了 $1，在委托给 $3 之前与 $2 进行同步。"
+  ],
+  [
+    "^[Cc]ustomize(?:\\.\\.\\.|…)?$",
+    "自定义"
+  ],
+  [
+    "^[Cc]ustomize\\s*>$",
+    "自定义 >"
+  ],
+  [
+    "^[Cc]ustomize$",
+    "自定义"
+  ],
+  [
+    "^[Bb]rowse(?:\\.\\.\\.|…)?$",
+    "浏览"
+  ],
+  [
+    "^[Ee]xplore(?:\\.\\.\\.|…)?$",
+    "探索"
+  ],
+  [
+    "^[Aa]pply$",
+    "应用"
+  ],
+  [
+    "^[Aa]pply\\s+[Cc]hanges$",
+    "应用更改"
+  ],
+  [
+    "^[Dd]iscard$",
+    "放弃"
+  ],
+  [
+    "^[Dd]iscard\\s+[Cc]hanges$",
+    "放弃更改"
   ]
 ]

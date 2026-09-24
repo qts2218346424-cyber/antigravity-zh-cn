@@ -189,6 +189,13 @@
       if (/^narrow$/i.test(text)) return '较窄';
       if (/^wide$/i.test(text)) return '较宽';
 
+      // 1.18 常用配置与操作动作模式匹配 (Customize / Browse / Apply)
+      if (/^customize(?:\.\.\.|…)?$/i.test(text)) return '自定义';
+      if (/^customize\s*>$/i.test(text)) return '自定义 >';
+      if (/^browse(?:\.\.\.|…)?$/i.test(text)) return '浏览';
+      if (/^apply$/i.test(text)) return '应用';
+      if (/^discard$/i.test(text)) return '放弃';
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
