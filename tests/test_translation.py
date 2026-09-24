@@ -536,6 +536,20 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(209);
         }
 
+        // 31. Send message Enter and Select Environment (Ctrl+.)
+        if (translate("Send message Enter") !== "发送消息 (Enter)") {
+            console.error("Send message Enter failed:", translate("Send message Enter"));
+            process.exit(210);
+        }
+        if (translate("Select Environment (Ctrl+.)") !== "选择运行环境 (Ctrl+.)") {
+            console.error("Select Environment failed:", translate("Select Environment (Ctrl+.)"));
+            process.exit(211);
+        }
+        if (translate("Select environment (Ctrl+.)") !== "选择运行环境 (Ctrl+.)") {
+            console.error("Select environment failed:", translate("Select environment (Ctrl+.)"));
+            process.exit(212);
+        }
+
         console.log("SUCCESS");
         """
         import tempfile

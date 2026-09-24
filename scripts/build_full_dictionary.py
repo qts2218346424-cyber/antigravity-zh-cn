@@ -301,6 +301,16 @@ NEW_TRANSLATIONS = {
     "Confirmed prefix search fallback cannot escape the backups directory": "确认前缀搜索回退无法逃逸备份目录",
     "Extracted core restore logic into private": "将核心恢复逻辑提取至私有方法",
 
+    # 发送消息与环境选择快捷键 Tooltip
+    "Send message Enter": "发送消息 (Enter)",
+    "Send message enter": "发送消息 (Enter)",
+    "send message enter": "发送消息 (Enter)",
+    "Send Message Enter": "发送消息 (Enter)",
+    "Select Environment (Ctrl+.)": "选择运行环境 (Ctrl+.)",
+    "Select environment (Ctrl+.)": "选择运行环境 (Ctrl+.)",
+    "Select Environment (Ctrl + .)": "选择运行环境 (Ctrl+.)",
+    "Select environment (Ctrl + .)": "选择运行环境 (Ctrl+.)",
+
     # Git 控制台与源码管理状态静态词条
     "Changes not staged for commit:": "未暂存以备提交的更改：",
     "Changes not staged for commit": "未暂存以备提交的更改",

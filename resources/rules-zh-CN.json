@@ -2818,5 +2818,33 @@
   [
     "^[Uu]pdated\\s+(?:in\\s+)?(.+?)\\s+to synchronize with\\s+(.+?)\\s+before delegating\\s+(.+?)\\.?$",
     "更新了 $1，在委托给 $3 之前与 $2 进行同步。"
+  ],
+  [
+    "^[Ss]end\\s+[Mm]essage\\s+(?:Enter|回车)$",
+    "发送消息 (Enter)"
+  ],
+  [
+    "^[Ss]end\\s+[Mm]essage\\s*\\(Enter\\)$",
+    "发送消息 (Enter)"
+  ],
+  [
+    "^[Ss]end\\s+[Mm]essage\\s*Enter$",
+    "发送消息 (Enter)"
+  ],
+  [
+    "^[Ss]end\\s+[Mm]essage$",
+    "发送消息"
+  ],
+  [
+    "^[Ss]elect\\s+[Ee]nvironment\\s*\\((?:Ctrl\\s*\\+\\s*\\.|Ctrl\\+\\.)\\)$",
+    "选择运行环境 (Ctrl+.)"
+  ],
+  [
+    "^[Ss]elect\\s+[Ee]nvironment\\s*\\((.+?)\\)$",
+    "选择运行环境 ($1)"
+  ],
+  [
+    "^[Ss]elect\\s+[Ee]nvironment:?$",
+    "选择运行环境"
   ]
 ]

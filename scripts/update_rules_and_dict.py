@@ -788,6 +788,17 @@ def audit_and_update_rules():
         [r"^Remediation and Hardening$", "修复与加固"],
         [r"^Worker Remediation$", "修复专员"],
         [r"^A modern, ultra-light.*$", "现代超轻量级桌面宠物项目"],
+
+        # 最新用户截图 1：发送消息快捷键提示 (Send message Enter)
+        [r"^[Ss]end\s+[Mm]essage\s+(?:Enter|回车)$", "发送消息 (Enter)"],
+        [r"^[Ss]end\s+[Mm]essage\s*\(Enter\)$", "发送消息 (Enter)"],
+        [r"^[Ss]end\s+[Mm]essage\s*Enter$", "发送消息 (Enter)"],
+        [r"^[Ss]end\s+[Mm]essage$", "发送消息"],
+
+        # 最新用户截图 2：环境选择气泡说明 (Select Environment (Ctrl+.))
+        [r"^[Ss]elect\s+[Ee]nvironment\s*\((?:Ctrl\s*\+\s*\.|Ctrl\+\.)\)$", "选择运行环境 (Ctrl+.)"],
+        [r"^[Ss]elect\s+[Ee]nvironment\s*\((.+?)\)$", "选择运行环境 ($1)"],
+        [r"^[Ss]elect\s+[Ee]nvironment:?$", "选择运行环境"],
     ]
 
     for pattern, repl in additional_rules:
