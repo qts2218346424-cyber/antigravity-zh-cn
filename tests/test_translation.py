@@ -79,6 +79,44 @@ class TestRuntimeTranslation(unittest.TestCase):
             const modelTagMatch = text.match(/^(.+?)\s*\((Thinking|Fast|Medium|High|Low)\)$/i);
             if (modelTagMatch && (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()])) return modelTagMatch[1] + '（' + (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()]) + '）';
 
+            // 任务操作前缀与状态动态包裹 (Checked task ..., Checking task ..., Running task ...)
+            const taskActionMatch = text.match(/^(Checked|Checking|Running|Started|Completed|Failed|Cancelled|Canceled|Killed)\s+task\s+(.+)$/i);
+            if (taskActionMatch) {
+                const actionMap = {
+                    checked: '已检查任务',
+                    checking: '正在检查任务',
+                    running: '正在执行任务',
+                    started: '已启动任务',
+                    completed: '已完成任务',
+                    failed: '任务执行失败',
+                    cancelled: '已取消任务',
+                    canceled: '已取消任务',
+                    killed: '已终止任务'
+                };
+                const actionPrefix = actionMap[taskActionMatch[1].toLowerCase()] || '任务';
+                const inner = taskActionMatch[2].trim();
+                const trInner = translate(inner) || inner;
+                return actionPrefix + ' ' + trInner;
+            }
+
+            // 任务执行与状态胶囊 (Run pytest suite finished >, Commit Strong localization finished >)
+            const taskStatusMatch = text.match(/^(.+?)\s+(finished|completed|failed|running|cancelled|canceled)(?:\s*([>›]))?$/i);
+            if (taskStatusMatch && (taskStatusMatch[3] || /[\u4e00-\u9fa5]/.test(taskStatusMatch[1]) || /^(run|running|commit|committing|check|checking|exec|executing|build|building|test|testing|git|npm|python|cargo|mvn|docker|node|make)\b/i.test(taskStatusMatch[1].trim()))) {
+                const statusMap = {
+                    finished: '已完成',
+                    completed: '已完成',
+                    failed: '失败',
+                    running: '运行中',
+                    cancelled: '已取消',
+                    canceled: '已取消'
+                };
+                const statusWord = statusMap[taskStatusMatch[2].toLowerCase()] || taskStatusMatch[2];
+                const inner = taskStatusMatch[1].trim();
+                const trInner = translate(inner) || inner;
+                const chevron = taskStatusMatch[3] ? ' ' + taskStatusMatch[3] : '';
+                return trInner + ' ' + statusWord + chevron;
+            }
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -562,6 +600,36 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Strong (Default)") !== "强 (默认)") {
             console.error("Strong (Default) failed:", translate("Strong (Default)"));
             process.exit(215);
+        }
+
+        // 33. 任务执行与状态胶囊汉化断言 (Checked task ..., ... finished >)
+        if (translate("Run pytest suite finished >") !== "运行 pytest 测试套件 已完成 >") {
+            console.error("Run pytest suite finished > failed:", translate("Run pytest suite finished >"));
+            process.exit(216);
+        }
+        if (translate("Run pytest suite finished") !== "运行 pytest 测试套件 已完成") {
+            console.error("Run pytest suite finished failed:", translate("Run pytest suite finished"));
+            process.exit(217);
+        }
+        if (translate("Checked task Run pytest suite") !== "已检查任务 运行 pytest 测试套件") {
+            console.error("Checked task Run pytest suite failed:", translate("Checked task Run pytest suite"));
+            process.exit(218);
+        }
+        if (translate("Commit Strong localization finished >") !== "提交 Strong 本地化 已完成 >") {
+            console.error("Commit Strong localization finished > failed:", translate("Commit Strong localization finished >"));
+            process.exit(219);
+        }
+        if (translate("Checked task Commit Strong localization") !== "已检查任务 提交 Strong 本地化") {
+            console.error("Checked task Commit Strong localization failed:", translate("Checked task Commit Strong localization"));
+            process.exit(220);
+        }
+        if (translate("Checked task 运行测试套件") !== "已检查任务 运行测试套件") {
+            console.error("Checked task 运行测试套件 failed:", translate("Checked task 运行测试套件"));
+            process.exit(221);
+        }
+        if (translate("运行测试套件 finished >") !== "运行测试套件 已完成 >") {
+            console.error("运行测试套件 finished > failed:", translate("运行测试套件 finished >"));
+            process.exit(222);
         }
 
         console.log("SUCCESS");

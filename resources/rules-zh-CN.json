@@ -2640,6 +2640,46 @@
     "选择运行环境"
   ],
   [
+    "^默认\\s+Strong$",
+    "默认 强"
+  ],
+  [
+    "^Default\\s+Strong$",
+    "默认 强"
+  ],
+  [
+    "^Strong\\s*\\(Default\\)$",
+    "强 (默认)"
+  ],
+  [
+    "^Strong\\s*\\(default\\)$",
+    "强 (默认)"
+  ],
+  [
+    "^Default:\\s*Strong$",
+    "默认：强"
+  ],
+  [
+    "^默认：\\s*Strong$",
+    "默认：强"
+  ],
+  [
+    "^Strong$",
+    "强"
+  ],
+  [
+    "^Weak$",
+    "弱"
+  ],
+  [
+    "^Strict$",
+    "严格"
+  ],
+  [
+    "^Relaxed$",
+    "宽松"
+  ],
+  [
     "^[Uu]pdated\\s+(\\d+)\\s+seconds?\\s+ago$",
     "更新于 $1 秒前"
   ],
@@ -2848,43 +2888,79 @@
     "更新了 $1，在委托给 $3 之前与 $2 进行同步。"
   ],
   [
-    "^默认\\s+Strong$",
-    "默认 强"
+    "^[Cc]hecked\\s+task\\s+(.+)$",
+    "已检查任务 $1"
   ],
   [
-    "^Default\\s+Strong$",
-    "默认 强"
+    "^[Cc]hecking\\s+task\\s+(.+)$",
+    "正在检查任务 $1"
   ],
   [
-    "^Strong\\s*\\(Default\\)$",
-    "强 (默认)"
+    "^[Rr]unning\\s+task\\s+(.+)$",
+    "正在执行任务 $1"
   ],
   [
-    "^Strong\\s*\\(default\\)$",
-    "强 (默认)"
+    "^[Ss]tarted\\s+task\\s+(.+)$",
+    "已启动任务 $1"
   ],
   [
-    "^Default:\\s*Strong$",
-    "默认：强"
+    "^[Cc]ompleted\\s+task\\s+(.+)$",
+    "已完成任务 $1"
   ],
   [
-    "^默认：\\s*Strong$",
-    "默认：强"
+    "^[Ff]ailed\\s+task\\s+(.+)$",
+    "任务执行失败 $1"
   ],
   [
-    "^Strong$",
-    "强"
+    "^[Cc]ancelled\\s+task\\s+(.+)$",
+    "已取消任务 $1"
   ],
   [
-    "^Weak$",
-    "弱"
+    "^[Cc]anceled\\s+task\\s+(.+)$",
+    "已取消任务 $1"
   ],
   [
-    "^Strict$",
-    "严格"
+    "^[Kk]illed\\s+task\\s+(.+)$",
+    "已终止任务 $1"
   ],
   [
-    "^Relaxed$",
-    "宽松"
+    "^Run\\s+pytest\\s+suite\\s+finished\\s*(?:>|›)?$",
+    "运行 pytest 测试套件 已完成 >"
+  ],
+  [
+    "^Run\\s+pytest\\s+suite\\s+finished$",
+    "运行 pytest 测试套件 已完成"
+  ],
+  [
+    "^Commit\\s+Strong\\s+localization\\s+finished\\s*(?:>|›)?$",
+    "提交 Strong 本地化 已完成 >"
+  ],
+  [
+    "^Commit\\s+Strong\\s+localization\\s+finished$",
+    "提交 Strong 本地化 已完成"
+  ],
+  [
+    "^([\\u4e00-\\u9fa5]+.*?)\\s+finished\\s*([>›])$",
+    "$1 已完成 $2"
+  ],
+  [
+    "^([\\u4e00-\\u9fa5]+.*?)\\s+finished$",
+    "$1 已完成"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+finished\\s*([>›])$",
+    "$1 已完成 $2"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+completed\\s*([>›])$",
+    "$1 已完成 $2"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+failed\\s*([>›])$",
+    "$1 失败 $2"
+  ],
+  [
+    "^([A-Za-z0-9_\\u4e00-\\u9fa5\\s\\-\\.\\/]+?)\\s+running\\s*([>›])$",
+    "$1 运行中 $2"
   ]
 ]

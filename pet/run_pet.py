@@ -1003,31 +1003,35 @@ def main():
     if args.smoke:
         sys.exit(run_smoke_test())
 
-    # 智能全局单实例管理：杜绝多开争抢 CPU 与置顶
-    global _GLOBAL_APP_MUTEX
-    _GLOBAL_APP_MUTEX = None
+    # 智能单实例管理：通过系统顶层窗口精准检测是否已有运行中的桌面宠物
     if sys.platform == "win32" and not args.smoke:
-        import ctypes
-        ERROR_ALREADY_EXISTS = 183
-        kernel32 = ctypes.windll.kernel32
-        _GLOBAL_APP_MUTEX = kernel32.CreateMutexW(None, False, "Global\\AntigravityPet_SingleInstance_Mutex_v2")
-        last_err = kernel32.GetLastError()
-        if last_err == ERROR_ALREADY_EXISTS:
-            print("[Runner] Antigravity 灵动桌面小宠物已有活跃实例运行中，正在激活前置...")
-            hwnd = get_pet_hwnd()
-            if hwnd:
-                try:
-                    import win32gui
-                    import win32con
-                    if win32gui.IsWindow(hwnd):
-                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                        win32gui.SetWindowPos(
-                            hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
-                        )
-                except Exception:
-                    pass
-            sys.exit(0)
+        try:
+            import win32gui
+            import win32con
+            found_existing = []
+            my_pid = os.getpid()
+
+            def _find_other_pet(h, _):
+                if win32gui.IsWindow(h):
+                    text = win32gui.GetWindowText(h)
+                    if text == "Antigravity Desktop Pet":
+                        import win32process
+                        _, proc_id = win32process.GetWindowThreadProcessId(h)
+                        if proc_id != my_pid:
+                            found_existing.append(h)
+
+            win32gui.EnumWindows(_find_other_pet, None)
+            if found_existing:
+                existing_hwnd = found_existing[0]
+                print(f"[Runner] 检测到已有桌面宠物窗口运行中 (HWND={hex(existing_hwnd)})，正在激活并置顶...")
+                win32gui.ShowWindow(existing_hwnd, win32con.SW_RESTORE)
+                win32gui.SetWindowPos(
+                    existing_hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+                    win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+                )
+                sys.exit(0)
+        except Exception:
+            pass
 
     import webview
 

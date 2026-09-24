@@ -811,6 +811,27 @@ def audit_and_update_rules():
         [r"^Weak$", "弱"],
         [r"^Strict$", "严格"],
         [r"^Relaxed$", "宽松"],
+
+        # 任务操作与执行状态胶囊（用户截图漏译修复）
+        [r"^[Cc]hecked\s+task\s+(.+)$", "已检查任务 $1"],
+        [r"^[Cc]hecking\s+task\s+(.+)$", "正在检查任务 $1"],
+        [r"^[Rr]unning\s+task\s+(.+)$", "正在执行任务 $1"],
+        [r"^[Ss]tarted\s+task\s+(.+)$", "已启动任务 $1"],
+        [r"^[Cc]ompleted\s+task\s+(.+)$", "已完成任务 $1"],
+        [r"^[Ff]ailed\s+task\s+(.+)$", "任务执行失败 $1"],
+        [r"^[Cc]ancelled\s+task\s+(.+)$", "已取消任务 $1"],
+        [r"^[Cc]anceled\s+task\s+(.+)$", "已取消任务 $1"],
+        [r"^[Kk]illed\s+task\s+(.+)$", "已终止任务 $1"],
+        [r"^Run\s+pytest\s+suite\s+finished\s*(?:>|›)?$", "运行 pytest 测试套件 已完成 >"],
+        [r"^Run\s+pytest\s+suite\s+finished$", "运行 pytest 测试套件 已完成"],
+        [r"^Commit\s+Strong\s+localization\s+finished\s*(?:>|›)?$", "提交 Strong 本地化 已完成 >"],
+        [r"^Commit\s+Strong\s+localization\s+finished$", "提交 Strong 本地化 已完成"],
+        [r"^([\u4e00-\u9fa5]+.*?)\s+finished\s*([>›])$", "$1 已完成 $2"],
+        [r"^([\u4e00-\u9fa5]+.*?)\s+finished$", "$1 已完成"],
+        [r"^([A-Za-z0-9_\u4e00-\u9fa5\s\-\.\/]+?)\s+finished\s*([>›])$", "$1 已完成 $2"],
+        [r"^([A-Za-z0-9_\u4e00-\u9fa5\s\-\.\/]+?)\s+completed\s*([>›])$", "$1 已完成 $2"],
+        [r"^([A-Za-z0-9_\u4e00-\u9fa5\s\-\.\/]+?)\s+failed\s*([>›])$", "$1 失败 $2"],
+        [r"^([A-Za-z0-9_\u4e00-\u9fa5\s\-\.\/]+?)\s+running\s*([>›])$", "$1 运行中 $2"],
     ]
 
     for pattern, repl in additional_rules:

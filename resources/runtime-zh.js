@@ -111,6 +111,44 @@
         return modelTagMatch[1] + '（' + (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()]) + '）';
       }
 
+      // 1.2 任务操作前缀与状态动态包裹 (Checked task ..., Checking task ..., Running task ...)
+      const taskActionMatch = text.match(/^(Checked|Checking|Running|Started|Completed|Failed|Cancelled|Canceled|Killed)\s+task\s+(.+)$/i);
+      if (taskActionMatch) {
+        const actionMap = {
+          checked: '已检查任务',
+          checking: '正在检查任务',
+          running: '正在执行任务',
+          started: '已启动任务',
+          completed: '已完成任务',
+          failed: '任务执行失败',
+          cancelled: '已取消任务',
+          canceled: '已取消任务',
+          killed: '已终止任务'
+        };
+        const actionPrefix = actionMap[taskActionMatch[1].toLowerCase()] || '任务';
+        const inner = taskActionMatch[2].trim();
+        const trInner = translate(inner) || inner;
+        return actionPrefix + ' ' + trInner;
+      }
+
+      // 1.3 任务执行与状态胶囊 (Run pytest suite finished >, Commit Strong localization finished >)
+      const taskStatusMatch = text.match(/^(.+?)\s+(finished|completed|failed|running|cancelled|canceled)(?:\s*([>›]))?$/i);
+      if (taskStatusMatch && (taskStatusMatch[3] || /[\u4e00-\u9fa5]/.test(taskStatusMatch[1]) || /^(run|running|commit|committing|check|checking|exec|executing|build|building|test|testing|git|npm|python|cargo|mvn|docker|node|make)\b/i.test(taskStatusMatch[1].trim()))) {
+        const statusMap = {
+          finished: '已完成',
+          completed: '已完成',
+          failed: '失败',
+          running: '运行中',
+          cancelled: '已取消',
+          canceled: '已取消'
+        };
+        const statusWord = statusMap[taskStatusMatch[2].toLowerCase()] || taskStatusMatch[2];
+        const inner = taskStatusMatch[1].trim();
+        const trInner = translate(inner) || inner;
+        const chevron = taskStatusMatch[3] ? ' ' + taskStatusMatch[3] : '';
+        return trInner + ' ' + statusWord + chevron;
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
