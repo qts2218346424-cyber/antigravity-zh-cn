@@ -2608,10 +2608,6 @@
     "修复专员"
   ],
   [
-    "^A modern, ultra-light.*$",
-    "现代超轻量级桌面宠物项目"
-  ],
-  [
     "^[Ss]end\\s+[Mm]essage\\s+(?:Enter|回车)$",
     "发送消息 (Enter)"
   ],

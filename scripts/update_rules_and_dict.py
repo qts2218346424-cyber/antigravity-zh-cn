@@ -787,7 +787,6 @@ def audit_and_update_rules():
         [r"^Remediation and Hardening Worker$", "修复与加固专员"],
         [r"^Remediation and Hardening$", "修复与加固"],
         [r"^Worker Remediation$", "修复专员"],
-        [r"^A modern, ultra-light.*$", "现代超轻量级桌面宠物项目"],
 
         # 最新用户截图 1：发送消息快捷键提示 (Send message Enter)
         [r"^[Ss]end\s+[Mm]essage\s+(?:Enter|回车)$", "发送消息 (Enter)"],

@@ -35,11 +35,9 @@ from patch_antigravity import (
     replace_asar_file_content,
     read_asar_file_content,
     PATCH_MARKER,
-    PET_HOOK_START,
-    PET_HOOK_END,
-    generate_pet_autostart_hook,
     apply_patch,
-    uninstall_pet
+    restore_backup,
+    toggle_auto_updates
 )
 
 class TestAntigravityZh(unittest.TestCase):
@@ -195,34 +193,8 @@ class TestAntigravityZh(unittest.TestCase):
         patched_unpacked = count_unpacked(patched_h)
         self.assertEqual(patched_unpacked, 293, "真实 asar 修补后丢弃了 unpacked 文件！")
 
-    def test_pet_hook_generation_and_uninstall_decoupling(self):
-        """测试灵动桌面宠物 Hook 生成与一键彻底卸载剥离逻辑"""
-        hook_code = generate_pet_autostart_hook()
-        self.assertIn(PET_HOOK_START, hook_code)
-        self.assertIn(PET_HOOK_END, hook_code)
-        self.assertIn("pet_config.json", hook_code)
-        self.assertIn("auto_start_with_antigravity", hook_code)
-
-        # 模拟包含桌面宠物自启 Hook 的 dist/utils.js
-        mock_utils_js = f"""/* __ANTIGRAVITY_ZH_CN_PATCHED__ */
-const __AGY_ZH_CODE__ = "console.log('zh')";
-
-{hook_code}
-
-void win.loadURL(url);
-"""
-        # 验证正则剥离逻辑
-        import re
-        pattern = re.compile(re.escape(PET_HOOK_START) + r".*?" + re.escape(PET_HOOK_END) + r"\n?", re.DOTALL)
-        cleaned = pattern.sub("", mock_utils_js)
-        self.assertNotIn(PET_HOOK_START, cleaned)
-        self.assertNotIn(PET_HOOK_END, cleaned)
-        self.assertNotIn("pet_config.json", cleaned)
-        self.assertIn("__AGY_ZH_CODE__", cleaned)
-        self.assertIn("void win.loadURL(url);", cleaned)
-
-    def test_e2e_pure_and_pet_install_and_uninstall(self):
-        """端到端模拟测试：纯净安装 -> 全能安装 -> 彻底卸载与自启剥离验证"""
+    def test_e2e_patch_install_and_restore(self):
+        """端到端模拟测试：安装纯净汉化补丁 -> 验证主世界/预加载注入与无损修补 -> 还原原版备份验证"""
         with tempfile.TemporaryDirectory() as temp_dir:
             install_dir = Path(temp_dir)
             res_dir = install_dir / "resources"
@@ -254,32 +226,25 @@ void win.loadURL(url);
             header_bytes = encode_asar_header_dynamic(json.dumps(mock_header, separators=(',', ':')))
             asar_path.write_bytes(header_bytes + body_data)
 
-            # 1. 验证纯净安装 (with_pet=False)
-            apply_patch(install_dir, lang="zh-CN", repo_root=REPO_ROOT, with_pet=False)
-            data_pure = bytearray(asar_path.read_bytes())
-            utils_pure = read_asar_file_content(data_pure, "dist/utils.js").decode("utf-8")
-            self.assertIn("__AGY_ZH_CODE__", utils_pure)
-            self.assertNotIn(PET_HOOK_START, utils_pure)
-            self.assertNotIn(PET_HOOK_END, utils_pure)
-            self.assertNotIn("run_pet.py", utils_pure)
+            # 1. 验证补丁安装
+            apply_patch(install_dir, lang="zh-CN", repo_root=REPO_ROOT)
+            self.assertTrue((res_dir / "app.asar.bak").is_file(), "安装后应存在 app.asar.bak 原始备份")
 
-            # 2. 验证全能安装 (with_pet=True)
-            apply_patch(install_dir, lang="zh-CN", repo_root=REPO_ROOT, with_pet=True)
-            data_pet = bytearray(asar_path.read_bytes())
-            utils_pet = read_asar_file_content(data_pet, "dist/utils.js").decode("utf-8")
-            self.assertIn("__AGY_ZH_CODE__", utils_pet)
-            self.assertIn(PET_HOOK_START, utils_pet)
-            self.assertIn(PET_HOOK_END, utils_pet)
-            self.assertIn("auto_start_with_antigravity", utils_pet)
+            data_patched = bytearray(asar_path.read_bytes())
+            utils_patched = read_asar_file_content(data_patched, "dist/utils.js").decode("utf-8")
+            self.assertIn("__AGY_ZH_CODE__", utils_patched, "utils.js 应注入主世界汉化通道")
 
-            # 3. 验证彻底卸载 (uninstall_pet，单测临时目录绝对不停止宿主)
-            uninstall_pet(install_dir, stop_host=False)
-            data_uninstalled = bytearray(asar_path.read_bytes())
-            utils_uninstalled = read_asar_file_content(data_uninstalled, "dist/utils.js").decode("utf-8")
-            self.assertIn("__AGY_ZH_CODE__", utils_uninstalled, "卸载桌宠不应破坏原有汉化注入")
-            self.assertNotIn(PET_HOOK_START, utils_uninstalled, "卸载后必须彻底剥离自启 Hook 开头")
-            self.assertNotIn(PET_HOOK_END, utils_uninstalled, "卸载后必须彻底剥离自启 Hook 结尾")
-            self.assertNotIn("auto_start_with_antigravity", utils_uninstalled)
+            preload_patched = read_asar_file_content(data_patched, "dist/preload.js").decode("utf-8")
+            self.assertIn(PATCH_MARKER, preload_patched, "preload.js 应包含汉化标记")
+            self.assertIn("__AGY_ZH_DICT__", preload_patched, "preload.js 应包含汉化字典注入")
+
+            # 2. 验证还原原版
+            res = restore_backup(install_dir)
+            self.assertTrue(res, "还原操作应返回成功")
+            data_restored = bytearray(asar_path.read_bytes())
+            utils_restored = read_asar_file_content(data_restored, "dist/utils.js").decode("utf-8")
+            self.assertNotIn("__AGY_ZH_CODE__", utils_restored, "还原后 utils.js 不应包含汉化通道")
+            self.assertEqual(utils_restored, f_utils.decode("utf-8"), "还原后 utils.js 内容应与原版完全一致")
 
 
 if __name__ == "__main__":

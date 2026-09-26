@@ -561,20 +561,20 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Changes not staged for commit:") !== "未暂存以备提交的更改：") process.exit(187);
         if (translate('(use "git add <file>..." to update what will be committed)') !== '（使用 "git add <file>..." 更新要提交的内容）') process.exit(188);
         if (translate('(use "git restore <file>..." to discard changes in working directory)') !== '（使用 "git restore <file>..." 放弃工作目录中的更改）') process.exit(189);
-        if (translate("modified:   pet/run_pet.py") !== "已修改:   pet/run_pet.py") process.exit(190);
+        if (translate("modified:   scripts/patch_antigravity.py") !== "已修改:   scripts/patch_antigravity.py") process.exit(190);
 
         // 验证多行整段 Git status 复合结构逐行汉化
-        const multilineGit = `On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges not staged for commit:\n  (use "git add <file>..." to update what will be committed)\n  (use "git restore <file>..." to discard changes in working directory)\n\tmodified:   pet/run_pet.py\n\tmodified:   resources/antigravity-zh-CN.json`;
+        const multilineGit = `On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges not staged for commit:\n  (use "git add <file>..." to update what will be committed)\n  (use "git restore <file>..." to discard changes in working directory)\n\tmodified:   scripts/patch_antigravity.py\n\tmodified:   resources/antigravity-zh-CN.json`;
         const translatedMulti = translate(multilineGit);
         if (!translatedMulti.includes("位于分支 main")) process.exit(191);
         if (!translatedMulti.includes("您的分支已与 'origin/main' 保持同步。")) process.exit(192);
         if (!translatedMulti.includes("未暂存以备提交的更改：")) process.exit(193);
-        if (!translatedMulti.includes("已修改:   pet/run_pet.py")) process.exit(194);
+        if (!translatedMulti.includes("已修改:   scripts/patch_antigravity.py")) process.exit(194);
 
         // 29. Subagent UI, System Initial Prompt, and Precision Updated rules
-        const subagentPrompt = "You are Worker Remediation for the Antigravity Desktop Pet project. Your working directory is: C:\\\\Users\\\\worker";
+        const subagentPrompt = "You are Worker Remediation for the Antigravity Localization project. Your working directory is: C:\\\\Users\\\\worker";
         const translatedPrompt = translate(subagentPrompt);
-        if (!translatedPrompt || !translatedPrompt.includes("您是 Antigravity Desktop Pet 项目的 Remediation 专员。您的工作目录为：")) {
+        if (!translatedPrompt || !translatedPrompt.includes("您是 Antigravity Localization 项目的 Remediation 专员。您的工作目录为：")) {
             console.error("Subagent prompt translation failed:", translatedPrompt);
             process.exit(195);
         }
@@ -590,8 +590,8 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Updated just now") !== "刚刚更新") process.exit(202);
 
         // 30. 子代理工作报告展示文本逐句汉化断言
-        const s1 = "1. Directory Traversal Protection in restore_backup (pet_engine/switcher.py):";
-        if (translate(s1) !== "1. restore_backup 中的目录遍历防护 (pet_engine/switcher.py)：") {
+        const s1 = "1. Directory Traversal Protection in restore_backup (scripts/patch_antigravity.py):";
+        if (translate(s1) !== "1. restore_backup 中的目录遍历防护 (scripts/patch_antigravity.py)：") {
             console.error("s1 failed:", translate(s1));
             process.exit(204);
         }
@@ -610,8 +610,8 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(207);
         }
 
-        const s5 = "2. Eliminated Rollback Self-Deadlock & Latency Penalty (pet_engine/switcher.py):";
-        if (translate(s5) !== "2. 消除回滚自死锁与延迟损耗 (pet_engine/switcher.py)：") process.exit(208);
+        const s5 = "2. Eliminated Rollback Self-Deadlock & Latency Penalty (scripts/patch_antigravity.py):";
+        if (translate(s5) !== "2. 消除回滚自死锁与延迟损耗 (scripts/patch_antigravity.py)：") process.exit(208);
 
         const s6 = "Updated in restore_backup to synchronize with _thread_lock and FileLock before delegating _restore_backup_unlocked.";
         if (translate(s6) !== "更新了 restore_backup，在委托给 _restore_backup_unlocked 之前与 _thread_lock and FileLock 进行同步。") {

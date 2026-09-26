@@ -1016,7 +1016,6 @@ NEW_TRANSLATIONS = {
     "Skill used": "已使用技能",
     "Post-Victory Auditor": "胜利后审查员",
     "Project Orchestrator": "项目编排器",
-    "Pet Team Lead": "宠物团队主管",
 
     # Agent 设置与沙箱/审查模式
     "Agent Settings": "Agent 设置",
