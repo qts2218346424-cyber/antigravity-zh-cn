@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Antigravity Windows 简体中文汉化补丁安装/管理脚本
 .DESCRIPTION
@@ -129,13 +129,33 @@ function Show-IdeGuidance {
 }
 
 function Start-AntigravityApp([string]$installDir) {
-    $exePath = Join-Path $installDir "Antigravity.exe"
-    if (Test-Path -LiteralPath $exePath) {
-        $ans = (Read-Host "是否立即启动 Antigravity？[y/n]").Trim().ToLower()
-        if ($ans -eq 'y' -or $ans -eq 'yes' -or $ans -eq '') {
-            Write-Color "正在启动 Antigravity..." Green
-            Start-Process -FilePath $exePath
-        }
+    if ([string]::IsNullOrWhiteSpace($installDir)) {
+        Write-Color "`n未指定安装路径，跳过自动启动。" Yellow
+        return
+    }
+
+    try {
+        $root = (Resolve-Path -LiteralPath $installDir -ErrorAction Stop).ProviderPath
+    } catch {
+        $root = $installDir
+    }
+
+    $exePath = Join-Path $root "Antigravity.exe"
+    if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
+        Write-Color "`n未在安装路径检测到 Antigravity.exe，跳过自动启动。" Yellow
+        return
+    }
+
+    if (@(Get-Process -Name 'Antigravity' -ErrorAction SilentlyContinue).Count -gt 0) {
+        Write-Color "`n检测到 Antigravity 已在运行中。" Green
+        return
+    }
+
+    Write-Color "`n正在自动启动 Antigravity..." Green
+    try {
+        Start-Process -FilePath $exePath -WorkingDirectory $root -ErrorAction Stop
+    } catch {
+        Write-Color "`n启动 Antigravity 失败：$($_.Exception.Message)" Red
     }
 }
 
@@ -186,7 +206,8 @@ function Run-InteractiveMenu {
                 Pause
             }
             '4' {
-                Invoke-PatchAction "restore" "zh-CN" $installDir
+                $ok = Invoke-PatchAction "restore" "zh-CN" $installDir
+                if ($ok) { Start-AntigravityApp $installDir }
                 Pause
             }
             '5' {
@@ -226,5 +247,8 @@ $targetDir = Find-AntigravityDirectory
 if ($Action -eq "interactive") {
     Run-InteractiveMenu
 } else {
-    Invoke-PatchAction $Action $Language $targetDir
+    $ok = Invoke-PatchAction $Action $Language $targetDir
+    if ($ok -and ($Action -eq "install" -or $Action -eq "restore")) {
+        Start-AntigravityApp $targetDir
+    }
 }

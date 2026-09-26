@@ -78,4 +78,12 @@ fi
 
 echo ""
 echo "✔ 操作已完成！"
+
+if [ "$ACTION" = "install" ] || [ "$ACTION" = "restore" ]; then
+    if [ -d "$APP_PATH" ]; then
+        echo "正在自动启动 Antigravity..."
+        open -a "$APP_PATH" 2>/dev/null || open "$APP_PATH" 2>/dev/null || true
+    fi
+fi
+
 read -p "按回车键退出..."

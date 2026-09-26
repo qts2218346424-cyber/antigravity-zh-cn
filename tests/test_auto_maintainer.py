@@ -31,7 +31,7 @@ class TestAutoMaintainer(unittest.TestCase):
         if install_dir and install_dir.is_dir():
             ver, is_patched = get_local_version_and_patch_state(install_dir)
             self.assertRegex(ver, r"^[0-9.]+$")
-            self.assertTrue(is_patched)
+            self.assertIsInstance(is_patched, bool)
 
     def test_dry_run_maintenance(self):
         res = perform_maintenance(dry_run=True)

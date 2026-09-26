@@ -63,3 +63,10 @@ python3 scripts/patch_antigravity.py "$ACTION" --lang "$LANG_CHOICE"
 
 echo ""
 echo "✔ 操作已完成！"
+
+if [ "$ACTION" = "install" ] || [ "$ACTION" = "restore" ]; then
+    if command -v antigravity >/dev/null 2>&1; then
+        echo "正在自动启动 Antigravity..."
+        nohup antigravity >/dev/null 2>&1 &
+    fi
+fi

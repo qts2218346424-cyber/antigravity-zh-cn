@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Antigravity Windows 后台自动维护看门狗脚本 (watchdog.ps1)
 .DESCRIPTION

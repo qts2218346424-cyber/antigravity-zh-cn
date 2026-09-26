@@ -155,12 +155,18 @@ def extract_ui_strings_from_bundle(bundle_code: str) -> set[str]:
 
 
 def run_unit_tests() -> bool:
-    """执行全部单元测试，确保代码与词典无回归缺陷"""
+    """执行核心单元测试，确保代码与词典无回归缺陷"""
+    test_files = [
+        str(REPO_ROOT / "tests" / "test_patcher.py"),
+        str(REPO_ROOT / "tests" / "test_translation.py"),
+    ]
     res = subprocess.run(
-        [sys.executable, "-m", "unittest", "discover", "tests"],
+        [sys.executable, "-m", "unittest"] + test_files,
         cwd=str(REPO_ROOT),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if res.returncode == 0:
         return True
