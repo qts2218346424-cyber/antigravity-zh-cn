@@ -53,13 +53,12 @@
       if (!text) return null;
 
       // 0.1 中文词汇残存复数 s 自动清洗（根治如 "(16 子智能体s)"、"子智能体s" 等英文拼接残留 bug）
-      if (/[\u4e00-\u9fa5]/.test(text)) {
+      if (/(?:子智能体|智能体|代理|任务|文件|项目|命令|会话|工具)s\b/.test(text)) {
         const cleaned = text
-          .replace(/\((\d+)\s*子智能体s\)/g, '($1 个子智能体)')
-          .replace(/(\d+)\s*子智能体s/g, '$1 个子智能体')
+          .replace(/\((\d+)\s*(?:子智能体|智能体|代理)s\)/g, '($1 个子智能体)')
+          .replace(/(\d+)\s*(?:子智能体|智能体|代理)s/g, '$1 个子智能体')
           .replace(/(\d+)\s*个(?:代理|智能体)s\s*正在运行/g, '$1 个智能体正在运行')
-          .replace(/(子智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1')
-          .replace(/([\u4e00-\u9fa5])s(?=[^\w]|$)/g, '$1');
+          .replace(/(子智能体|智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1');
         if (cleaned !== text) {
           return cleaned;
         }
@@ -233,39 +232,46 @@
         if (!el || !el.closest) return false;
         if (IGNORED_TAGS.has(el.tagName)) return true;
 
-        // 1. 占位符、浮层提示、禁用指针或不可编辑嵌入组件的 UI 描述文本一律允许汉化（如 Lexical placeholder / 附件芯片）
-        if (el.closest('[class*="placeholder"], [data-placeholder], [class*="pointer-events-none"], [contenteditable="false"]')) {
-          return false;
+        // 0. 【最高优先级】绝对保护正在编辑中的用户真实输入内容（contenteditable="true", textarea, input）
+        // 关键防护：必须置顶！绝不可被后续的 widget、card、dialog 等外层容器匹配所击穿！
+        const editableContainer = el.closest('[contenteditable="true"], textarea, input:not([type="button"]):not([type="submit"]):not([type="reset"])');
+        if (editableContainer) {
+          // 仅当节点本身处于明确的 placeholder 占位符容器内时才允许汉化，输入内容绝对不能碰
+          const placeholderEl = el.closest('[class*="placeholder"], [data-placeholder]');
+          if (!placeholderEl) {
+            return true;
+          }
         }
 
-        // 2. 浮层菜单、列表框、弹出浮层、提示框与斜杠命令自动补全一律允许汉化
-        if (el.closest('[role="listbox"], [role="menu"], [role="tooltip"], [class*="tooltip"], [class*="typeahead"], [class*="popover"], [class*="dropdown"], [class*="menu-item"], [data-radix-popper-content-wrapper], [data-floating-ui-portal]')) {
-          return false;
-        }
-
-        // 2.1 查找替换面板与搜索栏控制组件一律允许汉化
-        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"]')) {
-          return false;
-        }
-
-        // 2.2 自定义预算面板、进度条、徽章、控制开关与辅助卡片一律允许汉化
-        if (el.closest('[class*="customization"], [class*="budget"], [class*="progress"], [class*="widget"], [class*="overlay"], [class*="card"], [class*="banner"], [class*="dialog"], [class*="modal"], [class*="pill"], [class*="toggle"], [class*="segmented"], [class*="badge"], [role="dialog"], [role="status"], [role="progressbar"], [role="region"], [role="presentation"]')) {
-          return false;
-        }
-
-        // 3. 严格保护专业代码编辑器核心与终端容器
+        // 1. 严格保护专业代码编辑器核心与终端容器 (Monaco / CodeMirror / Xterm)
         if (el.closest(CODE_PROTECT_SELECTOR)) {
           return true;
         }
 
-        // 4. 保护用户已发送的聊天历史消息正文
+        // 2. 保护用户已发送的聊天历史消息正文
         if (el.closest('[data-testid="user-message"]')) {
           return true;
         }
 
-        // 5. 保护正在编辑中的用户真实输入内容（注意：非占位符）
-        if (el.closest('[contenteditable="true"], textarea, input:not([type="button"]):not([type="submit"])')) {
-          return true;
+        // 3. 占位符、浮层提示等 UI 描述文本允许汉化
+        if (el.closest('[class*="placeholder"], [data-placeholder], [class*="pointer-events-none"]')) {
+          return false;
+        }
+
+        // 4. 浮层菜单、列表框、弹出浮层、提示框与斜杠命令自动补全一律允许汉化
+        if (el.closest('[role="listbox"], [role="menu"], [role="tooltip"], [class*="tooltip"], [class*="typeahead"], [class*="popover"], [class*="dropdown"], [class*="menu-item"], [data-radix-popper-content-wrapper], [data-floating-ui-portal]')) {
+          return false;
+        }
+
+        // 5. 查找替换面板与搜索栏控制组件一律允许汉化
+        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"]')) {
+          return false;
+        }
+
+        // 6. 自定义预算面板、进度条、徽章、控制开关等辅助组件一律允许汉化
+        // 注意：移除全局通配型选择器 [class*="widget"], [role="region"], [role="presentation"]，防止其穿透并击穿编辑器保护！
+        if (el.closest('[class*="customization"], [class*="budget"], [class*="progress"], [class*="pill"], [class*="toggle"], [class*="segmented"], [class*="badge"], [role="progressbar"]')) {
+          return false;
         }
 
         return false;
@@ -309,16 +315,16 @@
         );
 
         let current;
-        let lastEndedWithChinese = false;
+        let lastEndedWithSubagent = false;
         while ((current = walker.nextNode())) {
           let original = current.nodeValue;
           const trimmed = (original || '').trim();
 
-          // 若前一个兄弟文本节点以中文字符结尾，且当前节点为独立的 "s)" 或 "s"，消除该复数残留
-          if (lastEndedWithChinese && (trimmed === 's)' || trimmed === 's')) {
+          // 若前一个兄弟文本节点以子智能体/代理结尾，且当前节点为独立的 "s)" 或 "s"，消除该复数残留
+          if (lastEndedWithSubagent && (trimmed === 's)' || trimmed === 's')) {
             current.nodeValue = trimmed === 's)' ? ')' : '';
             count++;
-            lastEndedWithChinese = trimmed === 's)';
+            lastEndedWithSubagent = trimmed === 's)';
             continue;
           }
 
@@ -334,7 +340,7 @@
               count++;
             }
           }
-          lastEndedWithChinese = /[\u4e00-\u9fa5]$/.test((current.nodeValue || '').trim());
+          lastEndedWithSubagent = /(?:子智能体|智能体|代理)$/.test((current.nodeValue || '').trim());
         }
       } catch (err) {
         // 防止遍历异常中断主流程
@@ -351,6 +357,10 @@
         elements.forEach((el) => {
           if (isProtectedAttrNode(el)) return;
           ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].forEach((attr) => {
+            // 绝对不可修改常规文本输入框或文本域的 value，防止篡改用户键入的真实字符
+            if (attr === 'value' && !(el.matches && el.matches('input[type="button"], input[type="submit"]'))) {
+              return;
+            }
             let val = el.getAttribute ? el.getAttribute(attr) : null;
             if (!val && attr in el && typeof el[attr] === 'string') val = el[attr];
             if (val) {
@@ -414,7 +424,7 @@
       if (!root || !root.querySelectorAll) return 0;
       let count = 0;
       try {
-        const candidates = root.querySelectorAll('[class*="budget"], [class*="customization"], [class*="progress"], [role="progressbar"], div, span, p');
+        const candidates = root.querySelectorAll('[class*="budget"], [class*="customization"], [class*="progress"], [role="progressbar"], [class*="quota"], [class*="usage"]');
         for (let i = 0; i < candidates.length; i++) {
           const el = candidates[i];
           if (translatedNodeSet.has(el) || isProtectedTextNode(el)) continue;
@@ -619,7 +629,7 @@
       if (origCreateTextNode) {
         document.createTextNode = function(data) {
           try {
-            if (typeof data === 'string' && data.length > 0 && data.length < 500) {
+            if (typeof data === 'string' && data.length > 2 && data.length < 500) {
               const tr = translate(data);
               if (tr && norm(data) !== norm(tr)) {
                 const lead = (data.match(/^\s*/) || [''])[0];
@@ -678,7 +688,7 @@
                   });
                 }
               } else if (node.nodeType === 3) { // 文本节点
-                if (!translatedNodeSet.has(node)) {
+                if (!translatedNodeSet.has(node) && !isProtectedTextNode(node)) {
                   const orig = node.nodeValue;
                   const tr = translate(orig);
                   if (tr && norm(orig) !== norm(tr)) {
@@ -693,7 +703,7 @@
             }
           } else if (m.type === 'characterData') {
             const node = m.target;
-            if (node && node.nodeType === 3 && !translatedNodeSet.has(node)) {
+            if (node && node.nodeType === 3 && !translatedNodeSet.has(node) && !isProtectedTextNode(node)) {
               const orig = node.nodeValue;
               const tr = translate(orig);
               if (tr && norm(orig) !== norm(tr)) {

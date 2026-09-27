@@ -46,13 +46,12 @@ class TestRuntimeTranslation(unittest.TestCase):
             const text = norm(raw);
             if (!text) return null;
 
-            if (/[\u4e00-\u9fa5]/.test(text)) {
+            if (/(?:子智能体|智能体|代理|任务|文件|项目|命令|会话|工具)s\b/.test(text)) {
                 const cleaned = text
-                    .replace(/\((\d+)\s*子智能体s\)/g, '($1 个子智能体)')
-                    .replace(/(\d+)\s*子智能体s/g, '$1 个子智能体')
+                    .replace(/\((\d+)\s*(?:子智能体|智能体|代理)s\)/g, '($1 个子智能体)')
+                    .replace(/(\d+)\s*(?:子智能体|智能体|代理)s/g, '$1 个子智能体')
                     .replace(/(\d+)\s*个(?:代理|智能体)s\s*正在运行/g, '$1 个智能体正在运行')
-                    .replace(/(子智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1')
-                    .replace(/([\u4e00-\u9fa5])s(?=[^\w]|$)/g, '$1');
+                    .replace(/(子智能体|智能体|代理|任务|文件|项目|命令|会话|工具)s\b/g, '$1');
                 if (cleaned !== text) return cleaned;
             }
 
@@ -447,6 +446,15 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Teamwork Project Prompt — Draft") !== "团队项目提示词 — 草稿") process.exit(133);
         if (translate("Status: Launched") !== "状态：已启动") process.exit(134);
         if (translate("Requirements") !== "需求清单") process.exit(135);
+
+        // 19.1 用户打字输入保护：中文后紧随 s/ss/d 或拼音时绝对不受复数清洗影响
+        if (translate("目前这个还存在一个问题，就是汉化后的版本我在打字框这里s") !== null) {
+            console.error("User input with s should not be translated/altered:", translate("目前这个还存在一个问题，就是汉化后的版本我在打字框这里s"));
+            process.exit(1351);
+        }
+        if (translate("我在打字框这里d") !== null) process.exit(1352);
+        if (translate("打字框ss") !== null) process.exit(1353);
+        if (translate("输入shu'r") !== null) process.exit(1354);
 
         // 20. Quota 5-hour limit countdown & MCP tool permissions
         if (translate("You have used some of your 5-hour limit, it will fully refresh in 4 hours, 13 minutes.") !== "您已使用部分 5 小时配额，将在 4 小时 13 分钟后完全刷新。") {
