@@ -542,6 +542,14 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Searching codebase: get_user") !== "正在搜索代码库：get_user") process.exit(169);
         if (translate("Thought Process (32 steps)") !== "思考过程 (32 个步骤)") process.exit(170);
         if (translate("Collapse Thoughts") !== "折叠思考过程") process.exit(171);
+        if (translate("Thinking for 5s") !== "思考了 5 秒") process.exit(1711);
+        if (translate("Thought for 10s") !== "思考了 10 秒") process.exit(1712);
+        if (translate("Thinking for") !== "正在思考") process.exit(1713);
+        if (translate("Thought for") !== "思考了") process.exit(1714);
+        if (translate("Thought Process") !== "思考过程") process.exit(1715);
+        if (translate("Copy thinking") !== "复制思考过程") process.exit(1716);
+        if (translate("Collapse Thinking") !== "折叠思考") process.exit(1717);
+        if (translate("Expand Thinking") !== "展开思考") process.exit(1718);
 
         // 26. New uploaded 5 images: Budget, Configuration desc, MCP descriptions, Script controls, Active conversations
         if (translate("89.7% of the customization budget is available.") !== "自定义预算剩余 89.7%") {

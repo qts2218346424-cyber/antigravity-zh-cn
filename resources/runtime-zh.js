@@ -248,6 +248,13 @@
           return true;
         }
 
+        // 1.1 严格保护思考面板内部的思维链正文与 Markdown 内容，阻断零散词典替换污染！
+        // 关键逻辑：外层触发器按钮（[data-testid="thinking-collapsible-trigger"]）及其内部文本允许正常汉化；
+        // 仅保护折叠展开后的思考 Markdown 正文区（.cursor-edit 及触发器紧随的同级正文容器）
+        if (el.closest('.cursor-edit, [data-testid="thinking-collapsible-trigger"] ~ div, [data-testid="thinking-content"], [aria-label*="Thought"] ~ div, [aria-label*="思考"] ~ div')) {
+          return true;
+        }
+
         // 2. 保护用户已发送的聊天历史消息正文
         if (el.closest('[data-testid="user-message"]')) {
           return true;
@@ -316,6 +323,7 @@
 
         let current;
         let lastEndedWithSubagent = false;
+        let lastEndedWithThinkingTimer = false;
         while ((current = walker.nextNode())) {
           let original = current.nodeValue;
           const trimmed = (original || '').trim();
@@ -325,6 +333,14 @@
             current.nodeValue = trimmed === 's)' ? ')' : '';
             count++;
             lastEndedWithSubagent = trimmed === 's)';
+            continue;
+          }
+
+          // 若前一个兄弟文本节点以思考计时器或秒数结尾，且当前节点为独立的 "s" 或 "s)"，转为中文单位 " 秒"
+          if (lastEndedWithThinkingTimer && (trimmed === 's' || trimmed === 's)')) {
+            current.nodeValue = trimmed === 's)' ? ' 秒)' : ' 秒';
+            count++;
+            lastEndedWithThinkingTimer = false;
             continue;
           }
 
@@ -341,6 +357,8 @@
             }
           }
           lastEndedWithSubagent = /(?:子智能体|智能体|代理)$/.test((current.nodeValue || '').trim());
+          const curTrimmed = (current.nodeValue || '').trim();
+          lastEndedWithThinkingTimer = /(?:正在思考|已思考|思考了|思考耗时)$/.test(curTrimmed) || (lastEndedWithThinkingTimer && /^\d+$/.test(curTrimmed));
         }
       } catch (err) {
         // 防止遍历异常中断主流程
@@ -463,6 +481,68 @@
       return count;
     };
 
+    // 专门处理思考过程折叠触发器与计时器动态汉化 (Thinking for Xs / Thought for Xs / Thought Process)
+    const translateThinkingTriggers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const triggers = root.querySelectorAll('[data-testid="thinking-collapsible-trigger"], button[aria-label*="Thought"], button[aria-label*="Thinking"], button[aria-label*="思考"]');
+        for (let i = 0; i < triggers.length; i++) {
+          const btn = triggers[i];
+          const ariaLabel = btn.getAttribute ? btn.getAttribute('aria-label') : null;
+          if (ariaLabel) {
+            const trLabel = translate(ariaLabel);
+            if (trLabel && trLabel !== ariaLabel) {
+              btn.setAttribute('aria-label', trLabel);
+              count++;
+            }
+          }
+          const textSpan = btn.querySelector ? btn.querySelector('span.text-secondary-foreground, span') : null;
+          if (textSpan) {
+            const raw = textSpan.textContent || '';
+            const trimmed = norm(raw);
+            const thinkingForMatch = trimmed.match(/^Thinking\s+for\s+(\d+)\s*s$/i);
+            if (thinkingForMatch) {
+              const target = `已思考 ${thinkingForMatch[1]} 秒`;
+              if (textSpan.textContent !== target) {
+                textSpan.textContent = target;
+                try { translatedNodeSet.add(textSpan); } catch (_) {}
+                count++;
+              }
+              continue;
+            }
+            const thoughtForMatch = trimmed.match(/^Thought\s+for\s+(\d+)\s*s$/i);
+            if (thoughtForMatch) {
+              const target = `思考了 ${thoughtForMatch[1]} 秒`;
+              if (textSpan.textContent !== target) {
+                textSpan.textContent = target;
+                try { translatedNodeSet.add(textSpan); } catch (_) {}
+                count++;
+              }
+              continue;
+            }
+            if (/^thought\s+process$/i.test(trimmed)) {
+              if (textSpan.textContent !== '思考过程') {
+                textSpan.textContent = '思考过程';
+                try { translatedNodeSet.add(textSpan); } catch (_) {}
+                count++;
+              }
+              continue;
+            }
+            if (/^thinking$/i.test(trimmed)) {
+              if (textSpan.textContent !== '思考中...') {
+                textSpan.textContent = '思考中...';
+                try { translatedNodeSet.add(textSpan); } catch (_) {}
+                count++;
+              }
+              continue;
+            }
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
     // 弱引用记录已挂载 MutationObserver 的根节点与 ShadowRoot
     const observedRoots = new WeakSet();
 
@@ -511,17 +591,19 @@
         let attrCount = 0;
         let hlCount = 0;
         let budgetCount = 0;
+        let thinkingCount = 0;
 
         forAllRoots(root, (currentRoot) => {
           observeRoot(currentRoot);
+          thinkingCount += translateThinkingTriggers(currentRoot);
           budgetCount += translateBudgetContainers(currentRoot);
           hlCount += translateHighlightedContainers(currentRoot);
           textCount += translateTextNodes(currentRoot);
           attrCount += translateAttributes(currentRoot);
         });
 
-        if (textCount > 0 || attrCount > 0 || hlCount > 0 || budgetCount > 0) {
-          console.log(`[AGY-ZH] Translated ${textCount} text nodes, ${attrCount} attributes, ${hlCount} highlighted containers, and ${budgetCount} budget containers.`);
+        if (textCount > 0 || attrCount > 0 || hlCount > 0 || budgetCount > 0 || thinkingCount > 0) {
+          console.log(`[AGY-ZH] Translated ${textCount} text nodes, ${attrCount} attributes, ${hlCount} highlighted containers, ${budgetCount} budget containers, and ${thinkingCount} thinking triggers.`);
         }
       } catch (err) {
         console.warn('[AGY-ZH] Error during runTranslation:', err);
