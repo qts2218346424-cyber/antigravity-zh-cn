@@ -780,6 +780,23 @@ class TestRuntimeTranslation(unittest.TestCase):
             process.exit(243);
         }
 
+        // 38. 错误终止通知卡片 (Agent terminated due to error)
+        if (translate("You can prompt the model to try again or start a new conversation if the error persists.") !== "若错误仍然存在，您可以提示模型重试或开启新对话。") {
+            console.error("error persist failed:", translate("You can prompt the model to try again or start a new conversation if the error persists."));
+            process.exit(244);
+        }
+        if (translate("See our") !== "请参阅我们的") process.exit(245);
+        if (translate("troubleshooting guide") !== "故障排除指南") process.exit(246);
+        if (translate("for more help.") !== "以获取更多帮助。") process.exit(247);
+        if (translate("See our troubleshooting guide for more help.") !== "请参阅我们的故障排除指南以获取更多帮助。") process.exit(248);
+        if (translate("This error is likely temporary. You can prompt the model to try again after some time.") !== "此错误可能是暂时性的。您可以稍后提示模型重试。") process.exit(249);
+        if (translate("Insufficient AI Credits") !== "AI 配额不足") process.exit(250);
+        if (translate("Purchase Credits") !== "购买配额") process.exit(251);
+        if (translate("See Plans") !== "查看方案") process.exit(252);
+        if (translate("Complete verification") !== "完成验证") process.exit(253);
+        if (translate("Verification required") !== "需要完成验证") process.exit(254);
+        if (translate("Your AI credits balance is too low to continue.") !== "您的 AI 配额余额不足，无法继续。") process.exit(255);
+
         console.log("SUCCESS");
         """
         import tempfile

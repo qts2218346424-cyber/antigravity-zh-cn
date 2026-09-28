@@ -3194,5 +3194,25 @@
   [
     "^[Dd]iscard\\s+[Cc]hanges$",
     "放弃更改"
+  ],
+  [
+    "^[Yy]ou can prompt the model to try again or start a new conversation if the error persists\\\\.?$",
+    "若错误仍然存在，您可以提示模型重试或开启新对话。"
+  ],
+  [
+    "^[Tt]his error is likely temporary\\\\. You can prompt the model to try again after some time\\\\.?$",
+    "此错误可能是暂时性的。您可以稍后提示模型重试。"
+  ],
+  [
+    "^[Ss]ee our troubleshooting guide for more help\\\\.?$",
+    "请参阅我们的故障排除指南以获取更多帮助。"
+  ],
+  [
+    "^[Pp]lease verify your account to continue using(?:\\\\s+(.+?))?\\\\.?$",
+    "请验证您的账号以继续使用。"
+  ],
+  [
+    "^[Yy]our AI credits balance is too low to continue\\\\.?$",
+    "您的 AI 配额余额不足，无法继续。"
   ]
 ]
