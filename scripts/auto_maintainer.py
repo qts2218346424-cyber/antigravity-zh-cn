@@ -228,7 +228,11 @@ def perform_maintenance(force: bool = False, dry_run: bool = False) -> bool:
     local_ver, is_patched = get_local_version_and_patch_state(install_dir)
     print(f"• 本地程序版本: {local_ver} (汉化补丁状态: {'✅ 已打补丁' if is_patched else '❌ 未打补丁/被覆盖'})")
 
-    # 1. 判断是否需要维护
+    # 1. 优先执行常态技能说明汉化巡检 (确保新安装技能第一时间被自动汉化)
+    print("• 正在巡检所有已安装技能的说明...")
+    sync_skill_localization(apply_changes=not dry_run)
+
+    # 2. 判断是否需要执行主程序重修补与版本同步
     needs_action = force or (not is_patched)
     if not needs_action:
         print("✅ 当前版本已打补丁且无异常，系统处于最优状态。")
@@ -255,10 +259,6 @@ def perform_maintenance(force: bool = False, dry_run: bool = False) -> bool:
     else:
         print("ℹ 本地实例未在运行或未提供端口，使用当前完整词库进行修补。")
         sync_full_dictionary()
-
-    # 2.1 自动汉化并同步所有新安装技能的说明
-    print("• 正在巡检并汉化所有已安装技能的说明...")
-    sync_skill_localization(apply_changes=not dry_run)
 
     # 3. 运行自动化测试门禁
     print("• 正在运行自动化测试套件...")

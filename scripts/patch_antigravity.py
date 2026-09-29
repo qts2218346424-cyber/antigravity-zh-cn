@@ -331,8 +331,58 @@ function __agyTranslateMenu(m) {{
         main_content = main_content.replace("buttons: ['Cancel', 'Quit']", "buttons: ['取消', '退出']")
         main_content = main_content.replace("title: 'Confirm Quit'", "title: '确认退出'")
         main_content = main_content.replace("'Connect to WSL'", "'连接到 WSL'")
+
+        # 注入主进程启动期技能说明全自动汉化自检钩子 (In-App Auto Skill Localizer)
+        from localize_skills import SKILL_TRANSLATION_MAP
+        skills_map_json = json.dumps(SKILL_TRANSLATION_MAP, ensure_ascii=False)
+        skill_hook = f"""
+/* __ANTIGRAVITY_SKILL_AUTO_LOCALIZER__ */
+(function() {{
+  try {{
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    const home = os.homedir();
+    const roots = [
+      path.join(home, '.gemini', 'skills'),
+      path.join(home, '.gemini', 'config', 'plugins'),
+      path.join(home, '.gemini', 'antigravity', 'builtin', 'skills')
+    ];
+    const skillMap = {skills_map_json};
+    const scanDir = (dir, depth = 0) => {{
+      if (depth > 4) return;
+      try {{
+        const entries = fs.readdirSync(dir, {{ withFileTypes: true }});
+        for (const ent of entries) {{
+          const fullPath = path.join(dir, ent.name);
+          if (ent.isDirectory()) {{
+            scanDir(fullPath, depth + 1);
+          }} else if (ent.name === 'SKILL.md') {{
+            const skillName = path.basename(dir);
+            if (skillMap[skillName]) {{
+              const targetZh = skillMap[skillName];
+              const content = fs.readFileSync(fullPath, 'utf8');
+              const match = content.match(/^description:\\s*(.*?)$/m);
+              if (match && !/[\\u4e00-\\u9fa5]/.test(match[1])) {{
+                const newContent = content.replace(match[0], 'description: "' + targetZh.replace(/"/g, '\\\\"') + '"');
+                fs.writeFileSync(fullPath, newContent, 'utf8');
+              }}
+            }}
+          }}
+        }}
+      }} catch (_) {{}}
+    }};
+    setTimeout(() => {{
+      roots.forEach(r => {{ if (fs.existsSync(r)) scanDir(r); }});
+    }}, 1000);
+  }} catch (_) {{}}
+}})();
+"""
+        if "/* __ANTIGRAVITY_SKILL_AUTO_LOCALIZER__ */" not in main_content:
+            main_content = skill_hook + "\n" + main_content
+
         asar_data = replace_asar_file_content(asar_data, "dist/main.js", main_content.encode("utf-8"))
-        print("  [OK] 主进程托盘模板与系统对话框 (dist/main.js) 汉化修补完成")
+        print("  [OK] 主进程托盘模板与系统对话框及技能自检 (dist/main.js) 汉化修补完成")
     except Exception as e:
         print(f"  [!] 忽略非致命项 dist/main.js: {e}")
 
