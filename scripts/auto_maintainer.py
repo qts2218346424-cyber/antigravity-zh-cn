@@ -45,6 +45,7 @@ from patch_antigravity import (
     PATCH_MARKER,
 )
 from build_full_dictionary import main as sync_full_dictionary
+from localize_skills import run_localization as sync_skill_localization
 
 MANIFEST_URL = (
     "https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/manifest/latest-x64-win.yml"
@@ -254,6 +255,10 @@ def perform_maintenance(force: bool = False, dry_run: bool = False) -> bool:
     else:
         print("ℹ 本地实例未在运行或未提供端口，使用当前完整词库进行修补。")
         sync_full_dictionary()
+
+    # 2.1 自动汉化并同步所有新安装技能的说明
+    print("• 正在巡检并汉化所有已安装技能的说明...")
+    sync_skill_localization(apply_changes=not dry_run)
 
     # 3. 运行自动化测试门禁
     print("• 正在运行自动化测试套件...")
