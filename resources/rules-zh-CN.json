@@ -3196,23 +3196,155 @@
     "放弃更改"
   ],
   [
-    "^[Yy]ou can prompt the model to try again or start a new conversation if the error persists\\\\.?$",
+    "^[Yy]ou can prompt the model to try again or start a new conversation if the error persists\\.?$",
     "若错误仍然存在，您可以提示模型重试或开启新对话。"
   ],
   [
-    "^[Tt]his error is likely temporary\\\\. You can prompt the model to try again after some time\\\\.?$",
+    "^[Tt]his error is likely temporary\\.? You can prompt the model to try again after some time\\.?$",
     "此错误可能是暂时性的。您可以稍后提示模型重试。"
   ],
   [
-    "^[Ss]ee our troubleshooting guide for more help\\\\.?$",
+    "^[Ss]ee our troubleshooting guide for more help\\.?$",
     "请参阅我们的故障排除指南以获取更多帮助。"
   ],
   [
-    "^[Pp]lease verify your account to continue using(?:\\\\s+(.+?))?\\\\.?$",
+    "^[Pp]lease verify your account to continue using(?:\\s+(.+?))?\\.?$",
     "请验证您的账号以继续使用。"
   ],
   [
-    "^[Yy]our AI credits balance is too low to continue\\\\.?$",
+    "^[Yy]our AI credits balance is too low to continue\\.?$",
     "您的 AI 配额余额不足，无法继续。"
+  ],
+  [
+    "^[Tt]he repeated report of (.+?) suggests (.+?)\\.?$",
+    "用户反复反馈的 $1 表明 $2。"
+  ],
+  [
+    "^[Mm]ixed language reports(?: repeatedly)? appearing point to (.+?)\\.?$",
+    "反复出现的中英混杂反馈表明 $1。"
+  ],
+  [
+    "^[Tt]he task is to (.+?)\\.?$",
+    "本次任务是 $1。"
+  ],
+  [
+    "^[Tt]he user (?:reports|is reporting|reported) (?:that )?(.+?)\\.?$",
+    "用户反馈 $1。"
+  ],
+  [
+    "^[Tt]he user is asking (?:for|to) (.+?)\\.?$",
+    "用户要求 $1。"
+  ],
+  [
+    "^[Tt]he user wants to (.+?)\\.?$",
+    "用户希望 $1。"
+  ],
+  [
+    "^[Tt]he core issue (?:is|appears to be) (.+?)\\.?$",
+    "核心问题在于 $1。"
+  ],
+  [
+    "^[Tt]he root cause (?:is|appears to be) (.+?)\\.?$",
+    "根本原因似乎在于 $1。"
+  ],
+  [
+    "^[Ii]nitial observation:?\\s*(.+?)\\.?$",
+    "初步观察：$1。"
+  ],
+  [
+    "^[Tt]his indicates (?:that )?(.+?)\\.?$",
+    "这表明 $1。"
+  ],
+  [
+    "^[Tt]his suggests (?:that )?(.+?)\\.?$",
+    "这表明 $1。"
+  ],
+  [
+    "^[Tt]his confirms (?:that )?(.+?)\\.?$",
+    "这证实了 $1。"
+  ],
+  [
+    "^[Tt]his means (?:that )?(.+?)\\.?$",
+    "这意味着 $1。"
+  ],
+  [
+    "^[Aa]nalyzing (?:the )?(.+?)\\.?$",
+    "正在分析 $1。"
+  ],
+  [
+    "^[Ee]xamining (?:the )?(.+?)\\.?$",
+    "正在检查 $1。"
+  ],
+  [
+    "^[Ii]nvestigating (?:the )?(?:possible causes|potential causes)?(?: of)?\\s*(.+?)\\.?$",
+    "正在排查 $1。"
+  ],
+  [
+    "^[Ll]ooking (?:at|into) (?:the )?(.+?)\\.?$",
+    "查看 $1。"
+  ],
+  [
+    "^[Cc]hecking (?:the )?(.+?)\\.?$",
+    "正在检查 $1。"
+  ],
+  [
+    "^[Ii]nspecting (?:the )?(.+?)\\.?$",
+    "正在审查 $1。"
+  ],
+  [
+    "^[Rr]eviewing (?:the )?(.+?)\\.?$",
+    "正在审查 $1。"
+  ],
+  [
+    "^[Ll]et's check (?:the )?(.+?)\\.?$",
+    "让我们检查 $1。"
+  ],
+  [
+    "^[Ll]et's examine (?:the )?(.+?)\\.?$",
+    "让我们查看 $1。"
+  ],
+  [
+    "^[Ll]et's inspect (?:the )?(.+?)\\.?$",
+    "让我们审查 $1。"
+  ],
+  [
+    "^[Ll]et's look at (?:the )?(.+?)\\.?$",
+    "让我们查看 $1。"
+  ],
+  [
+    "^[Ll]et's verify (?:that|if|whether)?\\s*(.+?)\\.?$",
+    "让我们验证 $1。"
+  ],
+  [
+    "^[Ll]et's run (?:the )?(.+?)\\.?$",
+    "让我们执行 $1。"
+  ],
+  [
+    "^[Ww]e need to (.+?)\\.?$",
+    "我们需要 $1。"
+  ],
+  [
+    "^[Ww]e should (.+?)\\.?$",
+    "我们应该 $1。"
+  ],
+  [
+    "^[Tt]o resolve this, (.+?)\\.?$",
+    "为了解决此问题，$1。"
+  ],
+  [
+    "^[Tt]o address this, (.+?)\\.?$",
+    "为了解决此问题，$1。"
+  ],
+  [
+    "^[Tt]o fix this, (.+?)\\.?$",
+    "为了修复此问题，$1。"
+  ],
+  [
+    "^[Aa]ll tests passed\\.?$",
+    "所有测试均已通过。"
+  ],
+  [
+    "^[Uu]nit tests passed at 100%\\.?$",
+    "单元测试 100% 通过。"
   ]
 ]

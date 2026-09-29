@@ -543,6 +543,255 @@
       return count;
     };
 
+    // 专用思维链模式库与短语词典 (Thinking Chain-of-Thought Patterns & Phrases)
+    const THINKING_PHRASES = [
+      // 定语后置结构平滑处理
+      [/(?:the\s+)?regular\s+expression\s+rules\s+in\s+the\s+configuration(?:\s+file)?/gi, '配置文件中的正则表达式规则'],
+      [/(?:the\s+)?files?\s+in\s+the\s+workspace/gi, '工作区中的文件'],
+      [/(?:the\s+)?files?\s+in\s+the\s+directory/gi, '目录中的文件'],
+      [/(?:the\s+)?files?\s+in\s+the\s+codebase/gi, '代码库中的文件'],
+      [/(?:the\s+)?test\s+suite\s+in\s+the\s+codebase/gi, '代码库中的测试套件'],
+      [/(?:the\s+)?rules?\s+in\s+the\s+configuration(?:\s+file)?/gi, '配置文件中的规则'],
+      [/(?:the\s+)?code\s+in\s+the\s+file/gi, '文件中的代码'],
+      [/\bcomponent(?:'s)?\b/gi, '组件'],
+      [/\bscript\b/gi, '脚本'],
+      [/\bfiles?\b/gi, '文件'],
+
+      // 介词短语
+      [/in the workspace/gi, '在工作区中'],
+      [/in the codebase/gi, '在代码库中'],
+      [/in the repository/gi, '在仓库中'],
+      [/in the configuration file/gi, '在配置文件中'],
+      [/in the configuration/gi, '在配置中'],
+      [/in the directory/gi, '在目录中'],
+      [/in the file/gi, '在文件中'],
+      [/in the implementation/gi, '在具体实现中'],
+      [/in the test suite/gi, '在测试套件中'],
+      [/in the following/gi, '在以下内容中'],
+      [/in order to/gi, '为了'],
+      [/based on/gi, '基于'],
+      [/according to/gi, '根据'],
+      [/at the same time/gi, '同时'],
+      [/on the other hand/gi, '另一方面'],
+      [/step-by-step|step by step/gi, '逐步'],
+      [/as follows/gi, '如下'],
+      [/for example/gi, '例如'],
+      [/starting with examining/gi, '从检查开始'],
+      [/to identify and potentially add/gi, '以识别并添加'],
+      [/to identify/gi, '以识别'],
+      [/to verify/gi, '以验证'],
+      [/to check/gi, '以检查'],
+      [/to resolve the issue|to address the issue/gi, '以解决该问题'],
+      [/to resolve this|to address this/gi, '以解决此问题'],
+      [/to fix this/gi, '以修复此问题'],
+
+      // 名词与术语短语
+      [/source code/gi, '源代码'],
+      [/unit tests/gi, '单元测试'],
+      [/test suite/gi, '测试套件'],
+      [/root cause/gi, '根本原因'],
+      [/regular expression rules/gi, '正则表达式规则'],
+      [/regular expressions/gi, '正则表达式'],
+      [/regular expression/gi, '正则表达式'],
+      [/translation engine/gi, '翻译引擎'],
+      [/translation issue|translation problem/gi, '汉化翻译问题'],
+      [/mixed language reports/gi, '中英混杂反馈'],
+      [/mixed language/gi, '中英混杂'],
+      [/persistent translation issue/gi, '持续存在的汉化翻译问题'],
+      [/persistent issue/gi, '持续存在的问题'],
+      [/a persistent/gi, '持续存在的'],
+      [/possible causes|potential causes/gi, '可能的原因'],
+      [/the implementation/gi, '具体实现'],
+      [/the component(?:'s)? source code/gi, '组件源代码'],
+      [/the generic case/gi, '"generic" 分支'],
+      [/reveals the agent termination message/gi, '揭示了智能体终止消息'],
+      [/agent termination message/gi, '智能体终止消息'],
+      [/agent termination/gi, '智能体终止'],
+      [/error notification card/gi, '错误通知卡片'],
+      [/error notification/gi, '错误通知'],
+      [/error message/gi, '错误信息'],
+      [/error card/gi, '错误卡片'],
+      [/new patterns that enhance error tolerance/gi, '提升容错能力的新模式'],
+      [/new patterns/gi, '新模式'],
+      [/error tolerance/gi, '容错能力'],
+      [/passed at 100%/gi, '100% 通过'],
+      [/all tests passed/gi, '所有测试均已通过'],
+      [/\bthe project\b/gi, '项目']
+    ];
+
+    const smoothPhrases = (text) => {
+      if (!text) return '';
+      let res = text;
+      for (let i = 0; i < THINKING_PHRASES.length; i++) {
+        res = res.replace(THINKING_PHRASES[i][0], THINKING_PHRASES[i][1]);
+      }
+      res = res
+        .replace(/\b(?:a|an|the)\s+/gi, '')
+        .replace(/\s*([，。！？；：])/g, '$1')
+        .replace(/([，。！？；：])\s*/g, '$1')
+        .trim();
+      if (res.endsWith('.')) res = res.slice(0, -1) + '。';
+      return res;
+    };
+
+    const THINKING_PATTERNS = [
+      // 1. 开篇陈述与反馈
+      [/^The task is to (.+)$/i, (m, p1) => '本次任务是' + smoothPhrases(p1)],
+      [/^The user (?:reports|is reporting|reported) (?:that )?(.+)$/i, (m, p1) => '用户反馈' + smoothPhrases(p1)],
+      [/^The user is asking (?:for|to) (.+)$/i, (m, p1) => '用户要求' + smoothPhrases(p1)],
+      [/^The user wants to (.+)$/i, (m, p1) => '用户希望' + smoothPhrases(p1)],
+      [/^The repeated report of (.+) suggests (.+)$/i, (m, p1, p2) => '用户反复反馈的' + smoothPhrases(p1) + '表明' + smoothPhrases(p2)],
+      [/^Mixed language reports (?:repeatedly )?appearing point to (.+)$/i, (m, p1) => '反复出现的中英混杂反馈表明' + smoothPhrases(p1)],
+      [/^The core issue (?:is|appears to be) (.+)$/i, (m, p1) => '核心问题在于' + smoothPhrases(p1)],
+      [/^The root cause (?:is|appears to be) (.+)$/i, (m, p1) => '根本原因似乎在于' + smoothPhrases(p1)],
+      [/^The main goal is to (.+)$/i, (m, p1) => '主要目标是' + smoothPhrases(p1)],
+      [/^The problem is (?:clearly )?about (.+)$/i, (m, p1) => '问题显然在于' + smoothPhrases(p1)],
+      [/^Initial observation:?\s*(.+)$/i, (m, p1) => '初步观察：' + smoothPhrases(p1)],
+      [/^This indicates (?:that )?(.+)$/i, (m, p1) => '这表明' + smoothPhrases(p1)],
+      [/^This suggests (?:that )?(.+)$/i, (m, p1) => '这表明' + smoothPhrases(p1)],
+      [/^This confirms (?:that )?(.+)$/i, (m, p1) => '这证实了' + smoothPhrases(p1)],
+      [/^This means (?:that )?(.+)$/i, (m, p1) => '这意味着' + smoothPhrases(p1)],
+      [/^The error notification card appears to be rendered by (.+)$/i, (m, p1) => '错误通知卡片似乎由 ' + p1 + ' 渲染'],
+      [/^The error card presents several key pieces of information\.?$/i, () => '错误卡片展示了几个关键信息。'],
+
+      // 2. 动词起手式与排查动作
+      [/^Analyzing (?:the )?(.+)$/i, (m, p1) => '正在分析' + smoothPhrases(p1)],
+      [/^Examining (?:the )?(.+)$/i, (m, p1) => '正在检查' + smoothPhrases(p1)],
+      [/^Investigating (?:the )?(?:possible causes|potential causes)?(?: of)?\s*(.+)$/i, (m, p1) => '正在排查' + smoothPhrases(p1)],
+      [/^Looking (?:at|into) (?:the )?(.+)$/i, (m, p1) => '查看' + smoothPhrases(p1)],
+      [/^Checking (?:the )?(.+)$/i, (m, p1) => '正在检查' + smoothPhrases(p1)],
+      [/^Inspecting (?:the )?(.+)$/i, (m, p1) => '正在审查' + smoothPhrases(p1)],
+      [/^Reviewing (?:the )?(.+)$/i, (m, p1) => '正在审查' + smoothPhrases(p1)],
+      [/^Exploring (?:how )?(.+)$/i, (m, p1) => '正在探索' + smoothPhrases(p1)],
+      [/^Testing (?:the )?(.+)$/i, (m, p1) => '正在测试' + smoothPhrases(p1)],
+      [/^Verifying (?:that|if|whether)?\s*(.+)$/i, (m, p1) => '正在验证' + smoothPhrases(p1)],
+      [/^Searching (?:for )?(.+)$/i, (m, p1) => '正在搜索' + smoothPhrases(p1)],
+      [/^Reading (?:the )?(.+)$/i, (m, p1) => '正在读取' + smoothPhrases(p1)],
+      [/^Updating (?:the )?(.+)$/i, (m, p1) => '正在更新' + smoothPhrases(p1)],
+      [/^Modifying (?:the )?(.+)$/i, (m, p1) => '正在修改' + smoothPhrases(p1)],
+      [/^Fixing (?:the )?(.+)$/i, (m, p1) => '正在修复' + smoothPhrases(p1)],
+      [/^Resolving (?:the )?(.+)$/i, (m, p1) => '正在解决' + smoothPhrases(p1)],
+      [/^Preparing (?:the )?(.+)$/i, (m, p1) => '正在准备' + smoothPhrases(p1)],
+
+      // 3. 第一人称与祈使式动作
+      [/^Let's check (?:the )?(.+)$/i, (m, p1) => '让我们检查' + smoothPhrases(p1)],
+      [/^Let's examine (?:the )?(.+)$/i, (m, p1) => '让我们查看' + smoothPhrases(p1)],
+      [/^Let's inspect (?:the )?(.+)$/i, (m, p1) => '让我们审查' + smoothPhrases(p1)],
+      [/^Let's look at (?:the )?(.+)$/i, (m, p1) => '让我们查看' + smoothPhrases(p1)],
+      [/^Let's verify (?:that|if|whether)?\s*(.+)$/i, (m, p1) => '让我们验证' + smoothPhrases(p1)],
+      [/^Let's run (?:the )?(.+)$/i, (m, p1) => '让我们执行' + smoothPhrases(p1)],
+      [/^We need to (.+)$/i, (m, p1) => '我们需要' + smoothPhrases(p1)],
+      [/^We should (.+)$/i, (m, p1) => '我们应该' + smoothPhrases(p1)],
+      [/^First, (?:let's |we should |we need to )?(.+)$/i, (m, p1) => '首先，' + smoothPhrases(p1)],
+      [/^Next, (?:let's |we should |we need to )?(.+)$/i, (m, p1) => '接下来，' + smoothPhrases(p1)],
+      [/^Now, (?:let's |we should |we need to )?(.+)$/i, (m, p1) => '现在，' + smoothPhrases(p1)],
+      [/^To resolve this, (.+)$/i, (m, p1) => '为了解决此问题，' + smoothPhrases(p1)],
+      [/^All tests passed\.?$/i, () => '所有测试均已通过。'],
+      [/^Unit tests passed at 100%\.?$/i, () => '单元测试 100% 通过。']
+    ];
+
+    const translateSingleThinkingSentence = (str) => {
+      const trimmed = norm(str);
+      if (!trimmed) return str;
+      if (DICT[trimmed]) return DICT[trimmed];
+      if (LOWER_DICT[trimmed.toLowerCase()]) return LOWER_DICT[trimmed.toLowerCase()];
+
+      for (let i = 0; i < THINKING_PATTERNS.length; i++) {
+        const [pattern, handler] = THINKING_PATTERNS[i];
+        const match = trimmed.match(pattern);
+        if (match) {
+          return handler(...match);
+        }
+      }
+      return smoothPhrases(trimmed);
+    };
+
+    const translateThinkingLine = (line) => {
+      const prefixMatch = line.match(/^(\s*(?:\d+\.|\-|\*)\s*)/);
+      const prefix = prefixMatch ? prefixMatch[1] : '';
+      const content = prefixMatch ? line.slice(prefix.length) : line;
+
+      const sentences = content.split(/(?<=\.\s+|;\s+|:\s+)/);
+      const translated = sentences.map(s => translateSingleThinkingSentence(s)).join('');
+      return prefix + translated;
+    };
+
+    const translateThinkingText = (raw) => {
+      if (!raw || !/[a-zA-Z]/.test(raw)) return null;
+      if (typeof raw === 'string' && raw.includes('\n')) {
+        const lines = raw.split('\n');
+        let anyTranslated = false;
+        const translatedLines = lines.map(line => {
+          const trimmed = line.trim();
+          if (!trimmed || !/[a-zA-Z]/.test(trimmed)) return line;
+          const tr = translateThinkingLine(trimmed);
+          if (tr && tr !== trimmed) {
+            anyTranslated = true;
+            const lead = (line.match(/^\s*/) || [''])[0];
+            const trail = (line.match(/\s*$/) || [''])[0];
+            return lead + tr + trail;
+          }
+          return line;
+        });
+        return anyTranslated ? translatedLines.join('\n') : null;
+      }
+      const trimmed = raw.trim();
+      const tr = translateThinkingLine(trimmed);
+      if (tr && tr !== trimmed) {
+        const lead = (raw.match(/^\s*/) || [''])[0];
+        const trail = (raw.match(/\s*$/) || [''])[0];
+        return lead + tr + trail;
+      }
+      return null;
+    };
+
+    // 专门扫描并流式重构展开后的思考过程正文内容 (Thinking Process Content Stream)
+    const translateThinkingContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const thinkingContainers = root.querySelectorAll(
+          '.cursor-edit, [data-testid="thinking-content"], [data-testid="thought-content"], [data-testid="thinking-collapsible-trigger"] ~ div, button[aria-label*="Thought"] ~ div, button[aria-label*="Thinking"] ~ div, button[aria-label*="思考"] ~ div'
+        );
+        for (let i = 0; i < thinkingContainers.length; i++) {
+          const container = thinkingContainers[i];
+          const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT,
+            {
+              acceptNode(n) {
+                const el = n.nodeType === 1 ? n : n.parentElement;
+                if (!el || !el.closest) return NodeFilter.FILTER_REJECT;
+                // 绝对保护代码块、代码编辑器与终端
+                if (el.closest('pre, code, kbd, samp, var, [data-language], .cm-editor, .monaco-editor, .xterm')) {
+                  return NodeFilter.FILTER_REJECT;
+                }
+                // 绝对保护用户真实输入框
+                if (el.closest('[contenteditable="true"], textarea, input')) {
+                  return NodeFilter.FILTER_REJECT;
+                }
+                if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                if (translatedNodeSet.has(n)) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+              }
+            }
+          );
+
+          let current;
+          while ((current = walker.nextNode())) {
+            const original = current.nodeValue;
+            const translated = translateThinkingText(original);
+            if (translated && norm(original) !== norm(translated)) {
+              current.nodeValue = translated;
+              translatedNodeSet.add(current);
+              count++;
+            }
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
     // 弱引用记录已挂载 MutationObserver 的根节点与 ShadowRoot
     const observedRoots = new WeakSet();
 
@@ -596,6 +845,7 @@
         forAllRoots(root, (currentRoot) => {
           observeRoot(currentRoot);
           thinkingCount += translateThinkingTriggers(currentRoot);
+          thinkingCount += translateThinkingContainers(currentRoot);
           budgetCount += translateBudgetContainers(currentRoot);
           hlCount += translateHighlightedContainers(currentRoot);
           textCount += translateTextNodes(currentRoot);
@@ -603,7 +853,7 @@
         });
 
         if (textCount > 0 || attrCount > 0 || hlCount > 0 || budgetCount > 0 || thinkingCount > 0) {
-          console.log(`[AGY-ZH] Translated ${textCount} text nodes, ${attrCount} attributes, ${hlCount} highlighted containers, ${budgetCount} budget containers, and ${thinkingCount} thinking triggers.`);
+          console.log(`[AGY-ZH] Translated ${textCount} text nodes, ${attrCount} attributes, ${hlCount} highlighted containers, ${budgetCount} budget containers, and ${thinkingCount} thinking items.`);
         }
       } catch (err) {
         console.warn('[AGY-ZH] Error during runTranslation:', err);
@@ -756,6 +1006,8 @@
             for (let j = 0; j < m.addedNodes.length; j++) {
               const node = m.addedNodes[j];
               if (node.nodeType === 1) { // 元素节点
+                syncCount += translateThinkingTriggers(node);
+                syncCount += translateThinkingContainers(node);
                 syncCount += translateBudgetContainers(node);
                 syncCount += translateHighlightedContainers(node);
                 syncCount += translateTextNodes(node);
@@ -763,6 +1015,8 @@
                 if (node.shadowRoot) {
                   forAllRoots(node.shadowRoot, (sr) => {
                     observeRoot(sr);
+                    syncCount += translateThinkingTriggers(sr);
+                    syncCount += translateThinkingContainers(sr);
                     syncCount += translateBudgetContainers(sr);
                     syncCount += translateHighlightedContainers(sr);
                     syncCount += translateTextNodes(sr);
@@ -785,15 +1039,28 @@
             }
           } else if (m.type === 'characterData') {
             const node = m.target;
-            if (node && node.nodeType === 3 && !translatedNodeSet.has(node) && !isProtectedTextNode(node)) {
-              const orig = node.nodeValue;
-              const tr = translate(orig);
-              if (tr && norm(orig) !== norm(tr)) {
-                const lead = (orig.match(/^\s*/) || [''])[0];
-                const trail = (orig.match(/\s*$/) || [''])[0];
-                node.nodeValue = lead + tr + trail;
-                translatedNodeSet.add(node);
-                syncCount++;
+            if (node && node.nodeType === 3 && !translatedNodeSet.has(node)) {
+              const parent = node.parentElement;
+              if (parent && parent.closest && parent.closest('.cursor-edit, [data-testid="thinking-content"], [data-testid="thought-content"], [data-testid="thinking-collapsible-trigger"] ~ div, button[aria-label*="Thought"] ~ div, button[aria-label*="Thinking"] ~ div, button[aria-label*="思考"] ~ div')) {
+                if (!parent.closest('pre, code, kbd, samp, var, [data-language], .cm-editor, .monaco-editor, .xterm, [contenteditable="true"], textarea, input')) {
+                  const orig = node.nodeValue;
+                  const tr = translateThinkingText(orig);
+                  if (tr && norm(orig) !== norm(tr)) {
+                    node.nodeValue = tr;
+                    translatedNodeSet.add(node);
+                    syncCount++;
+                  }
+                }
+              } else if (!isProtectedTextNode(node)) {
+                const orig = node.nodeValue;
+                const tr = translate(orig);
+                if (tr && norm(orig) !== norm(tr)) {
+                  const lead = (orig.match(/^\s*/) || [''])[0];
+                  const trail = (orig.match(/\s*$/) || [''])[0];
+                  node.nodeValue = lead + tr + trail;
+                  translatedNodeSet.add(node);
+                  syncCount++;
+                }
               }
             }
           } else if (m.type === 'attributes') {
@@ -827,6 +1094,8 @@
           try {
             observeRoot(shadowRoot);
             setTimeout(() => {
+              translateThinkingTriggers(shadowRoot);
+              translateThinkingContainers(shadowRoot);
               translateBudgetContainers(shadowRoot);
               translateHighlightedContainers(shadowRoot);
               translateTextNodes(shadowRoot);
