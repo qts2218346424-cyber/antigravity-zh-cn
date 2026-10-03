@@ -31,8 +31,62 @@ PATCH_MARKER = "/* __ANTIGRAVITY_ZH_CN_PATCHED__ */"
 ASAR_INTEGRITY_BLOCK_SIZE = 4 * 1024 * 1024
 
 
+def _is_running_inside_antigravity() -> bool:
+    """检测当前 Python 进程是否由 Antigravity 宿主进程启动（即从 Antigravity 对话内部调用）。
+    通过沿进程树向上遍历祖先进程，判断是否存在名为 Antigravity 的父进程。"""
+    if sys.platform != "win32":
+        # macOS/Linux: 检查进程树
+        try:
+            import subprocess
+            pid = os.getpid()
+            while pid and pid > 1:
+                result = subprocess.run(
+                    ["ps", "-p", str(pid), "-o", "ppid=,comm="],
+                    capture_output=True, text=True, timeout=3
+                )
+                if result.returncode != 0:
+                    break
+                parts = result.stdout.strip().split(None, 1)
+                if len(parts) < 2:
+                    break
+                ppid, comm = int(parts[0]), parts[1].lower()
+                if "antigravity" in comm:
+                    return True
+                pid = ppid
+        except Exception:
+            pass
+        return False
+    # Windows: 通过 WMI 查询进程父子链
+    try:
+        import subprocess
+        # 使用 PowerShell 沿进程树向上查找 Antigravity
+        ps_script = (
+            f"$pid = {os.getpid()}; "
+            "while ($pid -and $pid -ne 0) { "
+            "  try { $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$pid\" -ErrorAction Stop; "
+            "    if ($p.Name -match 'Antigravity') { Write-Output 'FOUND'; exit 0 }; "
+            "    $pid = $p.ParentProcessId "
+            "  } catch { break } "
+            "}; Write-Output 'NOTFOUND'"
+        )
+        result = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-Command", ps_script],
+            capture_output=True, text=True, timeout=5
+        )
+        return "FOUND" in result.stdout
+    except Exception:
+        return False
+
+
 def stop_antigravity_processes():
-    """终止正在运行的 Antigravity 宿主进程以防 ASAR 文件占用"""
+    """终止正在运行的 Antigravity 宿主进程以防 ASAR 文件占用。
+    重要：如果检测到当前脚本是从 Antigravity 内部（对话/命令行）调用的，
+    则跳过进程终止，避免 Antigravity 在运行汉化任务时"自杀"关闭。"""
+    if _is_running_inside_antigravity():
+        print("  [ℹ] 检测到当前正在 Antigravity 内部运行，跳过进程终止以避免程序关闭。")
+        print("  [ℹ] 提示：补丁将在下次重启 Antigravity 时生效。如果写入失败，请手动关闭后重试。")
+        return
+
     if sys.platform == "win32":
         try:
             import subprocess
@@ -41,18 +95,21 @@ def stop_antigravity_processes():
                 "Stop-Process -Force -ErrorAction SilentlyContinue"
             )
             subprocess.run(["powershell.exe", "-NoProfile", "-Command", cmd], capture_output=True, text=True, timeout=5)
+            import time; time.sleep(1)  # 等待文件锁释放
         except Exception:
             pass
     elif sys.platform == "darwin":
         try:
             import subprocess
             subprocess.run(["pkill", "-f", "Antigravity"], capture_output=True, timeout=5)
+            import time; time.sleep(1)
         except Exception:
             pass
     else:
         try:
             import subprocess
             subprocess.run(["pkill", "-f", "antigravity"], capture_output=True, timeout=5)
+            import time; time.sleep(1)
         except Exception:
             pass
 
@@ -216,8 +273,13 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
 
     backup_path = asar_path.with_suffix('.asar.bak')
 
-    # 1. 备份原版 asar（如果尚未存在备份）
-    if not backup_path.exists():
+    # 1. 备份原版 asar（如果当前 asar 为全新官方未修补版本，或尚未存在备份）
+    asar_bytes = asar_path.read_bytes()
+    is_current_unpatched = PATCH_MARKER.encode("utf-8") not in asar_bytes
+    if is_current_unpatched:
+        print(f"[1/4] 检测到全新官方未修补版本，正在创建/更新原版备份: {backup_path.name}...")
+        shutil.copy2(asar_path, backup_path)
+    elif not backup_path.exists():
         print(f"[1/4] 正在创建原版备份: {backup_path.name}...")
         shutil.copy2(asar_path, backup_path)
     else:
@@ -407,13 +469,33 @@ function __agyTranslateMenu(m) {{
     except Exception as e:
         print(f"  [!] 忽略非致命项 dist/updater.js: {e}")
 
-    # (4) 修补 dist/preload.js (预加载阶段 DOM 翻译引擎)
+    # (4) 修补 dist/preload.js (预加载阶段 DOM 翻译引擎 + 原生通知包装)
     try:
         preload_content = read_asar_file_content(asar_data, "dist/preload.js").decode("utf-8")
         if PATCH_MARKER not in preload_content:
+            notif_preload_patch = """
+try {
+  const origNotifSend = notificationAPI.send;
+  notificationAPI.send = function(options) {
+    try {
+      if (options) {
+        const tr = (typeof window !== 'undefined' && window.__AGY_ZH_DICT__) ? window.__AGY_ZH_DICT__ : {};
+        if (options.title && tr[options.title]) options.title = tr[options.title];
+        if (options.body && tr[options.body]) options.body = tr[options.body];
+      }
+    } catch (_) {}
+    return origNotifSend.call(this, options);
+  };
+} catch (_) {}
+"""
+            if "electron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);" in preload_content:
+                preload_content = preload_content.replace(
+                    "electron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);",
+                    f"{notif_preload_patch}\nelectron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);"
+                )
             preload_content += f"\n{PATCH_MARKER}\n{injection_code}\n"
             asar_data = replace_asar_file_content(asar_data, "dist/preload.js", preload_content.encode("utf-8"))
-            print("  [OK] DOM 翻译引擎预加载通道注入完成 (dist/preload.js)")
+            print("  [OK] DOM 翻译引擎与原生通知预加载通道注入完成 (dist/preload.js)")
     except Exception as e:
         print(f"  [!] 预加载环境注入失败: {e}")
         raise
@@ -466,6 +548,45 @@ const __AGY_ZH_CODE__ = {js_raw};
     except Exception as e:
         print(f"  [!] 主世界注入通道修补失败: {e}")
 
+    # (5.1) 修补 dist/ipcHandlers.js (原生桌面通知全汉化拦截)
+    try:
+        ipc_content = read_asar_file_content(asar_data, "dist/ipcHandlers.js").decode("utf-8")
+        if PATCH_MARKER not in ipc_content:
+            notif_dict_json = json.dumps(lang_dict, ensure_ascii=False)
+            ipc_header_patch = f"""
+{PATCH_MARKER}
+const __AGY_IPC_NOTIF_DICT__ = {notif_dict_json};
+function __agyTranslateNotif(text) {{
+    if (!text || typeof text !== 'string') return text;
+    const trimmed = text.trim();
+    if (__AGY_IPC_NOTIF_DICT__[trimmed]) return __AGY_IPC_NOTIF_DICT__[trimmed];
+    const lower = trimmed.toLowerCase();
+    for (const k in __AGY_IPC_NOTIF_DICT__) {{
+        if (k.toLowerCase() === lower) return __AGY_IPC_NOTIF_DICT__[k];
+    }}
+    return text;
+}}
+"""
+            ipc_content = ipc_header_patch + "\n" + ipc_content
+            old_notif_target = """        const notification = new electron_1.Notification({
+            title: options.title,
+            body: options.body,
+            silent: options.silent ?? false,
+        });"""
+            new_notif_target = """        const notification = new electron_1.Notification({
+            title: __agyTranslateNotif(options.title),
+            body: __agyTranslateNotif(options.body),
+            silent: options.silent ?? false,
+        });"""
+            if old_notif_target in ipc_content:
+                ipc_content = ipc_content.replace(old_notif_target, new_notif_target, 1)
+                asar_data = replace_asar_file_content(asar_data, "dist/ipcHandlers.js", ipc_content.encode("utf-8"))
+                print("  [OK] 原生桌面系统通知 (dist/ipcHandlers.js) 汉化拦截通道挂载完成")
+            else:
+                print("  [!] 未在 dist/ipcHandlers.js 中匹配到 notification:send 锚点")
+    except Exception as e:
+        print(f"  [!] 忽略非致命项 dist/ipcHandlers.js: {e}")
+
     # (6) 修补 dist/loadingOverlay.js (消除启动白屏卡顿与翻译启动文本)
     try:
         overlay_content = read_asar_file_content(asar_data, "dist/loadingOverlay.js").decode("utf-8")
@@ -503,6 +624,7 @@ const __AGY_ZH_CODE__ = {js_raw};
 
     # 4. 安全写入目标文件
     print(f"[4/4] 正在安全写入汉化文件: {asar_path.name}...")
+    stop_antigravity_processes()
     temp_dest = asar_path.with_suffix('.asar.tmp')
     try:
         temp_dest.write_bytes(asar_data)
