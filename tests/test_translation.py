@@ -805,6 +805,15 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (!translate("Examining the regular expression rules.").includes("正在检查")) process.exit(259);
         if (!translate("Unit tests passed at 100%.").includes("单元测试 100% 通过")) process.exit(260);
 
+        // 40. 通知中心与系统通知相关断言
+        if (translate("Notification") !== "通知") process.exit(261);
+        if (translate("Notifications") !== "通知") process.exit(262);
+        if (translate("Clear all") !== "清空全部") process.exit(263);
+        if (translate("No notifications") !== "暂无通知") process.exit(264);
+        if (translate("Mark all as read") !== "全部标记为已读") process.exit(265);
+        if (translate("Agent Finished") !== "智能体执行完成") process.exit(266);
+        if (translate("Task completed") !== "任务已完成") process.exit(267);
+
         console.log("SUCCESS");
         """
         import tempfile

@@ -973,6 +973,31 @@
           return origCreateTextNode.call(document, data);
         };
       }
+
+      // 拦截 window.Notification (消灭原生与网页通知英文)
+      if (typeof window !== 'undefined' && window.Notification) {
+        try {
+          const OrigNotification = window.Notification;
+          const PatchedNotification = function(title, opt) {
+            try {
+              const trTitle = translate(title) || title;
+              const newOpt = opt ? Object.assign({}, opt) : {};
+              if (newOpt.body) {
+                newOpt.body = translate(newOpt.body) || newOpt.body;
+              }
+              return new OrigNotification(trTitle, newOpt);
+            } catch (_) {
+              return new OrigNotification(title, opt);
+            }
+          };
+          PatchedNotification.prototype = OrigNotification.prototype;
+          PatchedNotification.permission = OrigNotification.permission;
+          if (OrigNotification.requestPermission) {
+            PatchedNotification.requestPermission = OrigNotification.requestPermission.bind(OrigNotification);
+          }
+          window.Notification = PatchedNotification;
+        } catch (_) {}
+      }
     } catch (_) {}
 
     // 监听 DOM 树变化并根据交互场景智能分流：
