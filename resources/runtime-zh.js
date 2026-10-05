@@ -1390,6 +1390,7 @@
           *[class*="bg-accent"],
           *[class*="bg-popover"],
           *[class*="bg-secondary"],
+          *[class*="bg-white"],
           main, aside, header, nav {
             background-color: transparent !important;
             background: transparent !important;
@@ -1410,15 +1411,17 @@
             background-image: none !important;
           }
 
-          /* 3. 左侧侧边栏：彻底全透明，消除所有白块横条 */
+          /* 3. 左侧侧边栏：彻底全透明，消除所有白块横条与折叠标题白块 */
           div[class*="bg-sidebar"],
           button[class*="bg-sidebar"],
           div[class*="bg-sidebar-secondary"],
           *[class*="bg-sidebar-muted"],
-          *[class*="bg-sidebar-accent"] {
+          *[class*="bg-sidebar-accent"],
+          *[class*="group/headerbtn"] {
             background-color: transparent !important;
             background: transparent !important;
             box-shadow: none !important;
+            border-color: transparent !important;
           }
           /* 仅在鼠标悬停在列表项时浮现极微弱的光晕 */
           *[class*="group/headerbtn"]:hover,
