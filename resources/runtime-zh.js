@@ -1340,7 +1340,7 @@
       }
     }, 800);
 
-    // 自定义全景高透壁纸与磨砂玻璃主题引擎 (Custom Wallpaper & Glass Theme Engine)
+    // 自定义全景高透壁纸与极致水晶主题引擎 (Custom Wallpaper & Crystal Theme Engine)
     const setupCustomWallpaper = () => {
       const bgImage = window.__AGY_BG_IMAGE__;
       if (!bgImage) return;
@@ -1376,77 +1376,127 @@
             background-size: cover !important;
             background-position: center center !important;
             background-repeat: no-repeat !important;
-            opacity: 0.82 !important;
-            filter: contrast(1.05) brightness(1.02) !important;
+            opacity: 1 !important;
           }
 
-          /* 全局清除阻断透光的实心死白/死灰背景 */
+          /* 1. 全局容器彻底全透明 (0% 遮挡) */
           html, body, #root,
           div[class*="w-screen"], div[class*="h-screen"], div[class*="min-h-0"],
           div[class*="group/pane"], div[class*="relative"],
-          .bg-background, div[class*="bg-background"],
-          main {
+          *[class*="bg-background"],
+          *[class*="bg-sidebar"],
+          *[class*="bg-card"],
+          *[class*="bg-muted"],
+          *[class*="bg-accent"],
+          *[class*="bg-popover"],
+          *[class*="bg-secondary"],
+          main, aside, header, nav {
             background-color: transparent !important;
             background: transparent !important;
             backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
           }
 
-          /* 彻底消除顶部与底部吸顶白雾渐变遮罩 */
-          [class*="md-sticky-message-bleed"],
-          [class*="md-sticky-message-bleed"]::after,
-          [class*="md-sticky-message-bleed"]::before,
-          div[class*="from-background"],
-          div[class*="to-transparent"] {
+          /* 2. 彻底抹杀所有吸顶白雾、渐变发光遮罩 (解决大面积白雾遮挡的元凶) */
+          *[class*="pointer-events-none"][class*="inset-x-"],
+          *[class*="md-sticky-message-bleed"],
+          *[class*="md-sticky-message-bleed"]::after,
+          *[class*="md-sticky-message-bleed"]::before,
+          *[class*="from-background"],
+          *[class*="to-transparent"],
+          div[class*="absolute"][class*="-right-1"][class*="bg-"] {
+            display: none !important;
             background: transparent !important;
             background-image: none !important;
           }
-          [class*="md-sticky-message-bleed"]::after {
-            display: none !important;
-          }
 
-          /* 侧边栏：轻度微透磨砂，保证目录树清晰 */
-          div[class*="bg-sidebar"] {
-            background-color: rgba(255, 255, 255, 0.45) !important;
-            backdrop-filter: blur(10px) !important;
-          }
-          .dark div[class*="bg-sidebar"], .theme-dark div[class*="bg-sidebar"] {
-            background-color: rgba(20, 20, 24, 0.5) !important;
-            backdrop-filter: blur(10px) !important;
-          }
-
-          /* 右侧面板 */
-          aside, div[class*="border-l"], div[class*="border-r"] {
-            background-color: rgba(255, 255, 255, 0.35) !important;
-            backdrop-filter: blur(6px) !important;
-          }
-
-          /* 用户卡片气泡：优雅微透 */
-          div[class*="bg-card"], div[class*="rounded-xl"] {
-            background-color: rgba(255, 255, 255, 0.45) !important;
-            backdrop-filter: blur(6px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
-          }
-
-          /* 底部输入框容器 */
-          div[class*="group/user-input-step"] {
+          /* 3. 左侧侧边栏：彻底全透明，消除所有白块横条 */
+          div[class*="bg-sidebar"],
+          button[class*="bg-sidebar"],
+          div[class*="bg-sidebar-secondary"],
+          *[class*="bg-sidebar-muted"],
+          *[class*="bg-sidebar-accent"] {
             background-color: transparent !important;
+            background: transparent !important;
+            box-shadow: none !important;
+          }
+          /* 仅在鼠标悬停在列表项时浮现极微弱的光晕 */
+          *[class*="group/headerbtn"]:hover,
+          div[class*="group pl-[30px]"]:hover,
+          div[class*="select-none"][class*="cursor-pointer"]:hover {
+            background-color: rgba(255, 255, 255, 0.22) !important;
+            backdrop-filter: blur(8px) !important;
+            border-radius: 8px !important;
           }
 
-          /* 文字清晰度强化 (柔和发光衬底，黑字纯净清晰) */
-          p, span, h1, h2, h3, h4, label {
-            text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8), 0 0 1px rgba(255, 255, 255, 0.9);
-            color: #1a1a1a !important;
+          /* 4. 彻底消除对话区域的“横条百叶窗”白条遮挡 */
+          div[class*="rounded-xl"],
+          div[class*="rounded-2xl"],
+          div[class*="rounded-lg"],
+          div[class*="bg-card"],
+          div[class*="files-changed-header"] {
+            background-color: transparent !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            border-color: rgba(255, 255, 255, 0.25) !important;
           }
 
-          /* 代码块与终端依然保持专业暗色对比度 */
-          pre, code, .cm-editor, .monaco-editor, .xterm {
-            background-color: rgba(24, 24, 28, 0.88) !important;
+          /* 工具调用折叠栏/执行状态条：完全通透，只保留文字与图标 */
+          div[class*="bg-muted"],
+          div[class*="border text-sm"] {
+            background-color: transparent !important;
+            background: transparent !important;
+          }
+
+          /* 5. 底部输入框：精致超薄水晶微透框，既能定位操作，又完全不挡底图风景 */
+          #antigravity\\\\.agentSidePanelInputBox,
+          div[id="antigravity.agentSidePanelInputBox"] {
+            background-color: rgba(255, 255, 255, 0.2) !important;
             backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+            border-radius: 16px !important;
+          }
+          div[class*="border-input"], textarea {
+            background-color: transparent !important;
+            background: transparent !important;
+          }
+
+          /* 排队消息提示条 */
+          div[class*="flex flex-col gap-2 w-full mb-2"] > div {
+            background-color: rgba(255, 255, 255, 0.22) !important;
+            backdrop-filter: blur(8px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            border-radius: 16px !important;
+          }
+
+          /* 6. 文字双重自适应高可读保护：柔和发光衬底，黑白双层边缘，确保在任何复杂背景下极度清晰锐利 */
+          p, span, h1, h2, h3, h4, label, button, a {
+            color: #111111 !important;
+            text-shadow: 
+              0 1px 2px rgba(255, 255, 255, 1),
+              0 0 4px rgba(255, 255, 255, 0.9),
+              0 0 1px #ffffff !important;
+            font-weight: 500 !important;
+          }
+
+          /* 图标清晰增强 */
+          svg {
+            filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.9));
+          }
+
+          /* 7. 代码块与终端高对比度暗色微透保护 */
+          pre, code, .cm-editor, .monaco-editor, .xterm {
+            background-color: rgba(18, 18, 22, 0.88) !important;
+            backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
             border-radius: 8px !important;
           }
           pre *, code *, .cm-editor *, .monaco-editor *, .xterm * {
             text-shadow: none !important;
+            color: inherit !important;
+            font-weight: normal !important;
           }
         `;
       };
