@@ -195,6 +195,88 @@
       if (/^apply$/i.test(text)) return '应用';
       if (/^discard$/i.test(text)) return '放弃';
 
+      // 1.19 英文月份与动态日期通用转换 (e.g. "November 2, 2026" -> "2026 年 11 月 2 日")
+      const MONTH_MAP = {
+        january: '1 月', february: '2 月', march: '3 月', april: '4 月',
+        may: '5 月', june: '6 月', july: '7 月', august: '8 月',
+        september: '9 月', october: '10 月', november: '11 月', december: '12 月',
+        jan: '1 月', feb: '2 月', mar: '3 月', apr: '4 月',
+        jun: '6 月', jul: '7 月', aug: '8 月', sep: '9 月', sept: '9 月',
+        oct: '10 月', nov: '11 月', dec: '12 月'
+      };
+
+      const formatEnDate = (dateStr) => {
+        if (!dateStr) return '';
+        const trimmed = dateStr.trim();
+        let m = trimmed.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})$/i);
+        if (m) {
+          const month = MONTH_MAP[m[1].toLowerCase()] || m[1];
+          return `${m[3]} 年 ${month} ${m[2]} 日`;
+        }
+        m = trimmed.match(/^([A-Za-z]+)\s+(\d{4})$/i);
+        if (m) {
+          const month = MONTH_MAP[m[1].toLowerCase()] || m[1];
+          return `${m[2]} 年 ${month}`;
+        }
+        m = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+),?\s*(\d{4})$/i);
+        if (m) {
+          const month = MONTH_MAP[m[2].toLowerCase()] || m[2];
+          return `${m[3]} 年 ${month} ${m[1]} 日`;
+        }
+        return trimmed;
+      };
+
+      // 1.20 模型与服务生命周期/下线通知动态匹配 (e.g. "GPT-OSS will be removed from Antigravity on November 2, 2026.")
+      const modelRemovalDateMatch = text.match(/^(.+?)\s+will\s+be\s+removed\s+from\s+Antigravity\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+      if (modelRemovalDateMatch) {
+        const zhDate = formatEnDate(modelRemovalDateMatch[2]);
+        const modelName = modelRemovalDateMatch[1].trim();
+        return `${modelName} 将于 ${zhDate}从 Antigravity 中下线。`;
+      }
+
+      const modelRemovalMatch = text.match(/^(.+?)\s+will\s+be\s+removed\s+from\s+Antigravity\.?$/i);
+      if (modelRemovalMatch) {
+        return `${modelRemovalMatch[1].trim()} 即将从 Antigravity 中下线。`;
+      }
+
+      const modelDeprecateDateMatch = text.match(/^(.+?)\s+will\s+be\s+deprecated\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+      if (modelDeprecateDateMatch) {
+        const zhDate = formatEnDate(modelDeprecateDateMatch[2]);
+        return `${modelDeprecateDateMatch[1].trim()} 将于 ${zhDate}弃用。`;
+      }
+
+      const modelDeprecatedAndRemovedMatch = text.match(/^(.+?)\s+is\s+deprecated\s+and\s+will\s+be\s+removed\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+      if (modelDeprecatedAndRemovedMatch) {
+        const zhDate = formatEnDate(modelDeprecatedAndRemovedMatch[2]);
+        return `${modelDeprecatedAndRemovedMatch[1].trim()} 已废弃，将于 ${zhDate}移除。`;
+      }
+
+      const modelRemovedOnMatch = text.match(/^(.+?)\s+will\s+be\s+removed\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+      if (modelRemovedOnMatch) {
+        const zhDate = formatEnDate(modelRemovedOnMatch[2]);
+        return `${modelRemovedOnMatch[1].trim()} 将于 ${zhDate}移除。`;
+      }
+
+      // 1.21 会话统计胶囊 (e.g. "1 active conversation and 2 archived conversations", "1 active conversation")
+      const convoCountMatch = text.match(/^(?:(\d+)\s+active\s+conversations?)?(?:\s*and\s*)?(?:(\d+)\s+archived\s+conversations?)?$/i);
+      if (convoCountMatch && (convoCountMatch[1] || convoCountMatch[2])) {
+        const parts = [];
+        if (convoCountMatch[1]) parts.push(`${convoCountMatch[1]} 个活跃会话`);
+        if (convoCountMatch[2]) parts.push(`${convoCountMatch[2]} 个已归档会话`);
+        return parts.join(' 和 ');
+      }
+
+      // 1.22 会话归档短语碎片与链接前缀容错
+      if (/^View\s+archived\s+conversations\s+in(?:\s+history)?\.?$/i.test(text)) {
+        return '在历史记录中查看已归档会话。';
+      }
+      if (/^View\s+archived\s+conversations\s+in\s*:?$/i.test(text)) {
+        return '在历史记录中查看已归档会话：';
+      }
+      if (/^View\s+archived\s+conversations$/i.test(text)) {
+        return '查看已归档会话';
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -475,6 +557,65 @@
             el.textContent = '可用自定义预算。';
             try { translatedNodeSet.add(el); } catch (_) {}
             count++;
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
+    // 专门处理 Toast 通知、带内联超链接及 Markdown 渲染的系统浮层 (e.g. "View archived conversations in [history](notification://history).")
+    const translateNotificationContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const candidates = root.querySelectorAll(
+          '[role="alert"], [role="status"], [class*="toast"], [class*="notification"], [data-testid*="toast"], [data-testid*="notification"], p, span, div'
+        );
+        for (let i = 0; i < candidates.length; i++) {
+          const el = candidates[i];
+          if (translatedNodeSet.has(el) || isProtectedTextNode(el)) continue;
+          const text = norm(el.textContent || '');
+          if (!text || text.length > 300) continue;
+
+          // 匹配包含超链接或内联文本的归档通知: "View archived conversations in history."
+          if (/^View archived conversations in\s+history\.?$/i.test(text)) {
+            let deepChildMatched = false;
+            for (let c = 0; c < el.children.length; c++) {
+              if (/View archived conversations in\s+history/i.test(norm(el.children[c].textContent || ''))) {
+                deepChildMatched = true;
+                break;
+              }
+            }
+            if (deepChildMatched) continue;
+
+            const link = el.querySelector('a');
+            if (link) {
+              const childNodes = Array.from(el.childNodes);
+              let foundLink = false;
+              for (let n = 0; n < childNodes.length; n++) {
+                const node = childNodes[n];
+                if (node === link) {
+                  link.textContent = '历史记录';
+                  try { translatedNodeSet.add(link); } catch (_) {}
+                  foundLink = true;
+                } else if (node.nodeType === 3) {
+                  if (!foundLink) {
+                    node.nodeValue = '在 ';
+                  } else {
+                    node.nodeValue = ' 中查看已归档会话。';
+                  }
+                  try { translatedNodeSet.add(node); } catch (_) {}
+                }
+              }
+              try { translatedNodeSet.add(el); } catch (_) {}
+              count++;
+              continue;
+            } else {
+              el.textContent = '在历史记录中查看已归档会话。';
+              try { translatedNodeSet.add(el); } catch (_) {}
+              count++;
+              continue;
+            }
           }
         }
       } catch (_) {}
@@ -847,6 +988,7 @@
           thinkingCount += translateThinkingTriggers(currentRoot);
           thinkingCount += translateThinkingContainers(currentRoot);
           budgetCount += translateBudgetContainers(currentRoot);
+          budgetCount += translateNotificationContainers(currentRoot);
           hlCount += translateHighlightedContainers(currentRoot);
           textCount += translateTextNodes(currentRoot);
           attrCount += translateAttributes(currentRoot);
@@ -1034,6 +1176,7 @@
                 syncCount += translateThinkingTriggers(node);
                 syncCount += translateThinkingContainers(node);
                 syncCount += translateBudgetContainers(node);
+                syncCount += translateNotificationContainers(node);
                 syncCount += translateHighlightedContainers(node);
                 syncCount += translateTextNodes(node);
                 syncCount += translateAttributes(node);
@@ -1043,6 +1186,7 @@
                     syncCount += translateThinkingTriggers(sr);
                     syncCount += translateThinkingContainers(sr);
                     syncCount += translateBudgetContainers(sr);
+                    syncCount += translateNotificationContainers(sr);
                     syncCount += translateHighlightedContainers(sr);
                     syncCount += translateTextNodes(sr);
                     syncCount += translateAttributes(sr);
@@ -1122,6 +1266,7 @@
               translateThinkingTriggers(shadowRoot);
               translateThinkingContainers(shadowRoot);
               translateBudgetContainers(shadowRoot);
+              translateNotificationContainers(shadowRoot);
               translateHighlightedContainers(shadowRoot);
               translateTextNodes(shadowRoot);
               translateAttributes(shadowRoot);
