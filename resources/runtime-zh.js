@@ -828,7 +828,37 @@
       [/^Now, (?:let's |we should |we need to )?(.+)$/i, (m, p1) => '现在，' + smoothPhrases(p1)],
       [/^To resolve this, (.+)$/i, (m, p1) => '为了解决此问题，' + smoothPhrases(p1)],
       [/^All tests passed\.?$/i, () => '所有测试均已通过。'],
-      [/^Unit tests passed at 100%\.?$/i, () => '单元测试 100% 通过。']
+      [/^Unit tests passed at 100%\.?$/i, () => '单元测试 100% 通过。'],
+
+      // 4. 转折、核对、假设与反思推演 (Wait / Hold on / Double check / Based on / In summary)
+      [/^(?:Wait|Hold on), (?:let's |let me |let us )?(.+)$/i, (m, p1) => '等等，让我' + smoothPhrases(p1)],
+      [/^Let me double[- ]check (?:the )?(.+)$/i, (m, p1) => '让我仔细复核' + smoothPhrases(p1)],
+      [/^Let me check (?:the )?(.+)$/i, (m, p1) => '让我检查' + smoothPhrases(p1)],
+      [/^Let me examine (?:the )?(.+)$/i, (m, p1) => '让我查看' + smoothPhrases(p1)],
+      [/^Let me verify (?:that|if|whether)?\s*(.+)$/i, (m, p1) => '让我验证' + smoothPhrases(p1)],
+      [/^Let me inspect (?:the )?(.+)$/i, (m, p1) => '让我审查' + smoothPhrases(p1)],
+      [/^Let me run (?:the )?(.+)$/i, (m, p1) => '让我执行' + smoothPhrases(p1)],
+      [/^Let me test (?:the )?(.+)$/i, (m, p1) => '让我测试' + smoothPhrases(p1)],
+      [/^Let's consider (?:the )?(.+)$/i, (m, p1) => '让我们考虑' + smoothPhrases(p1)],
+      [/^Let's break down (?:the )?(?:problem|task|requirements):?\s*(.*)$/i, (m, p1) => '让我们拆解需求：' + smoothPhrases(p1)],
+      [/^Here is what we need to do:?\s*(.*)$/i, (m, p1) => '以下是我们要做的事：' + smoothPhrases(p1)],
+      [/^Based on (?:the )?(?:above|previous) (?:analysis|investigation), (.+)$/i, (m, p1) => '基于上述分析，' + smoothPhrases(p1)],
+      [/^In conclusion, (.+)$/i, (m, p1) => '总的来说，' + smoothPhrases(p1)],
+      [/^In summary, (.+)$/i, (m, p1) => '概括而言，' + smoothPhrases(p1)],
+      [/^To fix this issue, (.+)$/i, (m, p1) => '为了解决此问题，' + smoothPhrases(p1)],
+      [/^To resolve this issue, (.+)$/i, (m, p1) => '为了解决此问题，' + smoothPhrases(p1)],
+      [/^The next step is to (.+)$/i, (m, p1) => '下一步是' + smoothPhrases(p1)],
+      [/^This approach ensures that (.+)$/i, (m, p1) => '该方案可确保' + smoothPhrases(p1)],
+      [/^Now, let's verify (?:that )?(.+)$/i, (m, p1) => '现在，让我们验证' + smoothPhrases(p1)],
+      [/^Let's look at the implementation of (?:the )?(.+)$/i, (m, p1) => '让我们查看 ' + smoothPhrases(p1) + ' 的具体实现'],
+      [/^Let's examine the source code of (?:the )?(.+)$/i, (m, p1) => '让我们检查 ' + smoothPhrases(p1) + ' 的源代码'],
+      [/^It seems that (.+)$/i, (m, p1) => '看起来' + smoothPhrases(p1)],
+      [/^It appears that (.+)$/i, (m, p1) => '看起来' + smoothPhrases(p1)],
+      [/^Notice that (.+)$/i, (m, p1) => '注意：' + smoothPhrases(p1)],
+      [/^Recall that (.+)$/i, (m, p1) => '回顾可知：' + smoothPhrases(p1)],
+      [/^Everything looks good\.?$/i, () => '一切正常。'],
+      [/^The implementation is complete\.?$/i, () => '具体实现已完成。'],
+      [/^The fix is verified\.?$/i, () => '修复已验证完成。']
     ];
 
     const translateSingleThinkingSentence = (str) => {

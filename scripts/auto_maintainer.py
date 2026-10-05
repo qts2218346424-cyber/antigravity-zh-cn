@@ -232,6 +232,13 @@ def perform_maintenance(force: bool = False, dry_run: bool = False) -> bool:
     print("• 正在巡检所有已安装技能的说明...")
     sync_skill_localization(apply_changes=not dry_run)
 
+    # 1.1 确保源头中文深度思考协议全局常驻
+    try:
+        from patch_antigravity import ensure_chinese_thinking_protocol
+        ensure_chinese_thinking_protocol()
+    except Exception as e:
+        print(f"  [!] 源头思考协议同步提示: {e}")
+
     # 2. 判断是否需要执行主程序重修补与版本同步
     needs_action = force or (not is_patched)
     if not needs_action:

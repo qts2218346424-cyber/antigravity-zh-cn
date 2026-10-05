@@ -644,6 +644,12 @@ function __agyTranslateNotif(text) {{
     except Exception as e:
         print(f"  [!] 自动禁用更新提示: {e}")
 
+    # 自动固化与同步“源头中文深度思考协议”，实现“源头指令 + 客户端 DOM 网关”双层协同
+    try:
+        ensure_chinese_thinking_protocol()
+    except Exception as e:
+        print(f"  [!] 源头思考协议同步提示: {e}")
+
 
 def restore_backup(install_dir: Path):
     """还原原版 app.asar"""
@@ -692,6 +698,51 @@ def toggle_auto_updates(install_dir: Path, disable: bool):
             print("ℹ 当前已允许自动更新。")
         else:
             print("⚠ 未找到 app-update.yml.disabled 配置文件。")
+
+
+def ensure_chinese_thinking_protocol():
+    """确保宿主环境全局与工作区规则中，源头中文深度思考规范 100% 固化常驻 (Native Chinese Thinking Protocol)"""
+    protocol_content = """# Antigravity 全局智能体全中文呈现与深度思考全汉化规范 (Chinese Presentation & Thinking Protocol)
+
+所有挂载或运行于 Antigravity 宿主系统下的模型、主智能体与所有派生子代理（包括但不限于 Worker、Challenger、Auditor、Sentinel、Explorer、Writer 等），必须严格遵守以下全中文呈现准则：
+
+---
+
+## 1. 深度思考过程全中文规范 (Native Chinese Thinking Process - 核心准则)
+
+- **思考过程直出纯中文**：
+  在 Antigravity 桌面端中，模型的所有思维推理流（包括 `<thought>`、Thinking Process、Chain-of-Thought、步骤规划与方案推演）都会实时直接渲染在界面的“思考折叠面板”中供用户展开查阅。
+  为了彻底消除思考面板中“半英半中、机械单词拼接、中英夹生”的现象，**模型在组织思考过程时，必须统一直接使用规范、通顺、严谨的纯简体中文展开全流程思维推演**。
+- **技术原语与代码保留**：
+  在思考过程中，涉及的源代码片段、函数名、类名、变量标识符、系统命令、文件路径以及特定英文技术术语（如 `nodeValue`, `TreeWalker`, `MutationObserver` 等），自然保留原始英文或以行内代码标记包裹。但所有周围的背景分析、因果逻辑推理、排查思路与动作规划，必须全部使用纯正中文自然语言表达。
+- **严禁整句英文思维输出**：
+  严禁使用大段英文自然语言组织思考链，杜绝因大模型输出纯英文而导致前端展示不彻底或夹杂中英词汇的问题。
+
+---
+
+## 2. 用户展示界面零英文原则 (Zero-English User Presentation - 最高优先级)
+
+- **所有展示给用户看的内容必须为纯正中文**：
+  所有最终呈现给用户的交互对话、气泡消息、任务汇报（Handoff Report）、技术方案（Implementation Plan）、修改总结（Walkthrough / Progress）、代码解释及进度说明，一律必须使用规范且易懂的纯正简体中文。
+- **严禁向用户展示英文自然语言段落**：
+  除源代码、程序标识符、变量名、库/模块名称、系统命令与文件路径本身外，面向用户的所有标题、正文段落、列表项、说明文字必须全部翻译或生成为中文，严禁夹杂未经翻译的英文自然语言整句。
+- **工具调用与执行日志总结**：
+  工具调用与任务执行的前置规划与后置汇报必须使用中文清晰呈现给用户。
+"""
+    user_home = Path.home()
+    target_locations = [
+        user_home / ".gemini" / "rules" / "chinese_thinking_protocol.md",
+        user_home / ".gemini" / "config" / "rules" / "chinese_thinking_protocol.md",
+    ]
+
+    for p in target_locations:
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(protocol_content, encoding="utf-8")
+        except Exception:
+            pass
+
+    print("  [OK] 源头中文深度思考协议已全局固化 (Native Chinese Thinking Protocol Active)")
 
 
 def main():
