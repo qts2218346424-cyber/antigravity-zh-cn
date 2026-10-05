@@ -1340,6 +1340,126 @@
       }
     }, 800);
 
+    // 自定义全景高透壁纸与磨砂玻璃主题引擎 (Custom Wallpaper & Glass Theme Engine)
+    const setupCustomWallpaper = () => {
+      const bgImage = window.__AGY_BG_IMAGE__;
+      if (!bgImage) return;
+
+      const applyBg = () => {
+        let style = document.getElementById('agy-bg-style');
+        if (!style) {
+          style = document.createElement('style');
+          style.id = 'agy-bg-style';
+          document.head.appendChild(style);
+        }
+
+        let bgDiv = document.getElementById('agy-custom-background');
+        if (!bgDiv) {
+          bgDiv = document.createElement('div');
+          bgDiv.id = 'agy-custom-background';
+          const target = document.body || document.documentElement;
+          if (target) target.prepend(bgDiv);
+        }
+
+        style.textContent = `
+          #agy-custom-background {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0 !important;
+            pointer-events: none !important;
+            background-image: url("${bgImage}") !important;
+            background-size: cover !important;
+            background-position: center center !important;
+            background-repeat: no-repeat !important;
+            opacity: 0.82 !important;
+            filter: contrast(1.05) brightness(1.02) !important;
+          }
+
+          /* 全局清除阻断透光的实心死白/死灰背景 */
+          html, body, #root,
+          div[class*="w-screen"], div[class*="h-screen"], div[class*="min-h-0"],
+          div[class*="group/pane"], div[class*="relative"],
+          .bg-background, div[class*="bg-background"],
+          main {
+            background-color: transparent !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+          }
+
+          /* 彻底消除顶部与底部吸顶白雾渐变遮罩 */
+          [class*="md-sticky-message-bleed"],
+          [class*="md-sticky-message-bleed"]::after,
+          [class*="md-sticky-message-bleed"]::before,
+          div[class*="from-background"],
+          div[class*="to-transparent"] {
+            background: transparent !important;
+            background-image: none !important;
+          }
+          [class*="md-sticky-message-bleed"]::after {
+            display: none !important;
+          }
+
+          /* 侧边栏：轻度微透磨砂，保证目录树清晰 */
+          div[class*="bg-sidebar"] {
+            background-color: rgba(255, 255, 255, 0.45) !important;
+            backdrop-filter: blur(10px) !important;
+          }
+          .dark div[class*="bg-sidebar"], .theme-dark div[class*="bg-sidebar"] {
+            background-color: rgba(20, 20, 24, 0.5) !important;
+            backdrop-filter: blur(10px) !important;
+          }
+
+          /* 右侧面板 */
+          aside, div[class*="border-l"], div[class*="border-r"] {
+            background-color: rgba(255, 255, 255, 0.35) !important;
+            backdrop-filter: blur(6px) !important;
+          }
+
+          /* 用户卡片气泡：优雅微透 */
+          div[class*="bg-card"], div[class*="rounded-xl"] {
+            background-color: rgba(255, 255, 255, 0.45) !important;
+            backdrop-filter: blur(6px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+          }
+
+          /* 底部输入框容器 */
+          div[class*="group/user-input-step"] {
+            background-color: transparent !important;
+          }
+
+          /* 文字清晰度强化 (柔和发光衬底，黑字纯净清晰) */
+          p, span, h1, h2, h3, h4, label {
+            text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8), 0 0 1px rgba(255, 255, 255, 0.9);
+            color: #1a1a1a !important;
+          }
+
+          /* 代码块与终端依然保持专业暗色对比度 */
+          pre, code, .cm-editor, .monaco-editor, .xterm {
+            background-color: rgba(24, 24, 28, 0.88) !important;
+            backdrop-filter: blur(12px) !important;
+            border-radius: 8px !important;
+          }
+          pre *, code *, .cm-editor *, .monaco-editor *, .xterm * {
+            text-shadow: none !important;
+          }
+        `;
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyBg);
+      } else {
+        applyBg();
+      }
+    };
+
+    setupCustomWallpaper();
+
   } catch (e) {
     console.warn('[AGY-ZH] Runtime translation failed to bootstrap:', e);
   }

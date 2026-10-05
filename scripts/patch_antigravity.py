@@ -310,6 +310,17 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
 
     print("[3/4] 正在原位修补原生菜单、托盘及注入 DOM 翻译引擎...")
 
+    # 检测是否有自定义背景壁纸 (resources/background.jpg 或 background.png)
+    bg_data_uri = ""
+    for bg_candidate in [res_dir / "background.jpg", res_dir / "background.png", res_dir / "background.jpeg"]:
+        if bg_candidate.is_file():
+            import base64
+            b64_str = base64.b64encode(bg_candidate.read_bytes()).decode("utf-8")
+            ext = "jpeg" if bg_candidate.suffix.lower() in [".jpg", ".jpeg"] else "png"
+            bg_data_uri = f"data:image/{ext};base64,{b64_str}"
+            print(f"  [OK] 检测到自定义全景背景壁纸 ({bg_candidate.name})，已就绪注入")
+            break
+
     # 构建运行时注入脚本
     injection_code = f"""
 (function() {{
@@ -317,6 +328,7 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
     window.__AGY_ZH_LANG__ = {json.dumps(lang)};
     window.__AGY_ZH_DICT__ = {json.dumps(lang_dict, ensure_ascii=False)};
     window.__AGY_ZH_RULES__ = {json.dumps(rules_list, ensure_ascii=False)};
+    window.__AGY_BG_IMAGE__ = {json.dumps(bg_data_uri)};
     {runtime_js_code}
   }} catch(e) {{
     console.error("[AGY-ZH] Failed to bootstrap translation:", e);
