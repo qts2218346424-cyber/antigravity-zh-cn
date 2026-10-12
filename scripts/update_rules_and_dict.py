@@ -120,6 +120,8 @@ def audit_and_update_rules():
             continue
         if any(k in pattern for k in ["dded validation with", "irectory Traversal", "liminated Rollback", "xplicitly rejected", "esolved canonical", "onfirmed prefix", "xtracted core restore"]):
             continue
+        if any(k in pattern for k in ["weekly limit", "five hour limit", "5-hour limit", "fully refresh in"]):
+            continue
         if pattern == r"^Are you sure you want to delete (.+)\?$":
             project_rule = r"^[Aa]re you sure you want to delete\s+(?:the\s+)?(?:projects?\s+|项目\s*)(.+?)[\?？]?$"
             if project_rule not in seen_patterns:
@@ -479,29 +481,42 @@ def audit_and_update_rules():
         [r"^Integrity mode:\s*(.+)$", "完整性模式：$1"],
         [r"^Requirements$", "需求清单"],
 
-        # 配额限制与刷新倒计时 (You have used some of your 5-hour limit, it will fully refresh in 4 hours, 13 minutes.)
-        [r"^[Yy]ou have used some of your 5-hour limit,\s*it will fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "您已使用部分 5 小时配额，将在 $1 小时 $2 分钟后完全刷新。"],
-        [r"^[Yy]ou have used all of your 5-hour limit,\s*it will fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "您的 5 小时配额已用尽，将在 $1 小时 $2 分钟后完全刷新。"],
-        [r"^[Yy]ou have used some of your 5-hour limit,\s*it will fully refresh in (\d+)\s+hours?\.?$", "您已使用部分 5 小时配额，将在 $1 小时后完全刷新。"],
-        [r"^[Yy]ou have used all of your 5-hour limit,\s*it will fully refresh in (\d+)\s+hours?\.?$", "您的 5 小时配额已用尽，将在 $1 小时后完全刷新。"],
-        [r"^[Yy]ou have used some of your 5-hour limit,\s*it will fully refresh in (\d+)\s+minutes?\.?$", "您已使用部分 5 小时配额，将在 $1 分钟后完全刷新。"],
-        [r"^[Yy]ou have used all of your 5-hour limit,\s*it will fully refresh in (\d+)\s+minutes?\.?$", "您的 5 小时配额已用尽，将在 $1 分钟后完全刷新。"],
-        [r"^[Yy]ou have used some of your 5-hour limit,\s*it will fully refresh in (.+?)\.?$", "您已使用部分 5 小时配额，将在 $1 后完全刷新。"],
-        [r"^[Yy]ou have used all of your 5-hour limit,\s*it will fully refresh in (.+?)\.?$", "您的 5 小时配额已用尽，将在 $1 后完全刷新。"],
-        [r"^[Yy]ou have used some of your 5-hour limit\.?$", "您已使用部分 5 小时配额。"],
-        [r"^[Yy]ou have used all of your 5-hour limit\.?$", "您的 5 小时配额已用尽。"],
-        [r"^[Yy]ou have used some of your weekly limit,\s*it will fully refresh in (\d+)\s+days?,\s+(\d+)\s+hours?\.?$", "您已使用部分每周配额，将在 $1 天 $2 小时后完全刷新。"],
-        [r"^[Yy]ou have used all of your weekly limit,\s*it will fully refresh in (\d+)\s+days?,\s+(\d+)\s+hours?\.?$", "您的每周配额已用尽，将在 $1 天 $2 小时后完全刷新。"],
-        [r"^[Yy]ou have used some of your weekly limit,\s*it will fully refresh in (\d+)\s+days?\.?$", "您已使用部分每周配额，将在 $1 天后完全刷新。"],
-        [r"^[Yy]ou have used all of your weekly limit,\s*it will fully refresh in (\d+)\s+days?\.?$", "您的每周配额已用尽，将在 $1 天后完全刷新。"],
-        [r"^[Yy]ou have used some of your weekly limit,\s*it will fully refresh in (\d+)\s+hours?\.?$", "您已使用部分每周配额，将在 $1 小时后完全刷新。"],
-        [r"^[Yy]ou have used all of your weekly limit,\s*it will fully refresh in (\d+)\s+hours?\.?$", "您的每周配额已用尽，将在 $1 小时后完全刷新。"],
-        [r"^[Ii]t will fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "将在 $1 小时 $2 分钟后完全刷新。"],
-        [r"^[Ii]t will fully refresh in (\d+)\s+days?,\s+(\d+)\s+hours?\.?$", "将在 $1 天 $2 小时后完全刷新。"],
-        [r"^fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "将在 $1 小时 $2 分钟后完全刷新。"],
+        # 配额限制与刷新倒计时高精度规则（数字高精度优先，通配兜底垫后）
+        [r"^[Yy]ou have used some of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "您已使用部分 5 小时配额，将在 $1 小时 $2 分钟后完全刷新。"],
+        [r"^[Yy]ou have used all of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "您的 5 小时配额已用尽，将在 $1 小时 $2 分钟后完全刷新。"],
+        [r"^[Yy]ou have used some of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+hours?\.?$", "您已使用部分 5 小时配额，将在 $1 小时后完全刷新。"],
+        [r"^[Yy]ou have used all of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+hours?\.?$", "您的 5 小时配额已用尽，将在 $1 小时后完全刷新。"],
+        [r"^[Yy]ou have used some of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+minutes?\.?$", "您已使用部分 5 小时配额，将在 $1 分钟后完全刷新。"],
+        [r"^[Yy]ou have used all of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+minutes?\.?$", "您的 5 小时配额已用尽，将在 $1 分钟后完全刷新。"],
+
+        [r"^[Yy]ou have used some of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+days?,\s+(\d+)\s+hours?\.?$", "您已使用部分每周配额，将在 $1 天 $2 小时后完全刷新。"],
+        [r"^[Yy]ou have used all of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+days?,\s+(\d+)\s+hours?\.?$", "您的每周配额已用尽，将在 $1 天 $2 小时后完全刷新。"],
+        [r"^[Yy]ou have used some of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+days?\.?$", "您已使用部分每周配额，将在 $1 天后完全刷新。"],
+        [r"^[Yy]ou have used all of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+days?\.?$", "您的每周配额已用尽，将在 $1 天后完全刷新。"],
+        [r"^[Yy]ou have used some of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+hours?\.?$", "您已使用部分每周配额，将在 $1 小时后完全刷新。"],
+        [r"^[Yy]ou have used all of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (\d+)\s+hours?\.?$", "您的每周配额已用尽，将在 $1 小时后完全刷新。"],
+
+        [r"^(?:[Ii]t|[Ww]hich)?\s*will fully refresh in (\d+)\s+days?,\s+(\d+)\s+hours?\.?$", "将在 $1 天 $2 小时后完全刷新。"],
         [r"^fully refresh in (\d+)\s+days?,\s+(\d+)\s+hours?\.?$", "将在 $1 天 $2 小时后完全刷新。"],
+        [r"^(?:[Ii]t|[Ww]hich)?\s*will fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "将在 $1 小时 $2 分钟后完全刷新。"],
+        [r"^fully refresh in (\d+)\s+hours?,\s+(\d+)\s+minutes?\.?$", "将在 $1 小时 $2 分钟后完全刷新。"],
+        [r"^(?:[Ii]t|[Ww]hich)?\s*will fully refresh in (\d+)\s+days?\.?$", "将在 $1 天后完全刷新。"],
+        [r"^fully refresh in (\d+)\s+days?\.?$", "将在 $1 天后完全刷新。"],
+        [r"^(?:[Ii]t|[Ww]hich)?\s*will fully refresh in (\d+)\s+hours?\.?$", "将在 $1 小时后完全刷新。"],
+        [r"^fully refresh in (\d+)\s+hours?\.?$", "将在 $1 小时后完全刷新。"],
+
         [r"^(\d+)\s+hours?,\s*(\d+)\s+minutes?$", "$1 小时 $2 分钟"],
         [r"^(\d+)\s+days?,\s*(\d+)\s+hours?$", "$1 天 $2 小时"],
+
+        # 通配兜底规则（垫后）
+        [r"^[Yy]ou have used some of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (.+?)\.?$", "您已使用部分 5 小时配额，将在 $1 后完全刷新。"],
+        [r"^[Yy]ou have used all of your 5-hour limit,\s*(?:it|which)?\s*will fully refresh in (.+?)\.?$", "您的 5 小时配额已用尽，将在 $1 后完全刷新。"],
+        [r"^[Yy]ou have used some of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (.+?)\.?$", "您已使用部分每周配额，将在 $1 后完全刷新。"],
+        [r"^[Yy]ou have used all of your weekly limit,\s*(?:it|which)?\s*will fully refresh in (.+?)\.?$", "您的每周配额已用尽，将在 $1 后完全刷新。"],
+        [r"^(?:[Ii]t|[Ww]hich)?\s*will fully refresh in (.+?)\.?$", "将在 $1 后完全刷新。"],
+        [r"^fully refresh in (.+?)\.?$", "将在 $1 后完全刷新。"],
+        [r"^[Yy]ou have used some of your 5-hour limit\.?$", "您已使用部分 5 小时配额。"],
+        [r"^[Yy]ou have used all of your 5-hour limit\.?$", "您的 5 小时配额已用尽。"],
 
         # MCP 工具授权弹窗 (Allow using this MCP tool?)
         [r"^[Aa]llow using this MCP tool[\?？]?$", "允许使用此 MCP 工具吗？"],

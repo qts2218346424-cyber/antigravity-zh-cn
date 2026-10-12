@@ -71,7 +71,7 @@ class TestRuntimeTranslation(unittest.TestCase):
             if (text.endsWith('.') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '。';
             if (text.endsWith('?') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '？';
 
-            if (text.endsWith('>') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' >';
+            if ((text.endsWith('>') || text.endsWith('›') || text.endsWith('→')) && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' ' + text.slice(-1);
             if ((text.endsWith('✓') || text.endsWith('✔')) && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
                 return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' ' + text.slice(-1);
             }
@@ -374,12 +374,89 @@ class TestRuntimeTranslation(unittest.TestCase):
                 return '使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现。';
             }
 
+            // 1.33 配额与时间完全刷新动态匹配 (Quota limits and refresh duration localization)
+            const quotaWeeklyRefreshMatch = text.match(/^You have used (some|all) of your weekly limit,\s*(?:it|which)?\s*will fully refresh in\s+(.+?)\.?$/i);
+            if (quotaWeeklyRefreshMatch) {
+                const isAll = quotaWeeklyRefreshMatch[1].toLowerCase() === 'all';
+                const durationStr = quotaWeeklyRefreshMatch[2].trim();
+                const zhDuration = durationStr
+                    .replace(/(\d+)\s*days?/gi, '$1 天')
+                    .replace(/(\d+)\s*hours?/gi, '$1 小时')
+                    .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+                    .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+                    .replace(/,\s*/g, ' ')
+                    .trim();
+                const prefix = isAll ? '您的每周配额已用尽' : '您已使用部分每周配额';
+                return `${prefix}，将在 ${zhDuration}后完全刷新。`;
+            }
+
+            const quotaFiveHourRefreshMatch = text.match(/^You have used (some|all) of your (?:five\s*hour|5-hour)\s+limit,\s*(?:it|which)?\s*will fully refresh in\s+(.+?)\.?$/i);
+            if (quotaFiveHourRefreshMatch) {
+                const isAll = quotaFiveHourRefreshMatch[1].toLowerCase() === 'all';
+                const durationStr = quotaFiveHourRefreshMatch[2].trim();
+                const zhDuration = durationStr
+                    .replace(/(\d+)\s*hours?/gi, '$1 小时')
+                    .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+                    .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+                    .replace(/,\s*/g, ' ')
+                    .trim();
+                const prefix = isAll ? '您的 5 小时配额已用尽' : '您已使用部分 5 小时配额';
+                return `${prefix}，将在 ${zhDuration}后完全刷新。`;
+            }
+
+            const quotaGeneralRefreshMatch = text.match(/^(?:it|which)?\s*will fully refresh in\s+(.+?)\.?$/i);
+            if (quotaGeneralRefreshMatch) {
+                const durationStr = quotaGeneralRefreshMatch[1].trim();
+                const zhDuration = durationStr
+                    .replace(/(\d+)\s*days?/gi, '$1 天')
+                    .replace(/(\d+)\s*hours?/gi, '$1 小时')
+                    .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+                    .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+                    .replace(/,\s*/g, ' ')
+                    .trim();
+                return `将在 ${zhDuration}后完全刷新。`;
+            }
+
+            // 1.34 官方技能卡片动态前缀与截断匹配 (AlphaFold, AlphaGenome, Android CLI, Automation, ChEMBL)
+            if (/^Retrieve and analyze AlphaFold predicted structures for a protein/i.test(text)) {
+                return '获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定 UniProt ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用。若用户仅提供蛋白质名称、基因名称或氨基酸序列，请先要求提供 UniProt ID。';
+            }
+            if (/^Constructs deep-links and URLs for the AlphaGenome Atlas website/i.test(text)) {
+                return '为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异体探索链接 (基于 1 的 chr:pos:ref>alt)、基因组位点视图 (基于 1 的闭区间 chr:start-end)、候选摘要表以及 AlphaGenome 参考序列与备选预测比对。';
+            }
+            if (/^Analyzes genetic variant effects on gene expression/i.test(text)) {
+                return '使用 AlphaGenome API 分析遗传变异对基因表达 (RNA-seq)、染色质可及性 (DNASE)、组蛋白标记 (ChIP) 和转录因子的影响。当用户询问非编码变异效应、致病性、临床意义、疾病关联、功能效应、基因表达变化、剪接破坏或启动子与增强子中的调控效应时使用。';
+            }
+            if (/^Score,\s*annotate,\s*and analyze the functional impact of genetic variants/i.test(text)) {
+                return '使用 AlphaGenome 变异影响 (AVI) 分数评估、注释和分析遗传变异的功能影响。通过 AlphaGenome Atlas API 以 chr:pos:ref>alt 格式查询变异、注释 VCF/表格检出集、执行饱和诱变窗口扫描以及提取 GENCODE v46 GTF 基因/外显子/连接点坐标。';
+            }
+            if (/^Provides instructions for installing and using the ['`]?android['`]? CLI/i.test(text)) {
+                return '提供安装和使用 \'android\' CLI 的指南。\'android\' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行 Android 应用程序、管理 Android 虚拟设备并与之交互（包括截图和 UI 检查）、管理 Android SDK 组件、查阅官方 Android 文档，以及发现和安装官方 Android 技能。';
+            }
+            if (/^Interactive guide to design and create a scheduled background automation/i.test(text)) {
+                return '设计和创建定时后台自动化任务的交互式指南。当用户希望创建自动化或周期性定时任务时（如“每天早晨总结我的邮件”、“每周一向我发送待办列表”）使用此技能。亦可通过 /automation 斜杠命令触发。';
+            }
+            if (/^Query the ChEMBL database for bioactive molecules/i.test(text)) {
+                return '查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构。当用户询问化合物、靶点、IC50/Ki 值、药物机制或结构搜索时使用。';
+            }
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
                     const reg = item[0] instanceof RegExp ? item[0] : new RegExp(item[0]);
                     const repl = item[1];
-                    if (reg.test(text)) return text.replace(reg, repl);
+                    if (reg.test(text)) {
+                        let res = text.replace(reg, repl);
+                        if (/后完全刷新/.test(res)) {
+                            res = res
+                                .replace(/(\d+)\s*days?/gi, '$1 天')
+                                .replace(/(\d+)\s*hours?/gi, '$1 小时')
+                                .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+                                .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+                                .replace(/,\s*/g, ' ');
+                        }
+                        return res;
+                    }
                 } catch (_) {}
             }
             return null;
@@ -1208,6 +1285,48 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate(flashCardText) !== expectedFlashCard) {
             console.error("Gemini 3.8 Flash card failed:\\nExpected: " + expectedFlashCard + "\\nGot: " + translate(flashCardText));
             process.exit(368);
+        }
+
+        // 48. 会话右键上下文菜单、配额动态刷新时间与技能描述断言 (最新截图反馈)
+        // 48.1 会话右键菜单项与子菜单项
+        if (translate("Rename") !== "重命名") {
+            console.error("Rename failed:", translate("Rename"));
+            process.exit(370);
+        }
+        if (translate("Pin") !== "固定") process.exit(371);
+        if (translate("Mark Unread") !== "标记为未读") process.exit(372);
+        if (translate("Copy >") !== "复制 >") {
+            console.error("Copy > failed:", translate("Copy >"));
+            process.exit(373);
+        }
+        if (translate("Split >") !== "拆分 >") process.exit(374);
+        if (translate("Copy ›") !== "复制 ›") process.exit(375);
+        if (translate("Split ›") !== "拆分 ›") process.exit(376);
+        if (translate("Archive") !== "归档") process.exit(377);
+        if (translate("Delete") !== "删除") process.exit(378);
+        if (translate("Copy Link") !== "复制链接") process.exit(379);
+        if (translate("Copy Title") !== "复制标题") process.exit(380);
+        if (translate("Split Right") !== "向右拆分") process.exit(381);
+        if (translate("Split Down") !== "向下拆分") process.exit(382);
+
+        // 48.2 配额与时间刷新动态格式化
+        const quotaRefreshEn = "You have used some of your weekly limit, it will fully refresh in 4 days, 8 hours.";
+        const quotaRefreshZh = "您已使用部分每周配额，将在 4 天 8 小时后完全刷新。";
+        if (translate(quotaRefreshEn) !== quotaRefreshZh) {
+            console.error("Quota refresh test failed:\\nExpected: " + quotaRefreshZh + "\\nGot: " + translate(quotaRefreshEn));
+            process.exit(383);
+        }
+
+        // 48.3 技能卡片描述与截断断言
+        const alphafoldShort = "Retrieve and analyze AlphaFold predicted structures for a protein. Use when the user provides a specific UniProt Accession ID and wants structural confidence metrics (pLDDT), domain boundary...";
+        if (!translate(alphafoldShort) || !translate(alphafoldShort).includes("AlphaFold")) {
+            console.error("AlphaFold short failed:", translate(alphafoldShort));
+            process.exit(384);
+        }
+        const alphagenomeShort = "Constructs deep-links and URLs for the AlphaGenome Atlas website. Supports generating single-variant exploration links (1-based chr:pos:ref>alt), genomic locus views (1-based closed chr:start...";
+        if (!translate(alphagenomeShort) || !translate(alphagenomeShort).includes("AlphaGenome")) {
+            console.error("AlphaGenome short failed:", translate(alphagenomeShort));
+            process.exit(385);
         }
 
         console.log("SUCCESS");

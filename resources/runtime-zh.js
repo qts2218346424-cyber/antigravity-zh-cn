@@ -97,8 +97,8 @@
       if (text.endsWith('?') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
         return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + '？';
       }
-      if (text.endsWith('>') && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
-        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' >';
+      if ((text.endsWith('>') || text.endsWith('›') || text.endsWith('→')) && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
+        return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' ' + text.slice(-1);
       }
       if ((text.endsWith('✓') || text.endsWith('✔')) && (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()])) {
         return (DICT[text.slice(0, -1).trim()] || LOWER_DICT[lower.slice(0, -1).trim()]) + ' ' + text.slice(-1);
@@ -408,6 +408,72 @@
         return '使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现。';
       }
 
+      // 1.33 配额与时间完全刷新动态匹配 (Quota limits and refresh duration localization)
+      const quotaWeeklyRefreshMatch = text.match(/^You have used (some|all) of your weekly limit,\s*(?:it|which)?\s*will fully refresh in\s+(.+?)\.?$/i);
+      if (quotaWeeklyRefreshMatch) {
+        const isAll = quotaWeeklyRefreshMatch[1].toLowerCase() === 'all';
+        const durationStr = quotaWeeklyRefreshMatch[2].trim();
+        const zhDuration = durationStr
+          .replace(/(\d+)\s*days?/gi, '$1 天')
+          .replace(/(\d+)\s*hours?/gi, '$1 小时')
+          .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+          .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+          .replace(/,\s*/g, ' ')
+          .trim();
+        const prefix = isAll ? '您的每周配额已用尽' : '您已使用部分每周配额';
+        return `${prefix}，将在 ${zhDuration}后完全刷新。`;
+      }
+
+      const quotaFiveHourRefreshMatch = text.match(/^You have used (some|all) of your (?:five\s*hour|5-hour)\s+limit,\s*(?:it|which)?\s*will fully refresh in\s+(.+?)\.?$/i);
+      if (quotaFiveHourRefreshMatch) {
+        const isAll = quotaFiveHourRefreshMatch[1].toLowerCase() === 'all';
+        const durationStr = quotaFiveHourRefreshMatch[2].trim();
+        const zhDuration = durationStr
+          .replace(/(\d+)\s*hours?/gi, '$1 小时')
+          .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+          .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+          .replace(/,\s*/g, ' ')
+          .trim();
+        const prefix = isAll ? '您的 5 小时配额已用尽' : '您已使用部分 5 小时配额';
+        return `${prefix}，将在 ${zhDuration}后完全刷新。`;
+      }
+
+      const quotaGeneralRefreshMatch = text.match(/^(?:it|which)?\s*will fully refresh in\s+(.+?)\.?$/i);
+      if (quotaGeneralRefreshMatch) {
+        const durationStr = quotaGeneralRefreshMatch[1].trim();
+        const zhDuration = durationStr
+          .replace(/(\d+)\s*days?/gi, '$1 天')
+          .replace(/(\d+)\s*hours?/gi, '$1 小时')
+          .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+          .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+          .replace(/,\s*/g, ' ')
+          .trim();
+        return `将在 ${zhDuration}后完全刷新。`;
+      }
+
+      // 1.34 官方技能卡片动态前缀与截断匹配 (AlphaFold, AlphaGenome, Android CLI, Automation, ChEMBL)
+      if (/^Retrieve and analyze AlphaFold predicted structures for a protein/i.test(text)) {
+        return '获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定 UniProt ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用。若用户仅提供蛋白质名称、基因名称或氨基酸序列，请先要求提供 UniProt ID。';
+      }
+      if (/^Constructs deep-links and URLs for the AlphaGenome Atlas website/i.test(text)) {
+        return '为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异体探索链接 (基于 1 的 chr:pos:ref>alt)、基因组位点视图 (基于 1 的闭区间 chr:start-end)、候选摘要表以及 AlphaGenome 参考序列与备选预测比对。';
+      }
+      if (/^Analyzes genetic variant effects on gene expression/i.test(text)) {
+        return '使用 AlphaGenome API 分析遗传变异对基因表达 (RNA-seq)、染色质可及性 (DNASE)、组蛋白标记 (ChIP) 和转录因子的影响。当用户询问非编码变异效应、致病性、临床意义、疾病关联、功能效应、基因表达变化、剪接破坏或启动子与增强子中的调控效应时使用。';
+      }
+      if (/^Score,\s*annotate,\s*and analyze the functional impact of genetic variants/i.test(text)) {
+        return '使用 AlphaGenome 变异影响 (AVI) 分数评估、注释和分析遗传变异的功能影响。通过 AlphaGenome Atlas API 以 chr:pos:ref>alt 格式查询变异、注释 VCF/表格检出集、执行饱和诱变窗口扫描以及提取 GENCODE v46 GTF 基因/外显子/连接点坐标。';
+      }
+      if (/^Provides instructions for installing and using the ['`]?android['`]? CLI/i.test(text)) {
+        return '提供安装和使用 \'android\' CLI 的指南。\'android\' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行 Android 应用程序、管理 Android 虚拟设备并与之交互（包括截图和 UI 检查）、管理 Android SDK 组件、查阅官方 Android 文档，以及发现和安装官方 Android 技能。';
+      }
+      if (/^Interactive guide to design and create a scheduled background automation/i.test(text)) {
+        return '设计和创建定时后台自动化任务的交互式指南。当用户希望创建自动化或周期性定时任务时（如“每天早晨总结我的邮件”、“每周一向我发送待办列表”）使用此技能。亦可通过 /automation 斜杠命令触发。';
+      }
+      if (/^Query the ChEMBL database for bioactive molecules/i.test(text)) {
+        return '查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构。当用户询问化合物、靶点、IC50/Ki 值、药物机制或结构搜索时使用。';
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -415,7 +481,16 @@
           const reg = item[0] instanceof RegExp ? item[0] : new RegExp(item[0]);
           const repl = item[1];
           if (reg.test(text)) {
-            return text.replace(reg, repl);
+            let res = text.replace(reg, repl);
+            if (/后完全刷新/.test(res)) {
+              res = res
+                .replace(/(\d+)\s*days?/gi, '$1 天')
+                .replace(/(\d+)\s*hours?/gi, '$1 小时')
+                .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+                .replace(/(\d+)\s*seconds?/gi, '$1 秒')
+                .replace(/,\s*/g, ' ');
+            }
+            return res;
           }
         } catch (_) {}
       }
@@ -943,6 +1018,22 @@
       return count;
     };
 
+    // 专门处理弹出菜单与上下文菜单项瞬时汉化 (Context Menus, Dropdown Menus & Submenus)
+    const translateMenuContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const menuSelectors = '[role="menu"], [role="menubar"], [role="menuitem"], [data-radix-menu-content], [data-radix-popper-content-wrapper], [class*="context-menu"], [class*="dropdown-menu"]';
+        const menus = root.querySelectorAll(menuSelectors);
+        for (let i = 0; i < menus.length; i++) {
+          const item = menus[i];
+          count += translateTextNodes(item);
+          count += translateAttributes(item);
+        }
+      } catch (_) {}
+      return count;
+    };
+
     // 专门处理思考过程折叠触发器与计时器动态汉化 (Thinking for Xs / Thought for Xs / Thought Process)
     const translateThinkingTriggers = (root) => {
       if (!root || !root.querySelectorAll) return 0;
@@ -1376,12 +1467,15 @@
       interactExpiry = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 300;
       if (e && e.target && e.target.nodeType === 1) {
         translateFloatingCopyWidgets(e.target);
+        translateMenuContainers(e.target);
       }
       // 针对选区变化与右键上下文弹窗，在微任务中对全局浮层执行即时极速扫描
-      if (e && (e.type === 'mouseup' || e.type === 'contextmenu' || e.type === 'selectionchange')) {
+      if (e && (e.type === 'mouseup' || e.type === 'contextmenu' || e.type === 'selectionchange' || e.type === 'pointerdown')) {
         setTimeout(() => {
-          translateFloatingCopyWidgets(document.body || document.documentElement);
-        }, 10);
+          const body = document.body || document.documentElement;
+          translateFloatingCopyWidgets(body);
+          translateMenuContainers(body);
+        }, 5);
       }
     };
 
@@ -1538,6 +1632,7 @@
               const node = m.addedNodes[j];
               if (node.nodeType === 1) { // 元素节点
                 syncCount += translateFloatingCopyWidgets(node);
+                syncCount += translateMenuContainers(node);
                 syncCount += translateThinkingTriggers(node);
                 syncCount += translateThinkingContainers(node);
                 syncCount += translateBudgetContainers(node);
@@ -1549,6 +1644,7 @@
                   forAllRoots(node.shadowRoot, (sr) => {
                     observeRoot(sr);
                     syncCount += translateFloatingCopyWidgets(sr);
+                    syncCount += translateMenuContainers(sr);
                     syncCount += translateThinkingTriggers(sr);
                     syncCount += translateThinkingContainers(sr);
                     syncCount += translateBudgetContainers(sr);
@@ -1677,168 +1773,7 @@
     }, 800);
 
 
-    // =========================================================================
-    // Antigravity 专属轻量启动动画遮罩层 (In-page Boot Splash Overlay)
-    // 零侵入、零外部资源依赖，启动展示约 1.8 秒后平滑渐隐淡出并自动销毁
-    // =========================================================================
-    const initAntigravitySplashScreen = () => {
-      try {
-        if (typeof window === 'undefined' || window !== window.top) return;
-        if (document.getElementById('__antigravity_splash_screen__')) return;
-
-        // 支持通过配置关闭
-        try {
-          if (localStorage.getItem('__AGY_DISABLE_SPLASH__') === 'true') return;
-        } catch (_) {}
-
-        // 会话单次防抖（仅冷启动展示一次，页面内跳转与路由刷新不重复弹窗）
-        try {
-          if (sessionStorage.getItem('__agy_splash_shown__')) return;
-          sessionStorage.setItem('__agy_splash_shown__', 'true');
-        } catch (_) {}
-
-        const splashRoot = document.createElement('div');
-        splashRoot.id = '__antigravity_splash_screen__';
-        splashRoot.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background-color: #07090e;
-          z-index: 2147483647;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          opacity: 1;
-          transform: scale(1);
-          transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s ease;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-          pointer-events: auto;
-          overflow: hidden;
-          user-select: none;
-        `;
-
-        splashRoot.innerHTML = `
-          <canvas id="__ag_splash_canvas__" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;"></canvas>
-          <div style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;perspective:1000px;">
-            <div style="position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
-              <div style="position:absolute;width:160px;height:160px;border-radius:50%;border:1.5px dashed rgba(56,189,248,0.45);box-shadow:0 0 25px rgba(56,189,248,0.15);animation:__ag_rot1 14s linear infinite;"></div>
-              <div style="position:absolute;width:125px;height:125px;border-radius:50%;border:2px solid transparent;border-top-color:#38bdf8;border-bottom-color:#818cf8;animation:__ag_rot2 6s cubic-bezier(0.45,0.05,0.55,0.95) infinite;filter:drop-shadow(0 0 10px rgba(56,189,248,0.8));"></div>
-              <div style="position:absolute;width:75px;height:75px;border-radius:50%;border:1.5px solid rgba(56,189,248,0.7);animation:__ag_rip 2.5s cubic-bezier(0.1,0.8,0.3,1) infinite;"></div>
-              <div style="position:relative;width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #ffffff 0%, #38bdf8 30%, #4338ca 75%, #0f172a 100%);box-shadow:0 0 30px rgba(56,189,248,0.9),0 0 60px rgba(129,140,248,0.45);display:flex;align-items:center;justify-content:center;animation:__ag_lev 3s ease-in-out infinite;">
-                <svg viewBox="0 0 24 24" style="width:34px;height:34px;fill:none;stroke:#ffffff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(255,255,255,0.9));">
-                  <path d="M12 3L4 14h5v7h6v-7h5L12 3z"/>
-                  <circle cx="12" cy="19" r="1.5" fill="#38bdf8"/>
-                </svg>
-              </div>
-            </div>
-            <div style="font-size:24px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#ffffff 30%,#bae6fd 60%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;text-transform:uppercase;">Antigravity</div>
-            <div style="font-size:11px;letter-spacing:1.5px;color:#94a3b8;margin-bottom:16px;">GOOGLE DEEPMIND · AGENT ARCHITECTURE</div>
-            <div style="width:240px;height:3.5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;position:relative;margin-bottom:10px;">
-              <div id="__ag_splash_bar__" style="position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,#06b6d4,#38bdf8,#818cf8);box-shadow:0 0 8px #38bdf8;transition:width 0.15s ease;"></div>
-            </div>
-            <div id="__ag_splash_status__" style="font-size:11px;font-family:'SF Mono',Consolas,Menlo,monospace;color:#94a3b8;letter-spacing:0.5px;">正在初始化反重力内核...</div>
-          </div>
-          <style>
-            @keyframes __ag_rot1 { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            @keyframes __ag_rot2 { 0% { transform: rotateX(65deg) rotateY(25deg) rotateZ(0deg); } 100% { transform: rotateX(65deg) rotateY(25deg) rotateZ(360deg); } }
-            @keyframes __ag_lev { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-7px); } }
-            @keyframes __ag_rip { 0% { transform: scale(0.9); opacity: 0.9; } 100% { transform: scale(2.2); opacity: 0; } }
-          </style>
-        `;
-
-        const mountSplash = () => {
-          const parent = document.body || document.documentElement;
-          if (parent) {
-            parent.insertBefore(splashRoot, parent.firstChild);
-          } else {
-            setTimeout(mountSplash, 10);
-          }
-        };
-        mountSplash();
-
-        // 启动 Canvas 粒子微动画
-        let animId = null;
-        try {
-          const canvas = splashRoot.querySelector('#__ag_splash_canvas__');
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            let w = canvas.width = window.innerWidth;
-            let h = canvas.height = window.innerHeight;
-            const pts = [];
-            for (let i = 0; i < 48; i++) {
-              pts.push({
-                x: Math.random() * w,
-                y: Math.random() * h,
-                s: Math.random() * 2 + 0.8,
-                vy: -(Math.random() * 1.2 + 0.5),
-                vx: (Math.random() - 0.5) * 0.6,
-                a: Math.random() * 0.5 + 0.2,
-                c: Math.random() > 0.5 ? '#38bdf8' : '#818cf8'
-              });
-            }
-            const draw = () => {
-              ctx.clearRect(0, 0, w, h);
-              for (let i = 0; i < pts.length; i++) {
-                const p = pts[i];
-                p.y += p.vy;
-                p.x += p.vx;
-                if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
-                ctx.fillStyle = p.c;
-                ctx.globalAlpha = p.a;
-                ctx.fill();
-              }
-              animId = requestAnimationFrame(draw);
-            };
-            draw();
-          }
-        } catch (_) {}
-
-        // 启动进度推进与平滑淡出移除
-        const bar = splashRoot.querySelector('#__ag_splash_bar__');
-        const st = splashRoot.querySelector('#__ag_splash_status__');
-        const stages = [
-          { p: 25, t: '正在载入反重力引擎核心...' },
-          { p: 65, t: '启动多智能体协作总线...' },
-          { p: 90, t: '就绪界面本地化环境...' },
-          { p: 100, t: '反重力就绪！' }
-        ];
-        let idx = 0;
-        const progressTimer = setInterval(() => {
-          if (idx < stages.length) {
-            if (bar) bar.style.width = stages[idx].p + '%';
-            if (st) st.textContent = stages[idx].t;
-            idx++;
-          } else {
-            clearInterval(progressTimer);
-          }
-        }, 320);
-
-        // 1.8 秒平滑渐隐淡出，2.4 秒彻底自销毁
-        setTimeout(() => {
-          splashRoot.style.opacity = '0';
-          splashRoot.style.transform = 'scale(1.04)';
-          splashRoot.style.pointerEvents = 'none';
-
-          setTimeout(() => {
-            if (animId) cancelAnimationFrame(animId);
-            clearInterval(progressTimer);
-            if (splashRoot.parentNode) {
-              splashRoot.parentNode.removeChild(splashRoot);
-            }
-          }, 600);
-        }, 1800);
-
-      } catch (err) {
-        console.warn('[AGY-SPLASH] Failed to initialize splash overlay:', err);
-      }
-    };
-
-    // 挂载暴露全局控制开关
+    // 挂载暴露启动动画全局控制开关
     try {
       window.__AGY_TOGGLE_SPLASH__ = (enable) => {
         try {
@@ -1848,8 +1783,6 @@
         } catch (_) {}
       };
     } catch (_) {}
-
-    initAntigravitySplashScreen();
 
   } catch (e) {
     console.warn('[AGY-ZH] Runtime translation failed to bootstrap:', e);

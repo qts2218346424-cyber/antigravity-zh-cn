@@ -2162,7 +2162,91 @@ NEW_TRANSLATIONS = {
     "Start using Gemini 3.8 Flash, our best Flash model.": "开始使用 Gemini 3.8 Flash，我们最强大的 Flash 模型。",
     "Start using Gemini 3.8 Flash, our best Flash model": "开始使用 Gemini 3.8 Flash，我们最强大的 Flash 模型",
     "Use Gemini 3.8 Flash! As a newer model, it delivers more intelligence at 2x the speed for 70% less cost than Gemini 3.1 Pro.": "使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现。",
-    "Use Gemini 3.8 Flash! As a newer model, it delivers more intelligence at 2x the speed for 70% less cost than Gemini 3.1 Pro": "使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现"
+    "Use Gemini 3.8 Flash! As a newer model, it delivers more intelligence at 2x the speed for 70% less cost than Gemini 3.1 Pro": "使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现",
+
+    # 会话列表右键上下文菜单与二级子菜单 (Conversation Context Menu & Submenus)
+    "Copy >": "复制 >",
+    "Split >": "拆分 >",
+    "Copy ›": "复制 ›",
+    "Split ›": "拆分 ›",
+    "Copy →": "复制 →",
+    "Split →": "拆分 →",
+    "Mark Unread": "标记为未读",
+    "Mark as Unread": "标记为未读",
+    "Mark Read": "标记为已读",
+    "Mark as Read": "标记为已读",
+    "Unpin": "取消固定",
+    "Unarchive": "取消归档",
+    "Copy Link": "复制链接",
+    "Copy link": "复制链接",
+    "Copy Title": "复制标题",
+    "Copy title": "复制标题",
+    "Copy ID": "复制 ID",
+    "Copy Session ID": "复制会话 ID",
+    "Copy Conversation ID": "复制会话 ID",
+    "Copy Conversation": "复制会话",
+    "Copy Prompt": "复制提示词",
+    "Copy Branch": "复制分支",
+    "Copy Path": "复制路径",
+    "Copy Relative Path": "复制相对路径",
+    "Copy Absolute Path": "复制绝对路径",
+    "Copy Markdown": "复制 Markdown",
+    "Split Right": "向右拆分",
+    "Split Down": "向下拆分",
+    "Split Up": "向上拆分",
+    "Split Left": "向左拆分",
+    "Split Editor": "拆分编辑器",
+    "Split Editor Right": "向右拆分编辑器",
+    "Split Editor Down": "向下拆分编辑器",
+    "Move to New Window": "移动到新窗口",
+    "Move to Side": "移至侧边",
+    "Copy skill name": "复制技能名称",
+    "Copy Skill Name": "复制技能名称",
+    "Copy skill ID": "复制技能 ID",
+    "Copy Skill ID": "复制技能 ID",
+
+    # 配额与刷新时间短语 (Quota & Refresh Duration Phrasings)
+    "You have used some of your weekly limit, which will fully refresh in": "您已使用部分每周配额，将在以下时间后完全刷新：",
+    "You have used all of your weekly limit, which will fully refresh in": "您的每周配额已用尽，将在以下时间后完全刷新：",
+    "which will fully refresh in": "将在以下时间后完全刷新：",
+
+    # 官方与计算技能列表描述及截断匹配 (Skills Directory Cards & Descriptions)
+    "Retrieve and analyze AlphaFold predicted structures for a protein. Use when the user provides a specific UniProt Accession ID and wants structural confidence metrics (pLDDT), domain boundary analysis, or disorder assessment. Do not use if the user only has a protein name, gene name, or amino acid sequence — ask for a UniProt ID first.": "获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定的 UniProt Accession ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用。若用户仅提供蛋白质名称、基因名称或氨基酸序列，请先要求提供 UniProt ID。",
+    "Retrieve and analyze AlphaFold predicted structures for a protein. Use when the user provides a specific UniProt Accession ID and wants structural confidence metrics (pLDDT), domain boundary analysis, or disorder assessment. Do not use if the user only has a protein name, gene name, or amino acid sequence — ask for a UniProt ID first": "获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定的 UniProt Accession ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用。若用户仅提供蛋白质名称、基因名称或氨基酸序列，请先要求提供 UniProt ID。",
+    "Retrieve and analyze AlphaFold predicted structures for a protein. Use when the user provides a specific UniProt Accession ID and wants structural confidence metrics (pLDDT), domain boundary...": "获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定 UniProt ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用...",
+    "Retrieve and analyze AlphaFold predicted structures for a protein. Use when the user provides a specific UniProt Accession ID and wants structural confidence metrics (pLDDT), domain boundary…": "获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定 UniProt ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用...",
+
+    "Constructs deep-links and URLs for the AlphaGenome Atlas website. Supports generating single-variant exploration links (1-based chr:pos:ref>alt), genomic locus views (1-based closed chr:start-end), candidate summary tables, and AlphaGenome reference vs. alternate predictions. Use whenever visualizing, exploring, charting, or linking genetic variants and genomic loci on the AlphaGenome Atlas, or when asked to inspect, view, or link predictions for a genomic variant.": "为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异体探索链接 (基于 1 的 chr:pos:ref>alt)、基因组位点视图 (基于 1 的闭区间 chr:start-end)、候选摘要表以及 AlphaGenome 参考序列与备选预测比对。",
+    "Constructs deep-links and URLs for the AlphaGenome Atlas website. Supports generating single-variant exploration links (1-based chr:pos:ref>alt), genomic locus views (1-based closed chr:start-end), candidate summary tables, and AlphaGenome reference vs. alternate predictions. Use whenever visualizing, exploring, charting, or linking genetic variants and genomic loci on the AlphaGenome Atlas, or when asked to inspect, view, or link predictions for a genomic variant": "为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异体探索链接 (基于 1 的 chr:pos:ref>alt)、基因组位点视图 (基于 1 的闭区间 chr:start-end)、候选摘要表以及 AlphaGenome 参考序列与备选预测比对。",
+    "Constructs deep-links and URLs for the AlphaGenome Atlas website. Supports generating single-variant exploration links (1-based chr:pos:ref>alt), genomic locus views (1-based closed chr:start...": "为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异体探索链接、基因组位点视图与预测比对...",
+    "Constructs deep-links and URLs for the AlphaGenome Atlas website. Supports generating single-variant exploration links (1-based chr:pos:ref>alt), genomic locus views (1-based closed chr:start…": "为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异体探索链接、基因组位点视图与预测比对...",
+
+    "Analyzes genetic variant effects on gene expression (RNA-seq), chromatin accessibility (DNASE), histone marks (ChIP), and transcription factors using the AlphaGenome API. Use when the user asks about non-coding variant effects, pathogenicity, clinical significance, disease associations, functional effects, gene expression changes, splicing disruption, or regulatory effects in promoters and enhancers. Also use for resolving biological terms to tissue/cell-type ontologies (UBERON/CL) or analyzing variants in chr:pos:ref>alt format.": "使用 AlphaGenome API 分析遗传变异对基因表达 (RNA-seq)、染色质可及性 (DNASE)、组蛋白标记 (ChIP) 和转录因子的影响。当用户询问非编码变异效应、致病性、临床意义、疾病关联、功能效应、基因表达变化、剪接破坏或启动子与增强子中的调控效应时使用。",
+    "Analyzes genetic variant effects on gene expression (RNA-seq), chromatin accessibility (DNASE), histone marks (ChIP), and transcription factors using the AlphaGenome API. Use when the user asks about non-coding variant effects, pathogenicity, clinical significance, disease associations, functional effects, gene expression changes, splicing disruption, or regulatory effects in promoters and enhancers. Also use for resolving biological terms to tissue/cell-type ontologies (UBERON/CL) or analyzing variants in chr:pos:ref>alt format": "使用 AlphaGenome API 分析遗传变异对基因表达 (RNA-seq)、染色质可及性 (DNASE)、组蛋白标记 (ChIP) 和转录因子的影响。当用户询问非编码变异效应、致病性、临床意义、疾病关联、功能效应、基因表达变化、剪接破坏或启动子与增强子中的调控效应时使用。",
+    "Analyzes genetic variant effects on gene expression (RNA-seq), chromatin accessibility (DNASE), histone marks (ChIP), and transcription factors using the AlphaGenome API. Use when the user...": "使用 AlphaGenome API 分析遗传变异对基因表达、染色质可及性、组蛋白标记和转录因子的影响...",
+    "Analyzes genetic variant effects on gene expression (RNA-seq), chromatin accessibility (DNASE), histone marks (ChIP), and transcription factors using the AlphaGenome API. Use when the user…": "使用 AlphaGenome API 分析遗传变异对基因表达、染色质可及性、组蛋白标记和转录因子的影响...",
+
+    "Score, annotate, and analyze the functional impact of genetic variants using AlphaGenome Variant Impact (AVI) scores. Query variants in chr:pos:ref>alt format, annotate VCF/tabular callsets, perform saturation mutagenesis window scans (1-based closed chr:start-end), and extract GENCODE v46 GTF gene/exon/junction coordinates all via the AlphaGenome Atlas API.": "使用 AlphaGenome 变异影响 (AVI) 分数评估、注释和分析遗传变异的功能影响。通过 AlphaGenome Atlas API 以 chr:pos:ref>alt 格式查询变异、注释 VCF/表格检出集、执行饱和诱变窗口扫描以及提取 GENCODE v46 GTF 基因/外显子/连接点坐标。",
+    "Score, annotate, and analyze the functional impact of genetic variants using AlphaGenome Variant Impact (AVI) scores. Query variants in chr:pos:ref>alt format, annotate VCF/tabular callsets, perform saturation mutagenesis window scans (1-based closed chr:start-end), and extract GENCODE v46 GTF gene/exon/junction coordinates all via the AlphaGenome Atlas API": "使用 AlphaGenome 变异影响 (AVI) 分数评估、注释和分析遗传变异的功能影响。通过 AlphaGenome Atlas API 以 chr:pos:ref>alt 格式查询变异、注释 VCF/表格检出集、执行饱和诱变窗口扫描以及提取 GENCODE v46 GTF 基因/外显子/连接点坐标。",
+    "Score, annotate, and analyze the functional impact of genetic variants using AlphaGenome Variant Impact (AVI) scores. Query variants in chr:pos:ref>alt format, annotate VCF/tabular callsets,...": "使用 AlphaGenome 变异影响 (AVI) 分数评估、注释和分析遗传变异的功能影响...",
+    "Score, annotate, and analyze the functional impact of genetic variants using AlphaGenome Variant Impact (AVI) scores. Query variants in chr:pos:ref>alt format, annotate VCF/tabular callsets,…": "使用 AlphaGenome 变异影响 (AVI) 分数评估、注释和分析遗传变异的功能影响...",
+
+    "Provides instructions for installing and using the `android` CLI. The `android` command-line tool is a critical tool for Android development and helps you create new Android projects, run Android apps on devices, manage and interact with Android virtual devices (including screenshots and UI inspection), manage Android SDK components, look up official Android documentation, and discover and install official Android skills.": "提供安装和使用 'android' CLI 的指南。'android' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行 Android 应用程序、管理 Android 虚拟设备并与之交互（包括截图和 UI 检查）、管理 Android SDK 组件、查阅官方 Android 文档，以及发现和安装官方 Android 技能。",
+    "Provides instructions for installing and using the 'android' CLI. The 'android' command-line tool is a critical tool for Android development and helps you create new Android projects, run Android apps on devices, manage and interact with Android virtual devices (including screenshots and UI inspection), manage Android SDK components, look up official Android documentation, and discover and install official Android skills.": "提供安装和使用 'android' CLI 的指南。'android' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行 Android 应用程序、管理 Android 虚拟设备并与之交互（包括截图和 UI 检查）、管理 Android SDK 组件、查阅官方 Android 文档，以及发现和安装官方 Android 技能。",
+    "Provides instructions for installing and using the 'android' CLI. The 'android' command-line tool is a critical tool for Android development and helps you create new Android projects, run Android...": "提供安装和使用 'android' CLI 的指南。'android' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行...",
+    "Provides instructions for installing and using the 'android' CLI. The 'android' command-line tool is a critical tool for Android development and helps you create new Android projects, run Android…": "提供安装和使用 'android' CLI 的指南。'android' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行...",
+    "Provides instructions for installing and using the `android` CLI. The `android` command-line tool is a critical tool for Android development and helps you create new Android projects, run Android...": "提供安装和使用 'android' CLI 的指南。'android' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行...",
+    "Provides instructions for installing and using the `android` CLI. The `android` command-line tool is a critical tool for Android development and helps you create new Android projects, run Android…": "提供安装和使用 'android' CLI 的指南。'android' 命令行工具是 Android 开发的关键工具，可帮助您创建新的 Android 项目、在设备上运行...",
+
+    "Interactive guide to design and create a scheduled background automation. Use this skill when the user wants to create an automated or recurring scheduled task (e.g. \"summarize my emails every morning\", \"every Monday send me a to-do list\"). Also triggered by the /automation slash command.": "设计和创建定时后台自动化任务的交互式指南。当用户希望创建自动化或周期性定时任务时（如“每天早晨总结我的邮件”、“每周一向我发送待办列表”）使用此技能。亦可通过 /automation 斜杠命令触发。",
+    "Interactive guide to design and create a scheduled background automation. Use this skill when the user wants to create an automated or recurring scheduled task (e.g. \"summarize my emails every morning\", \"every Monday send me a to-do list\"). Also triggered by the /automation slash command": "设计和创建定时后台自动化任务的交互式指南。当用户希望创建自动化或周期性定时任务时（如“每天早晨总结我的邮件”、“每周一向我发送待办列表”）使用此技能。亦可通过 /automation 斜杠命令触发。",
+    "Interactive guide to design and create a scheduled background automation. Use this skill when the user wants to create an automated or recurring scheduled task (e.g. \"summarize my emails every...": "设计和创建定时后台自动化任务的交互式指南。当用户希望创建自动化或周期性定时任务时使用...",
+    "Interactive guide to design and create a scheduled background automation. Use this skill when the user wants to create an automated or recurring scheduled task (e.g. \"summarize my emails every…": "设计和创建定时后台自动化任务的交互式指南。当用户希望创建自动化或周期性定时任务时使用...",
+
+    "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values, drug mechanisms, or structure searches.": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构。当用户询问化合物、靶点、IC50/Ki 值、药物机制或结构搜索时使用。",
+    "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values, drug mechanisms, or structure searches": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构。当用户询问化合物、靶点、IC50/Ki 值、药物机制或结构搜索时使用。",
+    "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values...": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构...",
+    "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values…": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构…"
 }
 
 def main():

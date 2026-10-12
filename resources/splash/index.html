@@ -591,11 +591,13 @@
      * 3. 启动时序与系统进度模拟
      * ===================================================================== */
     const stages = [
-      { pct: 15, text: "正在初始化反重力内核 (Antigravity Engine)..." },
+      { pct: 15, text: "正在启动反重力引擎内核 (Antigravity Engine)..." },
       { pct: 35, text: "校准引力场曲率与量子矩阵..." },
-      { pct: 60, text: "建立异构多智能体联邦协作通道..." },
-      { pct: 85, text: "加载本地中文语言与全景交互系统..." },
-      { pct: 100, text: "系统自检完成 · 反重力就绪！" }
+      { pct: 58, text: "初始化异构多智能体联邦通信总线..." },
+      { pct: 76, text: "加载本地全景汉化与工作区上下文..." },
+      { pct: 88, text: "挂载代码分析引擎与智能体协同拓扑..." },
+      { pct: 96, text: "正在构建主工作台界面与会话面板..." },
+      { pct: 100, text: "反重力就绪 · 正在进入工作台..." }
     ];
 
     let currentStageIndex = 0;
@@ -605,13 +607,13 @@
       if (progressTimer) clearInterval(progressTimer);
       currentStageIndex = 0;
       updateProgress(0, stages[0].text);
-      playHumSound(120, 520, 1.8);
+      playHumSound(120, 520, 2.6);
 
       let currentPct = 0;
       progressTimer = setInterval(() => {
         const target = stages[currentStageIndex];
         if (currentPct < target.pct) {
-          currentPct += 2;
+          currentPct += 1;
           updateProgress(currentPct, target.text);
         } else {
           currentStageIndex++;
@@ -621,7 +623,7 @@
             playPulseSound();
           }
         }
-      }, 35);
+      }, 46);
     }
 
     function updateProgress(pct, statusText) {

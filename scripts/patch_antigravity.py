@@ -512,6 +512,10 @@ try {
                 "contextIsolation: true,",
                 "contextIsolation: true,\n            allFrames: true,"
             )
+            utils_content = utils_content.replace(
+                "const backgroundColor = isLight ? '#FAFAFA' : '#131313';",
+                "const backgroundColor = '#07090e';"
+            )
             js_raw = json.dumps(injection_code)
             hook_code = f"""
 /* __ANTIGRAVITY_ZH_CN_PATCHED__ */
@@ -587,40 +591,17 @@ function __agyTranslateNotif(text) {{
     except Exception as e:
         print(f"  [!] 忽略非致命项 dist/ipcHandlers.js: {e}")
 
-    # (6) 修补 dist/loadingOverlay.js (消除启动白屏卡顿与翻译启动文本)
+    # (6) 修补 dist/loadingOverlay.js (重构为原厂级深空反重力启动动效，彻底根除白屏断层)
     try:
         overlay_content = read_asar_file_content(asar_data, "dist/loadingOverlay.js").decode("utf-8")
-        overlay_content = overlay_content.replace(
-            '<div class="text">Loading Antigravity</div>',
-            '<div class="text">正在加载 Antigravity...</div>'
-        )
-        old_remove_str = """    win.webContents.once('did-finish-load', () => {
-        try {
-            win.contentView.removeChildView(view);
-        }
-        catch (_) {
-            // In case window was closed quickly
-        }
-        win.off('resize', updateBounds);
-    });"""
-        new_remove_str = """    let __agyOverlayRemoved = false;
-    const __agyRemoveOverlay = () => {
-        if (__agyOverlayRemoved) return;
-        __agyOverlayRemoved = true;
-        try {
-            win.contentView.removeChildView(view);
-        } catch (_) {}
-        win.off('resize', updateBounds);
-    };
-    win.webContents.once('dom-ready', __agyRemoveOverlay);
-    win.webContents.once('did-finish-load', __agyRemoveOverlay);
-    setTimeout(__agyRemoveOverlay, 1500);"""
-        if old_remove_str in overlay_content:
-            overlay_content = overlay_content.replace(old_remove_str, new_remove_str)
-            asar_data = replace_asar_file_content(asar_data, "dist/loadingOverlay.js", overlay_content.encode("utf-8"))
-            print("  [OK] 启动加载遮罩 (dist/loadingOverlay.js) 防白屏卡顿优化完成")
+        if PATCH_MARKER not in overlay_content:
+            overlay_file = res_dir / "loadingOverlay-zh.js"
+            if overlay_file.is_file():
+                overlay_patch_code = f"{PATCH_MARKER}\n{overlay_file.read_text(encoding='utf-8')}"
+                asar_data = replace_asar_file_content(asar_data, "dist/loadingOverlay.js", overlay_patch_code.encode("utf-8"))
+                print("  [OK] 原生反重力启动遮罩 (dist/loadingOverlay.js) 零延迟深空秒开重构完成")
     except Exception as e:
-        print(f"  [!] 忽略非致命项 dist/loadingOverlay.js: {e}")
+        print(f"  [!] 原生启动遮罩修补失败: {e}")
 
     # 4. 安全写入目标文件
     print(f"[4/4] 正在安全写入汉化文件: {asar_path.name}...")
