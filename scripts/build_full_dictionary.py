@@ -167,8 +167,8 @@ NEW_TRANSLATIONS = {
     "Viewing": "正在查看",
     "Read": "已读取",
     "Reading": "正在读取",
-    "Thinking for": "思考耗时",
-    "Thought for": "思考耗时",
+    "Thinking for": "正在思考",
+    "Thought for": "思考了",
     "Thinking time": "思考耗时",
     "Thinking Time": "思考耗时",
     "Thought time": "思考耗时",
@@ -1827,7 +1827,89 @@ NEW_TRANSLATIONS = {
     "Discard": "放弃",
     "discard": "放弃",
     "Discard Changes": "放弃更改",
-    "discard changes": "放弃更改"
+    "discard changes": "放弃更改",
+
+    # 2.23.0 新版本功能词条 (Chief of Staff 幕僚长、自动化、标签页、云端项目、音频等)
+    "Ask the agent to diagnose and fix this server": "让智能体诊断并修复此服务器",
+    "Binary": "二进制",
+    "BoN": "最佳候选采样 (BoN)",
+    "Build new features": "开发新功能",
+    "Cancel Sending Message": "取消发送消息",
+    "Chief of Staff": "幕僚长",
+    "Chief of Staff Dashboard": "幕僚长仪表盘",
+    "Chief of Staff voice message failed": "幕僚长语音消息发送失败",
+    "Chief of Staff voice mode is active": "幕僚长语音模式已激活",
+    "Chief of Staff voice mode stopped": "幕僚长语音模式已停止",
+    "Sent to Chief of Staff": "已发送给幕僚长",
+    "Click to view or edit comment": "点击查看或编辑评论",
+    "Close (Esc)": "关闭 (Esc)",
+    "Close other tabs": "关闭其他标签页",
+    "Close tabs to the right": "关闭右侧标签页",
+    "Continue with Google": "通过 Google 继续",
+    "Continue with Google Cloud": "通过 Google Cloud 继续",
+    "Copy Conversation ID": "复制会话 ID",
+    "Core AI Systems is hiring!": "Core AI Systems 正在招聘！",
+    "Create Cloud Project": "创建云端项目",
+    "Custom Order": "自定义排序",
+    "Debug and fix": "调试并修复",
+    "Disabled. Open the plugin page to finish setup.": "已禁用。打开插件页面以完成设置。",
+    "Download SVG": "下载 SVG",
+    "Electron (Android Desktop)": "Electron (Android 桌面版)",
+    "Electron (Desktop)": "Electron (桌面版)",
+    "Electron (Gemini App)": "Electron (Gemini 应用)",
+    "Export as PDF": "导出为 PDF",
+    "Extension (Cider)": "扩展 (Cider)",
+    "Extension (Eclipse)": "扩展 (Eclipse)",
+    "Extension (VS Code)": "扩展 (VS Code)",
+    "Extension (Visual Studio)": "扩展 (Visual Studio)",
+    "Failed to create automation.": "创建自动化失败。",
+    "Failed to upload HTML artifact to Drive": "上传 HTML 工件到 Google Drive 失败",
+    "Filter resources...": "筛选资源...",
+    "Folder": "文件夹",
+    "Fork conversation in this folder": "在此文件夹中分叉会话",
+    "Fork warning": "分叉警告",
+    "Forward": "前进",
+    "Gemini Enterprise": "Gemini 企业版",
+    "General work": "通用工作",
+    "Goals": "目标",
+    "Google (internal)": "Google (内部)",
+    "Hub": "中心",
+    "IDE (editor)": "IDE (编辑器)",
+    "Keeps working in this folder. Nothing is copied.": "继续在此文件夹中工作。不复制任何内容。",
+    "Links": "链接",
+    "MCP Restart Error:": "MCP 重启错误:",
+    "Mark This Conversation as Read": "将此会话标记为已读",
+    "Mark This Conversation as Unread": "将此会话标记为未读",
+    "New Automation": "新建自动化",
+    "New models have been enabled for you!": "已为您启用新模型！",
+    "Open Trajectory Debug View": "打开轨迹调试视图",
+    "Open in Built-in Browser": "在内置浏览器中打开",
+    "Open in external browser": "在外部浏览器中打开",
+    "Open in preview": "在预览中打开",
+    "Paste code": "粘贴代码",
+    "Pay As You Go": "按量计费",
+    "Permission Details": "权限详情",
+    "Pin a contrib experiment variant (force_contrib_variant). Requires Core Direct.": "固定社区实验变体 (force_contrib_variant)。需要 Core Direct。",
+    "Prompt to run when triggered...": "触发时运行的提示词...",
+    "Remount workspace": "重新挂载工作区",
+    "Research anything": "调研任何内容",
+    "Reset zoom (0)": "重置缩放 (0)",
+    "Search file contents...": "搜索文件内容...",
+    "Search tabs, files, plugins, subagents, artifacts, tasks...": "搜索标签页、文件、插件、子智能体、工件、任务...",
+    "See all": "查看全部",
+    "Seek": "定位",
+    "Sign-in required": "需要登录",
+    "Sort By": "排序方式",
+    "Sound": "声音",
+    "Sync JJ Worktrees to Head": "同步 JJ 工作树至 HEAD",
+    "Telemetry is disabled in Settings": "已在设置中禁用遥测",
+    "Toggle Overview Panel": "切换总览面板",
+    "Upload Files": "上传文件",
+    "Uploaded to Google Drive": "已上传到 Google 云端硬盘",
+    "Version Info": "版本信息",
+    "Volume": "音量",
+    "Write and edit docs": "编写并编辑文档",
+    "Zoom out (-)": "缩小 (-)"
 }
 
 def main():
@@ -1837,12 +1919,13 @@ def main():
     tw_file = res_dir / "antigravity-zh-TW.json"
     hk_file = res_dir / "antigravity-zh-HK.json"
 
-    # 1. Load existing dictionary
+    # 1. Load existing dictionary (Highest priority)
     with open(cn_file, "r", encoding="utf-8") as f:
-        full_dict = json.load(f)
+        existing_dict = json.load(f)
 
-    # 2. Update with new translations
-    full_dict.update(NEW_TRANSLATIONS)
+    # 2. Update with new translations (protect existing refined entries)
+    full_dict = dict(NEW_TRANSLATIONS)
+    full_dict.update(existing_dict)
 
     # 3. Clean up non-words and artifacts
     clean_dict = {}

@@ -182,7 +182,7 @@ class TestAntigravityZh(unittest.TestCase):
             return cnt
             
         orig_unpacked = count_unpacked(h)
-        self.assertEqual(orig_unpacked, 293, f"原版 unpacked 数量不符合预期: {orig_unpacked}")
+        self.assertIn(orig_unpacked, (293, 347), f"原版 unpacked 数量不符合预期: {orig_unpacked}")
         
         # 模拟修补 dist/menu.js
         old_menu = read_asar_file_content(data, "dist/menu.js")
@@ -191,7 +191,7 @@ class TestAntigravityZh(unittest.TestCase):
         
         _, _, patched_h = read_asar_header(patched)
         patched_unpacked = count_unpacked(patched_h)
-        self.assertEqual(patched_unpacked, 293, "真实 asar 修补后丢弃了 unpacked 文件！")
+        self.assertEqual(patched_unpacked, orig_unpacked, "真实 asar 修补后丢弃了 unpacked 文件！")
 
     def test_e2e_patch_install_and_restore(self):
         """端到端模拟测试：安装纯净汉化补丁 -> 验证主世界/预加载注入与无损修补 -> 还原原版备份验证"""
