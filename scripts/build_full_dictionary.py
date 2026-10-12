@@ -1965,7 +1965,70 @@ NEW_TRANSLATIONS = {
     "Use global settings": "使用全局设置",
     "Use Project Settings": "使用项目设置",
     "use project settings": "使用项目设置",
-    "Use project settings": "使用项目设置"
+    "Use project settings": "使用项目设置",
+
+    # 模型生命周期标签 (Model Badges)
+    "Leaving Soon": "即将下线",
+    "Leaving soon": "即将下线",
+    "leaving soon": "即将下线",
+
+    # 会话历史迁移与检索通知 (History Migration Notice)
+    "This page is going away soon": "此页面即将停用",
+    "This page is going away soon.": "此页面即将停用。",
+    "Search conversations with": "使用左上角的搜索图标 ",
+    "Search conversations with ": "使用左上角的搜索图标 ",
+    "in the top left.": " 搜索会话。",
+    "in the top left": "在左上角",
+    "View archived in the sidebar": "在侧边栏中查看已归档会话",
+    "View archived in the sidebar (": "在侧边栏中查看已归档会话（",
+    "menu).": "菜单）。",
+    " menu).": " 菜单）。",
+    "View archived in the sidebar (![filter](icon://filter_list) menu).": "在侧边栏中查看已归档会话（过滤菜单）。",
+    "View archived in the sidebar (Display options menu).": "在侧边栏中查看已归档会话（显示选项菜单）。",
+
+    # 自动化页面 (Automations)
+    "Create with Prompt": "使用提示词创建",
+    "create with prompt": "使用提示词创建",
+    "Search automations...": "搜索自动化...",
+    "Search automations": "搜索自动化",
+    "No automations configured.": "未配置自动化。",
+    "No automations configured": "未配置自动化",
+
+    # 插件与开发者套件中心 (Marketplace & Google Suite)
+    "Google Workspace": "Google Workspace",
+    "Connect to Google Workspace, including Docs, Sheets, Slides, Drive, and Calendar.": "连接至 Google Workspace，包括 Google 文档、表格、幻灯片、云端硬盘和日历。",
+    "Connect to Google Workspace, including Docs, Sheets, Slides, Drive, and Calendar": "连接至 Google Workspace，包括 Google 文档、表格、幻灯片、云端硬盘和日历",
+    "Google Calendar": "Google 日历",
+    "Check availability, schedule events, and RSVP.": "检查空闲时段、安排活动日程及回复邀请。",
+    "Check availability, schedule events, and RSVP": "检查空闲时段、安排活动日程及回复邀请",
+    "Read, draft, and edit docs.": "读取、起草和编辑文档。",
+    "Read, draft, and edit docs": "读取、起草和编辑文档",
+    "Read, write, and format spreadsheets.": "读取、编写和设置电子表格格式。",
+    "Read, write, and format spreadsheets": "读取、编写和设置电子表格格式",
+    "Read, edit, and export presentations.": "读取、编辑和导出演示文稿。",
+    "Read, edit, and export presentations": "读取、编辑和导出演示文稿",
+    "Search, upload, download, and share files.": "搜索、上传、下载和共享文件。",
+    "Search, upload, download, and share files": "搜索、上传、下载和共享文件",
+    "Build with Google": "使用 Google 工具构建",
+    "Build on Google's developer platforms, including Android, Chrome, Gemini, and Google Cloud.": "在 Google 开发者平台上构建应用，涵盖 Android、Chrome、Gemini 与 Google Cloud。",
+    "Build on Google's developer platforms, including Android, Chrome, Gemini, and Google Cloud": "在 Google 开发者平台上构建应用，涵盖 Android、Chrome、Gemini 与 Google Cloud",
+    "Core tools and knowledge required to develop for Android": "开发 Android 应用所需的核心工具与专业知识",
+    "Core tools and knowledge required to develo...": "开发 Android 所需的核心工具与知识...",
+    "Prototype, build & run modern apps that users love with Firebase's backend, AI, and operational infrastructure.": "利用 Firebase 的后端、AI 和运维基础设施，原型设计、构建并运行现代应用程序。",
+    "Prototype, build & run modern apps that user...": "利用 Firebase 构建现代应用程序...",
+    "Build applications with the Gemini Interactions API and Live API, including text, image, video, and speech generation, managed agents, and real-time multimodal streaming.": "使用 Gemini Interactions API 和 Live API 构建应用，涵盖多模态生成、托管智能体与流式传输。",
+    "Build applications with the Gemini Interaction...": "使用 Gemini Interactions API 构建多模态应用...",
+    "Curated collection of agent skills for science tasks.": "精选用于科学研究与计算任务的智能体技能集合。",
+    "Curated collection of agent skills for science t...": "用于科学计算任务的智能体技能精选集...",
+    "Using the Google Antigravity Python SDK to build AI agents": "使用 Google Antigravity Python SDK 构建 AI 智能体",
+    "Using the Google Antigravity Python SDK to b...": "使用 Antigravity Python SDK 构建智能体...",
+    "Science": "科学计算 (Science)",
+    "Google Antigravity SDK": "Google Antigravity SDK",
+
+    # 过滤与显示选项 (Display Options)
+    "Archived Only": "仅已归档",
+    "Archived only": "仅已归档",
+    "archived only": "仅已归档"
 }
 
 def main():

@@ -968,6 +968,24 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Use Global Settings") !== "使用全局设置") process.exit(290);
         if (translate("Use Project Settings") !== "使用项目设置") process.exit(291);
 
+        // 43. 模型下线标签、会话迁移提示、自动化页面、官方插件市场套件及显示菜单断言
+        if (translate("Leaving Soon") !== "即将下线") process.exit(292);
+        if (translate("Leaving soon") !== "即将下线") process.exit(293);
+        if (translate("This page is going away soon") !== "此页面即将停用") process.exit(294);
+        if (translate("Create with Prompt") !== "使用提示词创建") process.exit(295);
+        if (translate("Search automations...") !== "搜索自动化...") process.exit(296);
+        if (translate("No automations configured.") !== "未配置自动化。") process.exit(297);
+        if (translate("Connect to Google Workspace, including Docs, Sheets, Slides, Drive, and Calendar.") !== "连接至 Google Workspace，包括 Google 文档、表格、幻灯片、云端硬盘和日历。") process.exit(298);
+        if (translate("Google Calendar") !== "Google 日历") process.exit(299);
+        if (translate("Check availability, schedule events, and RSVP.") !== "检查空闲时段、安排活动日程及回复邀请。") process.exit(300);
+        if (translate("Read, draft, and edit docs.") !== "读取、起草和编辑文档。") process.exit(301);
+        if (translate("Read, write, and format spreadsheets.") !== "读取、编写和设置电子表格格式。") process.exit(302);
+        if (translate("Read, edit, and export presentations.") !== "读取、编辑和导出演示文稿。") process.exit(303);
+        if (translate("Search, upload, download, and share files.") !== "搜索、上传、下载和共享文件。") process.exit(304);
+        if (translate("Build with Google") !== "使用 Google 工具构建") process.exit(305);
+        if (translate("Build on Google's developer platforms, including Android, Chrome, Gemini, and Google Cloud.") !== "在 Google 开发者平台上构建应用，涵盖 Android、Chrome、Gemini 与 Google Cloud。") process.exit(306);
+        if (translate("Archived Only") !== "仅已归档") process.exit(307);
+
         console.log("SUCCESS");
         """
         import tempfile

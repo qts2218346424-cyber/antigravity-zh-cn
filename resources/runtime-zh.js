@@ -711,6 +711,64 @@
       return count;
     };
 
+    // 专门处理会话历史迁移与检索提示卡片复合容器 (This page is going away soon)
+    const translateHistoryNoticeContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const containers = root.querySelectorAll('div, section, [role="alert"], [class*="notice"], [class*="banner"]');
+        for (let i = 0; i < containers.length; i++) {
+          const el = containers[i];
+          if (translatedNodeSet.has(el) || isProtectedTextNode(el)) continue;
+          const text = norm(el.textContent || '');
+          if (text.includes('This page is going away soon') || (text.includes('Search conversations with') && text.includes('in the top left'))) {
+            const spans = el.querySelectorAll('span, p, div');
+            for (let j = 0; j < spans.length; j++) {
+              const sp = spans[j];
+              const spText = norm(sp.textContent || '');
+              if (spText === 'This page is going away soon') {
+                sp.textContent = '此页面即将停用';
+                count++;
+              } else if (spText.startsWith('Search conversations with') && spText.endsWith('in the top left.')) {
+                for (let k = 0; k < sp.childNodes.length; k++) {
+                  const node = sp.childNodes[k];
+                  if (node.nodeType === 3) {
+                    const nv = norm(node.nodeValue);
+                    if (nv.startsWith('Search conversations with')) {
+                      node.nodeValue = '使用左上角的 ';
+                      count++;
+                    } else if (nv.endsWith('in the top left.')) {
+                      node.nodeValue = ' 搜索会话。';
+                      count++;
+                    }
+                  }
+                }
+              } else if (spText.startsWith('View archived in the sidebar') && spText.includes('menu)')) {
+                for (let k = 0; k < sp.childNodes.length; k++) {
+                  const node = sp.childNodes[k];
+                  if (node.nodeType === 3) {
+                    const nv = norm(node.nodeValue);
+                    if (nv.startsWith('View archived in the sidebar')) {
+                      node.nodeValue = '在侧边栏中查看已归档会话';
+                      count++;
+                    } else if (nv.startsWith('(') || nv.startsWith(' (')) {
+                      node.nodeValue = '（';
+                      count++;
+                    } else if (nv.includes('menu).')) {
+                      node.nodeValue = ' 菜单）。';
+                      count++;
+                    }
+                  }
+                }
+              }
+            }
+            try { translatedNodeSet.add(el); } catch (_) {}
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
     // 专门处理思考过程折叠触发器与计时器动态汉化 (Thinking for Xs / Thought for Xs / Thought Process)
     const translateThinkingTriggers = (root) => {
       if (!root || !root.querySelectorAll) return 0;
@@ -1109,6 +1167,7 @@
           budgetCount += translateBudgetContainers(currentRoot);
           budgetCount += translateNotificationContainers(currentRoot);
           budgetCount += translateConsentContainers(currentRoot);
+          budgetCount += translateHistoryNoticeContainers(currentRoot);
           hlCount += translateHighlightedContainers(currentRoot);
           textCount += translateTextNodes(currentRoot);
           attrCount += translateAttributes(currentRoot);
