@@ -313,6 +313,18 @@ class TestRuntimeTranslation(unittest.TestCase):
                 return `自 ${zhDate}起，您当前的方案将不再支持第三方模型访问。`;
             }
 
+            // 1.28 悬浮操作与快速复制指令精确匹配 (Hover Copy Popup & Quick Actions)
+            if (/^copy$/i.test(text)) return '复制';
+            if (/^copied$/i.test(text)) return '已复制';
+            if (/^copy\s+code$/i.test(text)) return '复制代码';
+            if (/^copy\s+link(?: address)?$/i.test(text)) return '复制链接';
+            if (/^copy\s+path$/i.test(text)) return '复制路径';
+            if (/^copy\s+file\s+path$/i.test(text)) return '复制文件路径';
+            if (/^copy\s+full\s+path$/i.test(text)) return '复制完整路径';
+            if (/^copy\s+citation$/i.test(text)) return '复制引用';
+            if (/^copy\s+text$/i.test(text)) return '复制文本';
+            if (/^copy\s+all$/i.test(text)) return '复制全部';
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -1050,6 +1062,29 @@ class TestRuntimeTranslation(unittest.TestCase):
         }
         if (translate("Sonnet 5.5 is now available on paid Pro and Ultra plans.") !== "Sonnet 5.5 现已在付费 Pro 和 Ultra 方案中可用。") process.exit(319);
         if (translate("Third-party model access will no longer be available on your current plan starting on November 2, 2026.") !== "自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问。") process.exit(320);
+
+        // 45. 悬浮复制卡片、快捷操作与引用气泡断言 (最新截图悬浮 Copy 弹窗)
+        if (translate("Copy") !== "复制") {
+            console.error("Copy failed:", translate("Copy"));
+            process.exit(321);
+        }
+        if (translate("copy") !== "复制") process.exit(322);
+        if (translate("Copied") !== "已复制") process.exit(323);
+        if (translate("copied") !== "已复制") process.exit(324);
+        if (translate("Copy code") !== "复制代码") process.exit(325);
+        if (translate("copy code") !== "复制代码") process.exit(326);
+        if (translate("Copy path") !== "复制路径") process.exit(327);
+        if (translate("copy path") !== "复制路径") process.exit(328);
+        if (translate("Copy link") !== "复制链接") process.exit(329);
+        if (translate("copy link") !== "复制链接") process.exit(330);
+        if (translate("Copy text") !== "复制文本") process.exit(331);
+        if (translate("copy text") !== "复制文本") process.exit(332);
+        if (translate("Copy all") !== "复制全部") process.exit(333);
+        if (translate("copy all") !== "复制全部") process.exit(334);
+        if (translate("Copy file path") !== "复制文件路径") process.exit(335);
+        if (translate("Copy full path") !== "复制完整路径") process.exit(336);
+        if (translate("Copy citation") !== "复制引用") process.exit(337);
+        if (translate("Copy link address") !== "复制链接地址") process.exit(338);
 
         console.log("SUCCESS");
         """

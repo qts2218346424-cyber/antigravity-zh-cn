@@ -2059,7 +2059,31 @@ NEW_TRANSLATIONS = {
     "Sonnet 5.5 is now available on paid Pro and Ultra plans. Third-party model access will no longer be available on your current plan starting on November 2, 2026.": "Sonnet 5.5 现已在付费 Pro 和 Ultra 方案中可用。自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问。",
     "Sonnet 5.5 is now available on paid Pro and Ultra plans.": "Sonnet 5.5 现已在付费 Pro 和 Ultra 方案中可用。",
     "Third-party model access will no longer be available on your current plan starting on November 2, 2026.": "自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问。",
-    "Third-party model access will no longer be available on your current plan starting on November 2, 2026": "自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问"
+    "Third-party model access will no longer be available on your current plan starting on November 2, 2026": "自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问",
+
+    # 快捷复制、悬浮卡片与引用气泡 (Hover Copy & Floating Actions)
+    "Copy": "复制",
+    "copy": "复制",
+    "Copied": "已复制",
+    "copied": "已复制",
+    "Copy code": "复制代码",
+    "copy code": "复制代码",
+    "Copy link": "复制链接",
+    "copy link": "复制链接",
+    "Copy path": "复制路径",
+    "copy path": "复制路径",
+    "Copy text": "复制文本",
+    "copy text": "复制文本",
+    "Copy all": "复制全部",
+    "copy all": "复制全部",
+    "Copy file path": "复制文件路径",
+    "copy file path": "复制文件路径",
+    "Copy full path": "复制完整路径",
+    "copy full path": "复制完整路径",
+    "Copy citation": "复制引用",
+    "copy citation": "复制引用",
+    "Copy link address": "复制链接地址",
+    "copy link address": "复制链接地址"
 }
 
 def main():
@@ -2073,9 +2097,9 @@ def main():
     with open(cn_file, "r", encoding="utf-8") as f:
         existing_dict = json.load(f)
 
-    # 2. Update with new translations (protect existing refined entries)
-    full_dict = dict(NEW_TRANSLATIONS)
-    full_dict.update(existing_dict)
+    # 2. Update with new translations (protect existing refined entries and apply additions)
+    full_dict = dict(existing_dict)
+    full_dict.update(NEW_TRANSLATIONS)
 
     # 3. Clean up non-words and artifacts
     clean_dict = {}

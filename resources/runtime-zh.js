@@ -347,6 +347,18 @@
         return `自 ${zhDate}起，您当前的方案将不再支持第三方模型访问。`;
       }
 
+      // 1.28 悬浮操作与快速复制指令精确匹配 (Hover Copy Popup & Quick Actions)
+      if (/^copy$/i.test(text)) return '复制';
+      if (/^copied$/i.test(text)) return '已复制';
+      if (/^copy\s+code$/i.test(text)) return '复制代码';
+      if (/^copy\s+link(?: address)?$/i.test(text)) return '复制链接';
+      if (/^copy\s+path$/i.test(text)) return '复制路径';
+      if (/^copy\s+file\s+path$/i.test(text)) return '复制文件路径';
+      if (/^copy\s+full\s+path$/i.test(text)) return '复制完整路径';
+      if (/^copy\s+citation$/i.test(text)) return '复制引用';
+      if (/^copy\s+text$/i.test(text)) return '复制文本';
+      if (/^copy\s+all$/i.test(text)) return '复制全部';
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -392,6 +404,19 @@
           const placeholderEl = el.closest('[class*="placeholder"], [data-placeholder]');
           if (!placeholderEl) {
             return true;
+          }
+        }
+
+        // 0.2 【操作控件与悬浮气泡特赦】无论处于何种代码块、编辑器或正文容器内，交互操作按钮、复制提示及气泡菜单绝对允许汉化！
+        const rawContent = (node.nodeValue || el.textContent || '').trim();
+        if (/^copy(?:\s+(?:code|link|path|all|text|content|markdown|file\s+path|full\s+path|citation))?$/i.test(rawContent) || /^copied$/i.test(rawContent)) {
+          return false;
+        }
+
+        // 若元素自身或直接父级是明确的操作按钮、复制控件、气泡浮层或 Tooltip，且不是代码文本行自身
+        if (el.closest('button, [role="button"], [role="tooltip"], [role="menuitem"], [class*="copy"], [class*="tooltip"], [class*="popover"], [class*="popup"], [class*="bubble"], [class*="hover-card"], [class*="hovercard"], [class*="floating"], [data-floating-ui-portal], [data-radix-popper-content-wrapper]')) {
+          if (!el.closest('.cm-line, .view-line')) {
+            return false;
           }
         }
 
@@ -444,7 +469,7 @@
         if (!el || !el.closest) return false;
         if (IGNORED_TAGS.has(el.tagName)) return true;
         // 允许查找替换面板、自定义预算与交互控件的 placeholder/title/aria-label 进行汉化
-        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"], [class*="customization"], [class*="budget"], [class*="progress"], [class*="segmented"], [class*="toggle"], [class*="badge"], [role="tooltip"], [class*="tooltip"]')) return false;
+        if (el.closest('.find-widget, .monaco-findInput, [class*="find-widget"], [class*="search-widget"], [class*="customization"], [class*="budget"], [class*="progress"], [class*="segmented"], [class*="toggle"], [class*="badge"], [role="tooltip"], [class*="tooltip"], button, [role="button"], [class*="copy"], [class*="popover"], [class*="popup"], [class*="hover-card"], [class*="bubble"]')) return false;
         // 严格保护代码编辑器核心与终端
         if (el.closest(CODE_PROTECT_SELECTOR)) return true;
         return false;
@@ -815,6 +840,54 @@
               }
             }
             try { translatedNodeSet.add(el); } catch (_) {}
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
+    // 专门处理悬浮气泡、复制按钮与快速操作浮窗 (Floating Copy Widgets & Hover Cards)
+    const translateFloatingCopyWidgets = (root) => {
+      if (!root) return 0;
+      let count = 0;
+      try {
+        const candidates = root.querySelectorAll ? root.querySelectorAll('button, a, span, div, [role="button"], [class*="copy"], [class*="popup"], [class*="popover"], [class*="hover"], [class*="bubble"], [class*="card"], [class*="floating"], [data-radix-popper-content-wrapper]') : [];
+        for (let i = 0; i < candidates.length; i++) {
+          const el = candidates[i];
+          if (el.children.length === 0 || (el.children.length === 1 && el.children[0].tagName === 'SVG')) {
+            const txt = (el.textContent || '').trim();
+            if (/^copy$/i.test(txt)) {
+              for (let child = el.firstChild; child; child = child.nextSibling) {
+                if (child.nodeType === 3 && child.nodeValue.trim().toLowerCase() === 'copy') {
+                  const lead = (child.nodeValue.match(/^\s*/) || [''])[0];
+                  const trail = (child.nodeValue.match(/\s*$/) || [''])[0];
+                  child.nodeValue = lead + '复制' + trail;
+                  try { translatedNodeSet.add(child); } catch (_) {}
+                  count++;
+                }
+              }
+            } else if (/^copied$/i.test(txt)) {
+              for (let child = el.firstChild; child; child = child.nextSibling) {
+                if (child.nodeType === 3 && child.nodeValue.trim().toLowerCase() === 'copied') {
+                  const lead = (child.nodeValue.match(/^\s*/) || [''])[0];
+                  const trail = (child.nodeValue.match(/\s*$/) || [''])[0];
+                  child.nodeValue = lead + '已复制' + trail;
+                  try { translatedNodeSet.add(child); } catch (_) {}
+                  count++;
+                }
+              }
+            } else if (/^copy\s+(code|link|path|all|text|file\s+path|full\s+path|citation)$/i.test(txt)) {
+              const tr = translate(txt);
+              if (tr && norm(txt) !== norm(tr)) {
+                for (let child = el.firstChild; child; child = child.nextSibling) {
+                  if (child.nodeType === 3) {
+                    child.nodeValue = tr;
+                    try { translatedNodeSet.add(child); } catch (_) {}
+                    count++;
+                  }
+                }
+              }
+            }
           }
         }
       } catch (_) {}
@@ -1214,6 +1287,7 @@
 
         forAllRoots(root, (currentRoot) => {
           observeRoot(currentRoot);
+          textCount += translateFloatingCopyWidgets(currentRoot);
           thinkingCount += translateThinkingTriggers(currentRoot);
           thinkingCount += translateThinkingContainers(currentRoot);
           budgetCount += translateBudgetContainers(currentRoot);
@@ -1245,15 +1319,18 @@
     // 立即执行初始扫描
     runTranslation();
 
-    // 全局用户交互感知窗口（点击/按压时开启 250ms 零延迟同步直出通道）
+    // 全局用户交互感知窗口（点击/悬停/按压时开启 300ms 零延迟同步直出通道）
     let isUserInteracting = false;
     let interactExpiry = 0;
-    const markInteraction = () => {
+    const markInteraction = (e) => {
       isUserInteracting = true;
       interactExpiry = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 300;
+      if (e && e.target && e.target.nodeType === 1) {
+        translateFloatingCopyWidgets(e.target);
+      }
     };
 
-    ['pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach((evtType) => {
+    ['pointerdown', 'mousedown', 'keydown', 'touchstart', 'pointerover', 'mouseover'].forEach((evtType) => {
       try {
         window.addEventListener(evtType, markInteraction, { capture: true, passive: true });
       } catch (_) {}
@@ -1404,6 +1481,7 @@
             for (let j = 0; j < m.addedNodes.length; j++) {
               const node = m.addedNodes[j];
               if (node.nodeType === 1) { // 元素节点
+                syncCount += translateFloatingCopyWidgets(node);
                 syncCount += translateThinkingTriggers(node);
                 syncCount += translateThinkingContainers(node);
                 syncCount += translateBudgetContainers(node);
@@ -1414,6 +1492,7 @@
                 if (node.shadowRoot) {
                   forAllRoots(node.shadowRoot, (sr) => {
                     observeRoot(sr);
+                    syncCount += translateFloatingCopyWidgets(sr);
                     syncCount += translateThinkingTriggers(sr);
                     syncCount += translateThinkingContainers(sr);
                     syncCount += translateBudgetContainers(sr);
@@ -1541,6 +1620,180 @@
       }
     }, 800);
 
+
+    // =========================================================================
+    // Antigravity 专属轻量启动动画遮罩层 (In-page Boot Splash Overlay)
+    // 零侵入、零外部资源依赖，启动展示约 1.8 秒后平滑渐隐淡出并自动销毁
+    // =========================================================================
+    const initAntigravitySplashScreen = () => {
+      try {
+        if (typeof window === 'undefined' || window !== window.top) return;
+        if (document.getElementById('__antigravity_splash_screen__')) return;
+
+        // 支持通过配置关闭
+        try {
+          if (localStorage.getItem('__AGY_DISABLE_SPLASH__') === 'true') return;
+        } catch (_) {}
+
+        // 会话单次防抖（仅冷启动展示一次，页面内跳转与路由刷新不重复弹窗）
+        try {
+          if (sessionStorage.getItem('__agy_splash_shown__')) return;
+          sessionStorage.setItem('__agy_splash_shown__', 'true');
+        } catch (_) {}
+
+        const splashRoot = document.createElement('div');
+        splashRoot.id = '__antigravity_splash_screen__';
+        splashRoot.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background-color: #07090e;
+          z-index: 2147483647;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          opacity: 1;
+          transform: scale(1);
+          transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s ease;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+          pointer-events: auto;
+          overflow: hidden;
+          user-select: none;
+        `;
+
+        splashRoot.innerHTML = `
+          <canvas id="__ag_splash_canvas__" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;"></canvas>
+          <div style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;perspective:1000px;">
+            <div style="position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+              <div style="position:absolute;width:160px;height:160px;border-radius:50%;border:1.5px dashed rgba(56,189,248,0.45);box-shadow:0 0 25px rgba(56,189,248,0.15);animation:__ag_rot1 14s linear infinite;"></div>
+              <div style="position:absolute;width:125px;height:125px;border-radius:50%;border:2px solid transparent;border-top-color:#38bdf8;border-bottom-color:#818cf8;animation:__ag_rot2 6s cubic-bezier(0.45,0.05,0.55,0.95) infinite;filter:drop-shadow(0 0 10px rgba(56,189,248,0.8));"></div>
+              <div style="position:absolute;width:75px;height:75px;border-radius:50%;border:1.5px solid rgba(56,189,248,0.7);animation:__ag_rip 2.5s cubic-bezier(0.1,0.8,0.3,1) infinite;"></div>
+              <div style="position:relative;width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #ffffff 0%, #38bdf8 30%, #4338ca 75%, #0f172a 100%);box-shadow:0 0 30px rgba(56,189,248,0.9),0 0 60px rgba(129,140,248,0.45);display:flex;align-items:center;justify-content:center;animation:__ag_lev 3s ease-in-out infinite;">
+                <svg viewBox="0 0 24 24" style="width:34px;height:34px;fill:none;stroke:#ffffff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(255,255,255,0.9));">
+                  <path d="M12 3L4 14h5v7h6v-7h5L12 3z"/>
+                  <circle cx="12" cy="19" r="1.5" fill="#38bdf8"/>
+                </svg>
+              </div>
+            </div>
+            <div style="font-size:24px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#ffffff 30%,#bae6fd 60%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;text-transform:uppercase;">Antigravity</div>
+            <div style="font-size:11px;letter-spacing:1.5px;color:#94a3b8;margin-bottom:16px;">GOOGLE DEEPMIND · AGENT ARCHITECTURE</div>
+            <div style="width:240px;height:3.5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;position:relative;margin-bottom:10px;">
+              <div id="__ag_splash_bar__" style="position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,#06b6d4,#38bdf8,#818cf8);box-shadow:0 0 8px #38bdf8;transition:width 0.15s ease;"></div>
+            </div>
+            <div id="__ag_splash_status__" style="font-size:11px;font-family:'SF Mono',Consolas,Menlo,monospace;color:#94a3b8;letter-spacing:0.5px;">正在初始化反重力内核...</div>
+          </div>
+          <style>
+            @keyframes __ag_rot1 { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            @keyframes __ag_rot2 { 0% { transform: rotateX(65deg) rotateY(25deg) rotateZ(0deg); } 100% { transform: rotateX(65deg) rotateY(25deg) rotateZ(360deg); } }
+            @keyframes __ag_lev { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-7px); } }
+            @keyframes __ag_rip { 0% { transform: scale(0.9); opacity: 0.9; } 100% { transform: scale(2.2); opacity: 0; } }
+          </style>
+        `;
+
+        const mountSplash = () => {
+          const parent = document.body || document.documentElement;
+          if (parent) {
+            parent.insertBefore(splashRoot, parent.firstChild);
+          } else {
+            setTimeout(mountSplash, 10);
+          }
+        };
+        mountSplash();
+
+        // 启动 Canvas 粒子微动画
+        let animId = null;
+        try {
+          const canvas = splashRoot.querySelector('#__ag_splash_canvas__');
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            let w = canvas.width = window.innerWidth;
+            let h = canvas.height = window.innerHeight;
+            const pts = [];
+            for (let i = 0; i < 48; i++) {
+              pts.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                s: Math.random() * 2 + 0.8,
+                vy: -(Math.random() * 1.2 + 0.5),
+                vx: (Math.random() - 0.5) * 0.6,
+                a: Math.random() * 0.5 + 0.2,
+                c: Math.random() > 0.5 ? '#38bdf8' : '#818cf8'
+              });
+            }
+            const draw = () => {
+              ctx.clearRect(0, 0, w, h);
+              for (let i = 0; i < pts.length; i++) {
+                const p = pts[i];
+                p.y += p.vy;
+                p.x += p.vx;
+                if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
+                ctx.fillStyle = p.c;
+                ctx.globalAlpha = p.a;
+                ctx.fill();
+              }
+              animId = requestAnimationFrame(draw);
+            };
+            draw();
+          }
+        } catch (_) {}
+
+        // 启动进度推进与平滑淡出移除
+        const bar = splashRoot.querySelector('#__ag_splash_bar__');
+        const st = splashRoot.querySelector('#__ag_splash_status__');
+        const stages = [
+          { p: 25, t: '正在载入反重力引擎核心...' },
+          { p: 65, t: '启动多智能体协作总线...' },
+          { p: 90, t: '就绪界面本地化环境...' },
+          { p: 100, t: '反重力就绪！' }
+        ];
+        let idx = 0;
+        const progressTimer = setInterval(() => {
+          if (idx < stages.length) {
+            if (bar) bar.style.width = stages[idx].p + '%';
+            if (st) st.textContent = stages[idx].t;
+            idx++;
+          } else {
+            clearInterval(progressTimer);
+          }
+        }, 320);
+
+        // 1.8 秒平滑渐隐淡出，2.4 秒彻底自销毁
+        setTimeout(() => {
+          splashRoot.style.opacity = '0';
+          splashRoot.style.transform = 'scale(1.04)';
+          splashRoot.style.pointerEvents = 'none';
+
+          setTimeout(() => {
+            if (animId) cancelAnimationFrame(animId);
+            clearInterval(progressTimer);
+            if (splashRoot.parentNode) {
+              splashRoot.parentNode.removeChild(splashRoot);
+            }
+          }, 600);
+        }, 1800);
+
+      } catch (err) {
+        console.warn('[AGY-SPLASH] Failed to initialize splash overlay:', err);
+      }
+    };
+
+    // 挂载暴露全局控制开关
+    try {
+      window.__AGY_TOGGLE_SPLASH__ = (enable) => {
+        try {
+          if (enable) localStorage.removeItem('__AGY_DISABLE_SPLASH__');
+          else localStorage.setItem('__AGY_DISABLE_SPLASH__', 'true');
+          console.log('[AGY-SPLASH] 启动动画状态已更新为:', enable ? '开启' : '关闭');
+        } catch (_) {}
+      };
+    } catch (_) {}
+
+    initAntigravitySplashScreen();
 
   } catch (e) {
     console.warn('[AGY-ZH] Runtime translation failed to bootstrap:', e);

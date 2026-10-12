@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#适用环境)
 [![Target](https://img.shields.io/badge/Antigravity-v2.23.0-blue.svg)](https://antigravity.google)
-[![Terms](https://img.shields.io/badge/Dictionary-3141%20Terms-brightgreen.svg)](#)
+[![Terms](https://img.shields.io/badge/Dictionary-3157%20Terms-brightgreen.svg)](#)
 
 一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.23.0**）打造的高性能本地中文汉化补丁与辅助工具。
 
@@ -40,6 +40,8 @@
   - 支持 `zh-CN`（简体中文）、`zh-TW`（繁体中文-台湾）、`zh-HK`（繁体中文-香港）。
 - **安全备份与一键无损还原**：
   - 首次安装自动创建 `app.asar.bak` 原始副本；随时可通过控制台选择 `还原` 恢复官方原貌。
+- **反重力专属轻量启动动画 (In-page Splash Overlay)**：
+  - 应用冷启动阶段在顶层呈现深空反重力 3D 陀螺环与逆重力升腾粒子，遮蔽底层白屏闪烁，1.8 秒后丝滑淡出过渡至就绪的全中文工作区，完全零侵入、零外部依赖且自销毁。
 - **更新管理支持**：
   - 内置禁止/恢复官方自动更新的快捷开关，防止应用静默升级覆盖汉化。
 
