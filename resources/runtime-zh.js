@@ -383,6 +383,31 @@
       if (/^no\s+custom\s+agents?\s+yet\.?$/i.test(text)) return '暂无自定义智能体。';
       if (/^自定义\s*Agent(?:s)?$/i.test(text)) return '自定义智能体';
 
+      // 1.31 官方插件与扩展卡片描述动态匹配 (支持完整句与带省略号截断)
+      if (/^Search and retrieve official documentation across Google Cloud/i.test(text) || /^Search and retrieve official documentation acr(?:\.\.\.|…)?$/i.test(text)) {
+        return '检索涵盖 Google Cloud、Gemini、Android、Firebase、Flutter 及 Web 的官方文档。需要 Google Cloud 凭据 (ADC) 或 API 密钥。';
+      }
+      if (/^Integration skill and tools for Google Maps Platform/i.test(text) || /^Integration skill and tools for Google Maps Pl(?:\.\.\.|…)?$/i.test(text)) {
+        return 'Google Maps Platform API 的集成技能与工具套件。';
+      }
+      if (/^Official plugin for Dart and Flutter that installs/i.test(text)) {
+        return 'Dart 与 Flutter 官方插件，安装 Flutter/Dart 技能、规则、自定义智能体与 Dart MCP 服务器，用于从单一代码库构建面向移动端、Web、桌面及嵌入式设备的原生编译高质感应用。';
+      }
+      if (/^This plugin provides a specialized suite of skills for data engineers/i.test(text) || /^This plugin provides a specialized suite of skill(?:\.\.\.|…)?$/i.test(text)) {
+        return '此插件为在 Google Cloud 上工作的数据工程师与数据库专家提供专属技能套件。它作为专家助手，让您能在喜爱的编程智能体中使用自然语言提示构建复杂数据流水线、使用 dbt 转换数据、编写 Spark 和 BigQuery SQL 笔记本，并在 GCP 数据生态中编排端到端工作流。';
+      }
+      if (/^Google Cloud guidance for coding agents/i.test(text)) {
+        return '针对编程智能体的 Google Cloud 指南：首个项目快速上手、鉴权与凭据选择，以及 gcloud CLI 命令的安全关键验证。包含 Google Developer Knowledge MCP 服务器，以获取扎实、最新的 Google Cloud 文档。';
+      }
+
+      // 1.32 Gemini 3.8 Flash 升级与推荐卡片动态匹配
+      if (/^Start using Gemini 3\.8 Flash,\s*our best Flash model\.?$/i.test(text)) {
+        return '开始使用 Gemini 3.8 Flash，我们最强大的 Flash 模型。';
+      }
+      if (/^Use Gemini 3\.8 Flash!\s*As a newer model,\s*it delivers more intelligence at 2x the speed for 70% less cost than Gemini 3\.1 Pro\.?$/i.test(text)) {
+        return '使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现。';
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];

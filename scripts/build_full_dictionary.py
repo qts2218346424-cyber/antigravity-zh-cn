@@ -2125,7 +2125,44 @@ NEW_TRANSLATIONS = {
     "Catppuccin Latte": "Catppuccin 浅色 (Latte)",
     "Catppuccin Frappe": "Catppuccin 柔和 (Frappe)",
     "Catppuccin Macchiato": "Catppuccin 玛奇朵 (Macchiato)",
-    "Catppuccin Mocha": "Catppuccin 摩卡 (Mocha)"
+    "Catppuccin Mocha": "Catppuccin 摩卡 (Mocha)",
+
+    # 官方插件市场卡片 (Official Marketplace Plugins)
+    "Google Developer Knowledge": "Google 开发者知识库",
+    "Search and retrieve official documentation across Google Cloud, Gemini, Android, Firebase, Flutter, and Web. Requires Google Cloud credentials (ADC) or an API key.": "检索涵盖 Google Cloud、Gemini、Android、Firebase、Flutter 及 Web 的官方文档。需要 Google Cloud 凭据 (ADC) 或 API 密钥。",
+    "Search and retrieve official documentation across Google Cloud, Gemini, Android, Firebase, Flutter, and Web. Requires Google Cloud credentials (ADC) or an API key": "检索涵盖 Google Cloud、Gemini、Android、Firebase、Flutter 及 Web 的官方文档。需要 Google Cloud 凭据 (ADC) 或 API 密钥",
+    "Search and retrieve official documentation acr...": "检索涵盖 Google Cloud、Gemini、Android、Firebase 等官方文档...",
+    "Search and retrieve official documentation acr…": "检索涵盖 Google Cloud、Gemini、Android、Firebase 等官方文档...",
+
+    "Google Maps Platform": "Google Maps 平台",
+    "Integration skill and tools for Google Maps Platform APIs": "Google Maps Platform API 的集成技能与工具套件",
+    "Integration skill and tools for Google Maps Platform APIs.": "Google Maps Platform API 的集成技能与工具套件。",
+    "Integration skill and tools for Google Maps Pl...": "Google Maps Platform API 的集成技能与工具套件...",
+    "Integration skill and tools for Google Maps Pl…": "Google Maps Platform API 的集成技能与工具套件...",
+
+    "Dart and Flutter": "Dart 与 Flutter",
+    "Official plugin for Dart and Flutter that installs Flutter/Dart Skills, Rules, Custom Agents, and Dart MCP server for building natively compiled, visually stunning applications for mobile, web, desktop, and embedded devices from a single codebase": "Dart 与 Flutter 官方插件，安装 Flutter/Dart 技能、规则、自定义智能体与 Dart MCP 服务器，用于从单一代码库构建面向移动端、Web、桌面及嵌入式设备的原生编译高质感应用。",
+    "Official plugin for Dart and Flutter that installs Flutter/Dart Skills, Rules, Custom Agents, and Dart MCP server for building natively compiled, visually stunning applications for mobile, web, desktop, and embedded devices from a single codebase.": "Dart 与 Flutter 官方插件，安装 Flutter/Dart 技能、规则、自定义智能体与 Dart MCP 服务器，用于从单一代码库构建面向移动端、Web、桌面及嵌入式设备的原生编译高质感应用。",
+    "Official plugin for Dart and Flutter that installs...": "Dart 与 Flutter 官方插件，安装技能、规则与 MCP 服务器...",
+    "Official plugin for Dart and Flutter that installs…": "Dart 与 Flutter 官方插件，安装技能、规则与 MCP 服务器...",
+
+    "Data Agent Kit": "数据智能体套件 (Data Agent Kit)",
+    "This plugin provides a specialized suite of skills for data engineers and database practitioners working on Google Cloud. It acts as an expert assistant, allowing you to use natural language prompts in your preferred coding agent to architect complex data pipelines, transform data with dbt, write Spark and BigQuery SQL notebooks, and orchestrate end-to-end workflows across GCP's data ecosystem.": "此插件为在 Google Cloud 上工作的数据工程师与数据库专家提供专属技能套件。它作为专家助手，让您能在喜爱的编程智能体中使用自然语言提示构建复杂数据流水线、使用 dbt 转换数据、编写 Spark 和 BigQuery SQL 笔记本，并在 GCP 数据生态中编排端到端工作流。",
+    "This plugin provides a specialized suite of skills for data engineers and database practitioners working on Google Cloud. It acts as an expert assistant, allowing you to use natural language prompts in your preferred coding agent to architect complex data pipelines, transform data with dbt, write Spark and BigQuery SQL notebooks, and orchestrate end-to-end workflows across GCP's data ecosystem": "此插件为在 Google Cloud 上工作的数据工程师与数据库专家提供专属技能套件。它作为专家助手，让您能在喜爱的编程智能体中使用自然语言提示构建复杂数据流水线、使用 dbt 转换数据、编写 Spark 和 BigQuery SQL 笔记本，并在 GCP 数据生态中编排端到端工作流。",
+    "This plugin provides a specialized suite of skill...": "此插件为数据工程师提供专属技能套件，支持数据流水线构建...",
+    "This plugin provides a specialized suite of skill…": "此插件为数据工程师提供专属技能套件，支持数据流水线构建...",
+
+    "Google Cloud Developer": "Google Cloud 开发者套件",
+    "Google Cloud guidance for coding agents: first-project onboarding, authentication and credential selection, and safety-critical validation for gcloud CLI commands. Includes the Google Developer Knowledge MCP server for grounded, up-to-date Google Cloud documentation.": "针对编程智能体的 Google Cloud 指南：首个项目快速上手、鉴权与凭据选择，以及 gcloud CLI 命令的安全关键验证。包含 Google Developer Knowledge MCP 服务器，以获取扎实、最新的 Google Cloud 文档。",
+    "Google Cloud guidance for coding agents: first-project onboarding, authentication and credential selection, and safety-critical validation for gcloud CLI commands. Includes the Google Developer Knowledge MCP server for grounded, up-to-date Google Cloud documentation": "针对编程智能体的 Google Cloud 指南：首个项目快速上手、鉴权与凭据选择，以及 gcloud CLI 命令的安全关键验证。包含 Google Developer Knowledge MCP 服务器，以获取扎实、最新的 Google Cloud 文档。",
+    "Google Cloud guidance for coding agents: firs...": "针对编程智能体的 Google Cloud 指南：首个项目上手、鉴权...",
+    "Google Cloud guidance for coding agents: firs…": "针对编程智能体的 Google Cloud 指南：首个项目上手、鉴权...",
+
+    # 模型推荐与升级提示卡片 (Gemini 3.8 Flash Notices)
+    "Start using Gemini 3.8 Flash, our best Flash model.": "开始使用 Gemini 3.8 Flash，我们最强大的 Flash 模型。",
+    "Start using Gemini 3.8 Flash, our best Flash model": "开始使用 Gemini 3.8 Flash，我们最强大的 Flash 模型",
+    "Use Gemini 3.8 Flash! As a newer model, it delivers more intelligence at 2x the speed for 70% less cost than Gemini 3.1 Pro.": "使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现。",
+    "Use Gemini 3.8 Flash! As a newer model, it delivers more intelligence at 2x the speed for 70% less cost than Gemini 3.1 Pro": "使用 Gemini 3.8 Flash！作为更新的模型，它比 Gemini 3.1 Pro 速度提升 2 倍，成本降低 70%，同时带来更出色的智能表现"
 }
 
 def main():
