@@ -79,7 +79,7 @@ def get_remote_version() -> tuple[str, str]:
 
     req = urllib.request.Request(
         MANIFEST_URL,
-        headers={"User-Agent": "Mozilla/5.0", "x-app-version": "2.17.0"},
+        headers={"User-Agent": "Mozilla/5.0", "x-app-version": "2.23.0"},
     )
     try:
         with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:

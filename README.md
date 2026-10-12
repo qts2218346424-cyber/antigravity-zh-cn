@@ -2,11 +2,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#适用环境)
-[![Target](https://img.shields.io/badge/Target-Google%20Antigravity-green.svg)](https://antigravity.google)
+[![Target](https://img.shields.io/badge/Antigravity-v2.23.0-blue.svg)](https://antigravity.google)
+[![Terms](https://img.shields.io/badge/Dictionary-3027%20Terms-brightgreen.svg)](#)
 
-一个专为 **Google Antigravity**（智能体桌面端与配套 IDE）打造的高性能本地中文汉化补丁与辅助工具。
+一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.23.0**）打造的高性能本地中文汉化补丁与辅助工具。
 
-支持 **简体中文 (zh-CN)**、**繁体中文（中国台湾 zh-TW）** 和 **繁体中文（中国香港 zh-HK）**。
+支持 **简体中文 (zh-CN)**、**繁体中文（中国台湾 zh-TW）** 和 **繁体中文（中国香港 zh-HK）**。已覆盖 Chief of Staff 幕僚长仪表盘、自动化工作流、会话分叉、云端项目等最新特性。
 
 ---
 
@@ -161,7 +162,7 @@ Antigravity 套件中配套的 **Antigravity IDE**（代码编辑器）基于 VS
 
 ### 1. 本地无人值守看门狗 (`scripts/setup_watchdog.bat`)
 - 双击运行 `scripts/setup_watchdog.bat` 并按 `1`，即可一键注册 Windows 后台计划任务；
-- 任务每小时静默检测本地 Antigravity 是否发生版本更新（如 2.16.0 升级至 2.17.0）；
+- 任务每小时静默检测本地 Antigravity 是否发生版本更新（如 2.17.0 升级至 2.23.0）；
 - 一旦检测到新版发布或程序被官方覆盖，脚本会自动：
   1. 深度拉取新版 Bundle 并提取新增英文词条；
   2. 自动增量翻译、同步繁体并运行测试集；
