@@ -72,7 +72,7 @@
       margin-bottom: 28px;
     }
 
-    /* 3D 反重力陀螺环 1 */
+    /* 3D 反重力陀螺环 */
     .gravity-ring {
       position: absolute;
       border-radius: 50%;
@@ -232,13 +232,13 @@
       z-index: 20;
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(15, 23, 42, 0.75);
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.85);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 40px;
-      padding: 8px 18px;
+      padding: 6px 16px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
@@ -247,7 +247,7 @@
       border: 1px solid transparent;
       color: #94a3b8;
       font-size: 12px;
-      padding: 6px 14px;
+      padding: 6px 13px;
       border-radius: 20px;
       cursor: pointer;
       display: flex;
@@ -271,7 +271,7 @@
 
     .dock-divider {
       width: 1px;
-      height: 18px;
+      height: 16px;
       background: rgba(255, 255, 255, 0.15);
     }
 
@@ -343,34 +343,26 @@
 </head>
 <body>
 
-  <!-- 动态星空粒子引力场 Canvas -->
+  <!-- 视网膜高清 Canvas 引力场 -->
   <canvas id="canvas-bg"></canvas>
 
-  <!-- 居中启动舞台 -->
   <div class="splash-container">
     <div class="core-stage">
-      <!-- 反重力引力环 -->
       <div class="gravity-ring ring-outer"></div>
       <div class="gravity-ring ring-middle"></div>
       <div class="gravity-ring ring-inner"></div>
 
-      <!-- 冲击波涟漪 -->
       <div class="energy-wave"></div>
       <div class="energy-wave"></div>
 
-      <!-- 反重力核心能量悬浮球 -->
-      <div class="core-sphere" id="core-btn" title="点击释放量子反重力脉冲">
-        <!-- Antigravity 反重力徽标：向上逆引力箭头与量子轨道 -->
+      <div class="core-sphere" id="core-btn" title="点击释放反重力量子脉冲">
         <svg class="core-logo-svg" viewBox="0 0 24 24">
-          <!-- 悬浮升力核心箭头 -->
           <path d="M12 3L4 14h5v7h6v-7h5L12 3z" />
-          <!-- 反重力流光基座环 -->
           <circle cx="12" cy="19" r="1.5" fill="#38bdf8" />
         </svg>
       </div>
     </div>
 
-    <!-- 品牌名称 -->
     <div class="brand-title">
       Antigravity
     </div>
@@ -378,19 +370,16 @@
       GOOGLE DEEPMIND · AGENT ARCHITECTURE
     </div>
 
-    <!-- 启动进度条 -->
     <div class="progress-box">
       <div class="progress-bar" id="progress-bar"></div>
     </div>
 
-    <!-- 状态反馈 -->
     <div class="status-text">
       <span class="status-dot"></span>
-      <span id="status-label">正在初始化反重力引擎内核...</span>
+      <span id="status-label">正在初始化反重力内核 (Antigravity Engine)...</span>
     </div>
   </div>
 
-  <!-- 底部交互控制栏 -->
   <div class="controls-dock">
     <button class="dock-btn active" id="btn-theme-core" onclick="switchTheme('core')">
       <span>⚛️ 量子核心</span>
@@ -414,32 +403,32 @@
 
   <script>
     /* =====================================================================
-     * 1. 纯 Web Audio API 科幻音效合成器（零外部 MP3/WAV 依赖）
+     * 1. 纯 Web Audio API 声音引擎（自适应手势激活，杜绝自动播放策略阻塞）
      * ===================================================================== */
     let audioCtx = null;
     let soundEnabled = true;
 
-    function initAudio() {
+    function getAudioContext() {
       if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          audioCtx = new AudioContext();
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
         }
       }
       if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().catch(() => {});
       }
+      return audioCtx;
     }
 
-    // 播放反重力点火与量子升调音效
     function playHumSound(freqStart = 120, freqEnd = 480, duration = 1.2) {
       if (!soundEnabled) return;
       try {
-        initAudio();
-        if (!audioCtx) return;
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const ctx = getAudioContext();
+        if (!ctx || ctx.state === 'suspended') return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freqStart, now);
@@ -450,38 +439,33 @@
         gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + duration);
-      } catch (e) {
-        console.warn("音频播放异常:", e);
-      }
+      } catch (e) {}
     }
 
-    // 播放能量脉冲轻击声
     function playPulseSound() {
       if (!soundEnabled) return;
       try {
-        initAudio();
-        if (!audioCtx) return;
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const ctx = getAudioContext();
+        if (!ctx || ctx.state === 'suspended') return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(600, now);
         osc.frequency.exponentialRampToValueAtTime(150, now + 0.25);
 
-        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.setValueAtTime(0.18, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.25);
-      } catch (e) {
-        // 静默容错
-      }
+      } catch (e) {}
     }
 
     function toggleAudio() {
@@ -489,24 +473,30 @@
       document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
       document.getElementById('sound-label').textContent = soundEnabled ? '音效开启' : '已静音';
       if (soundEnabled) {
-        initAudio();
+        getAudioContext();
         playPulseSound();
       }
     }
 
     /* =====================================================================
-     * 2. Canvas 反重力粒子与力场系统
+     * 2. 视网膜高清 Canvas 粒子力场系统（支持高刷屏与帧率平滑插值）
      * ===================================================================== */
     const canvas = document.getElementById('canvas-bg');
     const ctx = canvas.getContext('2d');
-    let width = 0, height = 0;
+    let width = 0, height = 0, dpr = 1;
     let particles = [];
     const PARTICLE_COUNT = 90;
     let currentTheme = 'core';
+    let lastTimestamp = 0;
+    let animationFrameId = null;
 
     function resizeCanvas() {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      dpr = window.devicePixelRatio || 1;
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -519,17 +509,17 @@
         this.x = Math.random() * width;
         this.y = init ? Math.random() * height : height + 20;
         this.size = Math.random() * 2.2 + 0.8;
-        // 反重力特性：自下而上反向加速漂浮
-        this.speedY = -(Math.random() * 1.5 + 0.6);
-        this.speedX = (Math.random() - 0.5) * 0.8;
+        // 反重力向上漂浮矢量
+        this.baseSpeedY = -(Math.random() * 1.4 + 0.6);
+        this.baseSpeedX = (Math.random() - 0.5) * 0.8;
         this.alpha = Math.random() * 0.6 + 0.2;
         this.colorType = Math.random() > 0.5 ? '#38bdf8' : '#818cf8';
       }
-      update() {
-        this.y += this.speedY;
-        this.x += this.speedX;
+      update(dtFactor) {
+        this.y += this.baseSpeedY * dtFactor;
+        this.x += this.baseSpeedX * dtFactor;
 
-        // 引力井效应：向屏幕中央轻微汇聚
+        // 引力井：中心轻微汇聚
         const centerX = width / 2;
         const centerY = height / 2 - 30;
         const dx = centerX - this.x;
@@ -537,7 +527,7 @@
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist > 50 && dist < 350) {
-          this.x += (dx / dist) * 0.35;
+          this.x += (dx / dist) * 0.35 * dtFactor;
         }
 
         if (this.y < -30 || this.x < -30 || this.x > width + 30) {
@@ -560,10 +550,15 @@
       particles.push(new Particle());
     }
 
-    function animateParticles() {
+    function animate(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const elapsed = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+      // 基于 60fps 基准进行时间平滑因子插值，消除高刷屏加速或卡顿跳帧
+      const dtFactor = Math.min(Math.max(elapsed / 16.666, 0.5), 3.0);
+
       ctx.clearRect(0, 0, width, height);
 
-      // 如果是智能体星网模式，绘制节点连线
       if (currentTheme === 'constellation') {
         ctx.lineWidth = 0.5;
         for (let i = 0; i < particles.length; i++) {
@@ -583,17 +578,17 @@
         }
       }
 
-      particles.forEach(p => {
-        p.update();
-        p.draw();
-      });
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update(dtFactor);
+        particles[i].draw();
+      }
 
-      requestAnimationFrame(animateParticles);
+      animationFrameId = requestAnimationFrame(animate);
     }
-    animateParticles();
+    animationFrameId = requestAnimationFrame(animate);
 
     /* =====================================================================
-     * 3. 启动进度与状态机时序调度
+     * 3. 启动时序与系统进度模拟
      * ===================================================================== */
     const stages = [
       { pct: 15, text: "正在初始化反重力内核 (Antigravity Engine)..." },
@@ -656,23 +651,29 @@
       playPulseSound();
     }
 
-    // 点击中心核心触发脉冲爆发动效
     document.getElementById('core-btn').addEventListener('click', () => {
+      getAudioContext();
       playPulseSound();
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 24; i++) {
         const p = new Particle();
         p.x = width / 2;
         p.y = height / 2 - 30;
-        p.speedX = (Math.random() - 0.5) * 8;
-        p.speedY = (Math.random() - 0.5) * 8;
+        p.baseSpeedX = (Math.random() - 0.5) * 8;
+        p.baseSpeedY = (Math.random() - 0.5) * 8;
         p.size = Math.random() * 3 + 2;
         particles.push(p);
       }
     });
 
-    // 页面初次加载时触发启动流程
     window.addEventListener('DOMContentLoaded', () => {
       restartLaunch();
+    });
+
+    // 页面卸载时资源安全释放（防止 Electron 子窗口泄漏）
+    window.addEventListener('beforeunload', () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (progressTimer) clearInterval(progressTimer);
+      if (audioCtx) audioCtx.close().catch(() => {});
     });
   </script>
 </body>

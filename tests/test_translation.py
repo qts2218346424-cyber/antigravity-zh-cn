@@ -284,6 +284,35 @@ class TestRuntimeTranslation(unittest.TestCase):
                 return '使用项目设置';
             }
 
+            // 1.26 动态 AI 积分额度标签匹配 (Available AI Credits: 0 / 100 ...)
+            const aiCreditsMatch = text.match(/^Available\s+AI\s+Credits\s*:\s*(\d+(?:,\d+)?(?:\.\d+)?)$/i);
+            if (aiCreditsMatch) {
+                return `可用 AI 积分: ${aiCreditsMatch[1]}`;
+            }
+            if (/^Available\s+AI\s+Credits\s*:?$/i.test(text)) {
+                return '可用 AI 积分：';
+            }
+
+            // 1.27 第三方模型下线与方案变更动态通知
+            // e.g. "Sonnet 5.5 is now available on paid Pro and Ultra plans. Third-party model access will no longer be available on your current plan starting on November 2, 2026."
+            const modelAvailableThirdPartyMatch = text.match(/^(.+?)\s+is\s+now\s+available\s+on\s+paid\s+Pro\s+and\s+Ultra\s+plans\.\s*Third-party\s+model\s+access\s+will\s+no\s+longer\s+be\s+available\s+on\s+your\s+current\s+plan\s+starting\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+            if (modelAvailableThirdPartyMatch) {
+                const modelName = modelAvailableThirdPartyMatch[1].trim();
+                const zhDate = formatEnDate(modelAvailableThirdPartyMatch[2]);
+                return `${modelName} 现已在付费 Pro 和 Ultra 方案中可用。自 ${zhDate}起，您当前的方案将不再支持第三方模型访问。`;
+            }
+
+            const modelAvailablePlansMatch = text.match(/^(.+?)\s+is\s+now\s+available\s+on\s+paid\s+Pro\s+and\s+Ultra\s+plans\.?$/i);
+            if (modelAvailablePlansMatch) {
+                return `${modelAvailablePlansMatch[1].trim()} 现已在付费 Pro 和 Ultra 方案中可用。`;
+            }
+
+            const thirdPartyRemovedMatch = text.match(/^Third-party\s+model\s+access\s+will\s+no\s+longer\s+be\s+available\s+on\s+your\s+current\s+plan\s+starting\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+            if (thirdPartyRemovedMatch) {
+                const zhDate = formatEnDate(thirdPartyRemovedMatch[1]);
+                return `自 ${zhDate}起，您当前的方案将不再支持第三方模型访问。`;
+            }
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -985,6 +1014,42 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Build with Google") !== "使用 Google 工具构建") process.exit(305);
         if (translate("Build on Google's developer platforms, including Android, Chrome, Gemini, and Google Cloud.") !== "在 Google 开发者平台上构建应用，涵盖 Android、Chrome、Gemini 与 Google Cloud。") process.exit(306);
         if (translate("Archived Only") !== "仅已归档") process.exit(307);
+
+        // 44. 法律条款链接、Token 预算分类、AI 积分与第三方模型策略变更断言 (最新截图 4 处漏译)
+        // 44.1 法律原因内容更改提示
+        if (translate("Visit Legal Help to ask for content changes for legal reasons.") !== "如因法律原因需要更改内容，请访问法律帮助。") {
+            console.error("Legal help full sentence failed:", translate("Visit Legal Help to ask for content changes for legal reasons."));
+            process.exit(308);
+        }
+        if (translate("Legal Help") !== "法律帮助") process.exit(309);
+        if (translate("to ask for content changes for legal reasons.") !== "以申请因法律原因更改内容。") process.exit(310);
+        if (translate("to ask for content changes for legal reasons") !== "以申请因法律原因更改内容") process.exit(311);
+
+        // 44.2 自定义配置 Token 预算细分与其它自定义项
+        if (translate("The breakdown below shows token usage from customizations like rules, skills, and MCP. If a budget is exceeded, large rules are demoted to path pointers and large customizations are excluded automatically.") !== "下方明细展示了规则、技能与 MCP 等自定义配置的 Token 用量。若超出预算，大型规则将被降级为路径指针，大型自定义项将被自动排除。") {
+            console.error("Token breakdown desc failed:", translate("The breakdown below shows token usage from customizations like rules, skills, and MCP. If a budget is exceeded, large rules are demoted to path pointers and large customizations are excluded automatically."));
+            process.exit(312);
+        }
+        if (translate("Other Customizations") !== "其他自定义项") process.exit(313);
+
+        // 44.3 积分状态与操作按钮
+        if (translate("Available AI Credits: 0") !== "可用 AI 积分: 0") {
+            console.error("Available AI Credits: 0 failed:", translate("Available AI Credits: 0"));
+            process.exit(314);
+        }
+        if (translate("Available AI Credits: 100") !== "可用 AI 积分: 100") process.exit(315);
+        if (translate("See Activity") !== "查看活动记录") process.exit(316);
+        if (translate("Get More AI Credits") !== "获取更多 AI 积分") process.exit(317);
+
+        // 44.4 第三方模型策略变更通知
+        const notice1 = "Sonnet 5.5 is now available on paid Pro and Ultra plans. Third-party model access will no longer be available on your current plan starting on November 2, 2026.";
+        const expectedNotice1 = "Sonnet 5.5 现已在付费 Pro 和 Ultra 方案中可用。自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问。";
+        if (translate(notice1) !== expectedNotice1) {
+            console.error("Third-party model notice failed:\\nExpected: " + expectedNotice1 + "\\nGot: " + translate(notice1));
+            process.exit(318);
+        }
+        if (translate("Sonnet 5.5 is now available on paid Pro and Ultra plans.") !== "Sonnet 5.5 现已在付费 Pro 和 Ultra 方案中可用。") process.exit(319);
+        if (translate("Third-party model access will no longer be available on your current plan starting on November 2, 2026.") !== "自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问。") process.exit(320);
 
         console.log("SUCCESS");
         """

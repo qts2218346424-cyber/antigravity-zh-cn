@@ -2028,7 +2028,38 @@ NEW_TRANSLATIONS = {
     # 过滤与显示选项 (Display Options)
     "Archived Only": "仅已归档",
     "Archived only": "仅已归档",
-    "archived only": "仅已归档"
+    "archived only": "仅已归档",
+
+    # 法律帮助与内容修改 (Legal Help)
+    "Visit Legal Help to ask for content changes for legal reasons.": "如因法律原因需要更改内容，请访问法律帮助。",
+    "Visit Legal Help to ask for content changes for legal reasons": "如因法律原因需要更改内容，请访问法律帮助",
+    "Legal Help": "法律帮助",
+    "to ask for content changes for legal reasons.": "以申请因法律原因更改内容。",
+    "to ask for content changes for legal reasons": "以申请因法律原因更改内容",
+
+    # Token 预算说明与自定义明细 (Customization Token Breakdown)
+    "The breakdown below shows token usage from customizations like rules, skills, and MCP. If a budget is exceeded, large rules are demoted to path pointers and large customizations are excluded automatically.": "下方明细展示了规则、技能与 MCP 等自定义配置的 Token 用量。若超出预算，大型规则将被降级为路径指针，大型自定义项将被自动排除。",
+    "The breakdown below shows token usage from customizations like rules, skills, and MCP. If a budget is exceeded, large rules are demoted to path pointers and large customizations are excluded automatically": "下方明细展示了规则、技能与 MCP 等自定义配置的 Token 用量。若超出预算，大型规则将被降级为路径指针，大型自定义项将被自动排除。",
+    "Customization token budgets exceeded. Large rules are demoted to path pointers and large customizations are excluded from context.": "自定义 Token 预算超限。大型规则已降级为路径指针，大型自定义项已从上下文中排除。",
+    "Rules token budget exceeded. Large rules are demoted to path pointers.": "规则 Token 预算超限。大型规则已降级为路径指针。",
+    "Other Customizations": "其他自定义项",
+    "Other customizations": "其他自定义项",
+    "other customizations": "其他自定义项",
+
+    # 可用 AI 积分与活动记录 (AI Credits & Activity)
+    "Available AI Credits: 0": "可用 AI 积分: 0",
+    "Available AI Credits:": "可用 AI 积分：",
+    "Available AI Credits": "可用 AI 积分",
+    "See Activity": "查看活动记录",
+    "see activity": "查看活动记录",
+    "Get More AI Credits": "获取更多 AI 积分",
+    "get more ai credits": "获取更多 AI 积分",
+
+    # 第三方模型方案变更与下线通知 (Third-Party Model Policy Notification)
+    "Sonnet 5.5 is now available on paid Pro and Ultra plans. Third-party model access will no longer be available on your current plan starting on November 2, 2026.": "Sonnet 5.5 现已在付费 Pro 和 Ultra 方案中可用。自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问。",
+    "Sonnet 5.5 is now available on paid Pro and Ultra plans.": "Sonnet 5.5 现已在付费 Pro 和 Ultra 方案中可用。",
+    "Third-party model access will no longer be available on your current plan starting on November 2, 2026.": "自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问。",
+    "Third-party model access will no longer be available on your current plan starting on November 2, 2026": "自 2026 年 11 月 2 日起，您当前的方案将不再支持第三方模型访问"
 }
 
 def main():

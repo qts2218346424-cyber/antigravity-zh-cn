@@ -318,6 +318,35 @@
         return '使用项目设置';
       }
 
+      // 1.26 动态 AI 积分额度标签匹配 (Available AI Credits: 0 / 100 ...)
+      const aiCreditsMatch = text.match(/^Available\s+AI\s+Credits\s*:\s*(\d+(?:,\d+)?(?:\.\d+)?)$/i);
+      if (aiCreditsMatch) {
+        return `可用 AI 积分: ${aiCreditsMatch[1]}`;
+      }
+      if (/^Available\s+AI\s+Credits\s*:?$/i.test(text)) {
+        return '可用 AI 积分：';
+      }
+
+      // 1.27 第三方模型下线与方案变更动态通知
+      // e.g. "Sonnet 5.5 is now available on paid Pro and Ultra plans. Third-party model access will no longer be available on your current plan starting on November 2, 2026."
+      const modelAvailableThirdPartyMatch = text.match(/^(.+?)\s+is\s+now\s+available\s+on\s+paid\s+Pro\s+and\s+Ultra\s+plans\.\s*Third-party\s+model\s+access\s+will\s+no\s+longer\s+be\s+available\s+on\s+your\s+current\s+plan\s+starting\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+      if (modelAvailableThirdPartyMatch) {
+        const modelName = modelAvailableThirdPartyMatch[1].trim();
+        const zhDate = formatEnDate(modelAvailableThirdPartyMatch[2]);
+        return `${modelName} 现已在付费 Pro 和 Ultra 方案中可用。自 ${zhDate}起，您当前的方案将不再支持第三方模型访问。`;
+      }
+
+      const modelAvailablePlansMatch = text.match(/^(.+?)\s+is\s+now\s+available\s+on\s+paid\s+Pro\s+and\s+Ultra\s+plans\.?$/i);
+      if (modelAvailablePlansMatch) {
+        return `${modelAvailablePlansMatch[1].trim()} 现已在付费 Pro 和 Ultra 方案中可用。`;
+      }
+
+      const thirdPartyRemovedMatch = text.match(/^Third-party\s+model\s+access\s+will\s+no\s+longer\s+be\s+available\s+on\s+your\s+current\s+plan\s+starting\s+on\s+([A-Za-z]+(?:\s+\d{1,2})?,\s*\d{4})\.?$/i);
+      if (thirdPartyRemovedMatch) {
+        const zhDate = formatEnDate(thirdPartyRemovedMatch[1]);
+        return `自 ${zhDate}起，您当前的方案将不再支持第三方模型访问。`;
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -700,6 +729,29 @@
                   count++;
                 } else if (/Terms\s+of\s+Service/i.test(linkText)) {
                   node.textContent = node.textContent.replace(/Terms\s+of\s+Service/i, '服务条款');
+                  count++;
+                }
+              }
+            }
+            try { translatedNodeSet.add(el); } catch (_) {}
+          }
+
+          if (/Visit\s+Legal\s+Help\s+to\s+ask\s+for\s+content\s+changes/i.test(text)) {
+            for (let j = 0; j < el.childNodes.length; j++) {
+              const node = el.childNodes[j];
+              if (node.nodeType === 3) {
+                const val = norm(node.nodeValue);
+                if (/^Visit$/i.test(val)) {
+                  node.nodeValue = '如因法律原因需要更改内容，请访问 ';
+                  count++;
+                } else if (/^to\s+ask\s+for\s+content\s+changes\s+for\s+legal\s+reasons\.?$/i.test(val)) {
+                  node.nodeValue = '。';
+                  count++;
+                }
+              } else if (node.nodeType === 1 && (node.tagName === 'A' || node.matches('a, [class*="link"]'))) {
+                const linkText = norm(node.textContent);
+                if (/Legal\s+Help/i.test(linkText)) {
+                  node.textContent = '法律帮助';
                   count++;
                 }
               }
