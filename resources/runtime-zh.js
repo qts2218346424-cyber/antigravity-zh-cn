@@ -277,6 +277,47 @@
         return '查看已归档会话';
       }
 
+      // 1.23 欢迎问候模式匹配 (Welcome to Antigravity / Welcome to ...)
+      if (/^Welcome\s+to\s+(.+)$/i.test(text)) {
+        const m = text.match(/^Welcome\s+to\s+(.+)$/i);
+        const targetApp = DICT[m[1].trim()] || LOWER_DICT[m[1].trim().toLowerCase()] || m[1].trim();
+        return '欢迎使用 ' + targetApp;
+      }
+      if (/^Welcome\s+to$/i.test(text)) {
+        return '欢迎使用 ';
+      }
+
+      // 1.24 动态空状态与通知提示
+      if (/^No\s+changes\s+to\s+review\.?$/i.test(text)) {
+        return '没有需要审查的更改';
+      }
+      if (/^No\s+uploads\.?$/i.test(text)) {
+        return '暂无上传内容';
+      }
+
+      // 1.25 运行策略与权限预设描述
+      if (/^Every\s+command\s+requires\s+approval\.?$/i.test(text)) {
+        return '每条命令都需要批准。';
+      }
+      if (/^Ask\s+before\s+sensitive\s+operations\.?$/i.test(text)) {
+        return '执行敏感操作前先询问。';
+      }
+      if (/^Run\s+all\s+commands\s+without\s+restrictions\.?$/i.test(text)) {
+        return '无限制执行所有命令。';
+      }
+      if (/^Security\s+agent\s+decides\s+if\s+commands\s+run\.?$/i.test(text)) {
+        return '由安全智能体决定命令是否运行。';
+      }
+      if (/^Automatically\s+decide\s+if\s+commands\s+run\.?$/i.test(text)) {
+        return '自动决定命令是否运行。';
+      }
+      if (/^Use\s+Global\s+Settings?$/i.test(text)) {
+        return '使用全局设置';
+      }
+      if (/^Use\s+Project\s+Settings?$/i.test(text)) {
+        return '使用项目设置';
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -616,6 +657,54 @@
               count++;
               continue;
             }
+          }
+        }
+      } catch (_) {}
+      return count;
+    };
+
+    // 专门处理安全须知、服务条款与数据使用同意复选框容器
+    const translateConsentContainers = (root) => {
+      if (!root || !root.querySelectorAll) return 0;
+      let count = 0;
+      try {
+        const labels = root.querySelectorAll('label, [class*="checkbox"], [class*="terms"], span, p');
+        for (let i = 0; i < labels.length; i++) {
+          const el = labels[i];
+          if (translatedNodeSet.has(el) || isProtectedTextNode(el)) continue;
+          const text = norm(el.textContent || '');
+          if (!text) continue;
+
+          if (/^Yes,\s+I\s+agree\s+to\s+help\s+improve/i.test(text) && /Interactions\s+data/i.test(text)) {
+            for (let j = 0; j < el.childNodes.length; j++) {
+              const node = el.childNodes[j];
+              if (node.nodeType === 3) {
+                const val = norm(node.nodeValue);
+                if (/^Yes,\s+I\s+agree\s+to\s+help\s+improve\s*$/i.test(val)) {
+                  node.nodeValue = '是的，我同意协助改进 ';
+                  count++;
+                } else if (/^by\s+allowing\s+Google\s+to\s+collect\s+and\s+use\s+my\s+Interactions\s+data,\s*subject\s+to\s+the$/i.test(val)) {
+                  node.nodeValue = '（通过允许 Google 收集并使用我的互动数据），须遵守 ';
+                  count++;
+                } else if (/^\.?\s*I\s+understand\s+I\s+can\s+choose\s+to\s+opt\s+out\s+later\s+whenever\s+I\s+want\s+via\s+my\s+settings\.?$/i.test(val)) {
+                  node.nodeValue = '。我知道我可以随时通过个人设置选择停用。';
+                  count++;
+                } else if (/^\s*and\s*$/i.test(val)) {
+                  node.nodeValue = ' 和 ';
+                  count++;
+                }
+              } else if (node.nodeType === 1 && node.tagName === 'A') {
+                const linkText = norm(node.textContent);
+                if (/Google\s+Privacy\s+Policy/i.test(linkText)) {
+                  node.textContent = 'Google 隐私权政策';
+                  count++;
+                } else if (/Terms\s+of\s+Service/i.test(linkText)) {
+                  node.textContent = node.textContent.replace(/Terms\s+of\s+Service/i, '服务条款');
+                  count++;
+                }
+              }
+            }
+            try { translatedNodeSet.add(el); } catch (_) {}
           }
         }
       } catch (_) {}
@@ -1019,6 +1108,7 @@
           thinkingCount += translateThinkingContainers(currentRoot);
           budgetCount += translateBudgetContainers(currentRoot);
           budgetCount += translateNotificationContainers(currentRoot);
+          budgetCount += translateConsentContainers(currentRoot);
           hlCount += translateHighlightedContainers(currentRoot);
           textCount += translateTextNodes(currentRoot);
           attrCount += translateAttributes(currentRoot);

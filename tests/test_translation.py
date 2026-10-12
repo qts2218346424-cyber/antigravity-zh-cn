@@ -243,6 +243,47 @@ class TestRuntimeTranslation(unittest.TestCase):
                 return '查看已归档会话';
             }
 
+            // 1.23 欢迎问候模式匹配 (Welcome to Antigravity / Welcome to ...)
+            if (/^Welcome\s+to\s+(.+)$/i.test(text)) {
+                const m = text.match(/^Welcome\s+to\s+(.+)$/i);
+                const targetApp = DICT[m[1].trim()] || LOWER_DICT[m[1].trim().toLowerCase()] || m[1].trim();
+                return '欢迎使用 ' + targetApp;
+            }
+            if (/^Welcome\s+to$/i.test(text)) {
+                return '欢迎使用 ';
+            }
+
+            // 1.24 动态空状态与通知提示
+            if (/^No\s+changes\s+to\s+review\.?$/i.test(text)) {
+                return '没有需要审查的更改';
+            }
+            if (/^No\s+uploads\.?$/i.test(text)) {
+                return '暂无上传内容';
+            }
+
+            // 1.25 运行策略与权限预设描述
+            if (/^Every\s+command\s+requires\s+approval\.?$/i.test(text)) {
+                return '每条命令都需要批准。';
+            }
+            if (/^Ask\s+before\s+sensitive\s+operations\.?$/i.test(text)) {
+                return '执行敏感操作前先询问。';
+            }
+            if (/^Run\s+all\s+commands\s+without\s+restrictions\.?$/i.test(text)) {
+                return '无限制执行所有命令。';
+            }
+            if (/^Security\s+agent\s+decides\s+if\s+commands\s+run\.?$/i.test(text)) {
+                return '由安全智能体决定命令是否运行。';
+            }
+            if (/^Automatically\s+decide\s+if\s+commands\s+run\.?$/i.test(text)) {
+                return '自动决定命令是否运行。';
+            }
+            if (/^Use\s+Global\s+Settings?$/i.test(text)) {
+                return '使用全局设置';
+            }
+            if (/^Use\s+Project\s+Settings?$/i.test(text)) {
+                return '使用项目设置';
+            }
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -908,6 +949,24 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("View archived conversations in [history](notification://history).") !== "在 [历史记录](notification://history) 中查看已归档会话。") process.exit(273);
         if (translate("View archived conversations in") !== "在历史记录中查看已归档会话：") process.exit(274);
         if (translate("1 active conversation and 2 archived conversations") !== "1 个活跃会话 和 2 个已归档会话") process.exit(275);
+
+        // 42. 安全须知弹窗、条款同意、欢迎问候、空状态及权限策略断言
+        if (translate("Security Notice & Data Use") !== "安全须知与数据使用") process.exit(276);
+        if (translate("AI coding agents are known to have certain security limitations. Users should be aware of potential risks, including data exfiltration and possible code execution. Avoid processing highly sensitive data and verify all the actions taken by the agent.") !== "已知 AI 编程智能体存在一定的安全局限性。用户应当了解潜在风险，包括数据外泄和可能的代码执行。请避免处理高度敏感的数据，并核查智能体执行的所有操作。") process.exit(277);
+        if (translate("Accept and continue") !== "接受并继续") process.exit(278);
+        if (translate("Google Privacy Policy") !== "Google 隐私权政策") process.exit(279);
+        if (translate("Welcome to Antigravity") !== "欢迎使用 Antigravity") process.exit(280);
+        if (translate("Welcome to") !== "欢迎使用 ") process.exit(281);
+        if (translate("No changes to review") !== "没有需要审查的更改") process.exit(282);
+        if (translate("No uploads") !== "暂无上传内容") process.exit(283);
+        if (translate("Every command requires approval.") !== "每条命令都需要批准。") process.exit(284);
+        if (translate("Every command requires approval") !== "每条命令都需要批准") process.exit(285);
+        if (translate("Ask before sensitive operations.") !== "执行敏感操作前先询问。") process.exit(286);
+        if (translate("Ask before sensitive operations") !== "执行敏感操作前先询问") process.exit(287);
+        if (translate("Run all commands without restrictions.") !== "无限制执行所有命令。") process.exit(288);
+        if (translate("Run all commands without restrictions") !== "无限制执行所有命令") process.exit(289);
+        if (translate("Use Global Settings") !== "使用全局设置") process.exit(290);
+        if (translate("Use Project Settings") !== "使用项目设置") process.exit(291);
 
         console.log("SUCCESS");
         """

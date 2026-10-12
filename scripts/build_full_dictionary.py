@@ -1909,7 +1909,63 @@ NEW_TRANSLATIONS = {
     "Version Info": "版本信息",
     "Volume": "音量",
     "Write and edit docs": "编写并编辑文档",
-    "Zoom out (-)": "缩小 (-)"
+    "Zoom out (-)": "缩小 (-)",
+
+    # 安全须知、条款与数据使用 (Security Notice & Consent)
+    "Security Notice & Data Use": "安全须知与数据使用",
+    "Terms of Service & Data Use": "服务条款与数据使用",
+    "AI coding agents are known to have certain security limitations. Users should be aware of potential risks, including data exfiltration and possible code execution. Avoid processing highly sensitive data and verify all the actions taken by the agent.": "已知 AI 编程智能体存在一定的安全局限性。用户应当了解潜在风险，包括数据外泄和可能的代码执行。请避免处理高度敏感的数据，并核查智能体执行的所有操作。",
+    "AI coding agents are known to have certain security risks, including autonomous code execution, data exfiltration, prompt injection and supply chain risks. Ensure that you monitor and verify all actions taken by the agent.": "已知 AI 编程智能体存在一定的安全风险，包括自主代码执行、数据外泄、提示词注入和供应链风险。请确保监督并核查智能体执行的所有操作。",
+    "Yes, I agree to help improve Antigravity by allowing Google to collect and use my Interactions data, subject to the Google Antigravity 服务条款 and Google Privacy Policy. I understand I can choose to opt out later whenever I want via my settings.": "是的，我同意通过允许 Google 收集并使用我的互动数据来协助改进 Antigravity，须遵守 Google Antigravity 服务条款和 Google 隐私权政策。我知道我可以随时通过个人设置选择停用。",
+    "Yes, I agree to help improve Antigravity by allowing Google to collect and use my Interactions data, subject to the Google Antigravity Terms of Service and Google Privacy Policy. I understand I can choose to opt out later whenever I want via my settings.": "是的，我同意通过允许 Google 收集并使用我的互动数据来协助改进 Antigravity，须遵守 Google Antigravity 服务条款和 Google 隐私权政策。我知道我可以随时通过个人设置选择停用。",
+    "Yes, I agree to help improve": "是的，我同意协助改进 ",
+    "Yes, I agree to help improve ": "是的，我同意协助改进 ",
+    "by allowing Google to collect and use my Interactions data, subject to the": "（通过允许 Google 收集并使用我的互动数据），须遵守 ",
+    "by allowing Google to collect and use my Interactions data, subject to the ": "（通过允许 Google 收集并使用我的互动数据），须遵守 ",
+    "Google Privacy Policy": "Google 隐私权政策",
+    "Google Antigravity Terms of Service": "Google Antigravity 服务条款",
+    "I understand I can choose to opt out later whenever I want via my settings.": "我知道我可以随时通过个人设置选择停用。",
+    ". I understand I can choose to opt out later whenever I want via my settings.": "。我知道我可以随时通过个人设置选择停用。",
+    "Accept and continue": "接受并继续",
+    "Accept and Continue": "接受并继续",
+    "Yes, I'd like to receive product updates, tips, and promotions from Google": "是的，我希望接收来自 Google 的产品更新、提示和促销信息",
+    "Yes, I'd like to receive product updates, tips, and promotions from Google ": "是的，我希望接收来自 Google 的产品更新、提示和促销信息 ",
+    "via email.": "（通过电子邮件）。",
+
+    # 欢迎界面与问候语 (Welcome Screen)
+    "Welcome to Antigravity": "欢迎使用 Antigravity",
+    "Welcome to Antigravity!": "欢迎使用 Antigravity！",
+    "Welcome to your Chief of Staff": "欢迎使用幕僚长",
+    "Welcome to Cider with Jetski": "欢迎使用 Cider with Jetski",
+    "Welcome to": "欢迎使用 ",
+    "Welcome to ": "欢迎使用 ",
+
+    # 空状态提示 (Empty States)
+    "No changes to review": "没有需要审查的更改",
+    "No changes to review.": "没有需要审查的更改。",
+    "No uploads": "暂无上传内容",
+    "No uploads.": "暂无上传内容。",
+
+    # 项目权限模式与策略 (Permission Presets & Policies)
+    "Every command requires approval.": "每条命令都需要批准。",
+    "Every command requires approval": "每条命令都需要批准",
+    "Ask before sensitive operations.": "执行敏感操作前先询问。",
+    "Ask before sensitive operations": "执行敏感操作前先询问",
+    "Run all commands without restrictions.": "无限制执行所有命令。",
+    "Run all commands without restrictions": "无限制执行所有命令",
+    "Security agent decides if commands run.": "由安全智能体决定命令是否运行。",
+    "Security agent decides if commands run": "由安全智能体决定命令是否运行",
+    "Automatically decide if commands run.": "自动决定命令是否运行。",
+    "Automatically decide if commands run": "自动决定命令是否运行",
+    "Vetted (Preview)": "受审模式 (预览版)",
+    "Auto (Preview)": "自动模式 (预览版)",
+    "Use Global Settings": "使用全局设置",
+    "use global settings": "使用全局设置",
+    "Use Global Setting": "使用全局设置",
+    "Use global settings": "使用全局设置",
+    "Use Project Settings": "使用项目设置",
+    "use project settings": "使用项目设置",
+    "Use project settings": "使用项目设置"
 }
 
 def main():
