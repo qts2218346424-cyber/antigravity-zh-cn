@@ -440,6 +440,85 @@ class TestRuntimeTranslation(unittest.TestCase):
                 return '查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构。当用户询问化合物、靶点、IC50/Ki 值、药物机制或结构搜索时使用。';
             }
 
+            // 1.35 Google 文档官方插件详情页动态模式匹配 (Google Docs Plugin Page)
+            if (/^This is a preview of the plugin's source/i.test(text)) {
+                return '这是该插件源代码的预览。在您安装之前，以下内容均未激活。';
+            }
+            if (/^Install this plugin to use this prompt/i.test(text)) {
+                return '安装此插件以使用此提示词';
+            }
+            if (/^Summarize this design doc/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 50
+                    ? '总结此设计文档并列出...'
+                    : '总结此设计文档并列出关键要点';
+            }
+            if (/^Draft a launch announcement in a new doc/i.test(text)) {
+                return '根据我的笔记在新文档中起草发布公告';
+            }
+            if (/^Reply to the open comments on my doc/i.test(text)) {
+                return '回复我文档中的待处理评论并将其解决';
+            }
+            if (/^Read and write your Google Docs/i.test(text)) {
+                return '读取并编辑您的 Google 文档。通过链接总结任意文档、在新文档中起草提案与公告，以及回复并解决待处理评论。';
+            }
+            if (/^Read,\s*create,\s*edit,\s*and manage Google Docs/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 90
+                    ? '读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建...'
+                    : '读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建、评论及编辑 Google 文档时使用。';
+            }
+
+            // 1.36 科学计算插件技能自适应截断动态匹配 (Science Plugin Skills Auto-complete)
+            if (/^Fetch Evolutionary Conservation scores \(phyloP,\s*phastCons\)/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 150
+                    ? '从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 与转录因子结合位点...'
+                    : '从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 和转录因子结合位点 (TFBS)。在分析基因组变异或区域是否具有进化保守性、重要功能或受转录因子调控时使用。';
+            }
+            if (/^Queries the UniBind database for experimentally validated/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 150
+                    ? '查询 UniBind 数据库以获取经实验验证的转录因子 (TF) 结合位点...'
+                    : '查询 UniBind 数据库以获取经过实验验证的转录因子 (TF) 结合位点。用于检索直接的 TF-DNA 相互作用数据集、下载结合位点坐标进行本地分析，或按物种、细胞系或 TF 名称列出可用数据集。';
+            }
+            if (/^Access protein metadata,\s*function,\s*taxonomy/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 150
+                    ? '访问涵盖 UniProtKB、UniParc 和 UniRef 的蛋白质元数据、功能与序列...'
+                    : '访问涵盖 UniProtKB、UniParc 和 UniRef 的蛋白质元数据、功能、分类学与序列。用于搜索蛋白质、映射标识符或检索功能注释与发表文献。';
+            }
+            if (/^Checks whether the uv Python package manager is installed/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 100
+                    ? '检查是否已安装 uv Python 包管理器，若缺失则自动安装。确保 uv 存在于环境变量中...'
+                    : '检查是否已安装 uv Python 包管理器，若缺失则自动安装。确保 uv 存在于系统环境变量 PATH 中。当其他技能需要 uv 作为前置依赖时使用。';
+            }
+            if (/^Distills a completed user workflow or interaction into a reusable/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 120
+                    ? '将已完成的用户工作流或交互提炼为可复用的智能体技能...'
+                    : '将已完成的用户工作流或交互提炼为可复用的智能体技能。当用户要求将其工作流、交互或多步骤过程转为技能时使用。';
+            }
+            if (/^Retrieve and analyze AlphaFold predicted structures for a/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 150
+                    ? '获取并分析蛋白质的 AlphaFold 预测结构...'
+                    : '获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定 UniProt ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用。若用户仅提供蛋白质名称、基因名称或氨基酸序列，请先要求提供 UniProt ID。';
+            }
+            if (/^Constructs deep-links and URLs for the AlphaGenome Atlas/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 150
+                    ? '为 AlphaGenome Atlas 网站构建深层链接与 URL...'
+                    : '为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异体探索链接 (基于 1 的 chr:pos:ref>alt)、基因组位点视图 (基于 1 的闭区间 chr:start-end)、候选摘要表以及 AlphaGenome 参考序列与备选预测比对。';
+            }
+            if (/^Analyzes genetic variant effects on gene expression/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 150
+                    ? '使用 AlphaGenome API 分析遗传变异对基因表达的影响...'
+                    : '使用 AlphaGenome API 分析遗传变异对基因表达 (RNA-seq)、染色质可及性 (DNASE)、组蛋白标记 (ChIP) 和转录因子的影响。当用户询问非编码变异效应、致病性、临床意义、疾病关联、功能效应、基因表达变化、剪接破坏或启动子与增强子中的调控效应时使用。';
+            }
+            if (/^Score,\s*annotate,\s*and analyze the functional impact of genetic/i.test(text)) {
+                return text.endsWith('...') || text.endsWith('…') || text.length < 150
+                    ? '使用 AlphaGenome 变异影响 (AVI) 分数评估遗传变异...'
+                    : '使用 AlphaGenome 变异影响 (AVI) 分数评估、注释和分析遗传变异的功能影响。通过 AlphaGenome Atlas API 以 chr:pos:ref>alt 格式查询变异、注释 VCF/表格检出集、执行饱和诱变窗口扫描以及提取 GENCODE v46 GTF 基因/外显子/连接点坐标。';
+            }
+
+            // 1.37 科学计算等插件标签清洗匹配
+            if (/^(?:插件[:：]\s*)?科学计算\s*\((?:Science|science)\)$/i.test(text)) {
+                return text.includes('插件') ? '插件: 科学计算' : '科学计算';
+            }
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -1328,6 +1407,60 @@ class TestRuntimeTranslation(unittest.TestCase):
             console.error("AlphaGenome short failed:", translate(alphagenomeShort));
             process.exit(385);
         }
+
+        // 49. Google 文档插件详情页与各技能自适应截断断言 (最新 5 张截图)
+        // 49.1 Google 文档插件详情页
+        const gdocsPreview = "This is a preview of the plugin's source. Nothing below is active until you install it.";
+        if (translate(gdocsPreview) !== "这是该插件源代码的预览。在您安装之前，以下内容均未激活。") {
+            console.error("GDocs preview failed:", translate(gdocsPreview));
+            process.exit(390);
+        }
+        if (translate("Install this plugin to use this prompt") !== "安装此插件以使用此提示词") process.exit(391);
+        if (translate("Draft a launch announcement in a new doc from my notes") !== "根据我的笔记在新文档中起草发布公告") process.exit(392);
+        if (translate("Reply to the open comments on my doc and resolve them") !== "回复我文档中的待处理评论并将其解决") process.exit(393);
+        const gdocsOverviewEn = "Read and write your Google Docs. Summarize any doc from its link, draft proposals and announcements in a new doc, and reply to and resolve open comments.";
+        if (translate(gdocsOverviewEn) !== "读取并编辑您的 Google 文档。通过链接总结任意文档、在新文档中起草提案与公告，以及回复并解决待处理评论。") {
+            console.error("GDocs overview failed:", translate(gdocsOverviewEn));
+            process.exit(394);
+        }
+        const gdocsCommandShort = "Read, create, edit, and manage Google Docs. Use when the user shares a docs.google.com URL, asks to s...";
+        if (!translate(gdocsCommandShort) || !translate(gdocsCommandShort).includes("Google 文档")) {
+            console.error("GDocs command short failed:", translate(gdocsCommandShort));
+            process.exit(395);
+        }
+
+        // 49.2 科学计算插件技能自适应截断与标签
+        const ucscShort = "Fetch Evolutionary Conservation scores (phyloP, phastCons) and Trans...";
+        if (!translate(ucscShort) || !translate(ucscShort).includes("UCSC")) {
+            console.error("UCSC short failed:", translate(ucscShort));
+            process.exit(396);
+        }
+        const unibindShort = "Queries the UniBind database for experimentally validated transcription factor (T...";
+        if (!translate(unibindShort) || !translate(unibindShort).includes("UniBind")) {
+            console.error("UniBind short failed:", translate(unibindShort));
+            process.exit(397);
+        }
+        const uniprotShort = "Access protein metadata, function, taxonomy, and sequences across UniProtKB, ...";
+        if (!translate(uniprotShort) || !translate(uniprotShort).includes("UniProt")) {
+            console.error("UniProt short failed:", translate(uniprotShort));
+            process.exit(398);
+        }
+        const uvShort = "Checks whether the uv Python package manager is installed and installs it if missing. Ensures uv...";
+        if (!translate(uvShort) || !translate(uvShort).includes("uv")) {
+            console.error("uv short failed:", translate(uvShort));
+            process.exit(399);
+        }
+        const workflowShort = "Distills a completed user workflow or interaction into a reusable agent skill. ...";
+        if (!translate(workflowShort) || !translate(workflowShort).includes("技能")) {
+            console.error("Workflow skill short failed:", translate(workflowShort));
+            process.exit(400);
+        }
+        const alphafoldPShort = "Retrieve and analyze AlphaFold predicted structures for a p...";
+        if (!translate(alphafoldPShort) || !translate(alphafoldPShort).includes("AlphaFold")) {
+            console.error("AlphaFold p short failed:", translate(alphafoldPShort));
+            process.exit(401);
+        }
+        if (translate("科学计算 (Science)") !== "科学计算") process.exit(402);
 
         console.log("SUCCESS");
         """

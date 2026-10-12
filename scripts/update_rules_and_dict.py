@@ -919,6 +919,29 @@ def audit_and_update_rules():
         [r"^[Aa]pply\s+[Cc]hanges$", "应用更改"],
         [r"^[Dd]iscard$", "放弃"],
         [r"^[Dd]iscard\s+[Cc]hanges$", "放弃更改"],
+
+        # Google 文档官方插件详情页 (Google Docs Plugin Page)
+        [r"^[Tt]his is a preview of the plugin's source\. Nothing below is active until you install it\.?$", "这是该插件源代码的预览。在您安装之前，以下内容均未激活。"],
+        [r"^[Ii]nstall this plugin to use this prompt\.?$", "安装此插件以使用此提示词"],
+        [r"^[Ss]ummarize this design doc and list (?:the\s+)?key takeaways\.?$", "总结此设计文档并列出关键要点"],
+        [r"^[Ss]ummarize this design doc and list th(?:\.\.\.|…)?$", "总结此设计文档并列出..."],
+        [r"^[Dd]raft a launch announcement in a new doc from my notes\.?$", "根据我的笔记在新文档中起草发布公告"],
+        [r"^[Rr]eply to the open comments on my doc and resolve them\.?$", "回复我文档中的待处理评论并将其解决"],
+        [r"^[Rr]ead and write your Google Docs\. Summarize any doc from its link,\s*draft proposals and announcements in a new doc,\s*and reply to and resolve open (?:comments|评论)\.?$", "读取并编辑您的 Google 文档。通过链接总结任意文档、在新文档中起草提案与公告，以及回复并解决待处理评论。"],
+        [r"^[Rr]ead,\s*create,\s*edit,\s*and manage Google Docs\.\s*Use when the user shares a docs\.google\.com URL,\s*asks to search,\s*read,\s*write,\s*create,\s*comment on,\s*or edit Google Docs\.?$", "读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建、评论及编辑 Google 文档时使用。"],
+        [r"^[Rr]ead,\s*create,\s*edit,\s*and manage Google Docs\.\s*Use when the user shares a docs\.google\.com URL,\s*asks to s(?:\.\.\.|…)?$", "读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建..."],
+
+        # 科学计算插件及自动补全技能截断规则
+        [r"^[Ff]etch Evolutionary Conservation scores \(phyloP,\s*phastCons\) and Trans(?:\.\.\.|…)?$", "从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 与转录因子结合位点..."],
+        [r"^[Qq]ueries the UniBind database for experimentally validated transcription factor \(T(?:\.\.\.|…)?$", "查询 UniBind 数据库以获取经实验验证的转录因子 (TF) 结合位点..."],
+        [r"^[Aa]ccess protein metadata,\s*function,\s*taxonomy,\s*and sequences across UniProtKB,\s*(?:\.\.\.|…)?$", "访问涵盖 UniProtKB、UniParc 和 UniRef 的蛋白质元数据、功能与序列..."],
+        [r"^[Cc]hecks whether the uv Python package manager is installed and installs it if missing\.\s*Ensures uv(?:\.\.\.|…)?$", "检查是否已安装 uv Python 包管理器，若缺失则自动安装。确保 uv 存在于环境变量中..."],
+        [r"^[Dd]istills a completed user workflow or interaction into a reusable agent skill\.\s*(?:\.\.\.|…)?$", "将已完成的用户工作流或交互提炼为可复用的智能体技能..."],
+        [r"^[Rr]etrieve and analyze AlphaFold predicted structures for a p(?:\.\.\.|…)?$", "获取并分析蛋白质的 AlphaFold 预测结构..."],
+        [r"^[Cc]onstructs deep-links and URLs for the AlphaGenome Atlas web(?:\.\.\.|…)?$", "为 AlphaGenome Atlas 网站构建深层链接与 URL..."],
+        [r"^[Aa]nalyzes genetic variant effects on gene expression \(RNA-se(?:\.\.\.|…)?$", "使用 AlphaGenome API 分析遗传变异对基因表达的影响..."],
+        [r"^[Ss]core,\s*annotate,\s*and analyze the functional impact of genetic v(?:\.\.\.|…)?$", "使用 AlphaGenome 变异影响 (AVI) 分数评估遗传变异..."],
+        [r"^(?:插件[:：]\s*)?科学计算\s*\((?:Science|science)\)$", "科学计算"],
     ]
 
     for pattern, repl in additional_rules:

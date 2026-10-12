@@ -2246,7 +2246,65 @@ NEW_TRANSLATIONS = {
     "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values, drug mechanisms, or structure searches.": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构。当用户询问化合物、靶点、IC50/Ki 值、药物机制或结构搜索时使用。",
     "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values, drug mechanisms, or structure searches": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构。当用户询问化合物、靶点、IC50/Ki 值、药物机制或结构搜索时使用。",
     "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values...": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构...",
-    "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values…": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构…"
+    "Query the ChEMBL database for bioactive molecules, drug targets, bioactivity data, approved drugs, and chemical structures. Use when the user asks about compounds, targets, IC50/Ki values…": "查询 ChEMBL 数据库以获取生物活性分子、药物靶点、生物活性数据、已批准药物和化学结构…",
+
+    # Google 文档官方插件详情页 (Google Docs Plugin Page)
+    "This is a preview of the plugin's source. Nothing below is active until you install it.": "这是该插件源代码的预览。在您安装之前，以下内容均未激活。",
+    "This is a preview of the plugin's source. Nothing below is active until you install it": "这是该插件源代码的预览。在您安装之前，以下内容均未激活。",
+    "Install this plugin to use this prompt": "安装此插件以使用此提示词",
+    "Summarize this design doc and list the key takeaways": "总结此设计文档并列出关键要点",
+    "Summarize this design doc and list th...": "总结此设计文档并列出...",
+    "Summarize this design doc and list th…": "总结此设计文档并列出...",
+    "Summarize this design doc and list th": "总结此设计文档并列出...",
+    "Draft a launch announcement in a new doc from my notes": "根据我的笔记在新文档中起草发布公告",
+    "Reply to the open comments on my doc and resolve them": "回复我文档中的待处理评论并将其解决",
+    "Read and write your Google Docs. Summarize any doc from its link, draft proposals and announcements in a new doc, and reply to and resolve open comments.": "读取并编辑您的 Google 文档。通过链接总结任意文档、在新文档中起草提案与公告，以及回复并解决待处理评论。",
+    "Read and write your Google Docs. Summarize any doc from its link, draft proposals and announcements in a new doc, and reply to and resolve open comments": "读取并编辑您的 Google 文档。通过链接总结任意文档、在新文档中起草提案与公告，以及回复并解决待处理评论。",
+    "Read and write your Google Docs. Summarize any doc from its link, draft proposals and announcements in a new doc, and reply to and resolve open 评论。": "读取并编辑您的 Google 文档。通过链接总结任意文档、在新文档中起草提案与公告，以及回复并解决待处理评论。",
+    "Read and write your Google Docs. Summarize any doc from its link, draft proposals and announcements in a new doc, and reply to and resolve open 评论": "读取并编辑您的 Google 文档。通过链接总结任意文档、在新文档中起草提案与公告，以及回复并解决待处理评论。",
+    "Read, create, edit, and manage Google Docs. Use when the user shares a docs.google.com URL, asks to search, read, write, create, comment on, or edit Google Docs.": "读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建、评论及编辑 Google 文档时使用。",
+    "Read, create, edit, and manage Google Docs. Use when the user shares a docs.google.com URL, asks to search, read, write, create, comment on, or edit Google Docs": "读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建、评论及编辑 Google 文档时使用。",
+    "Read, create, edit, and manage Google Docs. Use when the user shares a docs.google.com URL, asks to s...": "读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建...",
+    "Read, create, edit, and manage Google Docs. Use when the user shares a docs.google.com URL, asks to s…": "读取、创建、编辑和管理 Google 文档。当用户分享 docs.google.com 网址，或要求搜索、阅读、撰写、创建...",
+
+    # 科学计算插件及自动补全技能截断描述 (Science Plugin Skills & Auto-complete Descriptions)
+    "Fetch Evolutionary Conservation scores (phyloP, phastCons) and Transcription Factor Binding Sites (TFBS) from the UCSC Genome Browser. Use when analyzing whether genomic variants or regions are evolutionarily conserved, functionally important, or bounded by TF regulators across major projects (ENCODE, JASPAR, ReMap).": "从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 和转录因子结合位点 (TFBS)。在分析基因组变异或区域是否具有进化保守性、重要功能或受转录因子调控时使用。",
+    "Fetch Evolutionary Conservation scores (phyloP, phastCons) and Transcription Factor Binding Sites (TFBS) from the UCSC Genome Browser. Use when analyzing whether genomic variants or regions are evolutionarily conserved, functionally important, or bounded by TF regulators across major projects (ENCODE, JASPAR, ReMap)": "从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 和转录因子结合位点 (TFBS)。在分析基因组变异或区域是否具有进化保守性、重要功能或受转录因子调控时使用。",
+    "Fetch Evolutionary Conservation scores (phyloP, phastCons) and Trans...": "从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 与转录因子结合位点...",
+    "Fetch Evolutionary Conservation scores (phyloP, phastCons) and Trans…": "从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 与转录因子结合位点...",
+
+    "Queries the UniBind database for experimentally validated transcription factor (TF) binding sites. Use when retrieving direct TF-DNA interaction datasets, downloading binding site coordinates (BED/FASTA) for local analysis, or listing available datasets by species, cell line, or TF name. Don't use to query specific intervals, locations, genes, motif models or expression data.": "查询 UniBind 数据库以获取经过实验验证的转录因子 (TF) 结合位点。用于检索直接的 TF-DNA 相互作用数据集、下载结合位点坐标进行本地分析，或按物种、细胞系或 TF 名称列出可用数据集。",
+    "Queries the UniBind database for experimentally validated transcription factor (TF) binding sites. Use when retrieving direct TF-DNA interaction datasets, downloading binding site coordinates (BED/FASTA) for local analysis, or listing available datasets by species, cell line, or TF name. Don't use to query specific intervals, locations, genes, motif models or expression data": "查询 UniBind 数据库以获取经过实验验证的转录因子 (TF) 结合位点。用于检索直接的 TF-DNA 相互作用数据集、下载结合位点坐标进行本地分析，或按物种、细胞系或 TF 名称列出可用数据集。",
+    "Queries the UniBind database for experimentally validated transcription factor (T...": "查询 UniBind 数据库以获取经实验验证的转录因子 (TF) 结合位点...",
+    "Queries the UniBind database for experimentally validated transcription factor (T…": "查询 UniBind 数据库以获取经实验验证的转录因子 (TF) 结合位点...",
+
+    "Access protein metadata, function, taxonomy, and sequences across UniProtKB, UniParc, and UniRef. Use when searching for proteins, mapping identifiers, or retrieving functional annotations and publications. Don't use for sequence alignment, protein folding, or sequence similarity search (use specialized skills for those tasks).": "访问涵盖 UniProtKB、UniParc 和 UniRef 的蛋白质元数据、功能、分类学与序列。用于搜索蛋白质、映射标识符或检索功能注释与发表文献。",
+    "Access protein metadata, function, taxonomy, and sequences across UniProtKB, UniParc, and UniRef. Use when searching for proteins, mapping identifiers, or retrieving functional annotations and publications. Don't use for sequence alignment, protein folding, or sequence similarity search (use specialized skills for those tasks)": "访问涵盖 UniProtKB、UniParc 和 UniRef 的蛋白质元数据、功能、分类学与序列。用于搜索蛋白质、映射标识符或检索功能注释与发表文献。",
+    "Access protein metadata, function, taxonomy, and sequences across UniProtKB, ...": "访问涵盖 UniProtKB、UniParc 和 UniRef 的蛋白质元数据、功能与序列...",
+    "Access protein metadata, function, taxonomy, and sequences across UniProtKB, …": "访问涵盖 UniProtKB、UniParc 和 UniRef 的蛋白质元数据、功能与序列...",
+
+    "Checks whether the uv Python package manager is installed and installs it if missing. Ensures uv is on PATH. Use when another skill requires uv as a prerequisite.": "检查是否已安装 uv Python 包管理器，若缺失则自动安装。确保 uv 存在于系统环境变量 PATH 中。当其他技能需要 uv 作为前置依赖时使用。",
+    "Checks whether the uv Python package manager is installed and installs it if missing. Ensures uv is on PATH. Use when another skill requires uv as a prerequisite": "检查是否已安装 uv Python 包管理器，若缺失则自动安装。确保 uv 存在于系统环境变量 PATH 中。当其他技能需要 uv 作为前置依赖时使用。",
+    "Checks whether the uv Python package manager is installed and installs it if missing. Ensures uv...": "检查是否已安装 uv Python 包管理器，若缺失则自动安装。确保 uv 存在于环境变量中...",
+    "Checks whether the uv Python package manager is installed and installs it if missing. Ensures uv…": "检查是否已安装 uv Python 包管理器，若缺失则自动安装。确保 uv 存在于环境变量中...",
+
+    "Distills a completed user workflow or interaction into a reusable agent skill. Use when the user asks to turn their workflow, interaction, or multi-step process into a skill, or when they say \"make this a skill\", \"create a skill from what we just did\", \"package this workflow\" or similar. Do not use for creating skills from scratch without an existing workflow (use a generic skill-creator for that).": "将已完成的用户工作流或交互提炼为可复用的智能体技能。当用户要求将其工作流、交互或多步骤过程转为技能时使用。",
+    "Distills a completed user workflow or interaction into a reusable agent skill. Use when the user asks to turn their workflow, interaction, or multi-step process into a skill, or when they say \"make this a skill\", \"create a skill from what we just did\", \"package this workflow\" or similar. Do not use for creating skills from scratch without an existing workflow (use a generic skill-creator for that)": "将已完成的用户工作流或交互提炼为可复用的智能体技能。当用户要求将其工作流、交互或多步骤过程转为技能时使用。",
+    "Distills a completed user workflow or interaction into a reusable agent skill. ...": "将已完成的用户工作流或交互提炼为可复用的智能体技能...",
+    "Distills a completed user workflow or interaction into a reusable agent skill. …": "将已完成的用户工作流或交互提炼为可复用的智能体技能...",
+
+    "Retrieve and analyze AlphaFold predicted structures for a p...": "获取并分析蛋白质的 AlphaFold 预测结构...",
+    "Retrieve and analyze AlphaFold predicted structures for a p…": "获取并分析蛋白质的 AlphaFold 预测结构...",
+    "Constructs deep-links and URLs for the AlphaGenome Atlas web...": "为 AlphaGenome Atlas 网站构建深层链接与 URL...",
+    "Constructs deep-links and URLs for the AlphaGenome Atlas web…": "为 AlphaGenome Atlas 网站构建深层链接与 URL...",
+    "Analyzes genetic variant effects on gene expression (RNA-se...": "使用 AlphaGenome API 分析遗传变异对基因表达的影响...",
+    "Analyzes genetic variant effects on gene expression (RNA-se…": "使用 AlphaGenome API 分析遗传变异对基因表达的影响...",
+    "Score, annotate, and analyze the functional impact of genetic v...": "使用 AlphaGenome 变异影响 (AVI) 分数评估遗传变异...",
+    "Score, annotate, and analyze the functional impact of genetic v…": "使用 AlphaGenome 变异影响 (AVI) 分数评估遗传变异...",
+
+    "科学计算 (Science)": "科学计算",
+    "插件: 科学计算 (Science)": "插件: 科学计算",
+    "插件：科学计算 (Science)": "插件：科学计算"
 }
 
 def main():
