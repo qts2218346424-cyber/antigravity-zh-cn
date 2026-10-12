@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#适用环境)
 [![Target](https://img.shields.io/badge/Antigravity-v2.23.0-blue.svg)](https://antigravity.google)
-[![Terms](https://img.shields.io/badge/Dictionary-3157%20Terms-brightgreen.svg)](#)
+[![Terms](https://img.shields.io/badge/Dictionary-3185%20Terms-brightgreen.svg)](#)
 
 一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.23.0**）打造的高性能本地中文汉化补丁与辅助工具。
 

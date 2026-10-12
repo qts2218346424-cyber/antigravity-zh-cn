@@ -359,6 +359,30 @@
       if (/^copy\s+text$/i.test(text)) return '复制文本';
       if (/^copy\s+all$/i.test(text)) return '复制全部';
 
+      // 1.29 短格式相对时间戳匹配 (e.g. "3m ago", "5m ago", "1h ago", "2d ago", "just now")
+      const relTimeMatch = text.match(/^(\d+)\s*(s|m|h|d|w|mo|y)\s+ago$/i);
+      if (relTimeMatch) {
+        const num = relTimeMatch[1];
+        const unit = relTimeMatch[2].toLowerCase();
+        const unitMap = {
+          s: '秒前',
+          m: '分钟前',
+          h: '小时前',
+          d: '天前',
+          w: '周前',
+          mo: '个月前',
+          y: '年前'
+        };
+        return `${num} ${unitMap[unit] || '前'}`;
+      }
+      if (/^just\s+now$/i.test(text)) return '刚刚';
+
+      // 1.30 法律条款引导前缀与自定义智能体兜底 (Visit ..., Custom Agents)
+      if (/^visit\s*$/i.test(text)) return '访问 ';
+      if (/^custom\s+agents?$/i.test(text)) return '自定义智能体';
+      if (/^no\s+custom\s+agents?\s+yet\.?$/i.test(text)) return '暂无自定义智能体。';
+      if (/^自定义\s*Agent(?:s)?$/i.test(text)) return '自定义智能体';
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -761,19 +785,19 @@
             try { translatedNodeSet.add(el); } catch (_) {}
           }
 
-          if (/Visit\s+Legal\s+Help\s+to\s+ask\s+for\s+content\s+changes/i.test(text)) {
+          if (/Visit\s+(?:Legal\s+Help|法律帮助)/i.test(text)) {
             for (let j = 0; j < el.childNodes.length; j++) {
               const node = el.childNodes[j];
               if (node.nodeType === 3) {
                 const val = norm(node.nodeValue);
                 if (/^Visit$/i.test(val)) {
-                  node.nodeValue = '如因法律原因需要更改内容，请访问 ';
+                  node.nodeValue = '访问 ';
                   count++;
                 } else if (/^to\s+ask\s+for\s+content\s+changes\s+for\s+legal\s+reasons\.?$/i.test(val)) {
-                  node.nodeValue = '。';
+                  node.nodeValue = '以申请因法律原因更改内容。';
                   count++;
                 }
-              } else if (node.nodeType === 1 && (node.tagName === 'A' || node.matches('a, [class*="link"]'))) {
+              } else if (node.nodeType === 1 && (node.tagName === 'A' || (node.matches && node.matches('a, [class*="link"]')))) {
                 const linkText = norm(node.textContent);
                 if (/Legal\s+Help/i.test(linkText)) {
                   node.textContent = '法律帮助';
@@ -1319,7 +1343,7 @@
     // 立即执行初始扫描
     runTranslation();
 
-    // 全局用户交互感知窗口（点击/悬停/按压时开启 300ms 零延迟同步直出通道）
+    // 全局用户交互感知窗口（点击/悬停/按压/选区变化/右键时开启 300ms 零延迟同步直出通道）
     let isUserInteracting = false;
     let interactExpiry = 0;
     const markInteraction = (e) => {
@@ -1328,11 +1352,18 @@
       if (e && e.target && e.target.nodeType === 1) {
         translateFloatingCopyWidgets(e.target);
       }
+      // 针对选区变化与右键上下文弹窗，在微任务中对全局浮层执行即时极速扫描
+      if (e && (e.type === 'mouseup' || e.type === 'contextmenu' || e.type === 'selectionchange')) {
+        setTimeout(() => {
+          translateFloatingCopyWidgets(document.body || document.documentElement);
+        }, 10);
+      }
     };
 
-    ['pointerdown', 'mousedown', 'keydown', 'touchstart', 'pointerover', 'mouseover'].forEach((evtType) => {
+    ['pointerdown', 'mousedown', 'mouseup', 'keydown', 'touchstart', 'touchend', 'pointerover', 'mouseover', 'contextmenu', 'selectionchange'].forEach((evtType) => {
       try {
-        window.addEventListener(evtType, markInteraction, { capture: true, passive: true });
+        const target = (evtType === 'selectionchange') ? document : window;
+        target.addEventListener(evtType, markInteraction, { capture: true, passive: true });
       } catch (_) {}
     });
 

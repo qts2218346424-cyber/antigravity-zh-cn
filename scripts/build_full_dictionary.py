@@ -2083,7 +2083,49 @@ NEW_TRANSLATIONS = {
     "Copy citation": "复制引用",
     "copy citation": "复制引用",
     "Copy link address": "复制链接地址",
-    "copy link address": "复制链接地址"
+    "copy link address": "复制链接地址",
+
+    # 法律条款拆分节点容错 (Visit ...)
+    "Visit": "访问",
+    "Visit ": "访问 ",
+    "visit": "访问",
+    "visit ": "访问 ",
+
+    # 自定义智能体与空状态 (Custom Agents & Empty State)
+    "Custom Agents": "自定义智能体",
+    "Custom Agent": "自定义智能体",
+    "custom agents": "自定义智能体",
+    "custom agent": "自定义智能体",
+    "Custom agents": "自定义智能体",
+    "No custom agents yet.": "暂无自定义智能体。",
+    "No custom agents yet": "暂无自定义智能体",
+    "No custom agent yet.": "暂无自定义智能体。",
+    "No custom agent yet": "暂无自定义智能体",
+    "No agents yet.": "暂无智能体。",
+    "No agents yet": "暂无智能体",
+    "No custom agents": "暂无自定义智能体",
+    "Custom Agent Error:": "自定义智能体错误：",
+    "Custom Agent Error": "自定义智能体错误",
+    "Custom agents are not available in Best of N mode.": "自定义智能体在 Best of N 模式下不可用。",
+    "Loading custom agents...": "正在加载自定义智能体...",
+    "No Custom Agents or Plugins": "未配置自定义智能体或插件",
+    "Refresh custom agents": "刷新自定义智能体",
+    "自定义 Agent": "自定义智能体",
+    "自定义 Agents": "自定义智能体",
+
+    # 主题配色菜单 (Theme Selection Options)
+    "Catppuccin": "Catppuccin",
+    "Gruvbox Material": "Gruvbox 质感",
+    "Gruvbox Dark": "Gruvbox 深色",
+    "Gruvbox Light": "Gruvbox 浅色",
+    "One Light": "One 浅色",
+    "One Dark": "One 深色",
+    "Solarized Light": "Solarized 浅色",
+    "Solarized Dark": "Solarized 深色",
+    "Catppuccin Latte": "Catppuccin 浅色 (Latte)",
+    "Catppuccin Frappe": "Catppuccin 柔和 (Frappe)",
+    "Catppuccin Macchiato": "Catppuccin 玛奇朵 (Macchiato)",
+    "Catppuccin Mocha": "Catppuccin 摩卡 (Mocha)"
 }
 
 def main():

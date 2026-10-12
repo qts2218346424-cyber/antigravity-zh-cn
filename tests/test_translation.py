@@ -325,6 +325,30 @@ class TestRuntimeTranslation(unittest.TestCase):
             if (/^copy\s+text$/i.test(text)) return '复制文本';
             if (/^copy\s+all$/i.test(text)) return '复制全部';
 
+            // 1.29 短格式相对时间戳匹配 (e.g. "3m ago", "5m ago", "1h ago", "2d ago", "just now")
+            const relTimeMatch = text.match(/^(\d+)\s*(s|m|h|d|w|mo|y)\s+ago$/i);
+            if (relTimeMatch) {
+                const num = relTimeMatch[1];
+                const unit = relTimeMatch[2].toLowerCase();
+                const unitMap = {
+                    s: '秒前',
+                    m: '分钟前',
+                    h: '小时前',
+                    d: '天前',
+                    w: '周前',
+                    mo: '个月前',
+                    y: '年前'
+                };
+                return `${num} ${unitMap[unit] || '前'}`;
+            }
+            if (/^just\s+now$/i.test(text)) return '刚刚';
+
+            // 1.30 法律条款引导前缀与自定义智能体兜底 (Visit ..., Custom Agents)
+            if (/^visit\s*$/i.test(text)) return '访问 ';
+            if (/^custom\s+agents?$/i.test(text)) return '自定义智能体';
+            if (/^no\s+custom\s+agents?\s+yet\.?$/i.test(text)) return '暂无自定义智能体。';
+            if (/^自定义\s*Agent(?:s)?$/i.test(text)) return '自定义智能体';
+
             for (let i = 0; i < RULES.length; i++) {
                 const item = RULES[i];
                 try {
@@ -1085,6 +1109,48 @@ class TestRuntimeTranslation(unittest.TestCase):
         if (translate("Copy full path") !== "复制完整路径") process.exit(336);
         if (translate("Copy citation") !== "复制引用") process.exit(337);
         if (translate("Copy link address") !== "复制链接地址") process.exit(338);
+
+        // 46. 相对时间戳、自定义智能体空状态、Visit 拆分与主题选项断言 (5 张新截图)
+        // 46.1 相对时间戳
+        if (translate("3m ago") !== "3 分钟前") {
+            console.error("3m ago failed:", translate("3m ago"));
+            process.exit(339);
+        }
+        if (translate("1m ago") !== "1 分钟前") process.exit(340);
+        if (translate("5m ago") !== "5 分钟前") process.exit(341);
+        if (translate("2h ago") !== "2 小时前") process.exit(342);
+        if (translate("1d ago") !== "1 天前") process.exit(343);
+        if (translate("30s ago") !== "30 秒前") process.exit(344);
+        if (translate("just now") !== "刚刚") process.exit(345);
+
+        // 46.2 法律免责拆分引导前缀
+        if (translate("Visit") !== "访问 ") {
+            console.error("Visit failed:", translate("Visit"));
+            process.exit(346);
+        }
+        if (translate("Visit ") !== "访问 ") process.exit(347);
+
+        // 46.3 自定义智能体与空状态描述
+        if (translate("Custom Agents") !== "自定义智能体") {
+            console.error("Custom Agents failed:", translate("Custom Agents"));
+            process.exit(348);
+        }
+        if (translate("Custom Agent") !== "自定义智能体") process.exit(349);
+        if (translate("No custom agents yet.") !== "暂无自定义智能体。") {
+            console.error("No custom agents yet. failed:", translate("No custom agents yet."));
+            process.exit(350);
+        }
+        if (translate("No custom agents yet") !== "暂无自定义智能体") process.exit(351);
+        if (translate("自定义 Agent") !== "自定义智能体") process.exit(352);
+
+        // 46.4 主题配色选项
+        if (translate("One Light") !== "One 浅色") {
+            console.error("One Light failed:", translate("One Light"));
+            process.exit(353);
+        }
+        if (translate("Solarized Light") !== "Solarized 浅色") process.exit(354);
+        if (translate("Gruvbox Material") !== "Gruvbox 质感") process.exit(355);
+        if (translate("Catppuccin") !== "Catppuccin") process.exit(356);
 
         console.log("SUCCESS");
         """
