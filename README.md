@@ -2,10 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#适用环境)
-[![Target](https://img.shields.io/badge/Antigravity-v2.23.0-blue.svg)](https://antigravity.google)
-[![Terms](https://img.shields.io/badge/Dictionary-3323%20Terms-brightgreen.svg)](#)
+[![Target](https://img.shields.io/badge/Antigravity-v2.24.0-blue.svg)](https://antigravity.google)
+[![Terms](https://img.shields.io/badge/Dictionary-3404%20Terms-brightgreen.svg)](#)
 
-一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.23.0**）打造的高性能本地中文汉化补丁与辅助工具。
+一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.24.0**）打造的高性能本地中文汉化补丁与辅助工具。
 
 支持 **简体中文 (zh-CN)**、**繁体中文（中国台湾 zh-TW）** 和 **繁体中文（中国香港 zh-HK）**。已覆盖 Chief of Staff 幕僚长仪表盘、自动化工作流、会话分叉、云端项目等最新特性。
 
