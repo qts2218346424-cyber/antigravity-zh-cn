@@ -26,6 +26,7 @@ tmp/
 scratch/
 *.tmp
 *.zip
+resources/media/video_data.json
 resources/untranslated.json
 resources/untranslated_all.json
 resources/untranslated_settings.json
