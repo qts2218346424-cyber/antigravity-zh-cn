@@ -36,11 +36,21 @@ for name, box in nezuko_boxes.items():
     cropped.save(buf, format='WEBP', quality=92)
     b64_nezuko_parts[name] = base64.b64encode(buf.getvalue()).decode('ascii')
 
-# 2. 读取小王子透明立绘
+# 2. 读取小王子核心与动作素材
 prince_webp = MEDIA_DIR / "little_prince_pet.webp"
-if not prince_webp.exists():
-    prince_webp = MEDIA_DIR / "little_prince_pet.png"
 b64_prince = base64.b64encode(prince_webp.read_bytes()).decode('ascii')
+
+prince_fox_webp = MEDIA_DIR / "prince_action_fox.webp"
+b64_prince_fox = base64.b64encode(prince_fox_webp.read_bytes()).decode('ascii')
+
+prince_rose_webp = MEDIA_DIR / "prince_asset_rose.webp"
+b64_prince_rose = base64.b64encode(prince_rose_webp.read_bytes()).decode('ascii')
+
+prince_sunset_webp = MEDIA_DIR / "prince_asset_sunset.webp"
+b64_prince_sunset = base64.b64encode(prince_sunset_webp.read_bytes()).decode('ascii')
+
+prince_stars_webp = MEDIA_DIR / "prince_asset_stars.webp"
+b64_prince_stars = base64.b64encode(prince_stars_webp.read_bytes()).decode('ascii')
 
 js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼桌宠 + 电脑 QQ 音乐无缝联动 + 额度告急与疲劳关怀中枢 + 四维配额立体同步引擎
 (function() {{
@@ -56,6 +66,10 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
   const NEZUKO_LEG_R = "data:image/webp;base64,{b64_nezuko_parts['leg_r']}";
 
   const PRINCE_IMG = "data:image/webp;base64,{b64_prince}";
+  const PRINCE_FOX_IMG = "data:image/webp;base64,{b64_prince_fox}";
+  const PRINCE_ROSE_IMG = "data:image/webp;base64,{b64_prince_rose}";
+  const PRINCE_SUNSET_IMG = "data:image/webp;base64,{b64_prince_sunset}";
+  const PRINCE_STARS_IMG = "data:image/webp;base64,{b64_prince_stars}";
 
   // ==========================================
   // 一、QQ 音乐客户端系统级对接遥控引擎
@@ -847,30 +861,179 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     .action-sleep #bone-head {{ transform: translateY(12px) rotate(8deg) scale(0.96) !important; }}
     .action-sleep #bone-arm-r {{ transform: rotate(-35deg) translateY(-8px) !important; }}
 
-    /* 小王子 6 大专属动效 */
-    .action-scarf .prince-avatar-img {{
-      animation: scarfWind 0.8s infinite ease-in-out alternate !important;
-      filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.75)) !important;
+    /* ========================================================= */
+    /* 小王子 5 大全新生动影视级动画引擎 (Vivid Motion Rig) */
+    /* ========================================================= */
+    .prince-action-layer {{
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; opacity: 0; transition: opacity 0.35s ease, transform 0.35s ease;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 20;
     }}
-    @keyframes scarfWind {{ 0% {{ transform: skewX(-5deg) rotate(-2deg); }} 100% {{ transform: skewX(6deg) rotate(4deg); }} }}
 
-    .action-rose .prince-avatar-img {{
-      transform: scale(1.06) translateY(-4px) !important;
-      filter: drop-shadow(0 0 20px rgba(244, 63, 94, 0.8)) !important;
+    /* 动作 1：🦊 驯养小狐狸 (亲昵蹭脸 + 呼吸律动 + 浮动爱心群) */
+    .action-fox #layer-action-fox {{ opacity: 1 !important; pointer-events: auto !important; }}
+    .action-fox #prince-avatar-body {{ opacity: 0 !important; transform: scale(0.95); }}
+    .prince-fox-img {{
+      width: 100%; height: 100%; object-fit: contain;
+      filter: drop-shadow(0 8px 18px rgba(249, 115, 22, 0.45));
+      animation: foxCuddle 1.8s infinite ease-in-out;
+      transform-origin: bottom center;
     }}
-    .action-fox .prince-avatar-img {{
-      transform: rotate(-6deg) translateY(6px) !important;
-      filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.75)) !important;
+    @keyframes foxCuddle {{
+      0%, 100% {{ transform: translateY(0) rotate(0deg) scale(1); }}
+      30% {{ transform: translateY(-4px) rotate(-2deg) scale(1.03); }}
+      70% {{ transform: translateY(-2px) rotate(2deg) scale(1.02); }}
     }}
-    .action-stars .prince-avatar-img {{
-      animation: starsFloat 1.2s infinite ease-in-out alternate !important;
-      filter: drop-shadow(0 0 24px rgba(250, 204, 21, 0.9)) !important;
+    .fox-hearts-cluster {{
+      position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+      pointer-events: none; width: 100px; height: 80px;
     }}
-    @keyframes starsFloat {{ 0% {{ transform: translateY(0) scale(1); }} 100% {{ transform: translateY(-12px) scale(1.05); }} }}
+    .fox-heart {{
+      position: absolute; font-size: 15px; opacity: 0;
+      animation: heartFloatUp 2s infinite ease-out;
+    }}
+    .fox-heart.fh1 {{ left: 20px; animation-delay: 0.1s; }}
+    .fox-heart.fh2 {{ left: 50px; animation-delay: 0.7s; font-size: 12px; }}
+    .fox-heart.fh3 {{ left: 75px; animation-delay: 1.3s; font-size: 14px; }}
+    @keyframes heartFloatUp {{
+      0% {{ transform: translateY(20px) scale(0.6); opacity: 0; }}
+      30% {{ opacity: 1; transform: translateY(0) scale(1.1); }}
+      80% {{ opacity: 0.8; }}
+      100% {{ transform: translateY(-35px) scale(0.8); opacity: 0; }}
+    }}
 
-    .action-sunset .prince-avatar-img {{
-      filter: drop-shadow(0 0 20px rgba(234, 88, 12, 0.85)) hue-rotate(-15deg) !important;
-      transform: scale(0.95) translateY(4px) !important;
+    /* 动作 2：🌹 呵护红玫瑰 (发光晶莹玻璃罩 + 玫瑰花瓣旋转飘落) */
+    .action-rose #layer-action-rose {{ opacity: 1 !important; pointer-events: auto !important; }}
+    .action-rose #prince-avatar-body {{
+      transform: scale(1.04) translateY(-3px) rotate(-1deg) !important;
+      filter: drop-shadow(0 0 20px rgba(244, 63, 94, 0.7)) !important;
+    }}
+    .rose-dome-img {{
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 140px; height: 175px; object-fit: contain;
+      animation: roseDomeRise 2.5s infinite ease-in-out alternate;
+      filter: drop-shadow(0 0 16px rgba(244, 63, 94, 0.85));
+    }}
+    @keyframes roseDomeRise {{
+      0% {{ transform: translateX(-50%) translateY(4px) scale(0.96); }}
+      100% {{ transform: translateX(-50%) translateY(-6px) scale(1.03); }}
+    }}
+    .rose-falling-petals {{
+      position: absolute; top: -10px; left: 0; right: 0; height: 180px; pointer-events: none;
+    }}
+    .petal {{
+      position: absolute; font-size: 14px; opacity: 0;
+      animation: petalTumble 3s infinite ease-in;
+    }}
+    .petal.p1 {{ left: 25px; animation-delay: 0.2s; }}
+    .petal.p2 {{ left: 55px; animation-delay: 1.0s; font-size: 12px; }}
+    .petal.p3 {{ left: 85px; animation-delay: 1.8s; }}
+    .petal.p4 {{ left: 110px; animation-delay: 2.4s; font-size: 13px; }}
+    @keyframes petalTumble {{
+      0% {{ transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0; }}
+      20% {{ opacity: 1; }}
+      80% {{ opacity: 0.85; }}
+      100% {{ transform: translateY(180px) translateX(25px) rotate(420deg); opacity: 0; }}
+    }}
+
+    /* 动作 3：🧣 呼啸长围巾 (动态流体波浪翻卷 + 疾风风痕流线) */
+    .action-scarf #layer-action-scarf {{ opacity: 1 !important; pointer-events: auto !important; }}
+    .action-scarf #prince-avatar-body {{
+      animation: scarfBodyTilt 0.45s infinite ease-in-out alternate !important;
+      filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.8)) !important;
+    }}
+    @keyframes scarfBodyTilt {{
+      0% {{ transform: skewX(-4deg) rotate(-2deg); }}
+      100% {{ transform: skewX(5deg) rotate(3deg); }}
+    }}
+    .wind-scarf-ribbon {{
+      position: absolute; top: 62px; left: -25px; width: 140px; height: 35px;
+      background: linear-gradient(90deg, #dc2626 0%, #ef4444 60%, rgba(254, 202, 202, 0.8) 100%);
+      border-radius: 18px 8px 18px 8px;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.85), inset 0 0 6px #fff;
+      transform-origin: right center;
+      animation: scarfRibbonWave 0.4s infinite ease-in-out alternate;
+    }}
+    @keyframes scarfRibbonWave {{
+      0% {{ transform: rotate(-18deg) skewY(-8deg) scaleY(0.85); }}
+      50% {{ transform: rotate(12deg) skewY(12deg) scaleY(1.2) translateY(-8px); }}
+      100% {{ transform: rotate(-12deg) skewY(-6deg) scaleY(0.9); }}
+    }}
+    .wind-gust-line {{
+      position: absolute; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+      border-radius: 2px; opacity: 0;
+      animation: windGustSweep 0.75s infinite linear;
+    }}
+    .wind-gust-line.wgl1 {{ top: 40px; left: -10px; width: 80px; animation-delay: 0.1s; }}
+    .wind-gust-line.wgl2 {{ top: 85px; left: -30px; width: 110px; animation-delay: 0.35s; }}
+    .wind-gust-line.wgl3 {{ top: 130px; left: 10px; width: 70px; animation-delay: 0.5s; }}
+    @keyframes windGustSweep {{
+      0% {{ transform: translateX(-40px); opacity: 0; }}
+      40% {{ opacity: 0.9; }}
+      100% {{ transform: translateX(120px); opacity: 0; }}
+    }}
+
+    /* 动作 4：✨ 仰望繁星 (手捧小行星 + 45度高能流星雨) */
+    .action-stars #layer-action-stars {{ opacity: 1 !important; pointer-events: auto !important; }}
+    .action-stars #prince-avatar-body {{
+      transform: translateY(-8px) scale(1.05) !important;
+      filter: drop-shadow(0 0 25px rgba(250, 204, 21, 0.95)) !important;
+    }}
+    .stars-orbit-img {{
+      position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+      width: 140px; height: 140px; object-fit: contain;
+      animation: starsOrbitPulse 2.8s infinite ease-in-out alternate;
+      filter: drop-shadow(0 0 18px rgba(254, 240, 138, 0.9));
+    }}
+    @keyframes starsOrbitPulse {{
+      0% {{ transform: translateX(-50%) scale(0.92) rotate(-5deg); }}
+      100% {{ transform: translateX(-50%) scale(1.08) rotate(8deg); }}
+    }}
+    .shooting-star {{
+      position: absolute; width: 55px; height: 2px;
+      background: linear-gradient(90deg, #fff 0%, rgba(250, 204, 21, 0.8) 50%, transparent 100%);
+      transform: rotate(-45deg); opacity: 0; border-radius: 2px;
+      box-shadow: 0 0 8px #fde047;
+      animation: meteorSlash 1.8s infinite ease-in;
+    }}
+    .shooting-star.ss1 {{ top: 15px; right: 10px; animation-delay: 0.2s; }}
+    .shooting-star.ss2 {{ top: 45px; right: 40px; animation-delay: 0.85s; width: 45px; }}
+    .shooting-star.ss3 {{ top: 5px; right: 65px; animation-delay: 1.4s; width: 65px; }}
+    @keyframes meteorSlash {{
+      0% {{ transform: translate(30px, -30px) rotate(-45deg); opacity: 0; }}
+      20% {{ opacity: 1; }}
+      70% {{ opacity: 1; }}
+      100% {{ transform: translate(-100px, 100px) rotate(-45deg); opacity: 0; }}
+    }}
+
+    /* 动作 5：🌅 四十四次日落 (巨大夕阳徐徐下沉 + 壮丽晚霞余晖) */
+    .action-sunset #layer-action-sunset {{ opacity: 1 !important; pointer-events: auto !important; }}
+    .action-sunset #prince-avatar-body {{
+      filter: drop-shadow(0 0 24px rgba(249, 115, 22, 0.9)) sepia(30%) hue-rotate(-12deg) !important;
+      transform: scale(0.96) translateY(5px) !important;
+    }}
+    .sunset-glow-img {{
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 150px; height: 150px; object-fit: contain;
+      animation: sunSinkingSlow 5s infinite ease-in-out alternate;
+      filter: drop-shadow(0 0 22px rgba(249, 115, 22, 0.95));
+    }}
+    @keyframes sunSinkingSlow {{
+      0% {{ transform: translateX(-50%) translateY(-25px) scale(0.92); opacity: 0.75; }}
+      50% {{ transform: translateX(-50%) translateY(5px) scale(1.05); opacity: 1; }}
+      100% {{ transform: translateX(-50%) translateY(32px) scale(0.98); opacity: 0.85; }}
+    }}
+    .sunset-ambient-glow {{
+      position: absolute; inset: -15px;
+      background: radial-gradient(circle at 50% 40%, rgba(249, 115, 22, 0.3) 0%, rgba(194, 24, 91, 0.2) 50%, transparent 80%);
+      border-radius: 50%; pointer-events: none;
+      animation: sunsetHaze 3s infinite alternate ease-in-out;
+    }}
+    @keyframes sunsetHaze {{
+      0% {{ opacity: 0.4; transform: scale(0.95); }}
+      100% {{ opacity: 0.85; transform: scale(1.08); }}
     }}
 
     /* 多态智能气泡引擎 */
@@ -1177,9 +1340,53 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
         <div class="bone-layer" id="bone-head"></div>
       </div>
 
-      <!-- 角色 2：小王子 B612 治愈立绘 -->
+      <!-- 角色 2：小王子 B612 治愈多图层动态机架 -->
       <div class="prince-pet-rig" id="pet-prince" style="display:none;" title="单击听名言 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
+        <!-- 待机全身像 -->
         <img src="${{PRINCE_IMG}}" class="prince-avatar-img" id="prince-avatar-body" alt="小王子">
+
+        <!-- 动作 1：小王子与小狐狸亲昵依偎动态层 -->
+        <div class="prince-action-layer" id="layer-action-fox">
+          <img src="${{PRINCE_FOX_IMG}}" class="prince-fox-img" alt="小王子与小狐狸">
+          <div class="fox-hearts-cluster">
+            <span class="fox-heart fh1">💖</span>
+            <span class="fox-heart fh2">✨</span>
+            <span class="fox-heart fh3">💕</span>
+          </div>
+        </div>
+
+        <!-- 动作 2：呵护玻璃罩红玫瑰与花瓣飘落层 -->
+        <div class="prince-action-layer" id="layer-action-rose">
+          <img src="${{PRINCE_ROSE_IMG}}" class="rose-dome-img" alt="玻璃罩红玫瑰">
+          <div class="rose-falling-petals">
+            <span class="petal p1">🌸</span>
+            <span class="petal p2">🌹</span>
+            <span class="petal p3">🌸</span>
+            <span class="petal p4">🌹</span>
+          </div>
+        </div>
+
+        <!-- 动作 3：呼啸长围巾与疾风风痕层 -->
+        <div class="prince-action-layer" id="layer-action-scarf">
+          <div class="wind-scarf-ribbon"></div>
+          <div class="wind-gust-line wgl1"></div>
+          <div class="wind-gust-line wgl2"></div>
+          <div class="wind-gust-line wgl3"></div>
+        </div>
+
+        <!-- 动作 4：仰望繁星、流星雨与小行星星环层 -->
+        <div class="prince-action-layer" id="layer-action-stars">
+          <img src="${{PRINCE_STARS_IMG}}" class="stars-orbit-img" alt="繁星小行星">
+          <div class="shooting-star ss1"></div>
+          <div class="shooting-star ss2"></div>
+          <div class="shooting-star ss3"></div>
+        </div>
+
+        <!-- 动作 5：四十四次日落夕阳余晖与晚霞层 -->
+        <div class="prince-action-layer" id="layer-action-sunset">
+          <img src="${{PRINCE_SUNSET_IMG}}" class="sunset-glow-img" alt="日落夕阳">
+          <div class="sunset-ambient-glow"></div>
+        </div>
       </div>
 
       <div class="nezuko-float-badge" id="nezuko-open-btn">🎋 桌面守护</div>
