@@ -721,6 +721,27 @@ const __AGY_ZH_CODE__ = {js_raw};
             notif_dict_json = json.dumps(lang_dict, ensure_ascii=False)
             ipc_header_patch = f"""
 {PATCH_MARKER}
+// 全局多媒体与 QQ 音乐客户端联动主控通道
+try {{
+    const {{ ipcMain: __agyIpcMain }} = require('electron');
+    const {{ exec: __agyExec }} = require('child_process');
+    if (__agyIpcMain && !__agyIpcMain.__agyMediaRegistered) {{
+        __agyIpcMain.__agyMediaRegistered = true;
+        __agyIpcMain.on('__agy_media_command__', (_evt, action) => {{
+            try {{
+                if (action === 'open_qq') {{
+                    __agyExec('start qqmusic://');
+                    return;
+                }}
+                const vkMap = {{ play_pause: '0xB3', next: '0xB0', prev: '0xB1' }};
+                const vk = vkMap[action] || '0xB3';
+                const cmd = `powershell -WindowStyle Hidden -NoProfile -Command "$w=Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern void keybd_event(byte b, byte s, uint f, uint e);' -Name K -Namespace U -PassThru; $w::keybd_event(${{vk}},0,1,0); $w::keybd_event(${{vk}},0,3,0)"`;
+                __agyExec(cmd);
+            }} catch (_) {{}}
+        }});
+    }}
+}} catch (_) {{}}
+
 const __AGY_IPC_NOTIF_DICT__ = {notif_dict_json};
 function __agyTranslateNotif(text) {{
     if (!text || typeof text !== 'string') return text;

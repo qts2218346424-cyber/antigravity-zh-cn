@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 生成双角色桌宠系统：
-1. 【🌸 灶门祢豆子】(鬼灭之刃大正和风 + 2D骨骼解剖分肢动画 + 原生配额看板 + 和风BGM)
-2. 【👑 小王子 (B612星球)】(浪漫法国童话 + 随风飘扬长围巾 + 玻璃罩红玫瑰 + 12句中法双语经典哲思名言定时气泡 + 仰望星空/四十四次日落/小狐狸动作)
-3. 【🔁 自由一键切换中枢】：本地持久化记忆当前选定角色。
+1. 【🌸 灶门祢豆子】(鬼灭之刃大正和风 + 2D骨骼解剖分肢动画 + 原生配额看板)
+2. 【👑 小王子 (B612星球)】(浪漫法国童话 + 随风飘扬长围巾 + 玻璃罩红玫瑰 + 12句中法双语哲思名言定时气泡)
+3. 【🎵 深度对接电脑 QQ 音乐客户端】：
+   - 全局媒体键无缝对接 (播放/暂停、上一曲、下一曲)；
+   - 一键唤醒 QQ 音乐客户端；
+   - 动态声波柱与唱片旋转联动；
+   - 兼具纯正和风治愈八音盒双模式。
 """
 
 import sys
@@ -48,17 +52,17 @@ prince_webp = MEDIA_DIR / "little_prince_pet.webp"
 b64_prince = base64.b64encode(prince_webp.read_bytes()).decode('ascii')
 
 js_code = f"""/**
- * Antigravity 异构多角色桌宠引擎 4.0 (Dual-Pet Engine)
- * 角色 1：🌸 灶门祢豆子 (鬼灭之刃 2D 骨骼分肢动力学 + 全局和风主题 + 原生配额看板)
- * 角色 2：👑 小王子 (B612星球治愈系 + 随风飘扬围巾 + 玻璃罩玫瑰 + 12句中法双语名言定期气泡)
- * 核心：支持一键切换并本地持久化记忆。
+ * Antigravity 异构多角色桌宠引擎 5.0 (Dual-Pet & QQ Music Bridge)
+ * 1. 深度对接电脑上的 QQ 音乐客户端 (播放/暂停、上一曲、下一曲、一键唤醒)
+ * 2. 角色 1：🌸 灶门祢豆子 (2D 骨骼分肢动力学 + 全局和风主题 + 原生配额看板)
+ * 3. 角色 2：👑 小王子 (B612星球治愈系 + 随风飘扬围巾 + 玫瑰 + 12句中法双语名言定期气泡)
+ * 4. 自由一键切换中枢 + 本地记忆
  */
 
 (function() {{
   if (typeof window === 'undefined' || window.__NEZUKO_PET_INITIALIZED__) return;
   window.__NEZUKO_PET_INITIALIZED__ = true;
 
-  // 资源 Base64
   const NEZUKO_HEAD = "data:image/webp;base64,{b64_nezuko_parts['head']}";
   const NEZUKO_TORSO = "data:image/webp;base64,{b64_nezuko_parts['torso']}";
   const NEZUKO_ARM_L = "data:image/webp;base64,{b64_nezuko_parts['arm_l']}";
@@ -69,7 +73,68 @@ js_code = f"""/**
   const PRINCE_IMG = "data:image/webp;base64,{b64_prince}";
 
   // ==========================================
-  // 一、《小王子》12 句中法双语经典哲思名言库
+  // 一、QQ 音乐客户端系统级对接遥控引擎
+  // ==========================================
+  class QQMusicBridgeEngine {{
+    constructor() {{
+      this.mode = 'qqmusic'; // 'qqmusic' | 'synth'
+      this.isPlaying = false;
+      this.ipc = null;
+      this.initIPC();
+    }}
+
+    initIPC() {{
+      try {{
+        if (typeof window !== 'undefined' && window.require) {{
+          const electron = window.require('electron');
+          if (electron && electron.ipcRenderer) {{
+            this.ipc = electron.ipcRenderer;
+          }}
+        }}
+      }} catch (_) {{}}
+    }}
+
+    sendCommand(cmd) {{
+      if (this.ipc) {{
+        this.ipc.send('__agy_media_command__', cmd);
+      }} else {{
+        // Web 浏览器端降级：尝试调用协议
+        if (cmd === 'open_qq') {{
+          try {{ window.location.href = 'qqmusic://'; }} catch (_) {{}}
+        }}
+      }}
+    }}
+
+    playPause() {{
+      this.isPlaying = !this.isPlaying;
+      this.sendCommand('play_pause');
+      triggerMusicBeat();
+      updateMusicUI();
+    }}
+
+    nextTrack() {{
+      this.isPlaying = true;
+      this.sendCommand('next');
+      triggerMusicBeat();
+      updateMusicUI();
+    }}
+
+    prevTrack() {{
+      this.isPlaying = true;
+      this.sendCommand('prev');
+      triggerMusicBeat();
+      updateMusicUI();
+    }}
+
+    wakeUpQQMusic() {{
+      this.sendCommand('open_qq');
+    }}
+  }}
+
+  const qqBridge = new QQMusicBridgeEngine();
+
+  // ==========================================
+  // 二、《小王子》12 句中法双语经典哲思名言库
   // ==========================================
   const LITTLE_PRINCE_QUOTES = [
     {{
@@ -134,7 +199,6 @@ js_code = f"""/**
     }}
   ];
 
-  // 读取当前激活角色 ('nezuko' | 'prince')
   function getActivePet() {{
     return localStorage.getItem('__agy_active_pet_character__') || 'nezuko';
   }}
@@ -143,7 +207,7 @@ js_code = f"""/**
   }}
 
   // ==========================================
-  // 二、Antigravity 软件界面鬼灭和风全局主题
+  // 三、Antigravity 软件界面鬼灭和风全局主题
   // ==========================================
   const ideThemeStyle = document.createElement('style');
   ideThemeStyle.id = 'agy-demon-slayer-ide-theme';
@@ -164,9 +228,7 @@ js_code = f"""/**
       background: linear-gradient(135deg, rgba(28, 17, 13, 0.98) 0%, rgba(18, 10, 8, 0.99) 100%) !important;
       border-right: 1.5px solid rgba(197, 155, 39, 0.4) !important;
     }}
-    .sidebar .title-label h2, .sidebar .pane-header .title {{
-      color: #ffd54f !important; font-weight: 700 !important;
-    }}
+    .sidebar .title-label h2, .sidebar .pane-header .title {{ color: #ffd54f !important; font-weight: 700 !important; }}
     .part.statusbar, #workbench\\\\.parts\\\\.statusbar, .statusbar {{
       background: repeating-linear-gradient(45deg, #1b3820 0, #1b3820 8px, #111a13 8px, #111a13 16px) !important;
       border-top: 1.5px solid #c59b27 !important; color: #fff9c4 !important;
@@ -201,7 +263,7 @@ js_code = f"""/**
   if (isIdeThemeEnabled()) document.head.appendChild(ideThemeStyle);
 
   // ==========================================
-  // 三、模型配额中枢
+  // 四、模型配额中枢
   // ==========================================
   const defaultQuotaState = {{
     username: "qts2218346424@gmail.com",
@@ -269,146 +331,17 @@ js_code = f"""/**
   }}
   setInterval(sniffNativeQuotaFromDOM, 5000);
 
-  // ==========================================
-  // 四、随身 BGM 音乐盒 (含小王子星空八音盒)
-  // ==========================================
-  const noteFreqs = {{
-    'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
-    'C5': 523.25, 'D5': 587.33, 'E5': 659.26, 'F5': 698.46, 'G5': 783.99, 'A5': 880.00, 'B5': 987.77,
-    'C6': 1046.50
-  }};
-
-  const PLAYLIST = [
-    {{
-      title: "星の王子さま (小王子的星空)",
-      subtitle: "B612星球 · 浪漫治愈八音盒",
-      notes: [
-        ['E5', 0.5], ['G5', 0.5], ['B5', 0.8], ['A5', 0.5], ['G5', 0.8],
-        ['E5', 0.5], ['D5', 0.5], ['E5', 1.0], ['G5', 0.5], ['A5', 0.8],
-        ['B5', 0.5], ['D6', 0.5], ['B5', 1.0], ['A5', 0.5], ['G5', 1.2]
-      ]
-    }},
-    {{
-      title: "竈門炭治郎のうた (灶门炭治郎之歌)",
-      subtitle: "治愈抒情 · 椎名豪 / 中川奈美",
-      notes: [
-        ['G4', 0.45], ['A4', 0.45], ['B4', 0.7], ['D5', 0.45], ['B4', 0.7],
-        ['A4', 0.45], ['G4', 0.45], ['E4', 0.9], ['G4', 0.45], ['A4', 0.9],
-        ['B4', 0.45], ['D5', 0.45], ['E5', 0.9], ['D5', 0.45], ['B4', 0.9]
-      ]
-    }},
-    {{
-      title: "紅蓮華 (红莲华)",
-      subtitle: "经典热血 OP · LiSA 和风版",
-      notes: [
-        ['D5', 0.3], ['D5', 0.3], ['C5', 0.3], ['A4', 0.3], ['C5', 0.3], ['D5', 0.6],
-        ['D5', 0.3], ['E5', 0.3], ['F5', 0.3], ['E5', 0.3], ['D5', 0.3], ['C5', 0.6]
-      ]
-    }}
-  ];
-
-  class DualPetMusicEngine {{
-    constructor() {{
-      this.ctx = null;
-      this.isPlaying = false;
-      this.currentTrack = 0;
-      this.stepIndex = 0;
-      this.timer = null;
-      this.volume = 0.5;
-      this.customAudio = null;
-    }}
-    initContext() {{
-      if (!this.ctx) {{
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.ctx = new AudioContext();
-      }}
-      if (this.ctx.state === 'suspended') this.ctx.resume();
-    }}
-    playTone(freq, duration) {{
-      if (!this.ctx) return;
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.001, t);
-      gain.gain.exponentialRampToValueAtTime(0.35 * this.volume, t + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + duration * 1.6);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + duration * 1.7);
-    }}
-    playNextNote() {{
-      if (!this.isPlaying || this.customAudio) return;
-      const track = PLAYLIST[this.currentTrack];
-      if (this.stepIndex >= track.notes.length) this.stepIndex = 0;
-      const [noteName, dur] = track.notes[this.stepIndex];
-      const freq = noteFreqs[noteName] || 440;
-      this.playTone(freq, dur);
-      triggerMusicBeat();
-      this.stepIndex++;
-      this.timer = setTimeout(() => this.playNextNote(), dur * 1000);
-    }}
-    play() {{
-      if (this.customAudio) {{
-        this.customAudio.play();
-        this.isPlaying = true;
-        updateMusicUI();
-        return;
-      }}
-      this.initContext();
-      this.isPlaying = true;
-      this.playNextNote();
-      updateMusicUI();
-    }}
-    pause() {{
-      this.isPlaying = false;
-      if (this.timer) clearTimeout(this.timer);
-      if (this.customAudio) this.customAudio.pause();
-      updateMusicUI();
-    }}
-    toggle() {{
-      if (this.isPlaying) this.pause();
-      else this.play();
-    }}
-    next() {{
-      this.pause();
-      if (this.customAudio) this.customAudio = null;
-      this.currentTrack = (this.currentTrack + 1) % PLAYLIST.length;
-      this.stepIndex = 0;
-      this.play();
-    }}
-    prev() {{
-      this.pause();
-      if (this.customAudio) this.customAudio = null;
-      this.currentTrack = (this.currentTrack - 1 + PLAYLIST.length) % PLAYLIST.length;
-      this.stepIndex = 0;
-      this.play();
-    }}
-    loadLocalFile(file) {{
-      const url = URL.createObjectURL(file);
-      this.pause();
-      this.customAudio = new Audio(url);
-      this.customAudio.volume = this.volume;
-      this.customAudio.loop = true;
-      this.customAudio.addEventListener('ended', () => this.next());
-      this.play();
-      updateMusicUI(file.name);
-    }}
-  }}
-  const musicEngine = new DualPetMusicEngine();
-
+  // 节拍晃脑
   let beatTimer = null;
   function triggerMusicBeat() {{
     const headEl = document.getElementById('bone-head');
     const princeEl = document.getElementById('prince-avatar-body');
-    if (headEl && musicEngine.isPlaying) {{
+    if (headEl) {{
       headEl.classList.add('head-music-bob');
       if (beatTimer) clearTimeout(beatTimer);
       beatTimer = setTimeout(() => headEl.classList.remove('head-music-bob'), 400);
     }}
-    if (princeEl && musicEngine.isPlaying) {{
+    if (princeEl) {{
       princeEl.classList.add('prince-music-bob');
       if (beatTimer) clearTimeout(beatTimer);
       beatTimer = setTimeout(() => princeEl.classList.remove('prince-music-bob'), 400);
@@ -416,7 +349,7 @@ js_code = f"""/**
   }}
 
   // ==========================================
-  // 五、样式库 (双角色骨骼 + 小王子星空名言气泡)
+  // 五、CSS 样式库
   // ==========================================
   const styleEl = document.createElement('style');
   styleEl.id = 'dual-pet-advanced-styles';
@@ -429,10 +362,8 @@ js_code = f"""/**
       --ds-wood-dark: #231612;
       --ds-brass-gold: #c59b27;
       --ds-gold-glow: #ffd54f;
-      --lp-blue-dark: #0f172a;
-      --lp-blue-card: #1e293b;
       --lp-star-gold: #facc15;
-      --lp-rose-red: #f43f5e;
+      --qq-green: #10b981;
     }}
 
     #nezuko-pet-root {{
@@ -464,7 +395,6 @@ js_code = f"""/**
       transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
     }}
 
-    /* 角色画框容器 */
     .nezuko-pet-rig, .prince-pet-rig {{
       position: relative;
       width: 130px;
@@ -478,9 +408,7 @@ js_code = f"""/**
       cursor: grabbing;
     }}
 
-    /* ========================================================= */
-    /* 角色 1：祢豆子 2D 骨骼图层 */
-    /* ========================================================= */
+    /* 骨骼图层 */
     .bone-layer {{
       position: absolute;
       background-size: contain;
@@ -519,7 +447,7 @@ js_code = f"""/**
       transform-origin: 50% 10%; z-index: 4;
     }}
 
-    /* 祢豆子骨骼动作动画 */
+    /* 骨骼动画 */
     .action-run #bone-arm-l {{ animation: runArmL 0.16s infinite alternate ease-in-out !important; }}
     .action-run #bone-arm-r {{ animation: runArmR 0.16s infinite alternate ease-in-out !important; }}
     .action-run #bone-leg-l {{ animation: runLegL 0.16s infinite alternate ease-in-out !important; }}
@@ -567,26 +495,20 @@ js_code = f"""/**
 
     .head-music-bob {{ transform: translateY(-4px) rotate(3deg) !important; }}
 
-    /* ========================================================= */
-    /* 角色 2：小王子 (B612星球治愈系立绘与专属动作) */
-    /* ========================================================= */
+    /* 小王子立绘与动作 */
     .prince-avatar-img {{
       width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block;
       transform-origin: bottom center;
     }}
     .prince-music-bob {{ transform: translateY(-4px) rotate(3deg) !important; }}
 
-    /* 小王子专属动作 1：飘逸长围巾随风吹拂 (action-scarf) */
-    .action-scarf {{
-      animation: princeScarfWind 2.2s infinite ease-in-out !important;
-    }}
+    .action-scarf {{ animation: princeScarfWind 2.2s infinite ease-in-out !important; }}
     @keyframes princeScarfWind {{
       0%, 100% {{ transform: translateY(0) rotate(0deg); }}
       30% {{ transform: translateY(-4px) rotate(4deg) skewX(2deg); }}
       70% {{ transform: translateY(-2px) rotate(-3deg) skewX(-2deg); }}
     }}
 
-    /* 小王子专属动作 2：呵护玻璃罩红玫瑰 (action-rose) */
     .action-rose {{
       animation: princeRoseCuddle 1.8s infinite ease-in-out !important;
       filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.75)) !important;
@@ -596,16 +518,12 @@ js_code = f"""/**
       50% {{ transform: scale(1.06) translateY(-6px); }}
     }}
 
-    /* 小王子专属动作 3：召唤小狐狸 (action-fox) */
-    .action-fox {{
-      animation: princeFoxHop 1.4s infinite ease-in-out !important;
-    }}
+    .action-fox {{ animation: princeFoxHop 1.4s infinite ease-in-out !important; }}
     @keyframes princeFoxHop {{
       0%, 100% {{ transform: translateY(0); }}
       50% {{ transform: translateY(-8px) rotate(5deg); }}
     }}
 
-    /* 小王子专属动作 4：仰望繁星 (action-stars) */
     .action-stars {{
       animation: princeGazeStars 2.8s infinite ease-in-out !important;
       filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.8)) !important;
@@ -615,7 +533,6 @@ js_code = f"""/**
       50% {{ transform: translateY(-5px) rotate(-6deg); }}
     }}
 
-    /* 小王子专属动作 5：看四十四次日落 (action-sunset) */
     .action-sunset {{
       animation: princeSunsetGlow 3.2s infinite ease-in-out !important;
       filter: drop-shadow(0 0 20px rgba(251, 146, 60, 0.85)) !important;
@@ -625,9 +542,7 @@ js_code = f"""/**
       50% {{ transform: translateY(4px) scale(0.96); }}
     }}
 
-    /* ========================================================= */
-    /* 核心灵魂：《小王子》星空治愈名言气泡引擎 (中法双语) */
-    /* ========================================================= */
+    /* 小王子名言气泡 */
     #little-prince-quote-bubble {{
       position: absolute;
       bottom: calc(100% + 22px);
@@ -653,45 +568,17 @@ js_code = f"""/**
       transform: translateX(-50%) translateY(0) scale(1) !important;
     }}
     #little-prince-quote-bubble::after {{
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 8px solid transparent;
-      border-top-color: var(--lp-star-gold);
+      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border: 8px solid transparent; border-top-color: var(--lp-star-gold);
     }}
     .quote-tag {{
-      font-size: 10px;
-      color: var(--lp-star-gold);
-      font-weight: bold;
-      margin-bottom: 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 10px; color: var(--lp-star-gold); font-weight: bold; margin-bottom: 4px;
+      display: flex; justify-content: space-between; align-items: center;
     }}
-    .quote-zh {{
-      font-size: 12.5px;
-      color: #fef08a;
-      line-height: 1.55;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-    }}
-    .quote-fr {{
-      font-size: 9.5px;
-      color: #94a3b8;
-      font-style: italic;
-      margin-top: 4px;
-      line-height: 1.35;
-    }}
-    .quote-hint {{
-      font-size: 9px;
-      color: #64748b;
-      text-align: right;
-      margin-top: 4px;
-    }}
+    .quote-zh {{ font-size: 12.5px; color: #fef08a; line-height: 1.55; font-weight: 500; }}
+    .quote-fr {{ font-size: 9.5px; color: #94a3b8; font-style: italic; margin-top: 4px; line-height: 1.35; }}
 
-    /* 快捷胶囊动作条 */
+    /* 快捷胶囊条 */
     .nezuko-action-capsule {{
       position: absolute;
       top: -50px;
@@ -712,83 +599,47 @@ js_code = f"""/**
       backdrop-filter: blur(8px);
     }}
     .nezuko-action-capsule::after {{
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: -20px;
-      right: -20px;
-      height: 44px;
-      background: transparent;
-      pointer-events: auto;
+      content: ''; position: absolute; top: 100%; left: -20px; right: -20px; height: 44px;
+      background: transparent; pointer-events: auto;
     }}
     .nezuko-pet-stage:hover .nezuko-action-capsule,
     .nezuko-action-capsule:hover,
     .nezuko-action-capsule.is-active {{
-      opacity: 1 !important;
-      pointer-events: auto !important;
-      transform: translateX(-50%) translateY(0) scale(1) !important;
+      opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) scale(1) !important;
     }}
 
     .nezuko-capsule-btn {{
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(197, 155, 39, 0.45);
-      color: #fff;
-      font-size: 15px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
-      position: relative;
-      flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(197, 155, 39, 0.45);
+      color: #fff; font-size: 15px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); position: relative; flex-shrink: 0;
     }}
     .nezuko-capsule-btn:hover {{
-      background: var(--ds-dark-pink);
-      border-color: var(--ds-pink);
-      transform: scale(1.18);
+      background: var(--ds-dark-pink); border-color: var(--ds-pink); transform: scale(1.18);
       box-shadow: 0 0 12px rgba(244, 143, 177, 0.7);
     }}
     .nezuko-capsule-btn:active {{ transform: scale(0.95); }}
     .nezuko-capsule-btn[data-tip]::before {{
-      content: attr(data-tip);
-      position: absolute;
-      bottom: calc(100% + 7px);
-      left: 50%;
-      transform: translateX(-50%) scale(0.8);
-      background: rgba(20, 12, 10, 0.95);
-      border: 1px solid var(--ds-brass-gold);
-      color: var(--ds-gold-glow);
-      font-size: 10px;
-      font-weight: bold;
-      padding: 2px 7px;
-      border-radius: 4px;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      transition: all 0.18s ease;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%;
+      transform: translateX(-50%) scale(0.8); background: rgba(20, 12, 10, 0.95);
+      border: 1px solid var(--ds-brass-gold); color: var(--ds-gold-glow); font-size: 10px;
+      font-weight: bold; padding: 2px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: all 0.18s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }}
     .nezuko-capsule-btn:hover::before {{ opacity: 1; transform: translateX(-50%) scale(1); }}
 
     .btn-switch-pet {{
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
-      border-color: #60a5fa !important;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; border-color: #60a5fa !important;
     }}
 
     .btn-music-spin {{
       background: radial-gradient(circle, #ff80ab 20%, #231612 21%, #111 100%);
     }}
     .btn-music-spin.playing {{
-      animation: recordSpin 3.5s infinite linear;
-      border-color: var(--ds-pink);
-      box-shadow: 0 0 10px rgba(244, 143, 177, 0.8);
+      animation: recordSpin 3.5s infinite linear; border-color: var(--ds-pink); box-shadow: 0 0 10px rgba(244, 143, 177, 0.8);
     }}
     @keyframes recordSpin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
 
-    /* 拖拽被提起 */
     .pet-picked-up {{
       transform: scale(1.08) translateY(-22px) rotate(-8deg) !important;
       filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.35)) !important;
@@ -796,25 +647,16 @@ js_code = f"""/**
 
     /* 主操作看板 */
     #nezuko-main-card {{
-      position: absolute;
-      bottom: 225px;
-      right: 0;
-      width: 340px;
+      position: absolute; bottom: 225px; right: 0; width: 345px;
       background: linear-gradient(135deg, rgba(35, 22, 18, 0.96) 0%, rgba(20, 12, 10, 0.98) 100%);
-      border: 2px solid var(--ds-brass-gold);
-      border-radius: 12px;
+      border: 2px solid var(--ds-brass-gold); border-radius: 12px;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(244, 143, 177, 0.25);
-      color: #fff;
-      overflow: hidden;
-      display: none;
-      flex-direction: column;
-      z-index: 120;
+      color: #fff; overflow: hidden; display: none; flex-direction: column; z-index: 120;
       backdrop-filter: blur(12px);
     }}
     .nezuko-card-header {{
       display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;
-      background: linear-gradient(90deg, #381f19 0%, #4a2920 100%);
-      border-bottom: 1.5px solid var(--ds-brass-gold);
+      background: linear-gradient(90deg, #381f19 0%, #4a2920 100%); border-bottom: 1.5px solid var(--ds-brass-gold);
     }}
     .nezuko-header-title {{
       font-size: 13px; font-weight: 700; color: var(--ds-gold-glow);
@@ -831,46 +673,63 @@ js_code = f"""/**
       font-size: 12px; font-weight: 700; color: #e0e0e0; margin-bottom: 8px;
       display: flex; justify-content: space-between; align-items: center;
     }}
-    .nezuko-quota-row {{
-      display: flex; justify-content: space-between; align-items: center; padding: 6px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }}
-    .nezuko-quota-row:last-child {{ border-bottom: none; }}
-    .nezuko-quota-meta {{ display: flex; flex-direction: column; gap: 2px; }}
-    .nezuko-quota-name {{ font-size: 12px; color: #f5f5f5; }}
-    .nezuko-quota-reset {{ font-size: 10px; color: #9e9e9e; }}
-    .nezuko-quota-val-group {{ display: flex; align-items: center; gap: 8px; }}
-    .nezuko-quota-pct {{ font-size: 13px; font-weight: 700; color: #81c784; }}
-    .nezuko-ring-wrap {{ width: 24px; height: 24px; transform: rotate(-90deg); }}
-    .nezuko-ring-bg {{ fill: none; stroke: rgba(255, 255, 255, 0.15); stroke-width: 3.5; }}
-    .nezuko-ring-bar {{
-      fill: none; stroke: #81c784; stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 63;
-      stroke-dashoffset: 0; transition: stroke-dashoffset 0.6s ease;
-    }}
 
-    .nezuko-music-player {{
-      background: linear-gradient(180deg, rgba(46, 26, 20, 0.7) 0%, rgba(20, 12, 10, 0.85) 100%);
-      border: 1px solid var(--ds-brass-gold); border-radius: 8px; padding: 10px 12px;
-      display: flex; flex-direction: column; gap: 8px;
+    /* ========================================================= */
+    /* 核心焦点：QQ 音乐联动专属高能和风播放器面板 */
+    /* ========================================================= */
+    .qq-music-player-box {{
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(20, 12, 10, 0.9) 100%);
+      border: 1.5px solid var(--qq-green);
+      border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
     }}
+    .qq-status-bar {{
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 10.5px; color: #6ee7b7; font-weight: bold;
+    }}
+    .qq-pulse-dot {{
+      width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;
+      margin-right: 4px; box-shadow: 0 0 6px #10b981; animation: pulseGlow 1.5s infinite;
+    }}
+    @keyframes pulseGlow {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
+
     .nezuko-music-info {{ display: flex; align-items: center; gap: 10px; }}
     .nezuko-record-disc {{
-      width: 34px; height: 34px;
-      background: radial-gradient(circle, #ff80ab 15%, #111 16%, #222 65%, #111 100%);
-      border: 1.5px solid var(--ds-brass-gold); border-radius: 50%; flex-shrink: 0;
+      width: 36px; height: 36px;
+      background: radial-gradient(circle, #10b981 18%, #111 19%, #222 65%, #111 100%);
+      border: 1.5px solid var(--qq-green); border-radius: 50%; flex-shrink: 0;
       animation: recordSpin 3.5s infinite linear; animation-play-state: paused;
     }}
     .record-spinning {{ animation-play-state: running !important; }}
     .nezuko-song-texts {{ display: flex; flex-direction: column; overflow: hidden; }}
-    .nezuko-song-title {{ font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }}
-    .nezuko-song-sub {{ font-size: 9.5px; color: var(--ds-pink); }}
+    .nezuko-song-title {{ font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }}
+    .nezuko-song-sub {{ font-size: 10px; color: #a7f3d0; }}
+
+    /* 跳动声波柱动效 */
+    .sound-waves-box {{
+      display: flex; align-items: flex-end; gap: 2px; height: 14px;
+    }}
+    .sound-bar {{
+      width: 3px; background: #10b981; border-radius: 2px;
+      animation: barJump 0.8s infinite ease-in-out alternate;
+    }}
+    .sound-bar:nth-child(1) {{ height: 6px; animation-delay: 0.1s; }}
+    .sound-bar:nth-child(2) {{ height: 14px; animation-delay: 0.3s; }}
+    .sound-bar:nth-child(3) {{ height: 9px; animation-delay: 0.2s; }}
+    .sound-bar:nth-child(4) {{ height: 12px; animation-delay: 0.4s; }}
+    @keyframes barJump {{ 0% {{ height: 3px; }} 100% {{ height: 14px; }} }}
+
     .nezuko-music-controls {{ display: flex; align-items: center; justify-content: space-between; gap: 6px; }}
     .nezuko-ctrl-btn {{
       background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(197, 155, 39, 0.4);
       color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s;
     }}
     .nezuko-ctrl-btn:hover {{ background: var(--ds-dark-pink); border-color: var(--ds-pink); }}
-    .nezuko-ctrl-play {{ background: linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson)); font-weight: bold; padding: 4px 14px; }}
+    .nezuko-ctrl-play {{
+      background: linear-gradient(135deg, #059669, #047857) !important;
+      border-color: #34d399 !important; font-weight: bold; padding: 5px 16px;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }}
 
     .nezuko-float-badge {{
       position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
@@ -884,16 +743,15 @@ js_code = f"""/**
   document.head.appendChild(styleEl);
 
   // ==========================================
-  // 六、DOM 组装 (双角色共用舞台 + 治愈名言气泡)
+  // 六、DOM 组装
   // ==========================================
   const root = document.createElement('div');
   root.id = 'nezuko-pet-root';
   root.innerHTML = `
     <div class="nezuko-pet-stage" id="nezuko-pet-stage">
-      <!-- 地面接触软阴影 -->
       <div class="nezuko-pet-ground-shadow" id="nezuko-ground-shadow"></div>
 
-      <!-- 《小王子》治愈名言星空发光气泡 -->
+      <!-- 小王子名言气泡 -->
       <div id="little-prince-quote-bubble">
         <div class="quote-tag">
           <span id="qp-tag">🦊 狐狸的秘密 · B612星球</span>
@@ -901,23 +759,18 @@ js_code = f"""/**
         </div>
         <div class="quote-zh" id="qp-zh">真正重要的东西，用眼睛是看不见的，只有用心才能看清。</div>
         <div class="quote-fr" id="qp-fr">L'essentiel est invisible pour les yeux.</div>
-        <div class="quote-hint">点击抽取下一句 ✨</div>
       </div>
 
       <!-- 头顶快捷胶囊动作条 -->
       <div class="nezuko-action-capsule" id="nezuko-action-capsule">
-        <!-- 切换角色按钮 -->
-        <button class="nezuko-capsule-btn btn-switch-pet" id="btn-quick-switch" data-tip="切换宠物 (祢豆子/小王子)" title="切换宠物">🔁</button>
-
-        <!-- 动作按钮容器 (由 JS 动态装载对应角色的动作) -->
+        <button class="nezuko-capsule-btn btn-switch-pet" id="btn-quick-switch" data-tip="切换角色 (祢豆子/小王子)" title="切换角色">🔁</button>
         <div id="action-buttons-container" style="display:flex; gap:7px;"></div>
-
-        <button class="nezuko-capsule-btn btn-music-spin" id="btn-quick-music" data-tip="播放/切歌" title="播放/切换BGM">🎵</button>
+        <button class="nezuko-capsule-btn btn-music-spin" id="btn-quick-music" data-tip="QQ音乐播放/切歌" title="遥控电脑QQ音乐">🎵</button>
         <button class="nezuko-capsule-btn" id="btn-quick-board" data-tip="配额看板" title="打开配额看板">🎋</button>
       </div>
 
       <!-- 角色 1：祢豆子 2D 骨骼机架 -->
-      <div class="nezuko-pet-rig" id="pet-nezuko" style="display:none;" title="单击锁定动作条 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
+      <div class="nezuko-pet-rig" id="pet-nezuko" style="display:none;" title="双击打开看板 · 按住拖拽 · 滚轮切QQ音乐">
         <div class="bone-layer" id="bone-leg-l"></div>
         <div class="bone-layer" id="bone-leg-r"></div>
         <div class="bone-layer" id="bone-torso"></div>
@@ -927,7 +780,7 @@ js_code = f"""/**
       </div>
 
       <!-- 角色 2：小王子 B612 治愈立绘 -->
-      <div class="prince-pet-rig" id="pet-prince" style="display:none;" title="单击听名言哲思 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
+      <div class="prince-pet-rig" id="pet-prince" style="display:none;" title="单击听名言 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
         <img src="${{PRINCE_IMG}}" class="prince-avatar-img" id="prince-avatar-body" alt="小王子">
       </div>
 
@@ -945,11 +798,39 @@ js_code = f"""/**
       </div>
 
       <div class="nezuko-card-body">
+        <!-- 核心模块：电脑 QQ 音乐客户端无缝遥控中枢 -->
+        <div class="qq-music-player-box">
+          <div class="qq-status-bar">
+            <span><span class="qq-pulse-dot"></span>已对接电脑 QQ 音乐客户端</span>
+            <button class="nezuko-ctrl-btn" id="m-btn-wake-qq" style="font-size:9.5px; padding:2px 6px; background:rgba(16,185,129,0.25); border-color:#10b981;">
+              🚀 唤醒QQ音乐
+            </button>
+          </div>
+
+          <div class="nezuko-music-info">
+            <div class="nezuko-record-disc" id="nezuko-disc"></div>
+            <div class="nezuko-song-texts" style="flex:1;">
+              <span class="nezuko-song-title" id="music-title">QQ 音乐播放联动</span>
+              <span class="nezuko-song-sub" id="music-sub">点击下方按钮直接控制电脑上的 QQ 音乐</span>
+            </div>
+            <div class="sound-waves-box" id="sound-waves" style="display:none;">
+              <div class="sound-bar"></div><div class="sound-bar"></div>
+              <div class="sound-bar"></div><div class="sound-bar"></div>
+            </div>
+          </div>
+
+          <div class="nezuko-music-controls">
+            <button class="nezuko-ctrl-btn" id="m-btn-prev" title="QQ 音乐上一曲">⏮ 上一曲</button>
+            <button class="nezuko-ctrl-btn nezuko-ctrl-play" id="m-btn-play" title="播放 / 暂停 QQ 音乐">▶ 播放</button>
+            <button class="nezuko-ctrl-btn" id="m-btn-next" title="QQ 音乐下一曲">⏭ 下一曲</button>
+          </div>
+        </div>
+
         <!-- 角色切换与管理卡片 -->
         <div class="nezuko-section-box" style="background: rgba(59, 130, 246, 0.18); border-color: #60a5fa;">
           <div class="nezuko-section-title">
             <span style="color:#93c5fd;">⭐ 桌面宠物随心切换</span>
-            <span id="cur-pet-label" style="font-size:10px; color:#facc15;">小王子模式</span>
+            <span id="cur-pet-label" style="font-size:10px; color:#facc15;">当前角色</span>
           </div>
           <div style="display:flex; gap:8px;">
             <button class="nezuko-ctrl-btn" id="btn-select-nezuko" style="flex:1; padding:6px; background:linear-gradient(135deg, #c2185b, #b71c1c);">
@@ -1047,33 +928,13 @@ js_code = f"""/**
             </div>
           </div>
         </div>
-
-        <!-- 随身 BGM 音乐盒 -->
-        <div class="nezuko-music-player">
-          <div class="nezuko-music-info">
-            <div class="nezuko-record-disc" id="nezuko-disc"></div>
-            <div class="nezuko-song-texts">
-              <span class="nezuko-song-title" id="music-title">星の王子さま</span>
-              <span class="nezuko-song-sub" id="music-sub">B612星球 · 治愈八音盒</span>
-            </div>
-          </div>
-          <div class="nezuko-music-controls">
-            <button class="nezuko-ctrl-btn" id="m-btn-prev" title="上一曲">⏮</button>
-            <button class="nezuko-ctrl-btn nezuko-ctrl-play" id="m-btn-play" title="播放/暂停">▶ 播放</button>
-            <button class="nezuko-ctrl-btn" id="m-btn-next" title="下一曲">⏭</button>
-            <label class="nezuko-ctrl-btn" style="cursor:pointer;" title="导入本地音频">
-              📁 导入
-              <input type="file" id="m-file-input" accept="audio/*" style="display:none;">
-            </label>
-          </div>
-        </div>
       </div>
     </div>
   `;
   document.body.appendChild(root);
 
   // ==========================================
-  // 七、角色状态机与名言气泡引擎
+  // 七、逻辑与事件驱动
   // ==========================================
   const petNezuko = document.getElementById('pet-nezuko');
   const petPrince = document.getElementById('pet-prince');
@@ -1090,13 +951,59 @@ js_code = f"""/**
   const disc = document.getElementById('nezuko-disc');
   const quickMusicBtn = document.getElementById('btn-quick-music');
   const quickBoardBtn = document.getElementById('btn-quick-board');
+  const soundWaves = document.getElementById('sound-waves');
 
+  // QQ 音乐播放界面更新
+  window.updateMusicUI = function() {{
+    const playBtn = document.getElementById('m-btn-play');
+    const titleEl = document.getElementById('music-title');
+    const subEl = document.getElementById('music-sub');
+
+    if (qqBridge.isPlaying) {{
+      playBtn.textContent = "⏸ 暂停";
+      playBtn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
+      playBtn.style.borderColor = "#f87171";
+      disc.classList.add('record-spinning');
+      quickMusicBtn.classList.add('playing');
+      soundWaves.style.display = 'flex';
+      titleEl.textContent = "QQ 音乐正在播放中";
+      subEl.textContent = "音效已同步 · 点击可暂停或切歌";
+    }} else {{
+      playBtn.textContent = "▶ 播放";
+      playBtn.style.background = "linear-gradient(135deg, #059669, #047857)";
+      playBtn.style.borderColor = "#34d399";
+      disc.classList.remove('record-spinning');
+      quickMusicBtn.classList.remove('playing');
+      soundWaves.style.display = 'none';
+      titleEl.textContent = "QQ 音乐已就绪";
+      subEl.textContent = "点击播放直接启动电脑上的 QQ 音乐";
+    }}
+  }};
+
+  // 播放按钮控制
+  document.getElementById('m-btn-play').addEventListener('click', () => qqBridge.playPause());
+  document.getElementById('m-btn-next').addEventListener('click', () => qqBridge.nextTrack());
+  document.getElementById('m-btn-prev').addEventListener('click', () => qqBridge.prevTrack());
+  document.getElementById('m-btn-wake-qq').addEventListener('click', () => qqBridge.wakeUpQQMusic());
+
+  quickMusicBtn.addEventListener('click', (e) => {{
+    e.stopPropagation();
+    qqBridge.playPause();
+  }});
+
+  // 滚轮在桌宠上切歌
+  stageEl.addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    if (e.deltaY > 0) qqBridge.nextTrack();
+    else qqBridge.prevTrack();
+  }});
+
+  // 角色切换
   let activePet = getActivePet();
   let currentQuoteIndex = 0;
   let quoteAutoTimer = null;
   let quoteHideTimer = null;
 
-  // 弹出名言气泡函数
   function showNextQuote() {{
     const q = LITTLE_PRINCE_QUOTES[currentQuoteIndex];
     document.getElementById('qp-tag').textContent = q.tag + " · B612星球";
@@ -1108,10 +1015,9 @@ js_code = f"""/**
     if (quoteHideTimer) clearTimeout(quoteHideTimer);
     quoteHideTimer = setTimeout(() => {{
       quoteBubble.classList.remove('show');
-    }}, 9500); // 9.5秒后优雅淡出
+    }}, 9500);
   }}
 
-  // 切换角色动作按钮
   function renderActionButtons() {{
     actionBtnBox.innerHTML = '';
     if (activePet === 'nezuko') {{
@@ -1134,21 +1040,16 @@ js_code = f"""/**
       `;
     }}
 
-    // 绑定动作触发
     actionBtnBox.querySelectorAll('.nezuko-capsule-btn').forEach(btn => {{
       btn.addEventListener('click', (e) => {{
         e.stopPropagation();
         const action = btn.getAttribute('data-action');
-        if (action === 'quote') {{
-          showNextQuote();
-        }} else {{
-          triggerCurrentPetAction(action);
-        }}
+        if (action === 'quote') showNextQuote();
+        else triggerCurrentPetAction(action);
       }});
     }});
   }}
 
-  // 动作分发
   let actionTimer = null;
   function triggerCurrentPetAction(actionName, duration = 6500) {{
     const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
@@ -1161,7 +1062,6 @@ js_code = f"""/**
     }}, duration);
   }}
 
-  // 切换角色核心流程
   function switchPet(targetPet) {{
     activePet = targetPet;
     setActivePet(targetPet);
@@ -1182,16 +1082,14 @@ js_code = f"""/**
       boardRoleBadge.textContent = "B612星球 · 治愈桌宠";
       curPetLabel.textContent = "当前: 小王子";
       openBtn.textContent = "⭐ B612 看板";
-      // 开启定期送名言 (每 180 秒自动弹出一句)
       if (quoteAutoTimer) clearInterval(quoteAutoTimer);
       quoteAutoTimer = setInterval(showNextQuote, 180000);
-      showNextQuote(); // 切换时送上一句暖心问候
+      showNextQuote();
     }}
 
     renderActionButtons();
   }}
 
-  // 快捷切换按钮
   document.getElementById('btn-quick-switch').addEventListener('click', (e) => {{
     e.stopPropagation();
     switchPet(activePet === 'nezuko' ? 'prince' : 'nezuko');
@@ -1199,7 +1097,6 @@ js_code = f"""/**
   document.getElementById('btn-select-nezuko').addEventListener('click', () => switchPet('nezuko'));
   document.getElementById('btn-select-prince').addEventListener('click', () => switchPet('prince'));
 
-  // 点击小王子身体或气泡：抽取下一句
   petPrince.addEventListener('click', (e) => {{
     if (isDragging) return;
     showNextQuote();
@@ -1210,12 +1107,9 @@ js_code = f"""/**
     showNextQuote();
   }});
 
-  // 首次装载激活角色
   switchPet(activePet);
 
-  // ==========================================
-  // 八、防消失悬停桥接与拖拽手感
-  // ==========================================
+  // 防消失与交互
   let hideCapsuleTimer = null;
   let isCapsulePinned = false;
 
@@ -1300,7 +1194,7 @@ js_code = f"""/**
   petNezuko.addEventListener('mousedown', onDragDown);
   petPrince.addEventListener('mousedown', onDragDown);
 
-  // 配额更新与音乐
+  // 配额更新
   function updateQuotaDisplay() {{
     const CIRCLE_CIRCUM = 62.83;
     const setRing = (id, pct) => {{
@@ -1324,53 +1218,9 @@ js_code = f"""/**
   }}
   updateQuotaDisplay();
 
-  window.updateMusicUI = function(customName) {{
-    const titleEl = document.getElementById('music-title');
-    const subEl = document.getElementById('music-sub');
-    const playBtn = document.getElementById('m-btn-play');
-    if (customName) {{
-      titleEl.textContent = customName;
-      subEl.textContent = "本地音乐文件";
-    }} else {{
-      const trk = PLAYLIST[musicEngine.currentTrack];
-      titleEl.textContent = trk.title;
-      subEl.textContent = trk.subtitle;
-    }}
-    if (musicEngine.isPlaying) {{
-      playBtn.textContent = "⏸ 暂停";
-      disc.classList.add('record-spinning');
-      quickMusicBtn.classList.add('playing');
-    }} else {{
-      playBtn.textContent = "▶ 播放";
-      disc.classList.remove('record-spinning');
-      quickMusicBtn.classList.remove('playing');
-    }}
-  }};
-
-  quickMusicBtn.addEventListener('click', (e) => {{
-    e.stopPropagation();
-    if (!musicEngine.isPlaying) musicEngine.play();
-    else musicEngine.next();
-  }});
-  document.getElementById('m-btn-play').addEventListener('click', () => musicEngine.toggle());
-  document.getElementById('m-btn-next').addEventListener('click', () => musicEngine.next());
-  document.getElementById('m-btn-prev').addEventListener('click', () => musicEngine.prev());
-
-  document.getElementById('m-file-input').addEventListener('change', (e) => {{
-    const f = e.target.files[0];
-    if (f) musicEngine.loadLocalFile(f);
-  }});
-
-  // 滚轮切歌
-  stageEl.addEventListener('wheel', (e) => {{
-    e.preventDefault();
-    if (e.deltaY > 0) musicEngine.next();
-    else musicEngine.prev();
-  }});
-
 }})();
 """
 
 target_js = REPO_ROOT / "resources" / "nezuko-pet.js"
 target_js.write_text(js_code, encoding="utf-8")
-print(f"✅ 成功生成支持小王子切换与名言气泡的双角色桌宠引擎: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
+print(f"✅ 成功生成对接电脑 QQ 音乐的桌宠组件: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
