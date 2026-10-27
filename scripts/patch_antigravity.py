@@ -389,12 +389,15 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     with open(res_dir / "runtime-zh.js", "r", encoding="utf-8") as f:
         runtime_js_code = f.read()
 
+    nezuko_pet_file = res_dir / "nezuko-pet.js"
+    nezuko_pet_code = nezuko_pet_file.read_text(encoding="utf-8") if nezuko_pet_file.exists() else ""
+
     # 始终基于纯净备份读取，确保多次重复运行不受影响
     source_asar = backup_path if backup_path.exists() else asar_path
     print(f"[2/4] 正在读取并解析 ASAR 索引 (源: {source_asar.name})...")
     asar_data = bytearray(source_asar.read_bytes())
 
-    print("[3/4] 正在原位修补原生菜单、托盘及注入 DOM 翻译引擎...")
+    print("[3/4] 正在原位修补原生菜单、托盘及注入 DOM 翻译引擎与祢豆子桌宠...")
 
     # 构建运行时注入脚本
     injection_code = f"""
@@ -404,6 +407,7 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     window.__AGY_ZH_DICT__ = {json.dumps(lang_dict, ensure_ascii=False)};
     window.__AGY_ZH_RULES__ = {json.dumps(rules_list, ensure_ascii=False)};
     {runtime_js_code}
+    {nezuko_pet_code}
   }} catch(e) {{
     console.error("[AGY-ZH] Failed to bootstrap translation:", e);
   }}
@@ -657,7 +661,7 @@ const __AGY_ZH_CODE__ = {js_raw};
         print(f"  [!] 主世界注入通道修补失败: {e}")
         raise
 
-    # (5.1) 修补 dist/ipcHandlers.js (原生桌面通知全汉化拦截)
+    # (5.1) 修补 dist/ipcHandlers.js (原生桌面通知全汉化拦截 + 祢豆子桌宠对话提醒广播)
     try:
         ipc_content = read_asar_file_content(asar_data, "dist/ipcHandlers.js").decode("utf-8")
         if PATCH_MARKER not in ipc_content:
@@ -670,10 +674,50 @@ function __agyTranslateNotif(text) {{
     const trimmed = text.trim();
     if (__AGY_IPC_NOTIF_DICT__[trimmed]) return __AGY_IPC_NOTIF_DICT__[trimmed];
     const lower = trimmed.toLowerCase();
-    for (const k in __AGY_IPC_NOTIF_DICT__) {{
-        if (k.toLowerCase() === lower) return __AGY_IPC_NOTIF_DICT__[k];
+    if (__AGY_IPC_NOTIF_DICT__[lower]) return __AGY_IPC_NOTIF_DICT__[lower];
+
+    const patterns = [
+        [/^(?:Agent|Subagent)\\s+(?:has\\s+)?(?:finished|completed)(?:\\s+the\\s+task)?\\.?$/i, () => '智能体已完成该任务。'],
+        [/^(?:Agent|Subagent)\\s+["']?([^"']+)["']?\\s+(?:has\\s+)?(?:finished|completed)(?:\\s+the\\s+task)?\\.?$/i, (_, name) => `智能体 "${{name}}" 已完成任务。`],
+        [/^(?:Agent|Subagent)\\s+finished:?\\s*(.+)$/i, (_, m) => `智能体已完成：${{m}}`],
+        [/^(?:Agent|Subagent)\\s+completed:?\\s*(.+)$/i, (_, m) => `智能体已完成：${{m}}`],
+        [/^(?:Agent|Subagent)\\s+is\\s+waiting\\s+for\\s+(?:your\\s+)?(input|reply|response)\\.?:?\\s*(.*)$/i, (_, type, rest) => `智能体正在等待您的${{type === 'input' ? '输入' : '回复'}}${{rest ? '：' + rest : '。'}}`],
+        [/^(?:Agent|Subagent)\\s+(?:needs|requires)\\s+(?:your\\s+)?(input|response|reply|attention)\\.?:?\\s*(.*)$/i, (_, type, rest) => `智能体需要您的${{type === 'attention' ? '关注' : '输入'}}${{rest ? '：' + rest : ''}}`],
+        [/^Waiting\\s+for\\s+(?:your\\s+)?(input|approval|response|reply)\\.?:?\\s*(.*)$/i, (_, type, rest) => `正在等待您的${{type === 'approval' ? '审批' : '回复'}}${{rest ? '：' + rest : '...'}}`],
+        [/^Action\\s+requires?\\s+(?:your\\s+)?attention\\.?:?\\s*(.*)$/i, (_, rest) => `操作需要您的关注${{rest ? '：' + rest : ''}}`],
+        [/^Approval\\s+(?:is\\s+)?(?:required|requested)\\s*(?:for|to)?\\s*:?\\s*(.*)$/i, (_, rest) => `需要审批${{rest ? '：' + rest : ''}}`],
+        [/^Permission\\s+(?:is\\s+)?(?:required|requested)\\s*(?:for|by)?\\s*:?\\s*(.*)$/i, (_, rest) => `权限请求${{rest ? '：' + rest : ''}}`],
+        [/^Task\\s+(?:#?(\\d+):?\\s*)?(?:has\\s+)?(?:completed|finished|succeeded)\\.?:?\\s*(.*)$/i, (_, id, rest) => `任务 ${{id ? '#' + id + ' ' : ''}}已完成${{rest ? '：' + rest : ''}}`],
+        [/^Task\\s+(?:#?(\\d+):?\\s*)?failed\\.?:?\\s*(.*)$/i, (_, id, rest) => `任务 ${{id ? '#' + id + ' ' : ''}}执行失败${{rest ? '：' + rest : ''}}`],
+        [/^New\\s+message\\s+(?:from\\s+)?(.*)$/i, (_, sender) => sender ? `来自 ${{sender}} 的新消息` : '收到新消息'],
+        [/^Background\\s+task\\s+(?:has\\s+)?(?:finished|completed)\\.?:?\\s*(.*)$/i, (_, rest) => `后台任务已完成${{rest ? '：' + rest : ''}}`]
+    ];
+
+    for (const [reg, repl] of patterns) {{
+        const m = trimmed.match(reg);
+        if (m) return repl(...m);
     }}
-    return text;
+
+    let res = trimmed;
+    const phrases = [
+        ['Agent Finished', '智能体已完成'],
+        ['Agent Completed', '智能体已完成'],
+        ['Agent Needs Input', '智能体需要输入'],
+        ['Agent Requires Input', '智能体需要输入'],
+        ['Task Completed', '任务已完成'],
+        ['Task Finished', '任务已完成'],
+        ['Approval Required', '需要批准'],
+        ['Permission Requested', '已请求权限'],
+        ['Waiting for input', '等待输入'],
+        ['Waiting for reply', '等待回复'],
+        ['New message', '新消息']
+    ];
+    for (const [en, zh] of phrases) {{
+        if (res.includes(en)) {{
+            res = res.replace(new RegExp(en, 'gi'), zh);
+        }}
+    }}
+    return res;
 }}
 """
             ipc_content = ipc_header_patch + "\n" + ipc_content
@@ -682,16 +726,29 @@ function __agyTranslateNotif(text) {{
             body: options.body,
             silent: options.silent ?? false,
         });"""
-            new_notif_target = """        const notification = new electron_1.Notification({
-            title: __agyTranslateNotif(options.title),
-            body: __agyTranslateNotif(options.body),
+            new_notif_target = """        const trTitle = __agyTranslateNotif(options.title);
+        const trBody = __agyTranslateNotif(options.body);
+        const notification = new electron_1.Notification({
+            title: trTitle,
+            body: trBody,
             silent: options.silent ?? false,
-        });"""
+        });
+        try {
+            electron_1.BrowserWindow.getAllWindows().forEach(w => {
+                if (!w.isDestroyed()) {
+                    w.webContents.send('__agy_chat_notification__', {
+                        title: trTitle,
+                        body: trBody,
+                        silent: options.silent ?? false
+                    });
+                }
+            });
+        } catch (_) {}"""
             if old_notif_target in ipc_content:
                 ipc_content = ipc_content.replace(old_notif_target, new_notif_target, 1)
                 validate_js_syntax(ipc_content, "dist/ipcHandlers.js")
                 asar_data = replace_asar_file_content(asar_data, "dist/ipcHandlers.js", ipc_content.encode("utf-8"))
-                print("  [OK] 原生桌面系统通知 (dist/ipcHandlers.js) 汉化拦截通道挂载完成")
+                print("  [OK] 原生桌面系统通知与祢豆子桌宠广播 (dist/ipcHandlers.js) 汉化拦截通道挂载完成")
             else:
                 print("  [!] 未在 dist/ipcHandlers.js 中匹配到 notification:send 锚点")
     except Exception as e:
