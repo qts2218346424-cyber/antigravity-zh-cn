@@ -635,10 +635,19 @@ try {
   };
 } catch (_) {}
 """
+            media_bridge_code = """
+try {
+  electron_1.contextBridge.exposeInMainWorld('__agy_media_bridge__', {
+    send: (action) => {
+      try { electron_1.ipcRenderer.send('__agy_media_command__', action); } catch(_) {}
+    }
+  });
+} catch (_) {}
+"""
             if "electron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);" in preload_content:
                 preload_content = preload_content.replace(
                     "electron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);",
-                    f"{notif_preload_patch}\nelectron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);"
+                    f"{notif_preload_patch}\nelectron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);\n{media_bridge_code}"
                 )
             preload_content += f"\n{PATCH_MARKER}\n{injection_code}\n"
             validate_js_syntax(preload_content, "dist/preload.js")
@@ -747,10 +756,16 @@ try {{
                     setTimeout(() => {{ try {{ __agyExec(__focusCmd); }} catch(_) {{}} }}, 350);
                     return;
                 }}
-                const vkMap = {{ play_pause: '0xB3', next: '0xB0', prev: '0xB1' }};
-                const vk = vkMap[action] || '0xB3';
-                const cmd = `powershell -WindowStyle Hidden -NoProfile -Command "$w=Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern void keybd_event(byte b, byte s, uint f, uint e);' -Name K -Namespace U -PassThru; $w::keybd_event(${{vk}},0,1,0); $w::keybd_event(${{vk}},0,3,0)"`;
-                __agyExec(cmd);
+                const __resHelper = 'e:\\\\antigravity-cn\\\\resources\\\\media_helper.py';
+                const __runHelper = `python "${{__resHelper}}" ${{action}}`;
+                __agyExec(__runHelper, (err) => {{
+                    if (err) {{
+                        const vkMap = {{ play_pause: '0xB3', next: '0xB0', prev: '0xB1' }};
+                        const vk = vkMap[action] || '0xB3';
+                        const cmd = `powershell -WindowStyle Hidden -NoProfile -Command "$w=Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern void keybd_event(byte b, byte s, uint f, uint e);' -Name K$([guid]::NewGuid().ToString('N')) -Namespace U -PassThru; $w::keybd_event(${{vk}},0,1,0); $w::keybd_event(${{vk}},0,3,0)"`;
+                        __agyExec(cmd);
+                    }}
+                }});
             }} catch (_) {{}}
         }});
     }}

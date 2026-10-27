@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+"""
+生成全套动画级别（Animation Quality）动作效果的灶门祢豆子 & 小王子桌宠组件
+包含：
+1. 8 帧大正雾云杉木箱 360 度多视角原画分镜精灵图 (Sprite Sheet)
+2. 真实挤压与拉伸 (Squash & Stretch) 落地震地冲击波与风刃枫叶粒子
+3. 迪士尼十二黄金法则驱动的行走小碎步 (Dual-Joint IK Walk) 与风火轮狂奔 (Run Dash)
+4. 动漫级急刹车滑行 (Skid Brake) 与多阶段烟尘喷发
+5. 有机呼吸与自然眨眼微表情
+"""
 import sys
 import base64
 from io import BytesIO
@@ -36,7 +45,21 @@ for name, box in nezuko_boxes.items():
     cropped.save(buf, format='WEBP', quality=92)
     b64_nezuko_parts[name] = base64.b64encode(buf.getvalue()).decode('ascii')
 
-# 2. 读取小王子核心与动作素材
+# 裁剪探头特写头像（用于木箱探头）
+head_crop = im_nezuko.crop((15, 0, nw - 15, 175))
+buf_head = BytesIO()
+head_crop.save(buf_head, format='WEBP', quality=92)
+b64_head_peeker = base64.b64encode(buf_head.getvalue()).decode('ascii')
+
+# 2. 读取 8 帧 360 度转木箱分镜精灵图
+box_sheet_webp = MEDIA_DIR / "nezuko_box_spin_sheet.webp"
+b64_box_sheet = base64.b64encode(box_sheet_webp.read_bytes()).decode('ascii')
+
+# 读取落地冲击波素材
+box_fx_webp = MEDIA_DIR / "box_impact_shockwave.webp"
+b64_box_fx = base64.b64encode(box_fx_webp.read_bytes()).decode('ascii')
+
+# 3. 读取小王子核心与动作素材
 prince_webp = MEDIA_DIR / "little_prince_pet.webp"
 b64_prince = base64.b64encode(prince_webp.read_bytes()).decode('ascii')
 
@@ -52,18 +75,25 @@ b64_prince_sunset = base64.b64encode(prince_sunset_webp.read_bytes()).decode('as
 prince_stars_webp = MEDIA_DIR / "prince_asset_stars.webp"
 b64_prince_stars = base64.b64encode(prince_stars_webp.read_bytes()).decode('ascii')
 
-js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼桌宠 + 电脑 QQ 音乐无缝联动 + 额度告急与疲劳关怀中枢 + 四维配额立体同步引擎
+js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 (Animation-Grade Motion Rig)
+// 包含：8帧360度转木箱分镜 + 真实挤压与拉伸物理形变 + 双关节步态行走与风火轮狂奔 + 震地冲击波与动漫刹车
 (function() {{
   if (typeof window === 'undefined' || window.__AGY_NEZUKO_PET_INITIALIZED__) return;
   window.__AGY_NEZUKO_PET_INITIALIZED__ = true;
 
-  // 1. 2D 骨骼关节分肢图层
+  // 1. 核心分肢与动画分镜大图素材
   const NEZUKO_HEAD = "data:image/webp;base64,{b64_nezuko_parts['head']}";
   const NEZUKO_TORSO = "data:image/webp;base64,{b64_nezuko_parts['torso']}";
   const NEZUKO_ARM_L = "data:image/webp;base64,{b64_nezuko_parts['arm_l']}";
   const NEZUKO_ARM_R = "data:image/webp;base64,{b64_nezuko_parts['arm_r']}";
   const NEZUKO_LEG_L = "data:image/webp;base64,{b64_nezuko_parts['leg_l']}";
   const NEZUKO_LEG_R = "data:image/webp;base64,{b64_nezuko_parts['leg_r']}";
+  const NEZUKO_PEEKER_HEAD = "data:image/webp;base64,{b64_head_peeker}";
+
+  // 8 帧大正雾云杉木箱 360 度多视角原画分镜精灵图 (1280x220)
+  const BOX_SPIN_SHEET = "data:image/webp;base64,{b64_box_sheet}";
+  // 落地金色冲击波
+  const BOX_IMPACT_FX = "data:image/webp;base64,{b64_box_fx}";
 
   const PRINCE_IMG = "data:image/webp;base64,{b64_prince}";
   const PRINCE_FOX_IMG = "data:image/webp;base64,{b64_prince_fox}";
@@ -72,56 +102,312 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
   const PRINCE_STARS_IMG = "data:image/webp;base64,{b64_prince_stars}";
 
   // ==========================================
-  // 一、QQ 音乐客户端系统级对接遥控引擎
+  // 一、QQ 音乐客户端联动
   // ==========================================
-  class QQMusicBridgeEngine {{
+  // ==========================================
+  // 一、双模态沉浸音乐电台与真·实时歌词滚动引擎 (Vivid Music & LRC Karaoke Station)
+  // ==========================================
+  const BUILTIN_PLAYLIST = [
+    {{
+      title: "竈門禰豆子のうた (灶门祢豆子之歌)",
+      artist: "椎名豪 featuring 中川奈美 · 鬼灭之刃治愈插曲",
+      duration: 195,
+      notes: [
+        {{ t: 0.0, f: 523.25 }}, {{ t: 0.4, f: 659.25 }}, {{ t: 0.8, f: 783.99 }}, {{ t: 1.2, f: 1046.50 }},
+        {{ t: 2.0, f: 987.77 }}, {{ t: 2.6, f: 880.00 }}, {{ t: 3.2, f: 783.99 }}, {{ t: 4.0, f: 659.25 }},
+        {{ t: 5.0, f: 587.33 }}, {{ t: 5.8, f: 659.25 }}, {{ t: 6.6, f: 523.25 }}, {{ t: 7.8, f: 440.00 }}
+      ],
+      lrc: `[00:00.00] 竈門禰豆子のうた - 椎名豪 / 中川奈美
+[00:03.50] 鬼灭之刃 灶门炭治郎立志篇 · 治愈插曲
+[00:08.20] 傷ついても 打ちのめされても (纵使遍体鳞伤 纵使遭受重创)
+[00:15.50] 守るものがある (依然有誓死守护之物)
+[00:22.10] 失っても 失っても (纵然不断失去 纵然失去一切)
+[00:29.80] 生きていくしかない (也必须坚强地生存下去)
+[00:36.50] どんなに打ちのめされても (无论承受怎样的打击)
+[00:44.20] 守るものがある (都有必须守护的存在)
+[00:52.00] 優しさに 溢れた日々を (充满温柔的那些日子)
+[01:00.50] 胸に抱いて 前へ進め (深藏于心 迈步向前)
+[01:09.00] 運命を 照らす灯火 (照亮宿命的希望微光)
+[01:17.50] 決して消えはしない (永不熄灭)`
+    }},
+    {{
+      title: "红莲华 (Gurenge)",
+      artist: "LiSA · 鬼灭之刃第一季主题曲",
+      duration: 236,
+      notes: [
+        {{ t: 0.0, f: 659.25 }}, {{ t: 0.25, f: 659.25 }}, {{ t: 0.5, f: 783.99 }}, {{ t: 0.75, f: 880.00 }},
+        {{ t: 1.2, f: 987.77 }}, {{ t: 1.6, f: 880.00 }}, {{ t: 2.0, f: 783.99 }}, {{ t: 2.4, f: 659.25 }},
+        {{ t: 3.0, f: 587.33 }}, {{ t: 3.5, f: 659.25 }}, {{ t: 4.2, f: 783.99 }}, {{ t: 5.0, f: 880.00 }}
+      ],
+      lrc: `[00:00.00] 红莲华 (红莲の华) - LiSA
+[00:02.50] 鬼灭之刃 第一季片头曲 · 经典燃曲
+[00:06.20] 強くなれる理由を知った (领悟了变强的原因)
+[00:10.50] 僕を連れて進め (带着我一同前行)
+[00:15.20] 泥だらけの走馬灯に酔う (醉心于满是泥泞的走马灯)
+[00:21.00] こわばる心 震える手は (僵硬的内心 颤抖的双手)
+[00:26.50] 掴みたいものがある (有着无论如何都想要抓住的事物)
+[00:32.00] 夜の匂いに空睨んでも (仰望着夜空的冷冽气息)
+[00:37.50] 変わっていけるのは自分自身だけ (唯一能改变的唯有自己)
+[00:44.00] ありがとう 悲しみよ (感谢你 那些悲伤)
+[00:49.50] 紅蓮の華よ 咲き誇れ！ (红莲之花啊 骄傲绽放吧！)`
+    }},
+    {{
+      title: "Le Petit Prince (小王子 · 星空八音盒)",
+      artist: "B612 行星回响 · 纯音乐治愈八音盒",
+      duration: 180,
+      notes: [
+        {{ t: 0.0, f: 783.99 }}, {{ t: 0.4, f: 880.00 }}, {{ t: 0.8, f: 987.77 }}, {{ t: 1.4, f: 1318.51 }},
+        {{ t: 2.2, f: 1174.66 }}, {{ t: 2.8, f: 987.77 }}, {{ t: 3.4, f: 880.00 }}, {{ t: 4.2, f: 783.99 }},
+        {{ t: 5.0, f: 659.25 }}, {{ t: 5.6, f: 783.99 }}, {{ t: 6.4, f: 587.33 }}, {{ t: 7.2, f: 523.25 }}
+      ],
+      lrc: `[00:00.00] Le Petit Prince (小王子 · 星空纯音)
+[00:03.00] B612 星球专属 · 治愈纯音八音盒
+[00:07.50] 所有的大人都曾经是小孩子，虽然只有少数人记得。
+[00:15.00] 正因为你为你的玫瑰花费了时间，这才使你的玫瑰变得如此重要。
+[00:23.50] 只有用心才能看清本质，真正重要的东西用眼睛是看不见的。
+[00:32.00] 星星发亮，是为了让每个人有一天都能找到属于自己的那颗。
+[00:41.00] 如果你驯养了我，我们就会彼此需要。
+[00:49.00] 对我来说，你将是世界上独一无二的...
+[00:58.00] 我在繁星间注视着你，麦浪正泛起微风的金芒。`
+    }}
+  ];
+
+  class VividMusicStation {{
     constructor() {{
-      this.mode = 'qqmusic';
+      this.mode = 'builtin'; // 'builtin' | 'qqmusic'
       this.isPlaying = false;
+      this.currentTrackIdx = 0;
+      this.currentTime = 0;
+      this.duration = 195;
+      this.lrcLines = [];
+      this.currentLrcIdx = 0;
+      this.timer = null;
+      this.audioCtx = null;
+      this.localAudioEl = null;
+      this.bridge = null;
       this.ipc = null;
       this.initIPC();
+      this.loadTrack(0);
     }}
 
     initIPC() {{
       try {{
-        if (typeof window !== 'undefined' && window.require) {{
-          const electron = window.require('electron');
-          if (electron && electron.ipcRenderer) {{
-            this.ipc = electron.ipcRenderer;
+        if (typeof window !== 'undefined') {{
+          if (window.__agy_media_bridge__) this.bridge = window.__agy_media_bridge__;
+          if (window.require) {{
+            const electron = window.require('electron');
+            if (electron && electron.ipcRenderer) this.ipc = electron.ipcRenderer;
           }}
         }}
       }} catch (_) {{}}
     }}
 
-    sendCommand(cmd) {{
-      if (this.ipc) {{
-        this.ipc.send('__agy_media_command__', cmd);
+    ensureAudio() {{
+      if (!this.audioCtx) {{
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) this.audioCtx = new AudioCtx();
+      }}
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {{
+        this.audioCtx.resume();
       }}
     }}
 
-    playPause() {{
-      this.isPlaying = !this.isPlaying;
-      this.sendCommand('play_pause');
+    sendIPCCommand(cmd) {{
+      if (!this.bridge && window.__agy_media_bridge__) this.bridge = window.__agy_media_bridge__;
+      if (this.bridge && typeof this.bridge.send === 'function') {{
+        this.bridge.send(cmd);
+        return;
+      }}
+      if (this.ipc && typeof this.ipc.send === 'function') {{
+        this.ipc.send('__agy_media_command__', cmd);
+        return;
+      }}
+      try {{
+        window.postMessage({{ type: '__agy_media_cmd__', action: cmd }}, '*');
+      }} catch (_) {{}}
+    }}
+
+    setMode(mode) {{
+      this.mode = mode;
+      if (this.isPlaying && mode === 'qqmusic') {{
+        this.pauseBuiltin();
+      }}
+      this.updateUI();
+    }}
+
+    loadTrack(idx) {{
+      this.currentTrackIdx = (idx + BUILTIN_PLAYLIST.length) % BUILTIN_PLAYLIST.length;
+      const track = BUILTIN_PLAYLIST[this.currentTrackIdx];
+      this.duration = track.duration || 180;
+      this.currentTime = 0;
+      this.parseLRC(track.lrc);
+      this.currentLrcIdx = 0;
+      this.updateUI();
+    }}
+
+        parseLRC(lrcText) {{
+      this.lrcLines = [];
+      if (!lrcText) return;
+      const nl = String.fromCharCode(10);
+      const lines = lrcText.split(nl);
+      lines.forEach(raw => {{
+        const l = raw.trim();
+        if (l.startsWith('[') && l.indexOf(']') > 1) {{
+          const closeIdx = l.indexOf(']');
+          const tag = l.slice(1, closeIdx);
+          const text = l.slice(closeIdx + 1).trim();
+          if (tag.indexOf(':') > 0) {{
+            const parts = tag.split(':');
+            const mins = parseInt(parts[0], 10);
+            const secs = parseFloat(parts[1]);
+            if (!isNaN(mins) && !isNaN(secs) && text) {{
+              this.lrcLines.push({{ time: mins * 60 + secs, text }});
+            }}
+          }}
+        }}
+      }});
+      this.lrcLines.sort((a, b) => a.time - b.time);
+    }}
+
+    playBuiltin() {{
+      this.ensureAudio();
+      this.isPlaying = true;
+      if (this.timer) clearInterval(this.timer);
+      this.timer = setInterval(() => {{
+        this.currentTime += 0.5;
+        if (this.currentTime >= this.duration) {{
+          this.nextTrack();
+          return;
+        }}
+        this.playMelodyTick();
+        this.syncLRC();
+        this.updateTimeDisplay();
+      }}, 500);
       triggerMusicBeat();
-      updateMusicUI();
+      this.updateUI();
+    }}
+
+    pauseBuiltin() {{
+      this.isPlaying = false;
+      if (this.timer) {{
+        clearInterval(this.timer);
+        this.timer = null;
+      }}
+      this.updateUI();
+    }}
+
+    playMelodyTick() {{
+      if (!this.audioCtx || this.mode !== 'builtin') return;
+      const track = BUILTIN_PLAYLIST[this.currentTrackIdx];
+      if (!track || !track.notes) return;
+      const loopTime = this.currentTime % 8.0;
+      track.notes.forEach(n => {{
+        if (Math.abs(loopTime - n.t) < 0.26) {{
+          this.playBellNote(n.f);
+        }}
+      }});
+    }}
+
+    playBellNote(freq) {{
+      try {{
+        if (!this.audioCtx) return;
+        const now = this.audioCtx.currentTime;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.045, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.68);
+      }} catch (_) {{}}
+    }}
+
+    syncLRC() {{
+      if (!this.lrcLines.length) return;
+      let matchIdx = 0;
+      for (let i = 0; i < this.lrcLines.length; i++) {{
+        if (this.currentTime >= this.lrcLines[i].time) {{
+          matchIdx = i;
+        }} else {{
+          break;
+        }}
+      }}
+      if (matchIdx !== this.currentLrcIdx) {{
+        this.currentLrcIdx = matchIdx;
+        this.renderLRC();
+      }}
+    }}
+
+    renderLRC() {{
+      const box = document.getElementById('music-lrc-display');
+      if (!box) return;
+      if (this.mode === 'qqmusic') {{
+        box.innerHTML = '<div class="lrc-cur-line" style="color:#10b981;">📻 已对接 QQ 音乐客户端 · 推荐使用快捷键 Ctrl+Alt+D 呼出原厂超清桌面歌词</div>';
+        return;
+      }}
+      const prev = this.lrcLines[this.currentLrcIdx - 1] ? this.lrcLines[this.currentLrcIdx - 1].text : '';
+      const cur = this.lrcLines[this.currentLrcIdx] ? this.lrcLines[this.currentLrcIdx].text : '🎶 聆听动人旋律...';
+      const next = this.lrcLines[this.currentLrcIdx + 1] ? this.lrcLines[this.currentLrcIdx + 1].text : '';
+
+      box.innerHTML = `
+        <div class="lrc-prev-line">${{prev}}</div>
+        <div class="lrc-cur-line">${{cur}}</div>
+        <div class="lrc-next-line">${{next}}</div>
+      `;
+    }}
+
+    togglePlay() {{
+      if (this.mode === 'qqmusic') {{
+        this.isPlaying = !this.isPlaying;
+        this.sendIPCCommand('play_pause');
+        triggerMusicBeat();
+        this.updateUI();
+      }} else {{
+        if (this.isPlaying) {{
+          this.pauseBuiltin();
+        }} else {{
+          this.playBuiltin();
+        }}
+      }}
     }}
 
     nextTrack() {{
-      this.isPlaying = true;
-      this.sendCommand('next');
-      triggerMusicBeat();
-      updateMusicUI();
+      if (this.mode === 'qqmusic') {{
+        this.isPlaying = true;
+        this.sendIPCCommand('next');
+        triggerMusicBeat();
+        this.updateUI();
+      }} else {{
+        this.loadTrack(this.currentTrackIdx + 1);
+        this.playBuiltin();
+      }}
     }}
 
     prevTrack() {{
-      this.isPlaying = true;
-      this.sendCommand('prev');
-      triggerMusicBeat();
-      updateMusicUI();
+      if (this.mode === 'qqmusic') {{
+        this.isPlaying = true;
+        this.sendIPCCommand('prev');
+        triggerMusicBeat();
+        this.updateUI();
+      }} else {{
+        this.loadTrack(this.currentTrackIdx - 1);
+        this.playBuiltin();
+      }}
+    }}
+
+    seek(percent) {{
+      if (this.mode === 'builtin') {{
+        this.currentTime = this.duration * percent;
+        this.syncLRC();
+        this.updateTimeDisplay();
+      }}
     }}
 
     wakeUpQQMusic() {{
-      this.sendCommand('open_qq');
+      this.sendIPCCommand('open_qq');
       const btn = document.getElementById('m-btn-wake-qq');
       if (btn) {{
         const origTxt = btn.innerHTML;
@@ -137,27 +423,145 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
         }}, 4000);
       }}
     }}
+
+    importLocalAudio() {{
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'audio/*, .lrc';
+      inp.multiple = true;
+      inp.onchange = (e) => {{
+        const files = Array.from(e.target.files);
+        let audioFile = files.find(f => f.type.startsWith('audio/') || /\.(mp3|wav|ogg|flac|m4a)$/i.test(f.name));
+        let lrcFile = files.find(f => /\.lrc$/i.test(f.name));
+        if (audioFile) {{
+          const url = URL.createObjectURL(audioFile);
+          if (this.localAudioEl) {{
+            this.localAudioEl.pause();
+            this.localAudioEl.src = '';
+          }}
+          this.localAudioEl = new Audio(url);
+          const trackName = audioFile.name.split('.').slice(0, -1).join('.');
+          BUILTIN_PLAYLIST.unshift({{
+            title: `📁 ${{trackName}}`,
+            artist: "本地导入音频",
+            duration: 180,
+            lrc: `[00:00.00] 正在播放本地音频: ${{trackName}}\n[00:03.00] 已同步载入本地音乐播放！`
+          }});
+          if (lrcFile) {{
+            const reader = new FileReader();
+            reader.onload = (evt) => {{
+              BUILTIN_PLAYLIST[0].lrc = evt.target.result;
+              this.loadTrack(0);
+              this.localAudioEl.play();
+              this.isPlaying = true;
+              this.updateUI();
+            }};
+            reader.readAsText(lrcFile, 'utf-8');
+          }} else {{
+            this.loadTrack(0);
+            this.localAudioEl.play();
+            this.isPlaying = true;
+            this.updateUI();
+          }}
+          this.localAudioEl.ontimeupdate = () => {{
+            this.currentTime = this.localAudioEl.currentTime;
+            this.duration = this.localAudioEl.duration || 180;
+            this.syncLRC();
+            this.updateTimeDisplay();
+          }};
+          this.localAudioEl.onended = () => {{ this.nextTrack(); }};
+        }}
+      }};
+      inp.click();
+    }}
+
+    updateTimeDisplay() {{
+      const bar = document.getElementById('music-progress-bar');
+      const timeTxt = document.getElementById('music-time-txt');
+      if (bar) {{
+        const pct = Math.min(100, Math.max(0, (this.currentTime / this.duration) * 100));
+        bar.style.width = pct + '%';
+      }}
+      if (timeTxt) {{
+        const fmt = (s) => {{
+          const m = Math.floor(s / 60);
+          const sec = Math.floor(s % 60);
+          return `${{m < 10 ? '0' : ''}}${{m}}:${{sec < 10 ? '0' : ''}}${{sec}}`;
+        }};
+        timeTxt.innerText = `${{fmt(this.currentTime)}} / ${{fmt(this.duration)}}`;
+      }}
+    }}
+
+    updateUI() {{
+      const disc = document.getElementById('nezuko-disc');
+      const waves = document.getElementById('sound-waves');
+      const playBtn = document.getElementById('m-btn-play');
+      const titleEl = document.getElementById('music-title');
+      const subEl = document.getElementById('music-sub');
+      const tabBuiltin = document.getElementById('tab-music-builtin');
+      const tabQQ = document.getElementById('tab-music-qq');
+      const qqBox = document.getElementById('qq-extra-ctrls');
+      const progressBox = document.getElementById('music-progress-wrap');
+
+      if (tabBuiltin && tabQQ) {{
+        if (this.mode === 'builtin') {{
+          tabBuiltin.classList.add('active-tab');
+          tabQQ.classList.remove('active-tab');
+          if (qqBox) qqBox.style.display = 'none';
+          if (progressBox) progressBox.style.display = 'flex';
+        }} else {{
+          tabQQ.classList.add('active-tab');
+          tabBuiltin.classList.remove('active-tab');
+          if (qqBox) qqBox.style.display = 'flex';
+          if (progressBox) progressBox.style.display = 'none';
+        }}
+      }}
+
+      if (this.mode === 'builtin') {{
+        const track = BUILTIN_PLAYLIST[this.currentTrackIdx] || BUILTIN_PLAYLIST[0];
+        if (titleEl) titleEl.innerText = track.title;
+        if (subEl) subEl.innerText = track.artist;
+      }} else {{
+        if (titleEl) titleEl.innerText = 'QQ 音乐正在播放中';
+        if (subEl) subEl.innerText = '已直通系统媒体控制 · 点击切歌或按快捷键唤出桌面歌词';
+      }}
+
+      if (playBtn) {{
+        playBtn.innerHTML = this.isPlaying ? '⏸ 暂停' : '▶ 播放';
+        if (this.isPlaying) playBtn.classList.add('playing');
+        else playBtn.classList.remove('playing');
+      }}
+
+      if (disc) {{
+        if (this.isPlaying) disc.classList.add('rotating');
+        else disc.classList.remove('rotating');
+      }}
+
+      if (waves) {{
+        waves.style.display = this.isPlaying ? 'flex' : 'none';
+      }}
+
+      this.renderLRC();
+      this.updateTimeDisplay();
+    }}
   }}
 
-  const qqBridge = new QQMusicBridgeEngine();
+  const musicStation = new VividMusicStation();
+  const qqBridge = musicStation; // 保持兼容别名
+
 
   // ==========================================
-  // 二、Web Audio 极速警报与关怀音效引擎
+  // 二、拟真 Web Audio 音效 (沉木碰撞/气旋风刃/碎步/警报)
   // ==========================================
   class PetAudioSynth {{
-    constructor() {{
-      this.ctx = null;
-    }}
+    constructor() {{ this.ctx = null; }}
     ensureCtx() {{
       if (!this.ctx) {{
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (AudioCtx) this.ctx = new AudioCtx();
       }}
-      if (this.ctx && this.ctx.state === 'suspended') {{
-        this.ctx.resume();
-      }}
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     }}
-    // 额度告急警报音（急促双频警报声）
     playAlertSound() {{
       try {{
         this.ensureCtx();
@@ -170,13 +574,10 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
         osc.frequency.setValueAtTime(659, now + 0.12);
         gain.gain.setValueAtTime(0.12, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.36);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.36);
       }} catch (_) {{}}
     }}
-    // 疲劳健康关怀温和音效（三和弦轻灵水滴声）
     playCareSound() {{
       try {{
         this.ensureCtx();
@@ -190,149 +591,89 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
           osc.frequency.setValueAtTime(freq, now + idx * 0.08);
           gain.gain.setValueAtTime(0.09, now + idx * 0.08);
           gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(now + idx * 0.08);
-          osc.stop(now + idx * 0.08 + 0.38);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.08); osc.stop(now + idx * 0.08 + 0.38);
         }});
+      }} catch (_) {{}}
+    }}
+    // 木箱落地沉重撞击厚实音
+    playWoodThud() {{
+      try {{
+        this.ensureCtx();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(155, now);
+        osc.frequency.exponentialRampToValueAtTime(38, now + 0.22);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.25);
+      }} catch (_) {{}}
+    }}
+    // 转木箱高速风刃呼啸旋转音
+    playSpinWind() {{
+      try {{
+        this.ensureCtx();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.linearRampToValueAtTime(700, now + 0.28);
+        osc.frequency.linearRampToValueAtTime(200, now + 0.7);
+        gain.gain.setValueAtTime(0.02, now);
+        gain.gain.linearRampToValueAtTime(0.14, now + 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.73);
+      }} catch (_) {{}}
+    }}
+    // 奔跑轻快卡通小脚步
+    playFootstep() {{
+      try {{
+        this.ensureCtx();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, now);
+        gain.gain.setValueAtTime(0.035, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.06);
       }} catch (_) {{}}
     }}
   }}
   const petAudio = new PetAudioSynth();
 
   // ==========================================
-  // 三、《小王子》12 句中法双语经典哲思名言库
+  // 三、《小王子》12 句中法经典名言
   // ==========================================
   const LITTLE_PRINCE_QUOTES = [
-    {{
-      zh: "真正重要的东西，用眼睛是看不见的，只有用心才能看清。",
-      fr: "L'essentiel est invisible pour les yeux.",
-      tag: "🦊 狐狸的秘密"
-    }},
-    {{
-      zh: "如果你说你在下午四点来，从三点开始，我就开始感觉很快乐。",
-      fr: "Si tu viens à quatre heures de l'après-midi, dès trois heures je commencerai d'être heureux.",
-      tag: "🦊 期待的幸福"
-    }},
-    {{
-      zh: "你在你的玫瑰花身上耗费的时间，使得你的玫瑰花变得如此重要。",
-      fr: "C'est le temps que tu as perdu pour ta rose qui fait ta rose si importante.",
-      tag: "🌹 爱的驯养"
-    }},
-    {{
-      zh: "星星发亮，是为了让每一个人有一天都能找到属于自己的星星。",
-      fr: "Les étoiles sont éclairées pour que chacun puisse un jour retrouver la sienne.",
-      tag: "✨ 漫天繁星"
-    }},
-    {{
-      zh: "所有的大人都曾经是小孩，虽然，只有少数的人记得。",
-      fr: "Toutes les grandes personnes ont d'abord été des enfants.",
-      tag: "👑 永恒的童心"
-    }},
-    {{
-      zh: "天上的星星有亿万颗，唯独只有一颗星上开着我的花，只要仰望星空，就会感到幸福。",
-      fr: "Si quelqu'un aime une fleur unique, cela suffit pour qu'il soit heureux.",
-      tag: "🌟 独一无二"
-    }},
-    {{
-      zh: "当你驯养了我，我们就会彼此需要。对我来说，你就是世界上唯一的。",
-      fr: "Tu seras pour moi unique au monde. Je serai pour toi unique au monde.",
-      tag: "🦊 羁绊与陪伴"
-    }},
-    {{
-      zh: "一个人只有在感到悲伤的时候，才会喜欢看日落... ‘有一天，我看了四十四次日落。’",
-      fr: "Un jour, j'ai vu le soleil se coucher quarante-quatre fois...",
-      tag: "🌅 B612的黄昏"
-    }},
-    {{
-      zh: "沙漠之所以美丽，是因为在某个角落，藏着一口清泉。",
-      fr: "Ce qui embellit le désert, c'est qu'il cache un puits quelque part.",
-      tag: "💧 心灵的甘泉"
-    }},
-    {{
-      zh: "我就在其中的一颗星星上微笑着。当你夜晚仰望星空时，就好像所有的星星都在对你微笑。",
-      fr: "Alors ce sera pour toi comme si riaient toutes les étoiles.",
-      tag: "🌠 会笑的星星"
-    }},
-    {{
-      zh: "审判自己比审判别人要难得多。如果你能正确地审判自己，你就是一个真正有智慧的人。",
-      fr: "Il est bien plus difficile de se juger soi-même que de juger autrui.",
-      tag: "⚖️ 自省与智慧"
-    }},
-    {{
-      zh: "即使在人群中，人也一样会感到孤单。用心去寻找，才能找到真正的陪伴。",
-      fr: "On est un peu seul dans le désert... On est seul aussi chez les hommes.",
-      tag: "🌌 星际旅途"
-    }}
+    {{ zh: "真正重要的东西，用眼睛是看不见的，只有用心才能看清。", fr: "L'essentiel est invisible pour les yeux.", tag: "🦊 狐狸的秘密" }},
+    {{ zh: "如果你说你在下午四点来，从三点开始，我就开始感觉很快乐。", fr: "Si tu viens à quatre heures de l'après-midi, dès trois heures je commencerai d'être heureux.", tag: "🦊 期待的幸福" }},
+    {{ zh: "你在你的玫瑰花身上耗费的时间，使得你的玫瑰花变得如此重要。", fr: "C'est le temps que tu as perdu pour ta rose qui fait ta rose si importante.", tag: "🌹 爱的驯养" }},
+    {{ zh: "星星发亮，是为了让每一个人有一天都能找到属于自己的星星。", fr: "Les étoiles sont éclairées pour que chacun puisse un jour retrouver la sienne.", tag: "✨ 漫天繁星" }},
+    {{ zh: "所有的大人都曾经是小孩，虽然，只有少数的人记得。", fr: "Toutes les grandes personnes ont d'abord été des enfants.", tag: "👑 永恒的童心" }},
+    {{ zh: "天上的星星有亿万颗，唯独只有一颗星上开着我的花，只要仰望星空，就会感到幸福。", fr: "Si quelqu'un aime une fleur unique, cela suffit pour qu'il soit heureux.", tag: "🌟 独一无二" }},
+    {{ zh: "当你驯养了我，我们就会彼此需要。对我来说，你就是世界上唯一的。", fr: "Tu seras pour moi unique au monde. Je serai pour toi unique au monde.", tag: "🦊 羁绊与陪伴" }},
+    {{ zh: "一个人只有在感到悲伤的时候，才会喜欢看日落... ‘有一天，我看了四十四次日落。’", fr: "Un jour, j'ai vu le soleil se coucher quarante-quatre fois...", tag: "🌅 B612的黄昏" }},
+    {{ zh: "沙漠之所以美丽，是因为在某个角落，藏着一口清泉。", fr: "Ce qui embellit le désert, c'est qu'il cache un puits quelque part.", tag: "💧 心灵的甘泉" }},
+    {{ zh: "我就在其中的一颗星星上微笑着。当你夜晚仰望星空时，就好像所有的星星都在对你微笑。", fr: "Alors ce sera pour toi comme si riaient toutes les étoiles.", tag: "🌠 会笑的星星" }},
+    {{ zh: "审判自己比审判别人要难得多。如果你能正确地审判自己，你就是一个真正有智慧的人。", fr: "Il est bien plus difficile de se juger soi-même que de juger autrui.", tag: "⚖️ 自省与智慧" }},
+    {{ zh: "即使在人群中，人也一样会感到孤单。用心去寻找，才能找到真正的陪伴。", fr: "On est un peu seul dans le désert... On est seul aussi chez les hommes.", tag: "🌌 星际旅途" }}
   ];
 
-  function getActivePet() {{
-    return localStorage.getItem('__agy_active_pet_character__') || 'nezuko';
-  }}
-  function setActivePet(name) {{
-    localStorage.setItem('__agy_active_pet_character__', name);
-  }}
+  function getActivePet() {{ return localStorage.getItem('__agy_active_pet_character__') || 'nezuko'; }}
+  function setActivePet(name) {{ localStorage.setItem('__agy_active_pet_character__', name); }}
 
   // ==========================================
-  // 四、Antigravity 软件界面鬼灭和风全局主题
-  // ==========================================
-  const ideThemeStyle = document.createElement('style');
-  ideThemeStyle.id = 'agy-demon-slayer-ide-theme';
-  ideThemeStyle.textContent = `
-    .part.activitybar, #workbench\\.parts\\.activitybar, .activitybar {{
-      background: linear-gradient(180deg, #1f130e 0%, #150c09 100%) !important;
-      border-right: 2px solid #c59b27 !important; position: relative !important;
-    }}
-    .part.activitybar::before, #workbench\\.parts\\.activitybar::before, .activitybar::before {{
-      content: '' !important; position: absolute !important; top: 0 !important; left: 0 !important; bottom: 0 !important;
-      width: 5px !important; background: repeating-linear-gradient(45deg, #2e7d32 0, #2e7d32 6px, #111 6px, #111 12px) !important;
-      z-index: 10 !important;
-    }}
-    .activitybar .action-item.checked .action-label, .activitybar .action-item.active .action-label {{
-      color: #ffd54f !important; filter: drop-shadow(0 0 6px rgba(255, 213, 79, 0.6)) !important;
-    }}
-    .part.sidebar, #workbench\\.parts\\.sidebar, .sidebar {{
-      background: linear-gradient(135deg, rgba(28, 17, 13, 0.98) 0%, rgba(18, 10, 8, 0.99) 100%) !important;
-      border-right: 1.5px solid rgba(197, 155, 39, 0.4) !important;
-    }}
-    .sidebar .title-label h2, .sidebar .pane-header .title {{ color: #ffd54f !important; font-weight: 700 !important; }}
-    .part.statusbar, #workbench\\.parts\\.statusbar, .statusbar {{
-      background: repeating-linear-gradient(45deg, #1b3820 0, #1b3820 8px, #111a13 8px, #111a13 16px) !important;
-      border-top: 1.5px solid #c59b27 !important; color: #fff9c4 !important;
-    }}
-    .statusbar .statusbar-item a, .statusbar .statusbar-item {{ color: #fff9c4 !important; }}
-    .part.titlebar, #workbench\\.parts\\.titlebar, .titlebar {{
-      background: linear-gradient(90deg, #2b1711 0%, #1a0f0a 100%) !important; border-bottom: 1.5px solid #c59b27 !important;
-    }}
-    .titlebar .window-title {{ color: #ffd54f !important; font-weight: 600 !important; }}
-    .tab.active {{
-      background: linear-gradient(180deg, rgba(46, 26, 20, 0.9) 0%, #1f120d 100%) !important;
-      border-top: 2.5px solid #f48fb1 !important; color: #fff !important;
-    }}
-    .monaco-scrollable-element .scrollbar .slider {{
-      background: rgba(197, 155, 39, 0.45) !important; border-radius: 4px !important;
-    }}
-  `;
-
-  function isIdeThemeEnabled() {{
-    const val = localStorage.getItem('__agy_demon_slayer_ide_theme__');
-    return val === null || val === 'true';
-  }}
-  function setIdeTheme(enabled) {{
-    localStorage.setItem('__agy_demon_slayer_ide_theme__', enabled ? 'true' : 'false');
-    if (enabled) {{
-      if (!document.getElementById('agy-demon-slayer-ide-theme')) document.head.appendChild(ideThemeStyle);
-    }} else {{
-      const el = document.getElementById('agy-demon-slayer-ide-theme');
-      if (el) el.remove();
-    }}
-  }}
-  if (isIdeThemeEnabled()) {{
-    document.head.appendChild(ideThemeStyle);
-  }}
-
-  // ==========================================
-  // 五、模型配额与四维立体同步引擎
+  // 四、模型配额与同步体系
   // ==========================================
   const defaultQuotaState = {{
     geminiWeeklyPct: 91,
@@ -341,11 +682,8 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     gemini5hReset: "46 分钟后重置",
     claudeWeeklyPct: 100,
     claudeWeeklyReset: "7 天后重置",
-    claude5hPct: 100,
-    claude5hReset: "5 小时后重置",
     lastSynced: "刚刚"
   }};
-
   function loadUserQuota() {{
     try {{
       const saved = localStorage.getItem('__nezuko_model_quota_v2__');
@@ -353,357 +691,18 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     }} catch (_) {{}}
     return Object.assign({{}}, defaultQuotaState);
   }}
-  function saveUserQuota(state) {{
-    try {{
-      localStorage.setItem('__nezuko_model_quota_v2__', JSON.stringify(state));
-    }} catch (_) {{}}
-  }}
   let currentQuota = loadUserQuota();
 
-  // (5.1) 网络拦截器：抓取真实配额响应
-  function initNetworkQuotaInterceptor() {{
-    try {{
-      const _origFetch = window.fetch;
-      if (_origFetch && !_origFetch.__agyIntercepted) {{
-        window.fetch = async function(...args) {{
-          const response = await _origFetch.apply(this, args);
-          try {{
-            const url = (args[0] && typeof args[0] === 'string') ? args[0] : (args[0] && args[0].url ? args[0].url : '');
-            if (url.includes('quota') || url.includes('limit') || url.includes('model') || url.includes('user') || url.includes('account')) {{
-              const clone = response.clone();
-              clone.json().then(data => parseQuotaFromPayload(data)).catch(() => {{}});
-            }}
-          }} catch (_) {{}}
-          return response;
-        }};
-        window.fetch.__agyIntercepted = true;
-      }}
-    }} catch (_) {{}}
-  }}
-  initNetworkQuotaInterceptor();
-
-  function parseQuotaFromPayload(data) {{
-    if (!data || typeof data !== 'object') return;
-    let updated = false;
-    function deepScan(obj) {{
-      if (!obj || typeof obj !== 'object') return;
-      for (const [k, v] of Object.entries(obj)) {{
-        const kl = k.toLowerCase();
-        if (typeof v === 'number') {{
-          if (kl.includes('gemini') && kl.includes('week')) {{
-            currentQuota.geminiWeeklyPct = Math.round(v > 1 ? v : v * 100);
-            updated = true;
-          }} else if (kl.includes('gemini') && (kl.includes('5h') || kl.includes('hour'))) {{
-            currentQuota.gemini5hPct = Math.round(v > 1 ? v : v * 100);
-            updated = true;
-          }} else if (kl.includes('claude') && kl.includes('week')) {{
-            currentQuota.claudeWeeklyPct = Math.round(v > 1 ? v : v * 100);
-            updated = true;
-          }} else if (kl.includes('claude') && (kl.includes('5h') || kl.includes('hour'))) {{
-            currentQuota.claude5hPct = Math.round(v > 1 ? v : v * 100);
-            updated = true;
-          }}
-        }} else if (typeof v === 'object') {{
-          deepScan(v);
-        }}
-      }}
-    }}
-    deepScan(data);
-    if (updated) {{
-      currentQuota.lastSynced = new Date().toLocaleTimeString('zh-CN', {{ hour12: false }});
-      saveUserQuota(currentQuota);
-      updateQuotaDisplay();
-      checkQuotaAlert();
-    }}
-  }}
-
-  // (5.2) 泛化 DOM 深度嗅探器
-  function sniffNativeQuotaFromDOM() {{
-    let updated = false;
-    try {{
-      const textNodes = [];
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-      let node;
-      while (node = walker.nextNode()) {{
-        const txt = node.nodeValue.trim();
-        if (!txt) continue;
-        if (
-          txt.includes('每周剩余') || txt.includes('Weekly limit') || txt.includes('Weekly request') ||
-          txt.includes('5 小时') || txt.includes('5小时') || txt.includes('5-hour') || txt.includes('5h limit') ||
-          txt.includes('剩余可用配额') || txt.includes('Remaining quota')
-        ) {{
-          textNodes.push(node);
-        }}
-      }}
-
-      textNodes.forEach(tn => {{
-        const container = tn.parentElement ? (tn.parentElement.closest('.quota-section, .monaco-list-row, div') || tn.parentElement) : null;
-        if (!container) return;
-        const text = container.textContent || '';
-
-        const mGW = text.match(/(?:每周|Weekly)[^\d%]*?(\d{1,3})%/i);
-        if (mGW) {{
-          const val = parseInt(mGW[1], 10);
-          if (val >= 0 && val <= 100) {{ currentQuota.geminiWeeklyPct = val; updated = true; }}
-        }}
-        const mG5 = text.match(/(?:5\s*(?:小时|hour|h))[^\d%]*?(\d{1,3})%/i);
-        if (mG5) {{
-          const val = parseInt(mG5[1], 10);
-          if (val >= 0 && val <= 100) {{ currentQuota.gemini5hPct = val; updated = true; }}
-        }}
-
-        if (text.toLowerCase().includes('claude') || text.toLowerCase().includes('gpt')) {{
-          const mCW = text.match(/(?:每周|Weekly)[^\d%]*?(\d{1,3})%/i);
-          if (mCW) {{ currentQuota.claudeWeeklyPct = parseInt(mCW[1], 10); updated = true; }}
-          const mC5 = text.match(/(?:5\s*(?:小时|hour|h))[^\d%]*?(\d{1,3})%/i);
-          if (mC5) {{ currentQuota.claude5hPct = parseInt(mC5[1], 10); updated = true; }}
-        }}
-
-        const mResetW = text.match(/(\d+\s*天.*?重置|\d+\s*days?\s*remaining)/i);
-        if (mResetW) {{ currentQuota.geminiWeeklyReset = mResetW[1].trim(); updated = true; }}
-        const mReset5 = text.match(/(\d+\s*分钟.*?重置|\d+\s*minutes?\s*remaining)/i);
-        if (mReset5) {{ currentQuota.gemini5hReset = mReset5[1].trim(); updated = true; }}
-      }});
-
-      if (updated) {{
-        currentQuota.lastSynced = new Date().toLocaleTimeString('zh-CN', {{ hour12: false }});
-        saveUserQuota(currentQuota);
-        updateQuotaDisplay();
-        checkQuotaAlert();
-      }}
-    }} catch (_) {{}}
-    return updated;
-  }}
-  setInterval(sniffNativeQuotaFromDOM, 5000);
-
-  // 额度告急提醒状态
-  let lastQuotaAlertKey = '';
-  let lastQuotaAlertTime = 0;
-  let quotaAlertEnabled = localStorage.getItem('__agy_quota_alert_enabled__') !== 'false';
-
-  function checkQuotaAlert(force = false) {{
-    if (!quotaAlertEnabled && !force) return false;
-
-    const alertItems = [];
-    if (currentQuota.geminiWeeklyPct <= 10) {{
-      alertItems.push({{ name: 'Gemini 模型', period: '每周配额', pct: currentQuota.geminiWeeklyPct, reset: currentQuota.geminiWeeklyReset }});
-    }}
-    if (currentQuota.gemini5hPct <= 10) {{
-      alertItems.push({{ name: 'Gemini 模型', period: '5小时配额', pct: currentQuota.gemini5hPct, reset: currentQuota.gemini5hReset }});
-    }}
-    if (currentQuota.claudeWeeklyPct <= 10) {{
-      alertItems.push({{ name: 'Claude 模型', period: '每周配额', pct: currentQuota.claudeWeeklyPct, reset: currentQuota.claudeWeeklyReset }});
-    }}
-    if (currentQuota.claude5hPct <= 10) {{
-      alertItems.push({{ name: 'Claude 模型', period: '5小时配额', pct: currentQuota.claude5hPct, reset: currentQuota.claude5hReset }});
-    }}
-
-    const alertTag = document.getElementById('quota-alert-status-tag');
-    if (alertTag) {{
-      if (alertItems.length > 0) {{
-        alertTag.textContent = '🚨 告急 (低于10%)';
-        alertTag.style.color = '#ef4444';
-      }} else {{
-        alertTag.textContent = '● 配额充裕';
-        alertTag.style.color = '#81c784';
-      }}
-    }}
-
-    if (alertItems.length === 0) return false;
-
-    const now = Date.now();
-    const alertKey = alertItems.map(it => `${{it.name}}_${{it.period}}_${{it.pct}}`).join('|');
-    if (!force && lastQuotaAlertKey === alertKey && (now - lastQuotaAlertTime < 15 * 60 * 1000)) {{
-      return false;
-    }}
-    lastQuotaAlertKey = alertKey;
-    lastQuotaAlertTime = now;
-
-    triggerQuotaAlertUI(alertItems[0]);
-    return true;
-  }}
-
-  function triggerQuotaAlertUI(item) {{
-    petAudio.playAlertSound();
-
-    if (activePet === 'nezuko') {{
-      triggerCurrentPetAction('burst', 6500);
-      showSmartBubble({{
-        type: 'alert',
-        tag: '🚨 鬼杀队紧急配额告急 · 低于10%',
-        zh: `🔥 唔嗯嗯！哥哥/主人快注意！你的【${{item.name}} · ${{item.period}}】剩余可用额度仅剩 <b style="color:#ef4444;font-size:14px;">${{item.pct}}%</b> 啦！鬼杀队物资告急，请合理规划提问节奏，注意体力分配哦~（${{item.reset}}）`,
-        sub: "Conseil de combat : Économisez vos requêtes restantes.",
-        actions: [
-          {{ text: '🎋 查看看板', cls: 'bubble-act-primary', onClick: () => openMainCard() }},
-          {{ text: '知道了', cls: 'bubble-act-subtle', onClick: () => hideSmartBubble() }}
-        ]
-      }}, 12000);
-    }} else {{
-      triggerCurrentPetAction('rose', 6500);
-      showSmartBubble({{
-        type: 'alert',
-        tag: '🚨 B612星球能源告急 · 低于10%',
-        zh: `🌹 糟糕了！你的【${{item.name}} · ${{item.period}}】额度只剩下 <b style="color:#ef4444;font-size:14px;">${{item.pct}}%</b> 了……就像小星球的水井快要见底一样。请小心节省使用，别让娇嫩的玫瑰花渴着了哦。（${{item.reset}}）`,
-        sub: "L'eau est épuisée sur l'astéroïde B612. Protégez votre rose.",
-        actions: [
-          {{ text: '⭐ 查看看板', cls: 'bubble-act-primary', onClick: () => openMainCard() }},
-          {{ text: '知道了', cls: 'bubble-act-subtle', onClick: () => hideSmartBubble() }}
-        ]
-      }}, 12000);
-    }}
-  }}
-
   // ==========================================
-  // 六、工作时间过长久坐疲劳关怀引擎
-  // ==========================================
-  let workStartTime = Date.now();
-  let lastActiveTime = Date.now();
-  let continuousWorkMinutes = 0;
-  let fatigueThresholdMinutes = parseInt(localStorage.getItem('__agy_fatigue_threshold__') || '45', 10);
-  let fatigueAlertEnabled = localStorage.getItem('__agy_fatigue_alert_enabled__') !== 'false';
-  let triggeredStages = {{ 30: false, 45: false, 60: false, 90: false, 120: false }};
-
-  function onUserActive() {{
-    const now = Date.now();
-    if (now - lastActiveTime > 10 * 60 * 1000) {{
-      workStartTime = now;
-      continuousWorkMinutes = 0;
-      triggeredStages = {{ 30: false, 45: false, 60: false, 90: false, 120: false }};
-    }}
-    lastActiveTime = now;
-  }}
-
-  window.addEventListener('mousemove', onUserActive, {{ passive: true }});
-  window.addEventListener('keydown', onUserActive, {{ passive: true }});
-  window.addEventListener('mousedown', onUserActive, {{ passive: true }});
-  window.addEventListener('wheel', onUserActive, {{ passive: true }});
-
-  function updateWorkTimeDisplay() {{
-    const labelEl = document.getElementById('work-timer-label');
-    if (!labelEl) return;
-    if (continuousWorkMinutes < 60) {{
-      labelEl.textContent = `${{continuousWorkMinutes}} 分钟`;
-    }} else {{
-      const h = Math.floor(continuousWorkMinutes / 60);
-      const m = continuousWorkMinutes % 60;
-      labelEl.textContent = `${{h}} 小时 ${{m}} 分钟`;
-    }}
-  }}
-
-  function triggerFatigueAlertUI(minutes) {{
-    petAudio.playCareSound();
-
-    if (activePet === 'nezuko') {{
-      triggerCurrentPetAction(minutes >= 60 ? 'sleep' : 'box', 7000);
-      let zhMsg = '';
-      if (minutes <= 45) {{
-        zhMsg = `🍵 唔嗯嗯~ 主人你已经专注编码战斗 <b style="color:#6ee7b7;font-size:13px;">${{minutes}} 分钟</b> 啦！祢豆子给你倒了一杯大正热绿茶，快眨眨眼睛、活动活动手腕休息 2 分钟吧~`;
-      }} else if (minutes <= 60) {{
-        zhMsg = `📦 呼啊~（揉眼睛伸懒腰）你已经连续战斗整整 <b style="color:#6ee7b7;font-size:13px;">1 个小时</b> 啦！身体是斩鬼的本钱，快站起来走动走动，不然祢豆子要把你抱进木箱里强制休眠啦！`;
-      }} else {{
-        zhMsg = `😤 气鼓鼓！连续工作已经超过 <b style="color:#f87171;font-size:13px;">${{minutes}} 分钟</b> 超负荷啦！炭治郎哥哥说过身体是最珍贵的武器，现在立刻、马上离开屏幕走走，喝口水再来！`;
-      }}
-
-      showSmartBubble({{
-        type: 'fatigue',
-        tag: `🍵 祢豆子的久坐健康关怀 · 连续工作 ${{minutes}} 分钟`,
-        zh: zhMsg,
-        sub: "Un repos réparateur décuple la puissance du Souffle.",
-        actions: [
-          {{ text: '🙆 好的，休息5分钟', cls: 'bubble-act-green', onClick: () => resetWorkTimer() }},
-          {{ text: '⏰ 稍后10分钟提醒', cls: 'bubble-act-subtle', onClick: () => delayFatigueAlert(10) }}
-        ]
-      }}, 14000);
-    }} else {{
-      triggerCurrentPetAction(minutes >= 60 ? 'sunset' : 'rose', 7000);
-      let zhMsg = '';
-      if (minutes <= 45) {{
-        zhMsg = `✨ 在这颗繁忙的小星球上，你已经连续工作了 <b style="color:#6ee7b7;font-size:13px;">${{minutes}} 分钟</b>。停下来看一眼窗外吧，去喝一杯甘甜的清水，水对疲惫的眼睛也是有益的。`;
-      }} else if (minutes <= 60) {{
-        zhMsg = `🌅 你已经连续工作整整 <b style="color:#6ee7b7;font-size:13px;">1 小时</b> 了。那个每天不停点灯熄灯的点灯人，就是因为没有时间休息才那么忧伤的。站起来伸个懒腰，陪我去看一场第44次日落吧。`;
-      }} else {{
-        zhMsg = `🦊（小狐狸悄悄拉了拉你的衣角）即使是最重要的事务，过度劳累的眼睛也会看不清的。请离开屏幕 5 分钟，让大脑去星球的草地上散步一会儿。`;
-      }}
-
-      showSmartBubble({{
-        type: 'fatigue',
-        tag: `👑 小王子的久坐关怀 · 连续工作 ${{minutes}} 分钟`,
-        zh: zhMsg,
-        sub: "Prenez le temps d'apprivoiser le repos. Regardez le coucher de soleil.",
-        actions: [
-          {{ text: '🙆 去看日落休息', cls: 'bubble-act-green', onClick: () => resetWorkTimer() }},
-          {{ text: '⏰ 稍后10分钟提醒', cls: 'bubble-act-subtle', onClick: () => delayFatigueAlert(10) }}
-        ]
-      }}, 14000);
-    }}
-  }}
-
-  function resetWorkTimer() {{
-    workStartTime = Date.now();
-    lastActiveTime = Date.now();
-    continuousWorkMinutes = 0;
-    triggeredStages = {{ 30: false, 45: false, 60: false, 90: false, 120: false }};
-    updateWorkTimeDisplay();
-    hideSmartBubble();
-    if (activePet === 'nezuko') triggerCurrentPetAction('sleep', 4000);
-  }}
-
-  function delayFatigueAlert(minutes) {{
-    hideSmartBubble();
-    setTimeout(() => {{
-      triggerFatigueAlertUI(continuousWorkMinutes);
-    }}, minutes * 60 * 1000);
-  }}
-
-  setInterval(() => {{
-    const now = Date.now();
-    if (now - lastActiveTime <= 10 * 60 * 1000) {{
-      continuousWorkMinutes = Math.floor((now - workStartTime) / 60000);
-    }} else {{
-      continuousWorkMinutes = 0;
-    }}
-    updateWorkTimeDisplay();
-
-    if (!fatigueAlertEnabled) return;
-    const stages = [120, 90, 60, 45, 30];
-    for (const stage of stages) {{
-      if (continuousWorkMinutes >= stage && stage >= fatigueThresholdMinutes && !triggeredStages[stage]) {{
-        triggeredStages[stage] = true;
-        triggerFatigueAlertUI(stage);
-        break;
-      }}
-    }}
-  }}, 10000);
-
-  // 节拍晃脑
-  let beatTimer = null;
-  function triggerMusicBeat() {{
-    const headEl = document.getElementById('bone-head');
-    const princeEl = document.getElementById('prince-avatar-body');
-    if (headEl) {{
-      headEl.classList.add('head-music-bob');
-      if (beatTimer) clearTimeout(beatTimer);
-      beatTimer = setTimeout(() => headEl.classList.remove('head-music-bob'), 400);
-    }}
-    if (princeEl) {{
-      princeEl.classList.add('prince-music-bob');
-      if (beatTimer) clearTimeout(beatTimer);
-      beatTimer = setTimeout(() => princeEl.classList.remove('prince-music-bob'), 400);
-    }}
-  }}
-
-  // ==========================================
-  // 七、CSS 样式库
+  // 五、动画级别 CSS 样式库 (含 8 帧分镜动画 + 真实形变)
   // ==========================================
   const styleEl = document.createElement('style');
-  styleEl.id = 'dual-pet-advanced-styles';
+  styleEl.id = 'dual-pet-animation-grade-styles';
   styleEl.textContent = `
     :root {{
       --ds-pink: #f48fb1;
       --ds-dark-pink: #c2185b;
       --ds-crimson: #b71c1c;
-      --ds-tanjiro-green: #2e7d32;
-      --ds-wood-dark: #231612;
       --ds-brass-gold: #c59b27;
       --ds-gold-glow: #ffd54f;
       --lp-star-gold: #facc15;
@@ -716,7 +715,8 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       bottom: 24px;
       z-index: 999999;
       user-select: none;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      transition: right 0.75s cubic-bezier(0.25, 1, 0.5, 1), bottom 0.3s ease;
     }}
 
     .nezuko-pet-stage {{
@@ -724,19 +724,22 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       display: flex;
       flex-direction: column;
       align-items: center;
+      transform-origin: bottom center;
+      transition: transform 0.22s ease-out;
     }}
 
+    /* 真实随步伐与跳跃缩放的地面阴影 */
     .nezuko-pet-ground-shadow {{
       position: absolute;
       bottom: -6px;
       left: 50%;
       transform: translateX(-50%);
-      width: 105px;
-      height: 15px;
-      background: radial-gradient(ellipse at center, rgba(10, 5, 8, 0.45) 0%, rgba(10, 5, 8, 0.15) 50%, transparent 75%);
+      width: 100px;
+      height: 14px;
+      background: radial-gradient(ellipse at center, rgba(10, 5, 8, 0.55) 0%, rgba(10, 5, 8, 0.15) 55%, transparent 75%);
       border-radius: 50%;
       pointer-events: none;
-      transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transition: transform 0.15s ease, opacity 0.15s ease;
     }}
 
     .nezuko-pet-rig, .prince-pet-rig {{
@@ -744,13 +747,11 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       width: 130px;
       height: 215px;
       cursor: grab;
-      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
-      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+      filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.25));
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
       transform-origin: bottom center;
     }}
-    .nezuko-pet-rig:active, .prince-pet-rig:active {{
-      cursor: grabbing;
-    }}
+    .nezuko-pet-rig:active, .prince-pet-rig:active {{ cursor: grabbing; }}
 
     /* 骨骼图层 */
     .bone-layer {{
@@ -758,152 +759,398 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       background-size: contain;
       background-repeat: no-repeat;
       pointer-events: none;
-      transition: transform 0.15s ease-out;
     }}
     #bone-head {{
       top: 0; left: 0; width: 130px; height: 121px;
       background-image: url('${{NEZUKO_HEAD}}');
       transform-origin: 50% 90%; z-index: 10;
+      transition: transform 0.12s ease-out;
     }}
     #bone-torso {{
       top: 108px; left: 34px; width: 62px; height: 77px;
       background-image: url('${{NEZUKO_TORSO}}');
-      transform-origin: 50% 100%; z-index: 6;
+      transform-origin: 50% 95%; z-index: 6;
+      transition: transform 0.12s ease-out;
     }}
     #bone-arm-l {{
       top: 108px; left: 0; width: 50px; height: 71px;
       background-image: url('${{NEZUKO_ARM_L}}');
       transform-origin: 75% 20%; z-index: 8;
+      transition: transform 0.12s ease-out;
     }}
     #bone-arm-r {{
       top: 108px; left: 81px; width: 49px; height: 71px;
       background-image: url('${{NEZUKO_ARM_R}}');
       transform-origin: 25% 20%; z-index: 8;
+      transition: transform 0.12s ease-out;
     }}
     #bone-leg-l {{
       top: 178px; left: 40px; width: 28px; height: 37px;
       background-image: url('${{NEZUKO_LEG_L}}');
       transform-origin: 50% 15%; z-index: 4;
+      transition: transform 0.12s ease-out;
     }}
     #bone-leg-r {{
       top: 178px; left: 62px; width: 28px; height: 37px;
       background-image: url('${{NEZUKO_LEG_R}}');
       transform-origin: 50% 15%; z-index: 4;
+      transition: transform 0.12s ease-out;
     }}
+
+    /* 动态眼皮与自然眨眼 */
+    .nezuko-eyelid-overlay {{
+      position: absolute;
+      top: 48px; left: 38px; width: 54px; height: 24px;
+      pointer-events: none; z-index: 12; opacity: 0;
+      background: radial-gradient(ellipse at center, #ffd1c1 0%, #ffc0b0 70%, transparent 100%);
+      border-radius: 50%; transform: scaleY(0);
+      transition: transform 0.08s ease-in, opacity 0.08s ease-in;
+    }}
+    .is-blinking .nezuko-eyelid-overlay {{
+      opacity: 1 !important; transform: scaleY(1) !important;
+    }}
+
+    /* 情绪浮动气泡 */
+    .floating-mood-bubble {{
+      position: absolute; top: -14px; right: 10px; font-size: 16px;
+      pointer-events: none; opacity: 0; transform: translateY(0) scale(0.6);
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 40; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4));
+    }}
+    .floating-mood-bubble.active {{
+      opacity: 1; transform: translateY(-18px) scale(1.15);
+    }}
+
+    /* ========================================================= */
+    /* 核心 1：动画级有机呼吸 (Organic Breathing) */
+    /* ========================================================= */
+    @keyframes organicBreathing {{
+      0%, 100% {{
+        transform: translateY(0) scale(1, 1);
+      }}
+      50% {{
+        transform: translateY(3.5px) scale(1.025, 0.975);
+      }}
+    }}
+    @keyframes headGentleBob {{
+      0%, 100% {{ transform: rotate(-2deg) translateY(0); }}
+      50% {{ transform: rotate(3deg) translateY(1.5px); }}
+    }}
+    @keyframes armOrganicIdleL {{
+      0%, 100% {{ transform: rotate(-5deg); }}
+      50% {{ transform: rotate(7deg); }}
+    }}
+    @keyframes armOrganicIdleR {{
+      0%, 100% {{ transform: rotate(5deg); }}
+      50% {{ transform: rotate(-7deg); }}
+    }}
+
+    .nezuko-pet-rig {{ animation: organicBreathing 3.6s infinite ease-in-out; }}
+    .nezuko-pet-rig #bone-head {{ animation: headGentleBob 3.6s infinite ease-in-out; }}
+    .nezuko-pet-rig #bone-arm-l {{ animation: armOrganicIdleL 3.6s infinite ease-in-out; }}
+    .nezuko-pet-rig #bone-arm-r {{ animation: armOrganicIdleR 3.6s infinite ease-in-out; }}
+
+    /* ========================================================= */
+    /* 核心 2：迪士尼十二法则驱动的动画级步态行走 (Walk Cycle) */
+    /* ========================================================= */
+    .is-walking {{
+      animation: animeWalkRig 0.5s infinite ease-in-out alternate !important;
+    }}
+    @keyframes animeWalkRig {{
+      0% {{
+        transform: translateY(0) rotate(2deg) scale(1.03, 0.97); /* 落地接触缓冲 */
+      }}
+      50% {{
+        transform: translateY(-6px) rotate(-1deg) scale(0.97, 1.03); /* 腾空最高点 */
+      }}
+      100% {{
+        transform: translateY(0) rotate(-2deg) scale(1.03, 0.97);
+      }}
+    }}
+
+    .is-walking #bone-leg-l {{
+      animation: animeLegCycleL 0.5s infinite alternate ease-in-out !important;
+    }}
+    .is-walking #bone-leg-r {{
+      animation: animeLegCycleR 0.5s infinite alternate ease-in-out !important;
+    }}
+    @keyframes animeLegCycleL {{
+      0% {{ transform: rotate(-28deg) translateY(-2px); }}
+      50% {{ transform: rotate(6deg) translateY(-5px); }}
+      100% {{ transform: rotate(32deg) translateY(0); }}
+    }}
+    @keyframes animeLegCycleR {{
+      0% {{ transform: rotate(32deg) translateY(0); }}
+      50% {{ transform: rotate(6deg) translateY(-5px); }}
+      100% {{ transform: rotate(-28deg) translateY(-2px); }}
+    }}
+
+    .is-walking #bone-arm-l {{ animation: animeArmCycleL 0.5s infinite alternate ease-in-out !important; }}
+    .is-walking #bone-arm-r {{ animation: animeArmCycleR 0.5s infinite alternate ease-in-out !important; }}
+    @keyframes animeArmCycleL {{ 0% {{ transform: rotate(26deg); }} 100% {{ transform: rotate(-26deg); }} }}
+    @keyframes animeArmCycleR {{ 0% {{ transform: rotate(-26deg); }} 100% {{ transform: rotate(26deg); }} }}
+
+    /* ========================================================= */
+    /* 核心 3：风火轮狂奔冲刺与急刹车滑行 (Run Dash & Skid Brake) */
+    /* ========================================================= */
+    .is-running {{
+      animation: animeDashRig 0.18s infinite alternate ease-in-out !important;
+    }}
+    @keyframes animeDashRig {{
+      0% {{
+        transform: translateY(1px) skewX(-18deg) scale(1.06, 0.94);
+      }}
+      100% {{
+        transform: translateY(-8px) skewX(-14deg) scale(0.95, 1.05);
+      }}
+    }}
+    .is-running #bone-leg-l {{ animation: legWheelL 0.18s infinite alternate !important; }}
+    .is-running #bone-leg-r {{ animation: legWheelR 0.18s infinite alternate !important; }}
+    @keyframes legWheelL {{ 0% {{ transform: rotate(-58deg) translateY(-6px); }} 100% {{ transform: rotate(58deg); }} }}
+    @keyframes legWheelR {{ 0% {{ transform: rotate(58deg); }} 100% {{ transform: rotate(-58deg) translateY(-6px); }} }}
+
+    .is-running #bone-arm-l {{ animation: armWheelL 0.18s infinite alternate !important; }}
+    .is-running #bone-arm-r {{ animation: armWheelR 0.18s infinite alternate !important; }}
+    @keyframes armWheelL {{ 0% {{ transform: rotate(65deg); }} 100% {{ transform: rotate(-65deg); }} }}
+    @keyframes armWheelR {{ 0% {{ transform: rotate(-65deg); }} 100% {{ transform: rotate(65deg); }} }}
+
+    /* 动漫级急刹车动作 (Skid Brake) */
+    .action-skid {{
+      animation: animeSkidBrake 0.4s ease-out forwards !important;
+    }}
+    @keyframes animeSkidBrake {{
+      0% {{
+        transform: skewX(22deg) translateY(4px) scale(1.12, 0.88);
+      }}
+      50% {{
+        transform: skewX(-8deg) translateY(-2px) scale(0.96, 1.04);
+      }}
+      100% {{
+        transform: skewX(0deg) translateY(0) scale(1, 1);
+      }}
+    }}
+
+    /* 冲刺连续扬尘烟云粒子 */
+    .dash-dust-container {{
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      pointer-events: none; width: 120px; height: 35px; z-index: 2;
+    }}
+    .dust-puff {{
+      position: absolute; bottom: 0; width: 18px; height: 18px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(245, 230, 215, 0.9) 0%, rgba(210, 190, 170, 0.6) 60%, transparent 80%);
+      opacity: 0;
+      animation: dustAnimeRise 0.5s ease-out forwards;
+    }}
+    @keyframes dustAnimeRise {{
+      0% {{ transform: translate(0, 0) scale(0.4); opacity: 0.9; }}
+      50% {{ opacity: 0.8; }}
+      100% {{ transform: translate(var(--dust-x, -30px), -24px) scale(1.8); opacity: 0; }}
+    }}
+
+    /* ========================================================= */
+    /* 核心 4：大正雾云杉木箱 8 帧分镜 360° 转木箱神技 */
+    /* ========================================================= */
+    .box-action-container {{
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 160px;
+      height: 220px;
+      z-index: 25;
+      display: none;
+      pointer-events: none;
+    }}
+    .show-box-action {{
+      display: block !important;
+      pointer-events: auto !important;
+    }}
+
+    /* 8 帧木箱分镜精灵视窗 */
+    .box-sprite-viewport {{
+      position: relative;
+      width: 160px;
+      height: 220px;
+      overflow: hidden;
+      transform-origin: bottom center;
+    }}
+
+    /* 精灵图平铺层 (1280px x 220px) */
+    .box-sprite-strip {{
+      position: absolute;
+      top: 0; left: 0;
+      width: 1280px;
+      height: 220px;
+      background-image: url('${{BOX_SPIN_SHEET}}');
+      background-size: 1280px 220px;
+      background-repeat: no-repeat;
+    }}
+
+    /* 动效 A：360度高速转木箱 + 抛物线腾空 + 真实挤压拉伸 */
+    .action-box-spin .box-sprite-viewport {{
+      animation: animeBoxSpinToss 1.25s cubic-bezier(0.2, 0.8, 0.25, 1) forwards !important;
+    }}
+    .action-box-spin .box-sprite-strip {{
+      animation: playBox8Frames 0.4s steps(8) infinite !important;
+    }}
+    @keyframes playBox8Frames {{
+      from {{ transform: translateX(0); }}
+      to {{ transform: translateX(-1280px); }}
+    }}
+
+    @keyframes animeBoxSpinToss {{
+      0% {{
+        transform: translateY(0) scale(1.15, 0.85); /* 预备蓄力下沉 */
+      }}
+      25% {{
+        transform: translateY(-68px) scale(1.05, 1.05) rotate(14deg); /* 腾空冲顶高速旋转 */
+      }}
+      55% {{
+        transform: translateY(-75px) scale(1.08, 1.08) rotate(-10deg);
+      }}
+      80% {{
+        transform: translateY(-15px) scale(0.96, 1.04); /* 重力加速坠落 */
+      }}
+      90% {{
+        transform: translateY(8px) scale(1.36, 0.65); /* 落地强烈挤压形变 (Squash) */
+      }}
+      96% {{
+        transform: translateY(-5px) scale(0.92, 1.08); /* 弹性向上回弹 (Stretch) */
+      }}
+      100% {{
+        transform: translateY(0) scale(1, 1); /* 平稳落定 */
+      }}
+    }}
+
+    /* 落地冲击波光环图层 */
+    .box-impact-ring {{
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.3);
+      width: 200px;
+      height: 200px;
+      background-image: url('${{BOX_IMPACT_FX}}');
+      background-size: contain;
+      background-repeat: no-repeat;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 20;
+    }}
+    .action-box-spin .box-impact-ring {{
+      animation: shockwaveBurst 0.65s ease-out 0.88s forwards !important;
+    }}
+    @keyframes shockwaveBurst {{
+      0% {{ transform: translateX(-50%) scale(0.3); opacity: 0; }}
+      20% {{ opacity: 1; transform: translateX(-50%) scale(0.9); }}
+      100% {{ transform: translateX(-50%) scale(1.4); opacity: 0; }}
+    }}
+
+    /* 转木箱飞旋的风刃与枫叶樱花粒子 */
+    .box-spin-particles {{
+      position: absolute; inset: -40px; pointer-events: none; z-index: 30; opacity: 0;
+    }}
+    .action-box-spin .box-spin-particles {{ opacity: 1 !important; }}
+    .spin-petal {{ position: absolute; font-size: 18px; opacity: 0; }}
+    .action-box-spin .spin-petal.sp1 {{ top: 20px; left: -15px; animation: petalAnimeBurst 1s ease-out 0.15s; }}
+    .action-box-spin .spin-petal.sp2 {{ top: 10px; right: -20px; animation: petalAnimeBurst 1s ease-out 0.3s; }}
+    .action-box-spin .spin-petal.sp3 {{ bottom: 20px; left: -20px; animation: petalAnimeBurst 1s ease-out 0.45s; }}
+    .action-box-spin .spin-petal.sp4 {{ bottom: 10px; right: -15px; animation: petalAnimeBurst 1s ease-out 0.6s; }}
+    @keyframes petalAnimeBurst {{
+      0% {{ transform: translate(30px, 30px) rotate(0deg) scale(0.4); opacity: 0; }}
+      30% {{ opacity: 1; transform: translate(var(--tx, -45px), var(--ty, -35px)) rotate(180deg) scale(1.3); }}
+      100% {{ opacity: 0; transform: translate(var(--tx, -80px), var(--ty, -60px)) rotate(420deg) scale(0.8); }}
+    }}
+
+    /* 动效 B：钻木箱与探头探脑 (Peek-a-boo Box) */
+    .box-peek-container {{
+      position: absolute; inset: 0; display: none; z-index: 10;
+    }}
+    .action-box-peek .box-peek-container {{ display: block !important; }}
+    .action-box-peek .box-sprite-viewport {{ display: none !important; }}
+
+    .peek-box-body {{
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, #422518 0%, #2b160f 45%, #1c0e09 100%);
+      border: 3px solid #140b07; border-radius: 6px;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.7), 0 8px 20px rgba(0,0,0,0.6);
+      overflow: hidden;
+    }}
+    .peek-box-body::before {{
+      content: ''; position: absolute; inset: 4px;
+      background: repeating-linear-gradient(90deg, transparent 0, transparent 20px, rgba(0,0,0,0.18) 20px, rgba(0,0,0,0.18) 22px);
+      border: 1px solid rgba(197, 155, 39, 0.25); border-radius: 3px; pointer-events: none;
+    }}
+    .peek-box-interior {{
+      position: absolute; inset: 10px 14px; background: #0d0604; border-radius: 4px;
+      overflow: hidden; z-index: 4; display: flex; justify-content: center; align-items: flex-end;
+    }}
+    .peeker-chibi-img {{
+      width: 110px; height: 135px; object-fit: contain;
+      transform: translateY(12px) scale(1);
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      filter: drop-shadow(0 -4px 8px rgba(0,0,0,0.5));
+    }}
+    .peek-box-door {{
+      position: absolute; inset: 10px 12px;
+      background: linear-gradient(180deg, #4a281a 0%, #351a10 50%, #200f09 100%);
+      border: 2px solid #140b07; border-radius: 3px;
+      transform-origin: left center; transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 12; box-shadow: inset 0 0 8px rgba(0,0,0,0.6), 2px 0 6px rgba(0,0,0,0.5);
+    }}
+    .action-box-peek .peek-box-door {{ transform: rotateY(-112deg) !important; }}
+    .action-box-peek .peeker-chibi-img {{ transform: translateY(-4px) scale(1.08) !important; }}
+
+    /* 摸头动作 */
+    .action-headpat #bone-head {{ transform: translateY(9px) scale(0.95) rotate(-5deg) !important; }}
+    .action-headpat #bone-arm-l {{ transform: rotate(-28deg) !important; }}
+    .action-headpat #bone-arm-r {{ transform: rotate(28deg) !important; }}
+
+    /* 气鼓跺脚 */
+    .action-stomp #bone-leg-r {{ animation: stompLeg 0.18s 8 alternate !important; }}
+    .action-stomp #bone-head {{ animation: stompHead 0.18s 8 alternate !important; }}
+    @keyframes stompLeg {{ 0% {{ transform: translateY(0); }} 100% {{ transform: translateY(-18px) rotate(18deg); }} }}
+    @keyframes stompHead {{ 0% {{ transform: rotate(-6deg); }} 100% {{ transform: rotate(6deg) translateY(3px); }} }}
+
+    /* 血鬼术爆血 */
+    .action-burst {{
+      filter: drop-shadow(0 0 25px rgba(220, 38, 38, 0.95)) drop-shadow(0 0 12px #f43f5e) !important;
+      animation: burstShake 0.1s infinite alternate !important;
+    }}
+    @keyframes burstShake {{ 0% {{ transform: translateX(-4px) scale(1.02); }} 100% {{ transform: translateX(4px) scale(1.04); }} }}
+
+    .action-sleep #bone-head {{ transform: translateY(14px) rotate(9deg) scale(0.95) !important; }}
+    .action-sleep #bone-arm-r {{ transform: rotate(-38deg) translateY(-8px) !important; }}
 
     /* 小王子立绘样式 */
     .prince-avatar-img {{
-      width: 100%; height: 100%;
-      object-fit: contain; pointer-events: none;
+      width: 100%; height: 100%; object-fit: contain; pointer-events: none;
       filter: drop-shadow(0 6px 14px rgba(250, 204, 21, 0.25));
-      transform-origin: bottom center;
-      transition: transform 0.2s ease-out;
+      transform-origin: bottom center; transition: transform 0.2s ease-out;
     }}
-
-    /* 音乐节拍晃脑 */
     .head-music-bob {{ transform: rotate(7deg) scale(1.05) !important; }}
     .prince-music-bob {{ transform: rotate(5deg) scale(1.04) !important; }}
 
-    /* 骨骼待机动画 */
-    @keyframes boneBreathing {{
-      0%, 100% {{ transform: translateY(0); }}
-      50% {{ transform: translateY(4px); }}
-    }}
-    @keyframes headGentleTilt {{
-      0%, 100% {{ transform: rotate(-2deg); }}
-      50% {{ transform: rotate(3deg); }}
-    }}
-    @keyframes armSwayL {{
-      0%, 100% {{ transform: rotate(-4deg); }}
-      50% {{ transform: rotate(6deg); }}
-    }}
-    @keyframes armSwayR {{
-      0%, 100% {{ transform: rotate(4deg); }}
-      50% {{ transform: rotate(-6deg); }}
-    }}
-
-    .nezuko-pet-rig {{ animation: boneBreathing 3.6s infinite ease-in-out; }}
-    .nezuko-pet-rig #bone-head {{ animation: headGentleTilt 4.2s infinite ease-in-out; }}
-    .nezuko-pet-rig #bone-arm-l {{ animation: armSwayL 3.2s infinite ease-in-out; }}
-    .nezuko-pet-rig #bone-arm-r {{ animation: armSwayR 3.2s infinite ease-in-out; }}
-
-    .prince-pet-rig {{ animation: boneBreathing 3.8s infinite ease-in-out; }}
-    .prince-pet-rig .prince-avatar-img {{ animation: headGentleTilt 4.5s infinite ease-in-out; }}
-
-    /* 祢豆子 6 大动作 */
-    .action-headpat #bone-head {{ transform: translateY(8px) scale(0.96) rotate(-4deg) !important; }}
-    .action-headpat #bone-arm-l {{ transform: rotate(-25deg) !important; }}
-    .action-headpat #bone-arm-r {{ transform: rotate(25deg) !important; }}
-
-    .action-run #bone-arm-l {{ animation: armRunL 0.25s infinite alternate !important; }}
-    .action-run #bone-arm-r {{ animation: armRunR 0.25s infinite alternate !important; }}
-    .action-run #bone-leg-l {{ animation: legRunL 0.25s infinite alternate !important; }}
-    .action-run #bone-leg-r {{ animation: legRunR 0.25s infinite alternate !important; }}
-    .action-run #bone-head {{ animation: headBobRun 0.25s infinite alternate !important; }}
-    @keyframes armRunL {{ 0% {{ transform: rotate(45deg); }} 100% {{ transform: rotate(-45deg); }} }}
-    @keyframes armRunR {{ 0% {{ transform: rotate(-45deg); }} 100% {{ transform: rotate(45deg); }} }}
-    @keyframes legRunL {{ 0% {{ transform: rotate(-40deg) translateY(-4px); }} 100% {{ transform: rotate(40deg); }} }}
-    @keyframes legRunR {{ 0% {{ transform: rotate(40deg); }} 100% {{ transform: rotate(-40deg) translateY(-4px); }} }}
-    @keyframes headBobRun {{ 0% {{ transform: translateY(0); }} 100% {{ transform: translateY(-6px); }} }}
-
-    .action-box {{ transform: scale(0.48) translateY(115px) !important; }}
-    .action-stomp #bone-leg-r {{ animation: stompLeg 0.2s 8 alternate !important; }}
-    .action-stomp #bone-head {{ animation: stompHead 0.2s 8 alternate !important; }}
-    @keyframes stompLeg {{ 0% {{ transform: translateY(0); }} 100% {{ transform: translateY(-16px) rotate(15deg); }} }}
-    @keyframes stompHead {{ 0% {{ transform: rotate(-4deg); }} 100% {{ transform: rotate(5deg) translateY(2px); }} }}
-
-    .action-burst {{
-      filter: drop-shadow(0 0 25px rgba(220, 38, 38, 0.95)) drop-shadow(0 0 10px #f43f5e) !important;
-      animation: burstShake 0.12s infinite alternate !important;
-    }}
-    @keyframes burstShake {{ 0% {{ transform: translateX(-3px); }} 100% {{ transform: translateX(3px); }} }}
-
-    .action-sleep #bone-head {{ transform: translateY(12px) rotate(8deg) scale(0.96) !important; }}
-    .action-sleep #bone-arm-r {{ transform: rotate(-35deg) translateY(-8px) !important; }}
-
-    /* ========================================================= */
-    /* 小王子 5 大全新生动影视级动画引擎 (Vivid Motion Rig) */
-    /* ========================================================= */
+    /* 小王子动作层 */
     .prince-action-layer {{
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       pointer-events: none; opacity: 0; transition: opacity 0.35s ease, transform 0.35s ease;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 20;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20;
     }}
-
-    /* 动作 1：🦊 驯养小狐狸 (亲昵蹭脸 + 呼吸律动 + 浮动爱心群) */
     .action-fox #layer-action-fox {{ opacity: 1 !important; pointer-events: auto !important; }}
     .action-fox #prince-avatar-body {{ opacity: 0 !important; transform: scale(0.95); }}
     .prince-fox-img {{
       width: 100%; height: 100%; object-fit: contain;
       filter: drop-shadow(0 8px 18px rgba(249, 115, 22, 0.45));
-      animation: foxCuddle 1.8s infinite ease-in-out;
-      transform-origin: bottom center;
+      animation: foxCuddle 1.8s infinite ease-in-out; transform-origin: bottom center;
     }}
     @keyframes foxCuddle {{
       0%, 100% {{ transform: translateY(0) rotate(0deg) scale(1); }}
       30% {{ transform: translateY(-4px) rotate(-2deg) scale(1.03); }}
       70% {{ transform: translateY(-2px) rotate(2deg) scale(1.02); }}
     }}
-    .fox-hearts-cluster {{
-      position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-      pointer-events: none; width: 100px; height: 80px;
-    }}
-    .fox-heart {{
-      position: absolute; font-size: 15px; opacity: 0;
-      animation: heartFloatUp 2s infinite ease-out;
-    }}
-    .fox-heart.fh1 {{ left: 20px; animation-delay: 0.1s; }}
-    .fox-heart.fh2 {{ left: 50px; animation-delay: 0.7s; font-size: 12px; }}
-    .fox-heart.fh3 {{ left: 75px; animation-delay: 1.3s; font-size: 14px; }}
-    @keyframes heartFloatUp {{
-      0% {{ transform: translateY(20px) scale(0.6); opacity: 0; }}
-      30% {{ opacity: 1; transform: translateY(0) scale(1.1); }}
-      80% {{ opacity: 0.8; }}
-      100% {{ transform: translateY(-35px) scale(0.8); opacity: 0; }}
-    }}
 
-    /* 动作 2：🌹 呵护红玫瑰 (发光晶莹玻璃罩 + 玫瑰花瓣旋转飘落) */
     .action-rose #layer-action-rose {{ opacity: 1 !important; pointer-events: auto !important; }}
     .action-rose #prince-avatar-body {{
       transform: scale(1.04) translateY(-3px) rotate(-1deg) !important;
@@ -919,68 +1166,21 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       0% {{ transform: translateX(-50%) translateY(4px) scale(0.96); }}
       100% {{ transform: translateX(-50%) translateY(-6px) scale(1.03); }}
     }}
-    .rose-falling-petals {{
-      position: absolute; top: -10px; left: 0; right: 0; height: 180px; pointer-events: none;
-    }}
-    .petal {{
-      position: absolute; font-size: 14px; opacity: 0;
-      animation: petalTumble 3s infinite ease-in;
-    }}
-    .petal.p1 {{ left: 25px; animation-delay: 0.2s; }}
-    .petal.p2 {{ left: 55px; animation-delay: 1.0s; font-size: 12px; }}
-    .petal.p3 {{ left: 85px; animation-delay: 1.8s; }}
-    .petal.p4 {{ left: 110px; animation-delay: 2.4s; font-size: 13px; }}
-    @keyframes petalTumble {{
-      0% {{ transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0; }}
-      20% {{ opacity: 1; }}
-      80% {{ opacity: 0.85; }}
-      100% {{ transform: translateY(180px) translateX(25px) rotate(420deg); opacity: 0; }}
-    }}
 
-    /* 动作 3：🧣 呼啸长围巾 (动态流体波浪翻卷 + 疾风风痕流线) */
     .action-scarf #layer-action-scarf {{ opacity: 1 !important; pointer-events: auto !important; }}
-    .action-scarf #prince-avatar-body {{
-      animation: scarfBodyTilt 0.45s infinite ease-in-out alternate !important;
-      filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.8)) !important;
-    }}
-    @keyframes scarfBodyTilt {{
-      0% {{ transform: skewX(-4deg) rotate(-2deg); }}
-      100% {{ transform: skewX(5deg) rotate(3deg); }}
-    }}
     .wind-scarf-ribbon {{
       position: absolute; top: 62px; left: -25px; width: 140px; height: 35px;
       background: linear-gradient(90deg, #dc2626 0%, #ef4444 60%, rgba(254, 202, 202, 0.8) 100%);
-      border-radius: 18px 8px 18px 8px;
-      box-shadow: 0 0 14px rgba(239, 68, 68, 0.85), inset 0 0 6px #fff;
-      transform-origin: right center;
-      animation: scarfRibbonWave 0.4s infinite ease-in-out alternate;
+      border-radius: 18px 8px 18px 8px; box-shadow: 0 0 14px rgba(239, 68, 68, 0.85), inset 0 0 6px #fff;
+      transform-origin: right center; animation: scarfRibbonWave 0.4s infinite ease-in-out alternate;
     }}
     @keyframes scarfRibbonWave {{
       0% {{ transform: rotate(-18deg) skewY(-8deg) scaleY(0.85); }}
       50% {{ transform: rotate(12deg) skewY(12deg) scaleY(1.2) translateY(-8px); }}
       100% {{ transform: rotate(-12deg) skewY(-6deg) scaleY(0.9); }}
     }}
-    .wind-gust-line {{
-      position: absolute; height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
-      border-radius: 2px; opacity: 0;
-      animation: windGustSweep 0.75s infinite linear;
-    }}
-    .wind-gust-line.wgl1 {{ top: 40px; left: -10px; width: 80px; animation-delay: 0.1s; }}
-    .wind-gust-line.wgl2 {{ top: 85px; left: -30px; width: 110px; animation-delay: 0.35s; }}
-    .wind-gust-line.wgl3 {{ top: 130px; left: 10px; width: 70px; animation-delay: 0.5s; }}
-    @keyframes windGustSweep {{
-      0% {{ transform: translateX(-40px); opacity: 0; }}
-      40% {{ opacity: 0.9; }}
-      100% {{ transform: translateX(120px); opacity: 0; }}
-    }}
 
-    /* 动作 4：✨ 仰望繁星 (手捧小行星 + 45度高能流星雨) */
     .action-stars #layer-action-stars {{ opacity: 1 !important; pointer-events: auto !important; }}
-    .action-stars #prince-avatar-body {{
-      transform: translateY(-8px) scale(1.05) !important;
-      filter: drop-shadow(0 0 25px rgba(250, 204, 21, 0.95)) !important;
-    }}
     .stars-orbit-img {{
       position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
       width: 140px; height: 140px; object-fit: contain;
@@ -991,29 +1191,8 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       0% {{ transform: translateX(-50%) scale(0.92) rotate(-5deg); }}
       100% {{ transform: translateX(-50%) scale(1.08) rotate(8deg); }}
     }}
-    .shooting-star {{
-      position: absolute; width: 55px; height: 2px;
-      background: linear-gradient(90deg, #fff 0%, rgba(250, 204, 21, 0.8) 50%, transparent 100%);
-      transform: rotate(-45deg); opacity: 0; border-radius: 2px;
-      box-shadow: 0 0 8px #fde047;
-      animation: meteorSlash 1.8s infinite ease-in;
-    }}
-    .shooting-star.ss1 {{ top: 15px; right: 10px; animation-delay: 0.2s; }}
-    .shooting-star.ss2 {{ top: 45px; right: 40px; animation-delay: 0.85s; width: 45px; }}
-    .shooting-star.ss3 {{ top: 5px; right: 65px; animation-delay: 1.4s; width: 65px; }}
-    @keyframes meteorSlash {{
-      0% {{ transform: translate(30px, -30px) rotate(-45deg); opacity: 0; }}
-      20% {{ opacity: 1; }}
-      70% {{ opacity: 1; }}
-      100% {{ transform: translate(-100px, 100px) rotate(-45deg); opacity: 0; }}
-    }}
 
-    /* 动作 5：🌅 四十四次日落 (巨大夕阳徐徐下沉 + 壮丽晚霞余晖) */
     .action-sunset #layer-action-sunset {{ opacity: 1 !important; pointer-events: auto !important; }}
-    .action-sunset #prince-avatar-body {{
-      filter: drop-shadow(0 0 24px rgba(249, 115, 22, 0.9)) sepia(30%) hue-rotate(-12deg) !important;
-      transform: scale(0.96) translateY(5px) !important;
-    }}
     .sunset-glow-img {{
       position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
       width: 150px; height: 150px; object-fit: contain;
@@ -1025,115 +1204,43 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       50% {{ transform: translateX(-50%) translateY(5px) scale(1.05); opacity: 1; }}
       100% {{ transform: translateX(-50%) translateY(32px) scale(0.98); opacity: 0.85; }}
     }}
-    .sunset-ambient-glow {{
-      position: absolute; inset: -15px;
-      background: radial-gradient(circle at 50% 40%, rgba(249, 115, 22, 0.3) 0%, rgba(194, 24, 91, 0.2) 50%, transparent 80%);
-      border-radius: 50%; pointer-events: none;
-      animation: sunsetHaze 3s infinite alternate ease-in-out;
-    }}
-    @keyframes sunsetHaze {{
-      0% {{ opacity: 0.4; transform: scale(0.95); }}
-      100% {{ opacity: 0.85; transform: scale(1.08); }}
-    }}
 
-    /* 多态智能气泡引擎 */
+    /* 气泡与看板 */
     .pet-smart-bubble {{
-      position: absolute;
-      bottom: calc(100% + 22px);
-      left: 50%;
-      transform: translateX(-50%) translateY(10px) scale(0.9);
-      width: 275px;
+      position: absolute; bottom: calc(100% + 22px); left: 50%;
+      transform: translateX(-50%) translateY(10px) scale(0.9); width: 275px;
       background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%);
-      border: 1.5px solid var(--lp-star-gold);
-      border-radius: 12px;
-      padding: 10px 14px;
+      border: 1.5px solid var(--lp-star-gold); border-radius: 12px; padding: 10px 14px;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65), 0 0 16px rgba(250, 204, 21, 0.3);
-      pointer-events: none;
-      opacity: 0;
-      transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-      z-index: 150;
-      backdrop-filter: blur(10px);
+      pointer-events: none; opacity: 0; transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+      z-index: 150; backdrop-filter: blur(10px);
     }}
     .pet-smart-bubble.show {{
-      opacity: 1 !important;
-      pointer-events: auto !important;
-      transform: translateX(-50%) translateY(0) scale(1) !important;
+      opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) scale(1) !important;
     }}
     .pet-smart-bubble::after {{
       content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
       border: 8px solid transparent; border-top-color: var(--lp-star-gold);
     }}
 
-    .pet-smart-bubble.mode-alert {{
-      background: linear-gradient(135deg, rgba(69, 10, 10, 0.97) 0%, rgba(35, 10, 10, 0.98) 100%) !important;
-      border-color: #ef4444 !important;
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75), 0 0 24px rgba(239, 68, 68, 0.6) !important;
-      animation: alertPulseBorder 1.5s infinite alternate !important;
-    }}
-    .pet-smart-bubble.mode-alert::after {{ border-top-color: #ef4444 !important; }}
-    @keyframes alertPulseBorder {{
-      0% {{ box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }}
-      100% {{ box-shadow: 0 0 28px rgba(239, 68, 68, 0.9); border-color: #f87171; }}
-    }}
-
-    .pet-smart-bubble.mode-fatigue {{
-      background: linear-gradient(135deg, rgba(6, 78, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
-      border-color: #10b981 !important;
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(16, 185, 129, 0.45) !important;
-    }}
-    .pet-smart-bubble.mode-fatigue::after {{ border-top-color: #10b981 !important; }}
-
-    .bubble-tag-bar {{
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 10px; font-weight: bold; margin-bottom: 5px;
-    }}
+    .bubble-tag-bar {{ display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: bold; margin-bottom: 5px; }}
     .bubble-tag-text {{ color: var(--lp-star-gold); display: flex; align-items: center; gap: 4px; }}
-    .mode-alert .bubble-tag-text {{ color: #fca5a5 !important; }}
-    .mode-fatigue .bubble-tag-text {{ color: #6ee7b7 !important; }}
-
-    .bubble-close-btn {{
-      background: transparent; border: none; color: #94a3b8; font-size: 11px;
-      cursor: pointer; padding: 2px 4px; border-radius: 4px; line-height: 1;
-    }}
-    .bubble-close-btn:hover {{ color: #fff; background: rgba(255, 255, 255, 0.15); }}
-
+    .bubble-close-btn {{ background: transparent; border: none; color: #94a3b8; font-size: 11px; cursor: pointer; padding: 2px 4px; }}
+    .bubble-close-btn:hover {{ color: #fff; }}
     .bubble-main-txt {{ font-size: 12px; line-height: 1.55; color: #f8fafc; font-weight: 500; }}
-    .mode-alert .bubble-main-txt {{ color: #fee2e2 !important; font-weight: 600; }}
-    .mode-fatigue .bubble-main-txt {{ color: #ecfdf5 !important; }}
-
     .bubble-sub-txt {{ font-size: 9.5px; color: #94a3b8; font-style: italic; margin-top: 4px; line-height: 1.35; }}
-
-    .bubble-actions-row {{ display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }}
-    .bubble-act-btn {{
-      font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: 1px solid;
-      transition: all 0.2s;
-    }}
-    .bubble-act-primary {{ background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #fecaca; }}
-    .bubble-act-primary:hover {{ background: #ef4444; color: #fff; }}
-    .bubble-act-green {{ background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #a7f3d0; }}
-    .bubble-act-green:hover {{ background: #10b981; color: #fff; }}
-    .bubble-act-subtle {{ background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); color: #cbd5e1; }}
-    .bubble-act-subtle:hover {{ background: rgba(255, 255, 255, 0.2); color: #fff; }}
 
     /* 快捷胶囊条 */
     .nezuko-action-capsule {{
-      position: absolute;
-      top: -50px;
-      left: 50%;
+      position: absolute; top: -52px; left: 50%;
       transform: translateX(-50%) translateY(8px) scale(0.92);
       background: linear-gradient(135deg, rgba(35, 22, 18, 0.95) 0%, rgba(20, 12, 10, 0.98) 100%);
-      border: 1.5px solid var(--ds-brass-gold);
-      border-radius: 28px;
-      padding: 5px 10px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
+      border: 1.5px solid var(--ds-brass-gold); border-radius: 28px; padding: 5px 10px;
+      display: flex; align-items: center; gap: 7px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65), 0 0 16px rgba(244, 143, 177, 0.35);
-      opacity: 0;
-      pointer-events: none;
+      opacity: 0; pointer-events: none;
       transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-      z-index: 100;
-      backdrop-filter: blur(8px);
+      z-index: 100; backdrop-filter: blur(8px);
     }}
     .nezuko-action-capsule::after {{
       content: ''; position: absolute; top: 100%; left: -20px; right: -20px; height: 44px;
@@ -1165,16 +1272,9 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     }}
     .nezuko-capsule-btn:hover::before {{ opacity: 1; transform: translateX(-50%) scale(1); }}
 
-    .btn-switch-pet {{
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; border-color: #60a5fa !important;
-    }}
-
-    .btn-music-spin {{
-      background: radial-gradient(circle, #ff80ab 20%, #231612 21%, #111 100%);
-    }}
-    .btn-music-spin.playing {{
-      animation: recordSpin 3.5s infinite linear; border-color: var(--ds-pink); box-shadow: 0 0 10px rgba(244, 143, 177, 0.8);
-    }}
+    .btn-switch-pet {{ background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; border-color: #60a5fa !important; }}
+    .btn-roam-mode.roaming {{ background: linear-gradient(135deg, #10b981, #059669) !important; border-color: #34d399 !important; }}
+    .btn-music-spin.playing {{ animation: recordSpin 3.5s infinite linear; border-color: var(--ds-pink); box-shadow: 0 0 10px rgba(244, 143, 177, 0.8); }}
     @keyframes recordSpin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
 
     .pet-picked-up {{
@@ -1182,7 +1282,7 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.35)) !important;
     }}
 
-    /* 主操作看板 */
+    /* 看板卡片 */
     #nezuko-main-card {{
       position: absolute; bottom: 225px; right: 0; width: 345px;
       background: linear-gradient(135deg, rgba(35, 22, 18, 0.96) 0%, rgba(20, 12, 10, 0.98) 100%);
@@ -1195,73 +1295,53 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;
       background: linear-gradient(90deg, #381f19 0%, #4a2920 100%); border-bottom: 1.5px solid var(--ds-brass-gold);
     }}
-    .nezuko-header-title {{
-      font-size: 13px; font-weight: 700; color: var(--ds-gold-glow);
-      display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-    }}
-    .nezuko-card-body {{
-      padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; max-height: 480px; overflow-y: auto;
-    }}
-    .nezuko-section-box {{
-      background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(197, 155, 39, 0.35);
-      border-radius: 8px; padding: 10px 12px;
-    }}
-    .nezuko-section-title {{
-      font-size: 12px; font-weight: 700; color: #e0e0e0; margin-bottom: 8px;
-      display: flex; justify-content: space-between; align-items: center;
-    }}
+    .nezuko-header-title {{ font-size: 13px; font-weight: 700; color: var(--ds-gold-glow); display: flex; align-items: center; gap: 6px; }}
+    .nezuko-close-btn {{ background: transparent; border: none; color: #9ca3af; font-size: 14px; cursor: pointer; }}
+    .nezuko-close-btn:hover {{ color: #fff; }}
+    .nezuko-card-body {{ padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; max-height: 480px; overflow-y: auto; }}
+    .nezuko-section-box {{ background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(197, 155, 39, 0.35); border-radius: 8px; padding: 10px 12px; }}
+    .nezuko-section-title {{ font-size: 12px; font-weight: 700; color: #e0e0e0; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }}
+    .nezuko-ctrl-btn {{ background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(197, 155, 39, 0.4); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s; }}
+    .nezuko-ctrl-btn:hover {{ background: var(--ds-dark-pink); border-color: var(--ds-pink); }}
 
-    /* QQ 音乐播放器控制区 */
+    /* QQ音乐卡片 */
     .qq-music-player-box {{
-      background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(20, 12, 10, 0.9) 100%);
-      border: 1.5px solid var(--qq-green);
-      border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+      border: 1.5px solid #f59e0b; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
     }}
-    .qq-status-bar {{
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 10.5px; color: #6ee7b7; font-weight: bold;
+    .music-mode-tabs {{ display: flex; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; }}
+    .music-mode-tab {{ flex: 1; text-align: center; font-size: 10px; padding: 3px 4px; border-radius: 4px; cursor: pointer; color: #94a3b8; background: rgba(255,255,255,0.05); border: 1px solid transparent; transition: all 0.2s; }}
+    .music-mode-tab.active-tab {{ color: #fef08a; background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; font-weight: bold; }}
+    .music-lrc-container {{
+      background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 6px;
+      padding: 6px 8px; min-height: 54px; max-height: 60px; overflow: hidden; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center; gap: 3px;
     }}
-    .qq-pulse-dot {{
-      width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;
-      margin-right: 4px; box-shadow: 0 0 6px #10b981; animation: pulseGlow 1.5s infinite;
-    }}
+    .lrc-prev-line {{ font-size: 9.5px; color: #94a3b8; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; }}
+    .lrc-cur-line {{ font-size: 11.5px; font-weight: bold; color: #fef08a; text-shadow: 0 0 10px rgba(250, 204, 21, 0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 98%; transform: scale(1.02); transition: all 0.25s ease; }}
+    .lrc-next-line {{ font-size: 9.5px; color: #94a3b8; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; }}
+    .music-progress-wrapper {{ display: flex; align-items: center; gap: 8px; font-size: 9px; color: #94a3b8; cursor: pointer; }}
+    .music-progress-track {{ flex: 1; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; position: relative; overflow: hidden; }}
+    .music-progress-fill {{ height: 100%; width: 0%; background: linear-gradient(90deg, #f59e0b, #ef4444); border-radius: 2px; transition: width 0.3s; }}
+    .qq-status-bar {{ display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #6ee7b7; font-weight: bold; }}
+    .qq-pulse-dot {{ width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 4px; box-shadow: 0 0 6px #10b981; animation: pulseGlow 1.5s infinite; }}
     @keyframes pulseGlow {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
-
     .nezuko-music-info {{ display: flex; align-items: center; gap: 10px; }}
-    .nezuko-record-disc {{
-      width: 36px; height: 36px;
-      background: radial-gradient(circle, #10b981 18%, #111 19%, #222 65%, #111 100%);
-      border: 1.5px solid var(--qq-green); border-radius: 50%; flex-shrink: 0;
-      animation: recordSpin 3.5s infinite linear; animation-play-state: paused;
-    }}
+    .nezuko-record-disc {{ width: 36px; height: 36px; background: radial-gradient(circle, #10b981 18%, #111 19%, #222 65%, #111 100%); border: 1.5px solid var(--qq-green); border-radius: 50%; flex-shrink: 0; animation: recordSpin 3.5s infinite linear; animation-play-state: paused; }}
     .record-spinning {{ animation-play-state: running !important; }}
     .nezuko-song-texts {{ display: flex; flex-direction: column; overflow: hidden; }}
     .nezuko-song-title {{ font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }}
     .nezuko-song-sub {{ font-size: 10px; color: #a7f3d0; }}
-
     .sound-waves-box {{ display: flex; align-items: flex-end; gap: 2px; height: 14px; }}
-    .sound-bar {{
-      width: 3px; background: #10b981; border-radius: 2px;
-      animation: barJump 0.8s infinite ease-in-out alternate;
-    }}
+    .sound-bar {{ width: 3px; background: #10b981; border-radius: 2px; animation: barJump 0.8s infinite ease-in-out alternate; }}
     .sound-bar:nth-child(1) {{ height: 6px; animation-delay: 0.1s; }}
     .sound-bar:nth-child(2) {{ height: 14px; animation-delay: 0.3s; }}
     .sound-bar:nth-child(3) {{ height: 9px; animation-delay: 0.2s; }}
     .sound-bar:nth-child(4) {{ height: 12px; animation-delay: 0.4s; }}
     @keyframes barJump {{ 0% {{ height: 3px; }} 100% {{ height: 14px; }} }}
-
     .nezuko-music-controls {{ display: flex; align-items: center; justify-content: space-between; gap: 6px; }}
-    .nezuko-ctrl-btn {{
-      background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(197, 155, 39, 0.4);
-      color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s;
-    }}
-    .nezuko-ctrl-btn:hover {{ background: var(--ds-dark-pink); border-color: var(--ds-pink); }}
-    .nezuko-ctrl-play {{
-      background: linear-gradient(135deg, #059669, #047857) !important;
-      border-color: #34d399 !important; font-weight: bold; padding: 5px 16px;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-    }}
+    .nezuko-ctrl-play {{ background: linear-gradient(135deg, #059669, #047857) !important; border-color: #34d399 !important; font-weight: bold; padding: 5px 16px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }}
 
     .nezuko-float-badge {{
       position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
@@ -1271,39 +1351,11 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       opacity: 0.85; transition: opacity 0.2s;
     }}
     .nezuko-float-badge:hover {{ opacity: 1; background: var(--ds-dark-pink); color: #fff; }}
-
-    /* 配额项样式 */
-    .nezuko-quota-row {{
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 6px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    }}
-    .nezuko-quota-row:last-child {{ border-bottom: none; }}
-    .nezuko-quota-meta {{ display: flex; flex-direction: column; }}
-    .nezuko-quota-name {{ font-size: 11px; color: #d1d5db; }}
-    .nezuko-quota-reset {{ font-size: 9.5px; color: #9ca3af; }}
-    .nezuko-quota-val-group {{ display: flex; align-items: center; gap: 8px; }}
-    .nezuko-quota-pct {{ font-size: 12px; font-weight: 700; color: #ffd54f; min-width: 38px; text-align: right; }}
-
-    .nezuko-ring-box {{ width: 26px; height: 26px; position: relative; }}
-    .nezuko-ring-box svg {{ transform: rotate(-90deg); width: 26px; height: 26px; }}
-    .nezuko-ring-bg {{ fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 3.5; }}
-    .nezuko-ring-prog {{
-      fill: none; stroke: #81c784; stroke-width: 3.5; stroke-linecap: round;
-      stroke-dasharray: 62.83; stroke-dashoffset: 6.28; transition: stroke-dashoffset 0.6s ease;
-    }}
-
-    @keyframes spinSync {{
-      0% {{ transform: rotate(0deg); }}
-      100% {{ transform: rotate(360deg); }}
-    }}
-    .is-syncing {{
-      animation: spinSync 1s infinite linear; display: inline-block;
-    }}
   `;
   document.head.appendChild(styleEl);
 
   // ==========================================
-  // 八、DOM 组装
+  // 六、DOM 组装 (含 8 帧分镜木箱与落地冲击波视窗)
   // ==========================================
   const root = document.createElement('div');
   root.id = 'nezuko-pet-root';
@@ -1311,7 +1363,7 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     <div class="nezuko-pet-stage" id="nezuko-pet-stage">
       <div class="nezuko-pet-ground-shadow" id="nezuko-ground-shadow"></div>
 
-      <!-- 智能多态交互气泡中枢 (名言 / 额度告急 / 久坐疲劳关怀) -->
+      <!-- 智能多态交互气泡中枢 -->
       <div class="pet-smart-bubble" id="pet-smart-bubble">
         <div class="bubble-tag-bar">
           <span class="bubble-tag-text" id="bubble-tag-text">🦊 狐狸的秘密 · B612星球</span>
@@ -1319,73 +1371,81 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
         </div>
         <div class="bubble-main-txt" id="bubble-main-txt">真正重要的东西，用眼睛是看不见的，只有用心才能看清。</div>
         <div class="bubble-sub-txt" id="bubble-sub-txt">L'essentiel est invisible pour les yeux.</div>
-        <div class="bubble-actions-row" id="bubble-actions-row" style="display:none;"></div>
       </div>
 
-      <!-- 头顶快捷胶囊动作条 -->
+      <!-- 头顶快捷胶囊条 -->
       <div class="nezuko-action-capsule" id="nezuko-action-capsule">
         <button class="nezuko-capsule-btn btn-switch-pet" id="btn-quick-switch" data-tip="切换角色 (祢豆子/小王子)" title="切换角色">🔁</button>
+        <button class="nezuko-capsule-btn btn-roam-mode roaming" id="btn-quick-roam" data-tip="自主走动漫步 (已开启)" title="切换自主漫步/锁定">🚶</button>
         <div id="action-buttons-container" style="display:flex; gap:7px;"></div>
         <button class="nezuko-capsule-btn btn-music-spin" id="btn-quick-music" data-tip="QQ音乐播放/切歌" title="遥控电脑QQ音乐">🎵</button>
         <button class="nezuko-capsule-btn" id="btn-quick-board" data-tip="配额看板" title="打开配额看板">🎋</button>
       </div>
 
-      <!-- 角色 1：祢豆子 2D 骨骼机架 -->
-      <div class="nezuko-pet-rig" id="pet-nezuko" style="display:none;" title="双击打开看板 · 按住拖拽 · 滚轮切QQ音乐">
+      <!-- 情绪浮动微气泡 -->
+      <div class="floating-mood-bubble" id="floating-mood-bubble">🌸</div>
+
+      <!-- 角色 1：祢豆子 2D 骨骼机架 (支持双关节行走与风火轮飞奔) -->
+      <div class="nezuko-pet-rig" id="pet-nezuko" style="display:none;" title="双击打开看板 · 单击摸头 · 拖拽移动 · 滚轮切歌">
         <div class="bone-layer" id="bone-leg-l"></div>
         <div class="bone-layer" id="bone-leg-r"></div>
         <div class="bone-layer" id="bone-torso"></div>
         <div class="bone-layer" id="bone-arm-l"></div>
         <div class="bone-layer" id="bone-arm-r"></div>
-        <div class="bone-layer" id="bone-head"></div>
+        <div class="bone-layer" id="bone-head">
+          <div class="nezuko-eyelid-overlay" id="nezuko-eyelid"></div>
+        </div>
       </div>
 
-      <!-- 角色 2：小王子 B612 治愈多图层动态机架 -->
-      <div class="prince-pet-rig" id="pet-prince" style="display:none;" title="单击听名言 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
-        <!-- 待机全身像 -->
-        <img src="${{PRINCE_IMG}}" class="prince-avatar-img" id="prince-avatar-body" alt="小王子">
+      <!-- 角色 2：大正雾云杉木箱 (8帧360°旋转分镜 + 探头探脑视窗) -->
+      <div class="box-action-container" id="box-action-container">
+        <!-- 8 帧分镜精灵视窗 (用于 360 度转木箱神技) -->
+        <div class="box-sprite-viewport" id="box-sprite-viewport">
+          <div class="box-sprite-strip"></div>
+        </div>
 
-        <!-- 动作 1：小王子与小狐狸亲昵依偎动态层 -->
+        <!-- 落地冲击波光环图层 -->
+        <div class="box-impact-ring"></div>
+
+        <!-- 飞旋的枫叶樱花粒子 -->
+        <div class="box-spin-particles">
+          <span class="spin-petal sp1" style="--tx:-50px; --ty:-40px;">🍁</span>
+          <span class="spin-petal sp2" style="--tx:60px; --ty:-45px;">🌸</span>
+          <span class="spin-petal sp3" style="--tx:-55px; --ty:30px;">🍂</span>
+          <span class="spin-petal sp4" style="--tx:50px; --ty:35px;">🌸</span>
+        </div>
+
+        <!-- 探头探脑专属视窗 (用于钻木箱动作) -->
+        <div class="box-peek-container" id="box-peek-container">
+          <div class="peek-box-body">
+            <div class="peek-box-interior">
+              <img src="${{NEZUKO_PEEKER_HEAD}}" class="peeker-chibi-img" alt="木箱里的祢豆子">
+            </div>
+            <div class="peek-box-door"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 冲刺奔跑烟尘粒子容器 -->
+      <div class="dash-dust-container" id="dash-dust-container"></div>
+
+      <!-- 角色 3：小王子 B612 治愈多图层动态机架 -->
+      <div class="prince-pet-rig" id="pet-prince" style="display:none;" title="单击听名言 · 双击打开看板 · 拖拽移动 · 滚轮切歌">
+        <img src="${{PRINCE_IMG}}" class="prince-avatar-img" id="prince-avatar-body" alt="小王子">
         <div class="prince-action-layer" id="layer-action-fox">
           <img src="${{PRINCE_FOX_IMG}}" class="prince-fox-img" alt="小王子与小狐狸">
-          <div class="fox-hearts-cluster">
-            <span class="fox-heart fh1">💖</span>
-            <span class="fox-heart fh2">✨</span>
-            <span class="fox-heart fh3">💕</span>
-          </div>
         </div>
-
-        <!-- 动作 2：呵护玻璃罩红玫瑰与花瓣飘落层 -->
         <div class="prince-action-layer" id="layer-action-rose">
           <img src="${{PRINCE_ROSE_IMG}}" class="rose-dome-img" alt="玻璃罩红玫瑰">
-          <div class="rose-falling-petals">
-            <span class="petal p1">🌸</span>
-            <span class="petal p2">🌹</span>
-            <span class="petal p3">🌸</span>
-            <span class="petal p4">🌹</span>
-          </div>
         </div>
-
-        <!-- 动作 3：呼啸长围巾与疾风风痕层 -->
         <div class="prince-action-layer" id="layer-action-scarf">
           <div class="wind-scarf-ribbon"></div>
-          <div class="wind-gust-line wgl1"></div>
-          <div class="wind-gust-line wgl2"></div>
-          <div class="wind-gust-line wgl3"></div>
         </div>
-
-        <!-- 动作 4：仰望繁星、流星雨与小行星星环层 -->
         <div class="prince-action-layer" id="layer-action-stars">
           <img src="${{PRINCE_STARS_IMG}}" class="stars-orbit-img" alt="繁星小行星">
-          <div class="shooting-star ss1"></div>
-          <div class="shooting-star ss2"></div>
-          <div class="shooting-star ss3"></div>
         </div>
-
-        <!-- 动作 5：四十四次日落夕阳余晖与晚霞层 -->
         <div class="prince-action-layer" id="layer-action-sunset">
           <img src="${{PRINCE_SUNSET_IMG}}" class="sunset-glow-img" alt="日落夕阳">
-          <div class="sunset-ambient-glow"></div>
         </div>
       </div>
 
@@ -1403,20 +1463,28 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       </div>
 
       <div class="nezuko-card-body">
-        <!-- 核心模块：电脑 QQ 音乐客户端无缝遥控中枢 -->
+        <!-- 核心模块：双模态音乐电台与真·实时歌词滚动视窗 -->
         <div class="qq-music-player-box">
-          <div class="qq-status-bar">
-            <span><span class="qq-pulse-dot"></span>已对接电脑 QQ 音乐客户端</span>
-            <button class="nezuko-ctrl-btn" id="m-btn-wake-qq" style="font-size:9.5px; padding:2px 6px; background:rgba(16,185,129,0.25); border-color:#10b981;">
-              🚀 唤醒QQ音乐
+          <!-- 模式切换标签页 -->
+          <div class="music-mode-tabs">
+            <div class="music-mode-tab active-tab" id="tab-music-builtin">🎵 内置动漫曲库 (带实时歌词)</div>
+            <div class="music-mode-tab" id="tab-music-qq">📻 电脑 QQ 音乐遥控</div>
+          </div>
+
+          <!-- QQ 音乐专属控制栏 (切到 QQ 模式时显示) -->
+          <div class="qq-status-bar" id="qq-extra-ctrls" style="display:none;">
+            <span><span class="qq-pulse-dot"></span>已直通电脑 QQ 音乐客户端</span>
+            <button class="nezuko-ctrl-btn" id="m-btn-wake-qq" style="font-size:9px; padding:2px 6px; background:rgba(16,185,129,0.25); border-color:#10b981;">
+              🚀 唤醒/置顶QQ音乐
             </button>
           </div>
 
+          <!-- 歌曲与唱片信息 -->
           <div class="nezuko-music-info">
             <div class="nezuko-record-disc" id="nezuko-disc"></div>
-            <div class="nezuko-song-texts" style="flex:1;">
-              <span class="nezuko-song-title" id="music-title">QQ 音乐播放联动</span>
-              <span class="nezuko-song-sub" id="music-sub">点击下方按钮直接控制电脑上的 QQ 音乐</span>
+            <div class="nezuko-song-texts">
+              <span class="nezuko-song-title" id="music-title">竈門禰豆子のうた</span>
+              <span class="nezuko-song-sub" id="music-sub">椎名豪 featuring 中川奈美 · 鬼灭之刃治愈插曲</span>
             </div>
             <div class="sound-waves-box" id="sound-waves" style="display:none;">
               <div class="sound-bar"></div><div class="sound-bar"></div>
@@ -1424,10 +1492,25 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
             </div>
           </div>
 
+          <!-- 真·实时歌词瀑布视窗 -->
+          <div class="music-lrc-container" id="music-lrc-display">
+            <div class="lrc-cur-line">🎶 正在载入经典神曲歌词...</div>
+          </div>
+
+          <!-- 播放进度条与时间 -->
+          <div class="music-progress-wrapper" id="music-progress-wrap">
+            <div class="music-progress-track">
+              <div class="music-progress-fill" id="music-progress-bar"></div>
+            </div>
+            <span id="music-time-txt">00:00 / 03:15</span>
+          </div>
+
+          <!-- 音乐控制按钮栏 -->
           <div class="nezuko-music-controls">
-            <button class="nezuko-ctrl-btn" id="m-btn-prev" title="QQ 音乐上一曲">⏮ 上一曲</button>
-            <button class="nezuko-ctrl-btn nezuko-ctrl-play" id="m-btn-play" title="播放 / 暂停 QQ 音乐">▶ 播放</button>
-            <button class="nezuko-ctrl-btn" id="m-btn-next" title="QQ 音乐下一曲">⏭ 下一曲</button>
+            <button class="nezuko-ctrl-btn" id="m-btn-prev" title="上一曲">⏮ 上一首</button>
+            <button class="nezuko-ctrl-btn nezuko-ctrl-play" id="m-btn-play" title="播放 / 暂停">▶ 播放</button>
+            <button class="nezuko-ctrl-btn" id="m-btn-next" title="下一曲">⏭ 下一首</button>
+            <button class="nezuko-ctrl-btn" id="m-btn-import" title="导入本地歌曲与歌词" style="font-size:10px; padding:4px 6px; background:rgba(255,255,255,0.08);">📁 导入</button>
           </div>
         </div>
 
@@ -1447,190 +1530,23 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
           </div>
         </div>
 
-        <!-- 疲劳关怀与久坐健康提醒控制区 -->
+        <!-- 动画级走动漫步与冲刺飞奔控制区 -->
         <div class="nezuko-section-box" style="background: rgba(16, 185, 129, 0.15); border-color: #10b981;">
           <div class="nezuko-section-title">
-            <span style="color:#6ee7b7;">🍵 专注工作与久坐健康关怀</span>
-            <span id="fatigue-status-tag" style="font-size:10px; color:#81c784;">● 已激活</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:11px; color:#d1fae5;">
-            <span>当前已连续工作:</span>
-            <b id="work-timer-label" style="color:#fde047; font-size:13px;">0 分钟</b>
-          </div>
-          <div style="display:flex; gap:6px;">
-            <button class="nezuko-ctrl-btn" id="btn-test-fatigue" style="flex:1; padding:5px; background:linear-gradient(135deg, #059669, #047857); border-color:#34d399; font-weight:bold;">
-              🍵 立即体验久坐关怀
-            </button>
-            <button class="nezuko-ctrl-btn" id="btn-reset-work-timer" style="padding:5px 8px; background:rgba(255,255,255,0.1);" title="重置当前专注工作时间">
-              🔄 重置计时
-            </button>
-          </div>
-        </div>
-
-        <!-- 额度低于10%及时预警设置区 -->
-        <div class="nezuko-section-box" style="background: rgba(220, 38, 38, 0.15); border-color: #ef4444;">
-          <div class="nezuko-section-title">
-            <span style="color:#fca5a5;">🚨 额度极低及时告急提醒</span>
-            <span id="quota-alert-status-tag" style="font-size:10px; color:#81c784;">● 配额充裕</span>
+            <span style="color:#6ee7b7;">🚶 动画级物理走动与冲刺</span>
+            <span id="roam-status-tag" style="font-size:10px; color:#81c784;">● 自由漫步中</span>
           </div>
           <div style="font-size:10px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;">
-            当 Gemini 或 Claude 配额低于 <b style="color:#ef4444;">10%</b> 时，桌宠将立即进行专属警报、跳动提醒并播放警示音！
+            具备双关节起伏步态与极速风火轮冲刺；遇到边界平滑掉头；支持一键暂停自由漫步。
           </div>
           <div style="display:flex; gap:6px;">
-            <button class="nezuko-ctrl-btn" id="btn-test-quota-alert" style="flex:1; padding:5px; background:linear-gradient(135deg, #dc2626, #991b1b); border-color:#f87171; font-weight:bold;">
-              🚨 模拟低于10%告急警报
+            <button class="nezuko-ctrl-btn" id="btn-toggle-roam" style="flex:1; padding:5px; background:linear-gradient(135deg, #059669, #047857); border-color:#34d399; font-weight:bold;">
+              🚶 切换漫步模式 (开/关)
             </button>
-            <button class="nezuko-ctrl-btn" id="btn-mock-low-quota" style="padding:5px 8px; background:rgba(255,255,255,0.1);" title="将每周配额设定为 8% 进行真实测试">
-              📉 设为8%
-            </button>
-          </div>
-        </div>
-
-        <!-- 模型配额总看板 (Gemini 与 Claude / GPT) -->
-        <div class="nezuko-section-box" style="background: rgba(30, 20, 15, 0.7); border-color: var(--ds-brass-gold);">
-          <div class="nezuko-section-title">
-            <span style="color:var(--ds-gold-glow);">📊 模型配额实时监控</span>
-            <span id="quota-sync-time-tag" style="font-size:10px; color:#81c784;">刚刚已同步</span>
-          </div>
-
-          <!-- Gemini 配额组 -->
-          <div style="font-size:10.5px; font-weight:bold; color:#fbcfe8; margin-bottom:4px; display:flex; justify-content:space-between;">
-            <span>Gemini 模型</span>
-            <span style="font-size:9.5px; color:#81c784;">● 状态活跃</span>
-          </div>
-          <div class="nezuko-quota-row">
-            <div class="nezuko-quota-meta">
-              <span class="nezuko-quota-name">每周剩余可用配额</span>
-              <span class="nezuko-quota-reset" id="lbl-gemini-weekly-reset">${{currentQuota.geminiWeeklyReset}}</span>
-            </div>
-            <div class="nezuko-quota-val-group">
-              <span class="nezuko-quota-pct" id="lbl-gemini-weekly-pct">${{currentQuota.geminiWeeklyPct}}%</span>
-              <div class="nezuko-ring-box">
-                <svg viewBox="0 0 26 26">
-                  <circle class="nezuko-ring-bg" cx="13" cy="13" r="10" />
-                  <circle class="nezuko-ring-prog" id="ring-gemini-weekly" cx="13" cy="13" r="10" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div class="nezuko-quota-row">
-            <div class="nezuko-quota-meta">
-              <span class="nezuko-quota-name">5 小时剩余可用配额</span>
-              <span class="nezuko-quota-reset" id="lbl-gemini-5h-reset">${{currentQuota.gemini5hReset}}</span>
-            </div>
-            <div class="nezuko-quota-val-group">
-              <span class="nezuko-quota-pct" id="lbl-gemini-5h-pct">${{currentQuota.gemini5hPct}}%</span>
-              <div class="nezuko-ring-box">
-                <svg viewBox="0 0 26 26">
-                  <circle class="nezuko-ring-bg" cx="13" cy="13" r="10" />
-                  <circle class="nezuko-ring-prog" id="ring-gemini-5h" cx="13" cy="13" r="10" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Claude 与 GPT 配额组 -->
-          <div style="font-size:10.5px; font-weight:bold; color:#93c5fd; margin-top:8px; margin-bottom:4px; display:flex; justify-content:space-between;">
-            <span>Claude 与 GPT 模型</span>
-            <span style="font-size:9.5px; color:#81c784;">● 充足</span>
-          </div>
-          <div class="nezuko-quota-row">
-            <div class="nezuko-quota-meta">
-              <span class="nezuko-quota-name">每周剩余可用配额</span>
-              <span class="nezuko-quota-reset" id="lbl-claude-weekly-reset">${{currentQuota.claudeWeeklyReset}}</span>
-            </div>
-            <div class="nezuko-quota-val-group">
-              <span class="nezuko-quota-pct" id="lbl-claude-weekly-pct">${{currentQuota.claudeWeeklyPct}}%</span>
-              <div class="nezuko-ring-box">
-                <svg viewBox="0 0 26 26">
-                  <circle class="nezuko-ring-bg" cx="13" cy="13" r="10" />
-                  <circle class="nezuko-ring-prog" id="ring-claude-weekly" cx="13" cy="13" r="10" />
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div class="nezuko-quota-row">
-            <div class="nezuko-quota-meta">
-              <span class="nezuko-quota-name">5 小时剩余可用配额</span>
-              <span class="nezuko-quota-reset" id="lbl-claude-5h-reset">${{currentQuota.claude5hReset}}</span>
-            </div>
-            <div class="nezuko-quota-val-group">
-              <span class="nezuko-quota-pct" id="lbl-claude-5h-pct">${{currentQuota.claude5hPct}}%</span>
-              <div class="nezuko-ring-box">
-                <svg viewBox="0 0 26 26">
-                  <circle class="nezuko-ring-bg" cx="13" cy="13" r="10" />
-                  <circle class="nezuko-ring-prog" id="ring-claude-5h" cx="13" cy="13" r="10" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- 核心操作按钮：自动同步 与 手动校准 -->
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:8px;">
-            <button class="nezuko-ctrl-btn" id="btn-sync-quota" style="flex:1; padding:5px 8px; font-weight:bold; background:linear-gradient(135deg, #ec4899, #be185d); border-color:#f472b6;">
-              <span id="sync-icon">🔄</span> 自动同步原生配额
-            </button>
-            <button class="nezuko-ctrl-btn" id="btn-toggle-adjust" style="flex:1; padding:5px 8px; background:linear-gradient(135deg, #4b5563, #374151); border-color:#9ca3af;">
-              ⚙️ 手动校准微调
+            <button class="nezuko-ctrl-btn" id="btn-instant-dash" style="padding:5px 10px; background:linear-gradient(135deg, #ec4899, #be185d); font-weight:bold;">
+              🏃 立即冲刺狂奔
             </button>
           </div>
-
-          <!-- 全功能手动校准抽屉 -->
-          <div id="nezuko-adjust-box" style="display:none; margin-top:10px; padding:10px; background:rgba(0,0,0,0.5); border-radius:6px; border:1px dashed rgba(244,143,177,0.4);">
-            <div style="font-size:11px; font-weight:bold; color:#ffd54f; margin-bottom:8px; display:flex; justify-content:space-between;">
-              <span>⚙️ 模型配额精准微调</span>
-              <span style="font-size:9px; color:#cbd5e1;">实时生效 · 本地记忆</span>
-            </div>
-
-            <!-- Gemini 调整 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
-              <span>Gemini 每周配额:</span>
-              <b id="val-adj-gw" style="color:#ffd54f;">91%</b>
-            </div>
-            <input type="range" id="rng-adj-gw" min="0" max="100" value="91" style="width:100%; accent-color:#f48fb1; margin-bottom:6px;">
-
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
-              <span>Gemini 5小时配额:</span>
-              <b id="val-adj-g5" style="color:#ffd54f;">72%</b>
-            </div>
-            <input type="range" id="rng-adj-g5" min="0" max="100" value="72" style="width:100%; accent-color:#f48fb1; margin-bottom:8px;">
-
-            <!-- Claude 调整 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
-              <span>Claude 每周配额:</span>
-              <b id="val-adj-cw" style="color:#60a5fa;">100%</b>
-            </div>
-            <input type="range" id="rng-adj-cw" min="0" max="100" value="100" style="width:100%; accent-color:#60a5fa; margin-bottom:6px;">
-
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
-              <span>Claude 5小时配额:</span>
-              <b id="val-adj-c5" style="color:#60a5fa;">100%</b>
-            </div>
-            <input type="range" id="rng-adj-c5" min="0" max="100" value="100" style="width:100%; accent-color:#60a5fa; margin-bottom:8px;">
-
-            <!-- 快捷预设按钮 -->
-            <div style="display:flex; gap:4px; margin-bottom:8px;">
-              <button class="nezuko-ctrl-btn" id="btn-preset-100" style="flex:1; font-size:9.5px; padding:2px;">💯 100%</button>
-              <button class="nezuko-ctrl-btn" id="btn-preset-80" style="flex:1; font-size:9.5px; padding:2px;">🔋 80%</button>
-              <button class="nezuko-ctrl-btn" id="btn-preset-50" style="flex:1; font-size:9.5px; padding:2px;">⚡ 50%</button>
-              <button class="nezuko-ctrl-btn" id="btn-preset-8" style="flex:1; font-size:9.5px; padding:2px; color:#f87171; border-color:#ef4444;">🚨 8%</button>
-            </div>
-
-            <button class="nezuko-ctrl-btn" id="btn-save-adjust" style="width:100%; padding:4px; font-weight:bold; background:linear-gradient(135deg, #10b981, #059669); border-color:#34d399;">
-              💾 保存校准并收起
-            </button>
-          </div>
-        </div>
-
-        <!-- 软件界面鬼灭全套主题开关 -->
-        <div class="nezuko-section-box" style="background: rgba(194, 24, 91, 0.15); border-color: var(--ds-pink);">
-          <div class="nezuko-section-title">
-            <span style="color:#ffd54f;">🌸 软件界面《鬼灭之刃》全局主题</span>
-            <span id="theme-status-tag" style="font-size:10px; color:#81c784;">● 已激活</span>
-          </div>
-          <button class="nezuko-ctrl-btn" id="btn-toggle-ide-theme" style="width:100%; padding:5px; background:linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson)); font-weight:bold;">
-            🎋 切换软件鬼灭主题 (开/关)
-          </button>
         </div>
 
       </div>
@@ -1639,17 +1555,18 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
   document.body.appendChild(root);
 
   // ==========================================
-  // 九、元素绑定与事件响应
+  // 七、DOM 元素引用与交互绑定
   // ==========================================
   const stageEl = document.getElementById('nezuko-pet-stage');
   const petNezuko = document.getElementById('pet-nezuko');
   const petPrince = document.getElementById('pet-prince');
+  const boxContainer = document.getElementById('box-action-container');
   const smartBubble = document.getElementById('pet-smart-bubble');
   const bubbleTagText = document.getElementById('bubble-tag-text');
   const bubbleCloseBtn = document.getElementById('bubble-close-btn');
   const bubbleMainTxt = document.getElementById('bubble-main-txt');
   const bubbleSubTxt = document.getElementById('bubble-sub-txt');
-  const bubbleActionsRow = document.getElementById('bubble-actions-row');
+  const moodBubble = document.getElementById('floating-mood-bubble');
 
   const mainCard = document.getElementById('nezuko-main-card');
   const openBtn = document.getElementById('nezuko-open-btn');
@@ -1659,76 +1576,40 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
   const boardRoleBadge = document.getElementById('board-role-badge');
   const curPetLabel = document.getElementById('cur-pet-label');
   const capsuleBar = document.getElementById('nezuko-action-capsule');
+  const quickRoamBtn = document.getElementById('btn-quick-roam');
   const disc = document.getElementById('nezuko-disc');
   const quickMusicBtn = document.getElementById('btn-quick-music');
   const quickBoardBtn = document.getElementById('btn-quick-board');
   const soundWaves = document.getElementById('sound-waves');
+  const dustContainer = document.getElementById('dash-dust-container');
 
-  function openMainCard() {{
-    mainCard.style.display = 'flex';
-  }}
-  function closeMainCard() {{
-    mainCard.style.display = 'none';
-  }}
+  function openMainCard() {{ mainCard.style.display = 'flex'; }}
+  function closeMainCard() {{ mainCard.style.display = 'none'; }}
 
-  // 智能气泡通用驱动
+  // 气泡控制
   let smartBubbleHideTimer = null;
   function showSmartBubble(cfg, duration = 8000) {{
-    smartBubble.className = 'pet-smart-bubble';
-    if (cfg.type === 'alert') smartBubble.classList.add('mode-alert');
-    else if (cfg.type === 'fatigue') smartBubble.classList.add('mode-fatigue');
-
     bubbleTagText.textContent = cfg.tag || '✦ 桌面守护';
     bubbleMainTxt.innerHTML = cfg.zh || '';
     bubbleSubTxt.textContent = cfg.sub || '';
-
-    bubbleActionsRow.innerHTML = '';
-    if (cfg.actions && cfg.actions.length > 0) {{
-      bubbleActionsRow.style.display = 'flex';
-      cfg.actions.forEach(act => {{
-        const btn = document.createElement('button');
-        btn.className = `bubble-act-btn ${{act.cls || 'bubble-act-subtle'}}`;
-        btn.textContent = act.text;
-        btn.onclick = (e) => {{
-          e.stopPropagation();
-          if (act.onClick) act.onClick();
-        }};
-        bubbleActionsRow.appendChild(btn);
-      }});
-    }} else {{
-      bubbleActionsRow.style.display = 'none';
-    }}
-
     smartBubble.classList.add('show');
     if (smartBubbleHideTimer) clearTimeout(smartBubbleHideTimer);
-    if (duration > 0) {{
-      smartBubbleHideTimer = setTimeout(() => hideSmartBubble(), duration);
-    }}
+    if (duration > 0) smartBubbleHideTimer = setTimeout(() => hideSmartBubble(), duration);
   }}
-
   function hideSmartBubble() {{
     smartBubble.classList.remove('show');
-    if (smartBubbleHideTimer) {{
-      clearTimeout(smartBubbleHideTimer);
-      smartBubbleHideTimer = null;
-    }}
+    if (smartBubbleHideTimer) {{ clearTimeout(smartBubbleHideTimer); smartBubbleHideTimer = null; }}
   }}
+  bubbleCloseBtn.addEventListener('click', (e) => {{ e.stopPropagation(); hideSmartBubble(); }});
 
-  bubbleCloseBtn.addEventListener('click', (e) => {{
-    e.stopPropagation();
-    hideSmartBubble();
-  }});
-
-  // QQ 音乐播放界面更新
+  // QQ 音乐状态更新
   window.updateMusicUI = function() {{
     const playBtn = document.getElementById('m-btn-play');
     const titleEl = document.getElementById('music-title');
     const subEl = document.getElementById('music-sub');
-
     if (qqBridge.isPlaying) {{
       playBtn.textContent = "⏸ 暂停";
       playBtn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
-      playBtn.style.borderColor = "#f87171";
       disc.classList.add('record-spinning');
       quickMusicBtn.classList.add('playing');
       soundWaves.style.display = 'flex';
@@ -1737,7 +1618,6 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     }} else {{
       playBtn.textContent = "▶ 播放";
       playBtn.style.background = "linear-gradient(135deg, #059669, #047857)";
-      playBtn.style.borderColor = "#34d399";
       disc.classList.remove('record-spinning');
       quickMusicBtn.classList.remove('playing');
       soundWaves.style.display = 'none';
@@ -1746,22 +1626,302 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     }}
   }};
 
-  document.getElementById('m-btn-play').addEventListener('click', () => qqBridge.playPause());
-  document.getElementById('m-btn-next').addEventListener('click', () => qqBridge.nextTrack());
-  document.getElementById('m-btn-prev').addEventListener('click', () => qqBridge.prevTrack());
-  document.getElementById('m-btn-wake-qq').addEventListener('click', () => qqBridge.wakeUpQQMusic());
+  document.getElementById('m-btn-play').addEventListener('click', () => musicStation.togglePlay());
+  document.getElementById('m-btn-next').addEventListener('click', () => musicStation.nextTrack());
+  document.getElementById('m-btn-prev').addEventListener('click', () => musicStation.prevTrack());
+  const wakeBtn = document.getElementById('m-btn-wake-qq');
+  if (wakeBtn) wakeBtn.addEventListener('click', () => musicStation.wakeUpQQMusic());
+  const importBtn = document.getElementById('m-btn-import');
+  if (importBtn) importBtn.addEventListener('click', () => musicStation.importLocalAudio());
 
-  quickMusicBtn.addEventListener('click', (e) => {{
-    e.stopPropagation();
-    qqBridge.playPause();
-  }});
+  const tabBuiltin = document.getElementById('tab-music-builtin');
+  const tabQQ = document.getElementById('tab-music-qq');
+  if (tabBuiltin) tabBuiltin.addEventListener('click', () => musicStation.setMode('builtin'));
+  if (tabQQ) tabQQ.addEventListener('click', () => musicStation.setMode('qqmusic'));
+
+  const pWrap = document.getElementById('music-progress-wrap');
+  if (pWrap) {{
+    pWrap.addEventListener('click', (e) => {{
+      const rect = pWrap.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      musicStation.seek(pct);
+    }});
+  }}
+
+  quickMusicBtn.addEventListener('click', (e) => {{ e.stopPropagation(); musicStation.togglePlay(); }});
 
   stageEl.addEventListener('wheel', (e) => {{
     e.preventDefault();
-    if (e.deltaY > 0) qqBridge.nextTrack();
-    else qqBridge.prevTrack();
+    if (e.deltaY > 0) musicStation.nextTrack();
+    else musicStation.prevTrack();
   }});
 
+  // ==========================================
+  // 八、动态生理眨眼与情绪微表情系统
+  // ==========================================
+  function scheduleNextBlink() {{
+    const delay = 3200 + Math.random() * 2600;
+    setTimeout(() => {{
+      if (activePet === 'nezuko' && petNezuko.style.display !== 'none') {{
+        petNezuko.classList.add('is-blinking');
+        setTimeout(() => {{
+          petNezuko.classList.remove('is-blinking');
+          scheduleNextBlink();
+        }}, 130);
+      }} else {{
+        scheduleNextBlink();
+      }}
+    }}, delay);
+  }}
+  scheduleNextBlink();
+
+  const MOOD_LIST = ['🌸', '✨', '💤', '❓', '💖', '🍵', '🍂'];
+  function showRandomMood() {{
+    if (Math.random() < 0.45) {{
+      const mood = MOOD_LIST[Math.floor(Math.random() * MOOD_LIST.length)];
+      moodBubble.textContent = mood;
+      moodBubble.classList.add('active');
+      setTimeout(() => moodBubble.classList.remove('active'), 2000);
+    }}
+  }}
+  setInterval(showRandomMood, 8500);
+
+  // ==========================================
+  // 九、动画级行走与冲刺位移引擎 (PetMotionController)
+  // ==========================================
+  let curRight = 32;
+  let curBottom = 24;
+  let facingDirection = 1; // 1: 朝左, -1: 朝右
+  let isRoamingEnabled = localStorage.getItem('__agy_pet_roam_enabled__') !== 'false';
+  let isMoving = false;
+  let isActionPlaying = false;
+
+  function updateFacing(direction) {{
+    facingDirection = direction;
+    stageEl.style.transform = `scaleX(${{direction}})`;
+    smartBubble.style.transform = direction === 1 
+      ? 'translateX(-50%) translateY(0) scale(1)' 
+      : 'translateX(50%) translateY(0) scale(1) scaleX(-1)';
+    capsuleBar.style.transform = direction === 1 
+      ? 'translateX(-50%) translateY(0) scale(1)' 
+      : 'translateX(50%) translateY(0) scale(1) scaleX(-1)';
+  }}
+
+  function spawnDustPuff() {{
+    const puff = document.createElement('div');
+    puff.className = 'dust-puff';
+    puff.style.left = (facingDirection > 0 ? '70%' : '30%');
+    puff.style.setProperty('--dust-x', (facingDirection > 0 ? '30px' : '-30px'));
+    dustContainer.appendChild(puff);
+    setTimeout(() => puff.remove(), 550);
+  }}
+
+  // 动画级行走小碎步
+  function walkTo(targetRight, speed = 1.0, onComplete = null) {{
+    if (isActionPlaying) return;
+    const maxRight = Math.min(window.innerWidth - 180, 850);
+    const minRight = 24;
+    targetRight = Math.max(minRight, Math.min(maxRight, targetRight));
+
+    const dist = targetRight - curRight;
+    if (Math.abs(dist) < 15) return;
+
+    const dir = dist > 0 ? 1 : -1;
+    updateFacing(dir);
+
+    const activeRig = activePet === 'nezuko' ? petNezuko : petPrince;
+    activeRig.classList.add('is-walking');
+    isMoving = true;
+
+    const durationSec = Math.max(0.65, Math.abs(dist) / (125 * speed));
+    root.style.transition = `right ${{durationSec}}s cubic-bezier(0.25, 1, 0.5, 1), bottom 0.3s ease`;
+    root.style.right = targetRight + 'px';
+    curRight = targetRight;
+
+    petAudio.playFootstep();
+
+    setTimeout(() => {{
+      activeRig.classList.remove('is-walking');
+      isMoving = false;
+      if (onComplete) onComplete();
+    }}, durationSec * 1000);
+  }}
+
+  // 极速风火轮狂奔冲刺与急刹车 (Run Dash)
+  function runDash(customDist = 0) {{
+    if (isActionPlaying) return;
+    isActionPlaying = true;
+    const maxRight = Math.min(window.innerWidth - 180, 850);
+    const minRight = 24;
+
+    let targetDist = customDist !== 0 ? customDist : (facingDirection > 0 ? 300 : -300);
+    let targetRight = curRight + targetDist;
+
+    if (targetRight > maxRight) {{
+      targetRight = curRight - 300;
+      updateFacing(-1);
+    }} else if (targetRight < minRight) {{
+      targetRight = curRight + 300;
+      updateFacing(1);
+    }}
+
+    const dist = targetRight - curRight;
+    updateFacing(dist > 0 ? 1 : -1);
+
+    const activeRig = activePet === 'nezuko' ? petNezuko : petPrince;
+    activeRig.classList.add('is-running');
+    petAudio.playSpinWind();
+
+    const dustTimer = setInterval(spawnDustPuff, 70);
+
+    const durationSec = 0.95;
+    root.style.transition = `right ${{durationSec}}s cubic-bezier(0.12, 0.8, 0.32, 1)`;
+    root.style.right = targetRight + 'px';
+    curRight = targetRight;
+
+    setTimeout(() => {{
+      clearInterval(dustTimer);
+      activeRig.classList.remove('is-running');
+      activeRig.classList.add('action-skid');
+      petAudio.playFootstep();
+
+      setTimeout(() => {{
+        activeRig.classList.remove('action-skid');
+        isActionPlaying = false;
+      }}, 400);
+    }}, durationSec * 1000);
+  }}
+
+  // 自主漫步巡航心跳
+  let roamInterval = null;
+  function startRoamHeartbeat() {{
+    if (roamInterval) clearInterval(roamInterval);
+    roamInterval = setInterval(() => {{
+      if (!isRoamingEnabled || isMoving || isActionPlaying || isDragging || mainCard.style.display === 'flex') return;
+
+      const rnd = Math.random();
+      if (rnd < 0.38) {{
+        walkTo(curRight + 65 + Math.random() * 95, 1.0);
+      }} else if (rnd < 0.76) {{
+        walkTo(curRight - (65 + Math.random() * 95), 1.0);
+      }} else if (rnd < 0.90) {{
+        updateFacing(facingDirection * -1);
+        moodBubble.textContent = '❓';
+        moodBubble.classList.add('active');
+        setTimeout(() => moodBubble.classList.remove('active'), 1800);
+      }} else {{
+        if (activePet === 'nezuko') triggerCurrentPetAction('sleep', 2500);
+      }}
+    }}, 11000);
+  }}
+
+  function toggleRoamMode() {{
+    isRoamingEnabled = !isRoamingEnabled;
+    localStorage.setItem('__agy_pet_roam_enabled__', isRoamingEnabled ? 'true' : 'false');
+    const roamTag = document.getElementById('roam-status-tag');
+    if (roamTag) {{
+      roamTag.textContent = isRoamingEnabled ? '● 自由漫步中' : '○ 锁定角落';
+      roamTag.style.color = isRoamingEnabled ? '#81c784' : '#9ca3af';
+    }}
+    if (quickRoamBtn) {{
+      if (isRoamingEnabled) {{
+        quickRoamBtn.classList.add('roaming');
+        quickRoamBtn.setAttribute('data-tip', '自主走动漫步 (已开启)');
+        quickRoamBtn.textContent = '🚶';
+      }} else {{
+        quickRoamBtn.classList.remove('roaming');
+        quickRoamBtn.setAttribute('data-tip', '自主漫步已暂停 (点击开启)');
+        quickRoamBtn.textContent = '📌';
+      }}
+    }}
+    if (isRoamingEnabled) startRoamHeartbeat();
+  }}
+
+  if (isRoamingEnabled) startRoamHeartbeat();
+  quickRoamBtn.addEventListener('click', (e) => {{ e.stopPropagation(); toggleRoamMode(); }});
+  document.getElementById('btn-toggle-roam').addEventListener('click', toggleRoamMode);
+  document.getElementById('btn-instant-dash').addEventListener('click', () => runDash());
+
+  // ==========================================
+  // 十、8 帧原画分镜 360° 转木箱神技动作引擎
+  // ==========================================
+  let boxSpinCount = 0;
+  function triggerDemonSlayerBoxAction() {{
+    if (isActionPlaying) return;
+    isActionPlaying = true;
+
+    boxSpinCount++;
+    const isSpin = (boxSpinCount % 2 === 1);
+
+    petNezuko.style.display = 'none';
+    boxContainer.classList.add('show-box-action');
+    boxContainer.className = 'box-action-container show-box-action';
+
+    if (isSpin) {{
+      // 动作 A：8 帧分镜 360° 转木箱 (Spin Box Whirlwind)
+      boxContainer.classList.add('action-box-spin');
+      petAudio.playSpinWind();
+
+      // 落地砸地音效与冲击波同步
+      setTimeout(() => petAudio.playWoodThud(), 880);
+
+      setTimeout(() => {{
+        // 旋转砸地完毕，平稳切换至探头探脑
+        boxContainer.classList.remove('action-box-spin');
+        boxContainer.classList.add('action-box-peek');
+        moodBubble.textContent = '✨';
+        moodBubble.classList.add('active');
+
+        setTimeout(() => {{
+          moodBubble.classList.remove('active');
+          boxContainer.className = 'box-action-container';
+          boxContainer.classList.remove('show-box-action');
+          petNezuko.style.display = 'block';
+          isActionPlaying = false;
+        }}, 2400);
+      }}, 1300);
+    }} else {{
+      // 动作 B：钻木箱与探头探脑 (Peek-a-boo Box)
+      boxContainer.classList.add('action-box-peek');
+      petAudio.playCareSound();
+      moodBubble.textContent = '🌸';
+      moodBubble.classList.add('active');
+
+      setTimeout(() => {{
+        moodBubble.classList.remove('active');
+        boxContainer.className = 'box-action-container';
+        boxContainer.classList.remove('show-box-action');
+        petNezuko.style.display = 'block';
+        isActionPlaying = false;
+      }}, 3200);
+    }}
+  }}
+
+  // 动作调度中心
+  let actionTimer = null;
+  function triggerCurrentPetAction(actionName, duration = 6500) {{
+    if (actionName === 'box') {{
+      triggerDemonSlayerBoxAction();
+      return;
+    }}
+    if (actionName === 'run') {{
+      runDash();
+      return;
+    }}
+
+    const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
+    currentRig.className = (activePet === 'nezuko' ? 'nezuko-pet-rig' : 'prince-pet-rig');
+    if (actionName) currentRig.classList.add('action-' + actionName);
+
+    if (actionTimer) clearTimeout(actionTimer);
+    actionTimer = setTimeout(() => {{
+      currentRig.className = (activePet === 'nezuko' ? 'nezuko-pet-rig' : 'prince-pet-rig');
+    }}, duration);
+  }}
+
+  // ==========================================
+  // 十一、角色切换与胶囊条按钮绑定
+  // ==========================================
   let activePet = getActivePet();
   let currentQuoteIndex = 0;
   let quoteAutoTimer = null;
@@ -1781,15 +1941,16 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     actionBtnBox.innerHTML = '';
     if (activePet === 'nezuko') {{
       actionBtnBox.innerHTML = `
-        <button class="nezuko-capsule-btn" data-action="headpat" data-tip="摸头杀蹭蹭" title="摸头杀蹭蹭">🐱</button>
-        <button class="nezuko-capsule-btn" data-action="run" data-tip="风火轮狂奔" title="豆豆眼风火轮狂奔">🏃</button>
-        <button class="nezuko-capsule-btn" data-action="box" data-tip="钻木箱捉猫" title="钻雾云杉木箱捉迷藏">📦</button>
+        <button class="nezuko-capsule-btn" data-action="box" data-tip="8帧分镜 360°转木箱 / 钻木箱" title="8帧大正雾云杉木箱360度凌空旋转">📦</button>
+        <button class="nezuko-capsule-btn" data-action="run" data-tip="极速风火轮冲刺飞奔" title="风火轮狂奔与急刹车滑行">🏃</button>
+        <button class="nezuko-capsule-btn" data-action="headpat" data-tip="摸头杀眯眯眼蹭蹭" title="摸头闭眼享受蹭蹭">🐱</button>
         <button class="nezuko-capsule-btn" data-action="stomp" data-tip="气鼓跺小脚" title="气鼓鼓跺小脚">😤</button>
         <button class="nezuko-capsule-btn" data-action="burst" data-tip="血鬼术·爆血" title="血鬼术·爆血觉醒">🔥</button>
         <button class="nezuko-capsule-btn" data-action="sleep" data-tip="揉眼伸懒腰" title="揉眼睛伸懒腰打瞌睡">🥱</button>
       `;
     }} else {{
       actionBtnBox.innerHTML = `
+        <button class="nezuko-capsule-btn" data-action="run" data-tip="星际飞奔漫步" title="在屏幕底栏飞奔冲刺">🏃</button>
         <button class="nezuko-capsule-btn" data-action="scarf" data-tip="飘逸长围巾" title="黄色围巾迎风飞扬">🧣</button>
         <button class="nezuko-capsule-btn" data-action="rose" data-tip="呵护红玫瑰" title="呵护玻璃罩里的红玫瑰">🌹</button>
         <button class="nezuko-capsule-btn" data-action="fox" data-tip="驯养小狐狸" title="与小狐狸相互依偎">🦊</button>
@@ -1809,21 +1970,11 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     }});
   }}
 
-  let actionTimer = null;
-  function triggerCurrentPetAction(actionName, duration = 6500) {{
-    const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
-    currentRig.className = (activePet === 'nezuko' ? 'nezuko-pet-rig' : 'prince-pet-rig');
-    if (actionName) currentRig.classList.add('action-' + actionName);
-
-    if (actionTimer) clearTimeout(actionTimer);
-    actionTimer = setTimeout(() => {{
-      currentRig.className = (activePet === 'nezuko' ? 'nezuko-pet-rig' : 'prince-pet-rig');
-    }}, duration);
-  }}
-
   function switchPet(targetPet) {{
     activePet = targetPet;
     setActivePet(targetPet);
+    boxContainer.className = 'box-action-container';
+    boxContainer.classList.remove('show-box-action');
 
     if (targetPet === 'nezuko') {{
       petNezuko.style.display = 'block';
@@ -1845,7 +1996,6 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       quoteAutoTimer = setInterval(showNextQuote, 180000);
       showNextQuote();
     }}
-
     renderActionButtons();
   }}
 
@@ -1856,218 +2006,28 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
   document.getElementById('btn-select-nezuko').addEventListener('click', () => switchPet('nezuko'));
   document.getElementById('btn-select-prince').addEventListener('click', () => switchPet('prince'));
 
-  petPrince.addEventListener('click', (e) => {{
+  petPrince.addEventListener('click', () => {{
     if (isDragging) return;
     showNextQuote();
     triggerCurrentPetAction('rose', 2000);
   }});
-  petNezuko.addEventListener('click', (e) => {{
+  petNezuko.addEventListener('click', () => {{
     if (isDragging) return;
     triggerCurrentPetAction('headpat', 2200);
   }});
 
-  smartBubble.addEventListener('click', (e) => {{
-    e.stopPropagation();
-    if (!smartBubble.classList.contains('mode-alert') && !smartBubble.classList.contains('mode-fatigue')) {{
-      showNextQuote();
-    }}
-  }});
-
-  // 疲劳与告急按钮交互
-  document.getElementById('btn-test-fatigue').addEventListener('click', () => {{
-    triggerFatigueAlertUI(continuousWorkMinutes >= 30 ? continuousWorkMinutes : 45);
-  }});
-  document.getElementById('btn-reset-work-timer').addEventListener('click', () => {{
-    resetWorkTimer();
-  }});
-
-  document.getElementById('btn-test-quota-alert').addEventListener('click', () => {{
-    checkQuotaAlert(true);
-  }});
-  document.getElementById('btn-mock-low-quota').addEventListener('click', () => {{
-    currentQuota.geminiWeeklyPct = 8;
-    saveUserQuota(currentQuota);
-    updateQuotaDisplay();
-    checkQuotaAlert(true);
-  }});
-
-  // ==========================================
-  // 十、配额自动同步与全功能手动校准交互
-  // ==========================================
-  const btnSyncQuota = document.getElementById('btn-sync-quota');
-  const syncIcon = document.getElementById('sync-icon');
-  const syncTimeTag = document.getElementById('quota-sync-time-tag');
-
-  btnSyncQuota.addEventListener('click', () => {{
-    syncIcon.classList.add('is-syncing');
-    btnSyncQuota.disabled = true;
-    btnSyncQuota.innerHTML = '<span class="is-syncing">🔄</span> 正在探测同步原生配额...';
-
-    // 1. 尝试直接嗅探
-    let success = sniffNativeQuotaFromDOM();
-
-    // 2. 若未捕获，尝试模拟轻微触发状态栏模型项展开
-    if (!success) {{
-      try {{
-        const statusBarItems = document.querySelectorAll('.statusbar-item, [aria-label*="Gemini"], [aria-label*="Model"], [aria-label*="quota"], [title*="配额"]');
-        statusBarItems.forEach(el => {{
-          try {{ el.dispatchEvent(new MouseEvent('mouseenter', {{ bubbles: true }})); }} catch (_) {{}}
-        }});
-      }} catch (_) {{}}
-    }}
-
-    setTimeout(() => {{
-      success = sniffNativeQuotaFromDOM() || success;
-      btnSyncQuota.disabled = false;
-      syncIcon.classList.remove('is-syncing');
-
-      if (success) {{
-        btnSyncQuota.innerHTML = '✅ 同步成功！(刚刚)';
-        btnSyncQuota.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-        btnSyncQuota.style.borderColor = '#34d399';
-        syncTimeTag.textContent = '● 刚刚同步成功';
-        syncTimeTag.style.color = '#81c784';
-        showSmartBubble({{
-          type: 'notice',
-          tag: '🎉 原生配额同步完成',
-          zh: `✅ 已成功从 Antigravity 原生环境抓取最新配额数据！<br>Gemini: 每周 ${{currentQuota.geminiWeeklyPct}}% · 5小时 ${{currentQuota.gemini5hPct}}%`,
-          sub: "Synchronisation des quotas réussie avec succès."
-        }}, 5000);
-      }} else {{
-        btnSyncQuota.innerHTML = '💡 待展开原生卡片';
-        btnSyncQuota.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-        btnSyncQuota.style.borderColor = '#fcd34d';
-        syncTimeTag.textContent = '○ 监听中 (请点击底栏)';
-        syncTimeTag.style.color = '#fbbf24';
-
-        showSmartBubble({{
-          type: 'notice',
-          tag: '💡 原生配额同步提示',
-          zh: `📡 <b>实时监听已激活！</b><br>请在下方状态栏点击一下<b>【模型名称】</b>（或配额图标）展开原生弹窗，桌宠将立即秒级捕获真实额度；或者您也可以使用下方的<b>【手动校准】</b>直接设定哦~`,
-          sub: "Cliquez sur la barre d'état pour ouvrir les quotas.",
-          actions: [
-            {{ text: '⚙️ 打开手动校准', cls: 'bubble-act-primary', onClick: () => {{
-              openMainCard();
-              document.getElementById('nezuko-adjust-box').style.display = 'block';
-            }} }},
-            {{ text: '知道了', cls: 'bubble-act-subtle', onClick: () => hideSmartBubble() }}
-          ]
-        }}, 9000);
-
-        // 自动展开手动微调抽屉
-        document.getElementById('nezuko-adjust-box').style.display = 'block';
-      }}
-
-      setTimeout(() => {{
-        btnSyncQuota.innerHTML = '<span id="sync-icon">🔄</span> 自动同步原生配额';
-        btnSyncQuota.style.background = 'linear-gradient(135deg, #ec4899, #be185d)';
-        btnSyncQuota.style.borderColor = '#f472b6';
-      }}, 3000);
-    }}, 450);
-  }});
-
-  // 手动校准微调面板控制
-  const adjBox = document.getElementById('nezuko-adjust-box');
-  document.getElementById('btn-toggle-adjust').addEventListener('click', () => {{
-    adjBox.style.display = adjBox.style.display === 'block' ? 'none' : 'block';
-  }});
-
-  const rngGW = document.getElementById('rng-adj-gw');
-  const rngG5 = document.getElementById('rng-adj-g5');
-  const rngCW = document.getElementById('rng-adj-cw');
-  const rngC5 = document.getElementById('rng-adj-c5');
-
-  function syncAdjustInputs() {{
-    rngGW.value = currentQuota.geminiWeeklyPct;
-    rngG5.value = currentQuota.gemini5hPct;
-    rngCW.value = currentQuota.claudeWeeklyPct;
-    rngC5.value = currentQuota.claude5hPct;
-
-    document.getElementById('val-adj-gw').textContent = currentQuota.geminiWeeklyPct + '%';
-    document.getElementById('val-adj-g5').textContent = currentQuota.gemini5hPct + '%';
-    document.getElementById('val-adj-cw').textContent = currentQuota.claudeWeeklyPct + '%';
-    document.getElementById('val-adj-c5').textContent = currentQuota.claude5hPct + '%';
-  }}
-  syncAdjustInputs();
-
-  rngGW.addEventListener('input', (e) => {{
-    currentQuota.geminiWeeklyPct = parseInt(e.target.value, 10);
-    document.getElementById('val-adj-gw').textContent = e.target.value + '%';
-    saveUserQuota(currentQuota);
-    updateQuotaDisplay();
-  }});
-  rngG5.addEventListener('input', (e) => {{
-    currentQuota.gemini5hPct = parseInt(e.target.value, 10);
-    document.getElementById('val-adj-g5').textContent = e.target.value + '%';
-    saveUserQuota(currentQuota);
-    updateQuotaDisplay();
-  }});
-  rngCW.addEventListener('input', (e) => {{
-    currentQuota.claudeWeeklyPct = parseInt(e.target.value, 10);
-    document.getElementById('val-adj-cw').textContent = e.target.value + '%';
-    saveUserQuota(currentQuota);
-    updateQuotaDisplay();
-  }});
-  rngC5.addEventListener('input', (e) => {{
-    currentQuota.claude5hPct = parseInt(e.target.value, 10);
-    document.getElementById('val-adj-c5').textContent = e.target.value + '%';
-    saveUserQuota(currentQuota);
-    updateQuotaDisplay();
-  }});
-
-  // 快捷预设按钮
-  const applyPreset = (gw, g5, cw, c5) => {{
-    currentQuota.geminiWeeklyPct = gw;
-    currentQuota.gemini5hPct = g5;
-    currentQuota.claudeWeeklyPct = cw;
-    currentQuota.claude5hPct = c5;
-    syncAdjustInputs();
-    saveUserQuota(currentQuota);
-    updateQuotaDisplay();
-    checkQuotaAlert();
-  }};
-
-  document.getElementById('btn-preset-100').addEventListener('click', () => applyPreset(100, 100, 100, 100));
-  document.getElementById('btn-preset-80').addEventListener('click', () => applyPreset(80, 80, 80, 80));
-  document.getElementById('btn-preset-50').addEventListener('click', () => applyPreset(50, 50, 50, 50));
-  document.getElementById('btn-preset-8').addEventListener('click', () => applyPreset(8, 8, 8, 8));
-
-  document.getElementById('btn-save-adjust').addEventListener('click', () => {{
-    saveUserQuota(currentQuota);
-    updateQuotaDisplay();
-    adjBox.style.display = 'none';
-    syncTimeTag.textContent = '● 已手动校准保存';
-    syncTimeTag.style.color = '#81c784';
-  }});
-
-  document.getElementById('btn-toggle-ide-theme').addEventListener('click', () => {{
-    const current = isIdeThemeEnabled();
-    setIdeTheme(!current);
-    document.getElementById('theme-status-tag').textContent = !current ? "● 已激活" : "○ 已关闭";
-    document.getElementById('theme-status-tag').style.color = !current ? "#81c784" : "#9ca3af";
-  }});
-
   switchPet(activePet);
 
-  // 防消失与交互
+  // 胶囊防消失
   let hideCapsuleTimer = null;
-  let isCapsulePinned = false;
-
   function showCapsule() {{
-    if (hideCapsuleTimer) {{
-      clearTimeout(hideCapsuleTimer);
-      hideCapsuleTimer = null;
-    }}
+    if (hideCapsuleTimer) clearTimeout(hideCapsuleTimer);
     capsuleBar.classList.add('is-active');
   }}
   function scheduleHideCapsule() {{
-    if (isCapsulePinned) return;
     if (hideCapsuleTimer) clearTimeout(hideCapsuleTimer);
-    hideCapsuleTimer = setTimeout(() => {{
-      capsuleBar.classList.remove('is-active');
-    }}, 450);
+    hideCapsuleTimer = setTimeout(() => capsuleBar.classList.remove('is-active'), 450);
   }}
-
   stageEl.addEventListener('mouseenter', showCapsule);
   stageEl.addEventListener('mouseleave', scheduleHideCapsule);
   capsuleBar.addEventListener('mouseenter', showCapsule);
@@ -2084,11 +2044,9 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     e.stopPropagation();
     mainCard.style.display = mainCard.style.display === 'flex' ? 'none' : 'flex';
   }});
-  closeBtn.addEventListener('click', () => {{
-    mainCard.style.display = 'none';
-  }});
+  closeBtn.addEventListener('click', () => mainCard.style.display = 'none');
 
-  // 拖拽引擎
+  // 拖拽物理引擎
   let isDragging = false;
   let startX = 0, startY = 0;
   let origRight = 32, origBottom = 24;
@@ -2109,8 +2067,11 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
         isDragging = true;
         const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
         currentRig.classList.add('pet-picked-up');
-        root.style.right = (origRight - dx) + 'px';
-        root.style.bottom = (origBottom - dy) + 'px';
+        curRight = origRight - dx;
+        curBottom = origBottom - dy;
+        root.style.transition = 'none';
+        root.style.right = curRight + 'px';
+        root.style.bottom = curBottom + 'px';
       }}
     }};
 
@@ -2120,10 +2081,10 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
       if (isDragging) {{
         const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
         currentRig.classList.remove('pet-picked-up');
+        root.style.transition = 'right 0.75s cubic-bezier(0.25, 1, 0.5, 1), bottom 0.3s ease';
         setTimeout(() => {{ isDragging = false; }}, 50);
       }}
     }};
-
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   }};
@@ -2131,35 +2092,14 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
   petNezuko.addEventListener('mousedown', onDragDown);
   petPrince.addEventListener('mousedown', onDragDown);
 
-  // 配额更新展示
-  function updateQuotaDisplay() {{
-    const CIRCLE_CIRCUM = 62.83;
-    const setRing = (id, pct) => {{
-      const ring = document.getElementById(id);
-      if (!ring) return;
-      const offset = CIRCLE_CIRCUM * (1 - (pct / 100));
-      ring.style.strokeDashoffset = offset;
-      if (pct > 75) ring.style.stroke = '#81c784';
-      else if (pct > 30) ring.style.stroke = '#ffd54f';
-      else ring.style.stroke = '#e57373';
-    }};
-    setRing('ring-gemini-weekly', currentQuota.geminiWeeklyPct);
-    setRing('ring-gemini-5h', currentQuota.gemini5hPct);
-    setRing('ring-claude-weekly', currentQuota.claudeWeeklyPct);
-    setRing('ring-claude-5h', currentQuota.claude5hPct);
-
-    document.getElementById('lbl-gemini-weekly-pct').textContent = currentQuota.geminiWeeklyPct + '%';
-    document.getElementById('lbl-gemini-5h-pct').textContent = currentQuota.gemini5hPct + '%';
-    document.getElementById('lbl-claude-weekly-pct').textContent = currentQuota.claudeWeeklyPct + '%';
-    document.getElementById('lbl-claude-5h-pct').textContent = currentQuota.claude5hPct + '%';
-  }}
-  updateQuotaDisplay();
-  updateWorkTimeDisplay();
-  checkQuotaAlert();
-
 }})();
 """
 
 target_js = REPO_ROOT / "resources" / "nezuko-pet.js"
 target_js.write_text(js_code, encoding="utf-8")
-print(f"✅ 成功生成对接电脑 QQ 音乐与额度/疲劳提醒/四维同步引擎的桌宠组件: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
+print(f"✅ 成功生成动画级别动作引擎桌宠代码: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
+
+# 同步写入 scripts/build_nezuko_pet.py
+build_py = REPO_ROOT / "scripts" / "build_nezuko_pet.py"
+build_py.write_text(Path(__file__).read_text(encoding="utf-8"), encoding="utf-8")
+print(f"✅ 成功同步 build_nezuko_pet.py: {build_py}")
