@@ -82,10 +82,6 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
     sendCommand(cmd) {{
       if (this.ipc) {{
         this.ipc.send('__agy_media_command__', cmd);
-      }} else {{
-        if (cmd === 'open_qq') {{
-          try {{ window.location.href = 'qqmusic://'; }} catch (_) {{}}
-        }}
       }}
     }}
 
@@ -112,6 +108,20 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼�
 
     wakeUpQQMusic() {{
       this.sendCommand('open_qq');
+      const btn = document.getElementById('m-btn-wake-qq');
+      if (btn) {{
+        const origTxt = btn.innerHTML;
+        btn.innerHTML = '✨ 唤醒中...';
+        setTimeout(() => {{ btn.innerHTML = origTxt; }}, 2000);
+      }}
+      if (typeof showSmartBubble === 'function') {{
+        showSmartBubble({{
+          type: 'notice',
+          tag: '🎵 本地 QQ 音乐联动',
+          zh: '🚀 <b>正在呼出 QQ 音乐主界面！</b><br>已检测到本地客户端路径并拉起，窗口即将前置显示~',
+          sub: 'Ouverture de la fenêtre QQ Music en cours...'
+        }}, 4000);
+      }}
     }}
   }}
 

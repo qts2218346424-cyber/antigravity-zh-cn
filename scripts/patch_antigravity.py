@@ -730,7 +730,21 @@ try {{
         __agyIpcMain.on('__agy_media_command__', (_evt, action) => {{
             try {{
                 if (action === 'open_qq') {{
-                    __agyExec('start qqmusic://');
+                    const __agyFs = require('fs');
+                    const __agyPaths = [
+                        'e:\\\\浏览器\\\\电脑管家\\\\tencent\\\\qqmusic\\\\QQMusic.exe',
+                        'C:\\\\Program Files\\\\Tencent\\\\QQMusic\\\\QQMusic.exe',
+                        'C:\\\\Program Files (x86)\\\\Tencent\\\\QQMusic\\\\QQMusic.exe',
+                        'D:\\\\Program Files\\\\Tencent\\\\QQMusic\\\\QQMusic.exe'
+                    ];
+                    let __target = __agyPaths.find(p => {{ try {{ return __agyFs.existsSync(p); }} catch(_) {{ return false; }} }});
+                    if (__target) {{
+                        __agyExec(`start "" "${{__target}}"`);
+                    }} else {{
+                        __agyExec('start QQMusic.exe || start qqmusic://');
+                    }}
+                    const __focusCmd = `powershell -WindowStyle Hidden -NoProfile -Command "$w=Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); [DllImport(\\"user32.dll\\")] public static extern bool SetForegroundWindow(IntPtr hWnd);' -Name W -Namespace U -PassThru; $p=Get-Process -Name QQMusic -ErrorAction SilentlyContinue | Select-Object -First 1; if($p -and $p.MainWindowHandle -ne [IntPtr]::Zero){{ $w::ShowWindowAsync($p.MainWindowHandle, 9); $w::SetForegroundWindow($p.MainWindowHandle) }}"`;
+                    setTimeout(() => {{ try {{ __agyExec(__focusCmd); }} catch(_) {{}} }}, 350);
                     return;
                 }}
                 const vkMap = {{ play_pause: '0xB3', next: '0xB0', prev: '0xB1' }};
