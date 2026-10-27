@@ -290,10 +290,11 @@ def get_asar_path(install_dir: Path) -> Path:
     return install_dir / "resources" / "app.asar"
 
 
-def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
+def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, character: str = None):
     """
     完整安装补丁流程：
     采用原位无损修改技术，精准替换 menu.js、tray.js、updater.js 和 preload.js。
+    支持全屏展示指定角色动画 (tanjiro, zenitsu, inosuke, nezuko, all)。
     """
     if repo_root is None:
         repo_root = Path(__file__).resolve().parent.parent
@@ -318,6 +319,39 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None):
 
     # 载入本地化资源
     res_dir = repo_root / "resources"
+
+    # 角色选择交互与配置解析
+    from splash_generator import THEMES, build_overlay_js, get_current_theme, save_current_theme
+
+    selected_char = character
+    if not selected_char:
+        # 检测是否为交互式终端，若是则弹出菜单供用户确认选择
+        is_interactive = sys.stdin.isatty() and not _is_running_inside_antigravity()
+        if is_interactive:
+            print("\n" + "=" * 62)
+            print("       请选择《鬼灭之刃》全屏启动动画展示角色")
+            print("=" * 62)
+            print(" [1] 灶门炭治郎 (全屏水之呼吸·生生流转巨浪斩击) [推荐]")
+            print(" [2] 我妻善逸   (全屏雷之呼吸·霹雳一闪雷霆爆闪)")
+            print(" [3] 嘴平伊之助 (全屏兽之呼吸·猪突猛进野猪喷气)")
+            print(" [4] 灶门祢豆子 (全屏竹篓探头萌动与樱花爆血)")
+            print(" [5] 鬼杀四象合集 (经典四宫格四主角轮巡大赏)")
+            print("=" * 62)
+            choice_map = {"1": "tanjiro", "2": "zenitsu", "3": "inosuke", "4": "nezuko", "5": "all"}
+            try:
+                user_choice = input("请输入选项编号 [1-5] (默认 1): ").strip()
+                selected_char = choice_map.get(user_choice, "tanjiro")
+            except (EOFError, KeyboardInterrupt):
+                selected_char = "tanjiro"
+        else:
+            selected_char = get_current_theme()
+
+    if selected_char not in THEMES:
+        selected_char = "tanjiro"
+
+    save_current_theme(selected_char)
+    theme_info = THEMES[selected_char]
+    print(f"• 选定启动动画角色: {theme_info['name']} ({theme_info['breath']})")
     dict_file = res_dir / f"antigravity-{lang}.json"
     if not dict_file.is_file():
         dict_file = res_dir / "antigravity-zh-CN.json"
@@ -632,16 +666,15 @@ function __agyTranslateNotif(text) {{
     except Exception as e:
         print(f"  [!] 忽略非致命项 dist/ipcHandlers.js: {e}")
 
-    # (6) 修补 dist/loadingOverlay.js (重构为原厂级深空反重力启动动效，彻底根除白屏断层)
+    # (6) 修补 dist/loadingOverlay.js (重构为原厂级全屏角色启动动效)
     try:
         overlay_content = read_asar_file_content(asar_data, "dist/loadingOverlay.js").decode("utf-8")
         if PATCH_MARKER not in overlay_content:
-            overlay_file = res_dir / "loadingOverlay-zh.js"
-            if overlay_file.is_file():
-                overlay_patch_code = f"{PATCH_MARKER}\n{overlay_file.read_text(encoding='utf-8')}"
-                validate_js_syntax(overlay_patch_code, "dist/loadingOverlay.js")
-                asar_data = replace_asar_file_content(asar_data, "dist/loadingOverlay.js", overlay_patch_code.encode("utf-8"))
-                print("  [OK] 原生反重力启动遮罩 (dist/loadingOverlay.js) 零延迟深空秒开重构完成")
+            overlay_code = build_overlay_js(selected_char)
+            overlay_patch_code = f"{PATCH_MARKER}\n{overlay_code}"
+            validate_js_syntax(overlay_patch_code, "dist/loadingOverlay.js")
+            asar_data = replace_asar_file_content(asar_data, "dist/loadingOverlay.js", overlay_patch_code.encode("utf-8"))
+            print(f"  [OK] 原生全屏角色启动遮罩 ({theme_info['name']}) 零延迟深空秒开重构完成")
     except KeyError:
         print("  [!] ASAR 中未包含 dist/loadingOverlay.js，跳过遮罩注入")
     except SyntaxError:
@@ -779,6 +812,8 @@ def main():
                         nargs="?", default="install", help="执行操作 (默认: install)")
     parser.add_argument("--lang", choices=["zh-CN", "zh-TW", "zh-HK"], default="zh-CN",
                         help="目标语言 (默认: zh-CN)")
+    parser.add_argument("--character", "-c", choices=["tanjiro", "zenitsu", "inosuke", "nezuko", "all"],
+                        default=None, help="启动动画展示角色: tanjiro(炭治郎), zenitsu(善逸), inosuke(伊之助), nezuko(祢豆子), all(四象合集)")
     parser.add_argument("--dir", help="Antigravity 安装目录路径 (默认自动检测)")
 
     args = parser.parse_args()
@@ -792,7 +827,7 @@ def main():
     repo_root = Path(__file__).resolve().parent.parent
 
     if args.action == "install":
-        apply_patch(install_dir, args.lang, repo_root)
+        apply_patch(install_dir, args.lang, repo_root, character=args.character)
     elif args.action == "restore":
         restore_backup(install_dir)
     elif args.action == "disable-updates":
