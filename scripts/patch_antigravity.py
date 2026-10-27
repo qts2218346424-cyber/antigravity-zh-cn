@@ -31,6 +31,37 @@ PATCH_MARKER = "/* __ANTIGRAVITY_ZH_CN_PATCHED__ */"
 ASAR_INTEGRITY_BLOCK_SIZE = 4 * 1024 * 1024
 
 
+def validate_js_syntax(code: str, file_desc: str = "javascript") -> bool:
+    """使用 Node.js 严格校验 JS 语法，若存在语法错误则立即抛出异常阻断写入"""
+    import subprocess
+    import tempfile
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".js", delete=False, mode="w", encoding="utf-8") as tf:
+            tf.write(code)
+            temp_path = tf.name
+
+        try:
+            res = subprocess.run(["node", "-c", temp_path], capture_output=True, text=True, timeout=5)
+            if res.returncode != 0:
+                err_msg = (res.stderr or res.stdout).strip()
+                print(f"  [CRITICAL ERROR] JS 语法校验失败 ({file_desc}):\n{err_msg}")
+                raise SyntaxError(f"JavaScript 语法校验未通过 ({file_desc}):\n{err_msg}")
+            return True
+        finally:
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+    except FileNotFoundError:
+        # 环境中未安装 node 时降级跳过
+        return True
+    except SyntaxError:
+        raise
+    except Exception:
+        return True
+
+
 def _is_running_inside_antigravity() -> bool:
     """检测当前 Python 进程是否由 Antigravity 宿主进程启动（即从 Antigravity 对话内部调用）。
     通过沿进程树向上遍历祖先进程，判断是否存在名为 Antigravity 的父进程。"""
@@ -355,6 +386,7 @@ function __agyTranslateMenu(m) {{
             menu_content = menu_content.replace('"Connect to WSL"', '"连接到 WSL"')
             menu_content = menu_content.replace("'Reopen Locally'", "'在本地重新打开'")
             menu_content = menu_content.replace('"Reopen Locally"', '"在本地重新打开"')
+            validate_js_syntax(menu_content, "dist/menu.js")
             asar_data = replace_asar_file_content(asar_data, "dist/menu.js", menu_content.encode("utf-8"))
             print("  [OK] 原生菜单与 WSL 项 (dist/menu.js) 汉化与调试支持修补完成")
     except Exception as e:
@@ -377,6 +409,7 @@ function __agyTranslateMenu(m) {{
             r"countItem.label = count > 0 ? `${count} 个智能体正在运行` : '无正在运行的智能体';",
             tray_content
         )
+        validate_js_syntax(tray_content, "dist/tray.js")
         asar_data = replace_asar_file_content(asar_data, "dist/tray.js", tray_content.encode("utf-8"))
         print("  [OK] 系统托盘动态状态 (dist/tray.js) 彻底重构修补完成")
     except Exception as e:
@@ -443,6 +476,7 @@ function __agyTranslateMenu(m) {{
         if "/* __ANTIGRAVITY_SKILL_AUTO_LOCALIZER__ */" not in main_content:
             main_content = skill_hook + "\n" + main_content
 
+        validate_js_syntax(main_content, "dist/main.js")
         asar_data = replace_asar_file_content(asar_data, "dist/main.js", main_content.encode("utf-8"))
         print("  [OK] 主进程托盘模板与系统对话框及技能自检 (dist/main.js) 汉化修补完成")
     except Exception as e:
@@ -464,6 +498,7 @@ function __agyTranslateMenu(m) {{
             "electron_updater_1.autoUpdater.autoInstallOnAppQuit = electron_1.app.isPackaged;",
             "electron_updater_1.autoUpdater.autoInstallOnAppQuit = false;"
         )
+        validate_js_syntax(updater_content, "dist/updater.js")
         asar_data = replace_asar_file_content(asar_data, "dist/updater.js", updater_content.encode("utf-8"))
         print("  [OK] 更新提示与自动静默覆盖防护 (dist/updater.js) 修补完成")
     except Exception as e:
@@ -494,6 +529,7 @@ try {
                     f"{notif_preload_patch}\nelectron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);"
                 )
             preload_content += f"\n{PATCH_MARKER}\n{injection_code}\n"
+            validate_js_syntax(preload_content, "dist/preload.js")
             asar_data = replace_asar_file_content(asar_data, "dist/preload.js", preload_content.encode("utf-8"))
             print("  [OK] DOM 翻译引擎与原生通知预加载通道注入完成 (dist/preload.js)")
     except Exception as e:
@@ -505,7 +541,11 @@ try {
         utils_content = read_asar_file_content(asar_data, "dist/utils.js").decode("utf-8")
         if PATCH_MARKER not in utils_content:
             import re
-            utils_content = re.sub(r"devTools:\s*[^,\n]+,", "devTools: true,", utils_content)
+            if "(0, debugConsole_1.isDebugConsoleEnabled)()," in utils_content:
+                utils_content = utils_content.replace("(0, debugConsole_1.isDebugConsoleEnabled)(),", "true,")
+            else:
+                utils_content = re.sub(r"devTools:\s*[^;\r\n]+?,(?=\s*(?://|[^\S\r\n]*[\r\n]))", "devTools: true,", utils_content)
+
             utils_content = utils_content.replace(
                 "contextIsolation: true,",
                 "contextIsolation: true,\n            allFrames: true,"
@@ -543,12 +583,14 @@ const __AGY_ZH_CODE__ = {js_raw};
 """
             if target_str in utils_content:
                 utils_content = utils_content.replace(target_str, replacement_str, 1)
+                validate_js_syntax(utils_content, "dist/utils.js")
                 asar_data = replace_asar_file_content(asar_data, "dist/utils.js", utils_content.encode("utf-8"))
                 print("  [OK] 主世界注入通道挂载完成 (dist/utils.js)")
             else:
                 print("  [!] 未在 dist/utils.js 中找到 void win.loadURL(url); 锚点")
     except Exception as e:
         print(f"  [!] 主世界注入通道修补失败: {e}")
+        raise
 
     # (5.1) 修补 dist/ipcHandlers.js (原生桌面通知全汉化拦截)
     try:
@@ -582,6 +624,7 @@ function __agyTranslateNotif(text) {{
         });"""
             if old_notif_target in ipc_content:
                 ipc_content = ipc_content.replace(old_notif_target, new_notif_target, 1)
+                validate_js_syntax(ipc_content, "dist/ipcHandlers.js")
                 asar_data = replace_asar_file_content(asar_data, "dist/ipcHandlers.js", ipc_content.encode("utf-8"))
                 print("  [OK] 原生桌面系统通知 (dist/ipcHandlers.js) 汉化拦截通道挂载完成")
             else:
@@ -596,10 +639,15 @@ function __agyTranslateNotif(text) {{
             overlay_file = res_dir / "loadingOverlay-zh.js"
             if overlay_file.is_file():
                 overlay_patch_code = f"{PATCH_MARKER}\n{overlay_file.read_text(encoding='utf-8')}"
+                validate_js_syntax(overlay_patch_code, "dist/loadingOverlay.js")
                 asar_data = replace_asar_file_content(asar_data, "dist/loadingOverlay.js", overlay_patch_code.encode("utf-8"))
                 print("  [OK] 原生反重力启动遮罩 (dist/loadingOverlay.js) 零延迟深空秒开重构完成")
+    except KeyError:
+        print("  [!] ASAR 中未包含 dist/loadingOverlay.js，跳过遮罩注入")
+    except SyntaxError:
+        raise
     except Exception as e:
-        print(f"  [!] 原生启动遮罩修补失败: {e}")
+        print(f"  [!] 原生启动遮罩修补非致命异常: {e}")
 
     # 4. 安全写入目标文件
     print(f"[4/4] 正在安全写入汉化文件: {asar_path.name}...")
