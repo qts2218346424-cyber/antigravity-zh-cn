@@ -504,10 +504,8 @@ try {
     try:
         utils_content = read_asar_file_content(asar_data, "dist/utils.js").decode("utf-8")
         if PATCH_MARKER not in utils_content:
-            utils_content = utils_content.replace(
-                "devTools: !electron_1.app.isPackaged,",
-                "devTools: true,"
-            )
+            import re
+            utils_content = re.sub(r"devTools:\s*[^,\n]+,", "devTools: true,", utils_content)
             utils_content = utils_content.replace(
                 "contextIsolation: true,",
                 "contextIsolation: true,\n            allFrames: true,"

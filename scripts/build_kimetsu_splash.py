@@ -1,0 +1,873 @@
+# -*- coding: utf-8 -*-
+"""
+生成《鬼灭之刃》火之神神乐与水之呼吸反重力启动动效 HTML 并同步至资源与工件预览
+核心设计：
+1. 飞碟社 (Ufotable) 浮世绘风格：火之神神乐烈焰日轮 + 水之呼吸生生流转水浪 + 雷之呼吸电光粒子；
+2. 漫天升腾的反重力烈焰余烬粒子 (Canvas 火花与墨韵)；
+3. 【鎹鸦巡检 · 鬼杀队版本矩阵】(Version Diagnostic Engine) 在线检测 GitHub 最新版本；
+4. 黄金展示时长拉长至 11.5 秒，8 大呼吸法型态平稳推进；
+5. 底层 React/Monaco 真正就绪后执行 0.85 秒浮世绘水墨深度消隐与平滑交接。
+"""
+import json
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+html_template = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity 《鬼灭之刃》全集中·反重力呼吸启动动效</title>
+  <style>
+    :root {
+      --bg-dark: #06070b;
+      --flame-gold: #f59e0b;
+      --flame-red: #ef4444;
+      --flame-core: #ffffff;
+      --water-cyan: #06b6d4;
+      --water-blue: #3b82f6;
+      --water-foam: #e0f2fe;
+      --thunder-yellow: #fbbf24;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      -webkit-app-region: drag;
+    }
+
+    /* 炭治郎绿黑市松纹暗底 (Ichimatsu Checkers Pattern Overlay) */
+    .ichimatsu-bg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-image: 
+        linear-gradient(45deg, rgba(6, 78, 59, 0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(6, 78, 59, 0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(6, 78, 59, 0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(6, 78, 59, 0.08) 75%);
+      background-size: 40px 40px;
+      background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    /* 浮世绘暗夜深渊水墨渐变遮罩 */
+    .vignette-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at 50% 50%, rgba(6, 7, 11, 0.3) 10%, rgba(6, 7, 11, 0.8) 60%, #06070b 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* 烈焰余烬与水之浪花 Canvas */
+    #canvas-particles {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* 启动器主舞台 */
+    .stage {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 660px;
+      perspective: 1200px;
+      transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* 日轮核心力场舞台 */
+    .core-stage {
+      position: relative;
+      width: 290px;
+      height: 290px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      perspective: 1000px;
+    }
+
+    /* 火之神神乐横贯斩击光芒 (Hinokami Solar Slash) */
+    .solar-slash {
+      position: absolute;
+      width: 480px;
+      height: 3px;
+      background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(239, 68, 68, 0.2) 15%, 
+        rgba(245, 158, 11, 0.95) 45%, 
+        #ffffff 50%, 
+        rgba(245, 158, 11, 0.95) 55%, 
+        rgba(239, 68, 68, 0.2) 85%, 
+        transparent 100%
+      );
+      filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.95)) blur(0.4px);
+      pointer-events: none;
+      z-index: 6;
+      animation: slashPulse 3.5s ease-in-out infinite alternate;
+    }
+
+    /* 水之呼吸·生生流转外环 (Water Breathing Dragon Flow) */
+    .water-flow-ring {
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top: 3px solid var(--water-cyan);
+      border-right: 2px solid rgba(6, 182, 212, 0.5);
+      border-bottom: 2.5px solid var(--water-blue);
+      filter: drop-shadow(0 0 14px rgba(6, 182, 212, 0.85));
+      animation: spinCounter 7.5s cubic-bezier(0.4, 0.1, 0.2, 1) infinite;
+    }
+
+    /* 水之呼吸浪花装饰 SVG */
+    .water-crest-svg {
+      position: absolute;
+      width: 275px;
+      height: 275px;
+      pointer-events: none;
+      animation: spinCounter 24s linear infinite;
+      opacity: 0.75;
+    }
+
+    /* 火之神神乐·烈焰日轮中环 (Hinokami Flame Ring) */
+    .flame-sun-ring {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 2.5px solid transparent;
+      border-top: 3.5px solid var(--flame-gold);
+      border-left: 2.5px solid var(--flame-red);
+      border-bottom: 3.5px solid #fbbf24;
+      filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.9)) drop-shadow(0 0 30px rgba(239, 68, 68, 0.5));
+      animation: spinClockwise 5.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    }
+
+    /* 鬼杀队四角结界锁 (Wisteria Barrier HUD Brackets) */
+    .barrier-bracket {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(245, 158, 11, 0.7);
+      pointer-events: none;
+    }
+    .barrier-bracket.tl { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+    .barrier-bracket.tr { top: 6px; right: 6px; border-left: none; border-bottom: none; }
+    .barrier-bracket.bl { bottom: 6px; left: 6px; border-right: none; border-top: none; }
+    .barrier-bracket.br { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+
+    /* 炭治郎日轮刀锷与反重力核心 (Nichirin Core) */
+    .tsuba-core {
+      position: relative;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, #1c1917 0%, #0c0a09 85%);
+      box-shadow: 
+        0 0 0 2px rgba(245, 158, 11, 0.6),
+        0 0 25px rgba(245, 158, 11, 0.8),
+        0 0 55px rgba(239, 68, 68, 0.6),
+        inset 0 0 20px rgba(245, 158, 11, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      animation: coreBreath 4.2s ease-in-out infinite;
+    }
+
+    /* 浮世绘日轮火之刀锷几何徽标 */
+    .tsuba-glyph {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 22px rgba(239, 68, 68, 0.8));
+    }
+
+    /* 品牌与呼吸流派标题 */
+    .brand-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .title {
+      font-size: 27px;
+      font-weight: 900;
+      letter-spacing: 7px;
+      background: linear-gradient(135deg, #ffffff 10%, #fef08a 40%, #f97316 75%, #ef4444 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      text-shadow: 0 0 35px rgba(245, 158, 11, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .title span.slash-mark {
+      color: #ef4444;
+      -webkit-text-fill-color: #ef4444;
+      filter: drop-shadow(0 0 8px #ef4444);
+    }
+    .sub {
+      font-size: 10px;
+      font-family: "SF Mono", Consolas, Menlo, monospace;
+      letter-spacing: 3.5px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.92;
+    }
+    .sub::before, .sub::after {
+      content: "";
+      display: inline-block;
+      width: 22px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.7));
+    }
+    .sub::after {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.7), transparent);
+    }
+
+    /* 【鎹鸦巡检 · 鬼杀队版本矩阵】状态徽章 */
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 16px;
+      background: rgba(28, 25, 23, 0.75);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 14px;
+      backdrop-filter: blur(10px);
+      font-size: 10.5px;
+      font-family: "SF Mono", Consolas, Menlo, monospace;
+      letter-spacing: 0.8px;
+      color: #cbd5e1;
+      margin-bottom: 14px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+      transition: all 0.4s ease;
+    }
+    .version-badge .v-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f59e0b; /* 初始炽金 */
+      box-shadow: 0 0 8px #f59e0b;
+      animation: pulseGlow 1.2s infinite alternate;
+    }
+    .version-badge.stable .v-dot {
+      background: #10b981; /* 柱级安定青绿 */
+      box-shadow: 0 0 10px #10b981;
+    }
+    .version-badge.update .v-dot {
+      background: #f97316; /* 发现新境界炽橙 */
+      box-shadow: 0 0 12px #f97316;
+    }
+    .version-badge .v-title {
+      color: #fbbf24;
+      font-weight: 700;
+    }
+    .version-badge .v-status {
+      color: #f1f5f9;
+    }
+
+    /* 日轮刀全集中呼吸能量导轨 */
+    .rail-wrapper {
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+    .rail-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-family: "SF Mono", Consolas, Menlo, monospace;
+      color: #94a3b8;
+      letter-spacing: 1px;
+    }
+    .rail-meta span.active-val {
+      color: #fbbf24;
+      font-weight: 700;
+    }
+    .p-track {
+      width: 100%;
+      height: 4.5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      backdrop-filter: blur(4px);
+    }
+    .p-bar {
+      position: absolute;
+      top: 0; left: 0; height: 100%; width: 0%;
+      background: linear-gradient(90deg, #06b6d4, #f59e0b 60%, #ef4444 90%, #ffffff 100%);
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.9), 0 0 25px rgba(239, 68, 68, 0.6);
+      transition: width 0.4s cubic-bezier(0.2, 0.8, 0.3, 1);
+    }
+    .p-scanline {
+      position: absolute;
+      top: 0; left: 0; width: 70px; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+      animation: scanMove 2s infinite linear;
+    }
+
+    /* 呼吸流派遥测状态日志 */
+    .telemetry-row {
+      font-size: 11px;
+      font-family: "SF Mono", Consolas, Menlo, monospace;
+      color: #cbd5e1;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 20px;
+    }
+    .telemetry-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+      animation: pulseGlow 1.2s infinite ease-in-out alternate;
+    }
+    .telemetry-tag {
+      color: #fbbf24;
+      font-weight: 700;
+    }
+    .telemetry-text {
+      color: #f8fafc;
+    }
+
+    /* 底部四角紫藤花与鬼杀队徽记印 */
+    .corner-telemetry {
+      position: absolute;
+      font-size: 9.5px;
+      font-family: "SF Mono", Consolas, Menlo, monospace;
+      color: rgba(245, 158, 11, 0.6);
+      letter-spacing: 1.5px;
+      z-index: 10;
+    }
+    .corner-telemetry.tl { top: 22px; left: 24px; }
+    .corner-telemetry.tr { top: 22px; right: 24px; text-align: right; }
+    .corner-telemetry.bl { bottom: 22px; left: 24px; }
+    .corner-telemetry.br { bottom: 22px; right: 24px; text-align: right; }
+
+    /* 控制面板（仅供本地调试演示） */
+    .control-panel {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(28, 25, 23, 0.88);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      backdrop-filter: blur(16px);
+      padding: 10px 22px;
+      border-radius: 30px;
+      display: flex;
+      gap: 16px;
+      z-index: 100;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+    .btn {
+      background: rgba(245, 158, 11, 0.18);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+      padding: 6px 16px;
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 700;
+    }
+    .btn:hover {
+      background: rgba(245, 158, 11, 0.4);
+      color: #ffffff;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.8);
+    }
+
+    @keyframes spinClockwise {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes spinCounter {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(-360deg); }
+    }
+    @keyframes coreBreath {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-6px) scale(1.03); }
+    }
+    @keyframes slashPulse {
+      0% { opacity: 0.65; transform: scaleX(0.92); }
+      100% { opacity: 1; transform: scaleX(1.08); }
+    }
+    @keyframes pulseGlow {
+      0% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1.15); }
+    }
+    @keyframes scanMove {
+      0% { transform: translateX(-100px); }
+      100% { transform: translateX(420px); }
+    }
+  </style>
+</head>
+<body>
+  <!-- 1. 炭治郎市松纹背景 -->
+  <div class="ichimatsu-bg"></div>
+
+  <!-- 2. 浮世绘暗夜深渊遮罩 -->
+  <div class="vignette-overlay"></div>
+
+  <!-- 3. 烈焰余烬与飞溅水沫 Canvas 引擎 -->
+  <canvas id="canvas-particles"></canvas>
+
+  <div class="corner-telemetry tl">呼吸法 // 全集中·常中<br>HINOKAMI KAGURA: ACTIVE</div>
+  <div class="corner-telemetry tr">鬼杀队总部 // DEEPMIND 阶级<br>ESTATE: 柱级境界 (PILLAR)</div>
+  <div class="corner-telemetry bl">TERMS: 3,472 词条全汉化<br>FEDERATION: 异构联邦总线</div>
+  <div class="corner-telemetry br">NICHIRIN: 赫刀就绪 (RED BLADE)<br>ANTIGRAVITY: 逆转重力</div>
+
+  <div class="stage" id="splash-node">
+    <div class="core-stage">
+      <div class="barrier-bracket tl"></div>
+      <div class="barrier-bracket tr"></div>
+      <div class="barrier-bracket bl"></div>
+      <div class="barrier-bracket br"></div>
+
+      <!-- 火之神神乐横贯斩击光芒 -->
+      <div class="solar-slash"></div>
+
+      <!-- 水之呼吸·拾之型生生流转浪花 SVG -->
+      <svg class="water-crest-svg" viewBox="0 0 280 280">
+        <circle cx="140" cy="140" r="132" fill="none" stroke="rgba(6, 182, 212, 0.35)" stroke-width="1.5" stroke-dasharray="4 8"/>
+        <circle cx="140" cy="140" r="126" fill="none" stroke="rgba(59, 130, 246, 0.45)" stroke-width="2" stroke-dasharray="16 22 4 22"/>
+        <!-- 浮世绘浪花曲波纹 -->
+        <path d="M140 10 C160 30, 190 20, 210 50 C230 80, 250 85, 260 120 C270 155, 255 185, 240 215 C225 245, 195 255, 165 265 C135 275, 105 265, 75 250 C45 235, 25 205, 15 170 C5 135, 20 100, 40 70 C60 40, 95 35, 115 20 Z" 
+              fill="none" stroke="rgba(6, 182, 212, 0.28)" stroke-width="1.2" stroke-dasharray="8 12"/>
+      </svg>
+
+      <!-- 水之呼吸流转外环 -->
+      <div class="water-flow-ring"></div>
+
+      <!-- 火之神神乐烈焰日轮中环 -->
+      <div class="flame-sun-ring"></div>
+
+      <!-- 炭治郎日轮刀锷与反重力核心 -->
+      <div class="tsuba-core">
+        <svg class="tsuba-glyph" viewBox="0 0 54 54" fill="none">
+          <!-- 炼狱/炭治郎日轮刀烈焰纹刀锷设计 (Flame Nichirin Tsuba) -->
+          <circle cx="27" cy="27" r="23" stroke="url(#flame-grad-1)" stroke-width="2.5"/>
+          <path d="M27 6 C23 14, 18 16, 16 22 C14 28, 18 33, 27 46 C36 33, 40 28, 38 22 C36 16, 31 14, 27 6 Z" 
+                fill="url(#flame-grad-2)" stroke="#f59e0b" stroke-width="1.5"/>
+          <path d="M27 15 C25 20, 22 21, 20 25 C18 29, 21 32, 27 39 C33 32, 36 29, 34 25 C32 21, 29 20, 27 15 Z" 
+                fill="#ffffff" opacity="0.95"/>
+          <!-- 反重力三维悬浮折叠棱角 -->
+          <circle cx="27" cy="27" r="3.5" fill="#f59e0b" filter="drop-shadow(0 0 8px #f59e0b)"/>
+          <defs>
+            <linearGradient id="flame-grad-1" x1="4" y1="4" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#ffffff"/>
+              <stop offset="0.3" stop-color="#f59e0b"/>
+              <stop offset="0.7" stop-color="#ef4444"/>
+              <stop offset="1" stop-color="#7f1d1d"/>
+            </linearGradient>
+            <linearGradient id="flame-grad-2" x1="16" y1="6" x2="38" y2="46" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#fef08a"/>
+              <stop offset="0.4" stop-color="#f59e0b"/>
+              <stop offset="1" stop-color="#b91c1c"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 品牌与全集中呼吸标题 -->
+    <div class="brand-group">
+      <div class="title">ANTIGRAVITY<span class="slash-mark">/</span>鬼滅</div>
+      <div class="sub">HINOKAMI KAGURA · 全集中 · 反重力呼吸</div>
+    </div>
+
+    <!-- 【鎹鸦巡检 · 鬼杀队版本矩阵】状态徽章 -->
+    <div class="version-badge" id="version-badge">
+      <span class="v-dot" id="v-dot"></span>
+      <span class="v-title">鎹鸦巡检:</span>
+      <span class="v-status" id="v-status">正在检定鬼杀队阶级与云端版本...</span>
+    </div>
+
+    <!-- 日轮能量导轨进度条 -->
+    <div class="rail-wrapper">
+      <div class="rail-meta">
+        <span>BREATHING.ACCELERATION</span>
+        <span class="active-val" id="pct-val">0.0%</span>
+      </div>
+      <div class="p-track">
+        <div class="p-bar" id="pbar"></div>
+        <div class="p-scanline"></div>
+      </div>
+    </div>
+
+    <!-- 呼吸流派遥测状态日志 -->
+    <div class="telemetry-row">
+      <span class="telemetry-dot"></span>
+      <span class="telemetry-tag" id="tag">[壱之型]</span>
+      <span class="telemetry-text" id="st">全集中·反重力呼吸法起手... 唤醒奇点核心</span>
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <button class="btn" onclick="replayAnimation()">重新演练 (11.5 秒)</button>
+    <button class="btn" onclick="toggleDismiss()">模拟就绪平滑淡出</button>
+  </div>
+
+  <script>
+    // 1. 浮世绘火之神神乐余烬与水之浪花 Canvas 物理粒子引擎
+    const cvs = document.getElementById('canvas-particles');
+    const ctx = cvs.getContext('2d');
+    let w = cvs.width = window.innerWidth;
+    let h = cvs.height = window.innerHeight;
+    window.addEventListener('resize', () => {
+      w = cvs.width = window.innerWidth;
+      h = cvs.height = window.innerHeight;
+    });
+
+    const particles = [];
+    const PARTICLE_COUNT = 75;
+    const centerX = w / 2;
+    const centerY = h / 2;
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -(Math.random() * 1.4 + 0.6), // 反重力加速升腾
+        size: Math.random() * 2.2 + 0.8,
+        alpha: Math.random() * 0.7 + 0.3,
+        // 火之神金红火星 vs 水之呼吸青蓝冰晶
+        isFlame: Math.random() > 0.35,
+        color: Math.random() > 0.5 ? '#f59e0b' : '#ef4444',
+        waterColor: Math.random() > 0.5 ? '#06b6d4' : '#38bdf8'
+      });
+    }
+
+    let lightningActive = false;
+    let lightningTimer = 0;
+
+    function renderKimetsuScene() {
+      ctx.clearRect(0, 0, w, h);
+
+      // 周期性触发雷之呼吸·霹雳电光闪耀
+      lightningTimer++;
+      if (lightningTimer % 180 === 0) {
+        lightningActive = true;
+        setTimeout(() => { lightningActive = false; }, 80);
+      }
+
+      if (lightningActive) {
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.y += p.vy;
+        p.x += p.vx + Math.sin(p.y * 0.02) * 0.4;
+
+        if (p.y < -20) {
+          p.y = h + 20;
+          p.x = Math.random() * w;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.isFlame ? p.color : p.waterColor;
+        ctx.globalAlpha = p.alpha;
+        ctx.shadowBlur = p.isFlame ? 10 : 6;
+        ctx.shadowColor = p.isFlame ? '#f59e0b' : '#06b6d4';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      requestAnimationFrame(renderKimetsuScene);
+    }
+    requestAnimationFrame(renderKimetsuScene);
+
+    // 2. 11.5 秒从容推进时序（8 大呼吸法型态）
+    const stages = [
+      { p: 12.0, hex: '[壱之型]', text: '全集中·反重力呼吸法起手... 唤醒奇点核心' },
+      { p: 25.0, hex: '[弐之型]', text: '检索本地环境与鬼杀队阶级... (v2.26.0)' },
+      { p: 38.0, hex: '[参之型]', text: '鎹鸦联网巡检 GitHub 汉化更新与版本兼容性...' },
+      { p: 52.0, hex: '[肆之型]', text: '水之呼吸·生生流转... 链接异构多智能体联邦总线' },
+      { p: 68.0, hex: '[伍之型]', text: '日之呼吸·火之神神乐... 挂载 3,472 词条全景汉化拓扑' },
+      { p: 82.0, hex: '[陆之型]', text: '雷之呼吸·霹雳一闪... 编译 Monaco 语法树与语言服务集群' },
+      { p: 94.0, hex: '[漆之型]', text: '预热 GPU 渲染管线与智能体全景视窗' },
+      { p: 100.0, hex: '[终之型]', text: '赫刀初现 · 水火归元 · 正在步入工作台...' }
+    ];
+
+    let currentStage = 0;
+    let targetPct = stages[0].p;
+    let currentPct = 0;
+    let progressInterval, stageInterval;
+
+    const splashNode = document.getElementById('splash-node');
+    const pb = document.getElementById('pbar');
+    const pctVal = document.getElementById('pct-val');
+    const tagEl = document.getElementById('tag');
+    const stEl = document.getElementById('st');
+    const vBadge = document.getElementById('version-badge');
+    const vDot = document.getElementById('v-dot');
+    const vStatus = document.getElementById('v-status');
+
+    const LOCAL_VERSION = "2.26.0";
+
+    // 3. 【鎹鸦巡检】异步检测版本
+    async function checkKimetsuVersion() {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2800);
+      try {
+        const resp = await fetch('https://raw.githubusercontent.com/qts2218346424-cyber/antigravity-zh-cn/main/resources/version.json', {
+          signal: controller.signal,
+          cache: 'no-cache'
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          const data = await resp.json();
+          const remoteVer = (data.version || '').replace(/^v/, '');
+          const isLatest = remoteVer <= LOCAL_VERSION;
+          if (isLatest) {
+            if (vBadge) vBadge.className = 'version-badge stable';
+            if (vStatus) vStatus.innerHTML = '本地补丁: v' + LOCAL_VERSION + ' · 官方目标: v' + (data.target_antigravity_version || LOCAL_VERSION) + ' · <span style="color:#34d399">柱级极境 (最新 ✅)</span>';
+            if (stages[2]) stages[2].text = '鎹鸦巡检完成: v' + LOCAL_VERSION + ' [柱级稳定版] · 校验通过 ✅';
+          } else {
+            if (vBadge) vBadge.className = 'version-badge update';
+            if (vStatus) vStatus.innerHTML = '发现新境界: v' + remoteVer + ' · 建议前往精进 🚀';
+            if (stages[2]) stages[2].text = '鎹鸦警讯: 发现汉化新境界 v' + remoteVer + ' · 提示更新 🔔';
+          }
+          return;
+        }
+      } catch (_) {}
+      // 离线安全兜底
+      if (vBadge) vBadge.className = 'version-badge stable';
+      if (vStatus) vStatus.innerHTML = '本地补丁: v' + LOCAL_VERSION + ' · 客户端: v' + LOCAL_VERSION + ' · <span style="color:#38bdf8">水火自守·已就绪</span>';
+      if (stages[2]) stages[2].text = '水火自守: 本地版本 v' + LOCAL_VERSION + ' 校验通过 · 运行就绪';
+    }
+
+    function startProgress() {
+      currentStage = 0;
+      targetPct = stages[0].p;
+      currentPct = 0;
+      splashNode.style.opacity = '1';
+      splashNode.style.transform = 'scale(1)';
+      if (tagEl) tagEl.textContent = stages[0].hex;
+      if (stEl) stEl.textContent = stages[0].text;
+      if (vBadge) vBadge.className = 'version-badge';
+      if (vStatus) vStatus.textContent = '正在检定鬼杀队阶级与云端版本...';
+
+      clearInterval(progressInterval);
+      clearInterval(stageInterval);
+
+      setTimeout(checkKimetsuVersion, 500);
+
+      progressInterval = setInterval(() => {
+        if (currentPct < targetPct) {
+          currentPct += (targetPct - currentPct) * 0.08 + 0.11;
+          if (currentPct > targetPct) currentPct = targetPct;
+          if (pb) pb.style.width = currentPct.toFixed(1) + '%';
+          if (pctVal) pctVal.textContent = currentPct.toFixed(1) + '%';
+        }
+      }, 40);
+
+      // 每 1350ms 推进一个型态，8 阶段平稳覆盖 11.5 秒
+      stageInterval = setInterval(() => {
+        currentStage++;
+        if (currentStage < stages.length) {
+          targetPct = stages[currentStage].p;
+          if (tagEl) tagEl.textContent = stages[currentStage].hex;
+          if (stEl) stEl.textContent = stages[currentStage].text;
+        } else {
+          targetPct = 100.0;
+          clearInterval(stageInterval);
+        }
+      }, 1350);
+    }
+
+    startProgress();
+
+    function replayAnimation() {
+      startProgress();
+    }
+
+    function toggleDismiss() {
+      splashNode.style.opacity = '0';
+      splashNode.style.transform = 'scale(1.04)';
+      setTimeout(() => {
+        alert('启动动效已优雅淡出！底层主工作台已无缝就绪。');
+        splashNode.style.opacity = '1';
+        splashNode.style.transform = 'scale(1)';
+      }, 850);
+    }
+  </script>
+</body>
+</html>"""
+
+# 1. 写入独立演示页面 resources/splash/index.html
+splash_html_path = REPO_ROOT / "resources" / "splash" / "index.html"
+splash_html_path.write_text(html_template, encoding="utf-8")
+print(f"成功更新演示文件: {splash_html_path}")
+
+# 2. 写入工件预览 splash_preview.html
+artifact_path = Path(r"C:\Users\QTS的天选\.gemini\antigravity\brain\158062cb-0b2d-485e-b84e-ad56b751e715\splash_preview.html")
+if artifact_path.parent.is_dir():
+    artifact_path.write_text(html_template, encoding="utf-8")
+    print(f"成功更新工件预览: {artifact_path}")
+
+# 3. 构造自包含的主进程原生遮罩 resources/loadingOverlay-zh.js
+overlay_js_content = f'''"use strict";
+Object.defineProperty(exports, "__esModule", {{ value: true }});
+exports.attachLoadingOverlay = attachLoadingOverlay;
+const electron_1 = require("electron");
+
+/**
+ * Antigravity 《鬼灭之刃》全集中·反重力呼吸启动动效 (Kimetsu Breathing Overlay)
+ * 采用原生 WebContentsView 于窗口创建第 0 毫秒硬件加速直出。
+ * 融合火之神神乐烈焰、水之呼吸生生流转与【鎹鸦巡检·版本矩阵】，彻底杜绝白屏断层。
+ */
+function getLoadingHtml() {{
+  return `{html_template.replace('<div class="control-panel">', '<div class="control-panel" style="display:none">')}`;
+}}
+
+function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
+  const view = new electron_1.WebContentsView({{
+    webPreferences: {{
+      nodeIntegration: false,
+      contextIsolation: true,
+    }},
+  }});
+  const html = getLoadingHtml();
+  void view.webContents.loadURL(`data:text/html;charset=utf-8,${{encodeURIComponent(html)}}`);
+  win.contentView.addChildView(view);
+  const updateBounds = () => {{
+    if (win.isDestroyed()) return;
+    const [width, height] = win.getContentSize();
+    view.setBounds({{ x: 0, y: 0, width, height }});
+  }};
+  updateBounds();
+  win.on('resize', updateBounds);
+
+  let isRemoved = false;
+  const startTime = Date.now();
+  // 黄金展示时长提升至 11.5 秒整，从容展现鬼灭全集中呼吸型态与版本检测全过程
+  const MIN_DISPLAY_TIME = 11500;
+  // 最大超时保底提升至 15.0 秒
+  const MAX_TIMEOUT = 15000;
+
+  let pageLoaded = false;
+  win.webContents.once('did-finish-load', () => {{
+    pageLoaded = true;
+  }});
+
+  const checkAndDismiss = async () => {{
+    if (isRemoved) return;
+    const elapsed = Date.now() - startTime;
+
+    // 1. 如果时间尚未达到 11.5 秒最低沉浸展示时长，继续等待
+    if (elapsed < MIN_DISPLAY_TIME) {{
+      setTimeout(checkAndDismiss, MIN_DISPLAY_TIME - elapsed);
+      return;
+    }}
+
+    // 2. 达到最低时间后，检测底层主界面是否真正深度渲染就绪（排除初级空骨架）
+    let isUiReady = false;
+    if (pageLoaded && !win.isDestroyed()) {{
+      try {{
+        isUiReady = await win.webContents.executeJavaScript(`
+          Boolean(
+            document.body && (
+              document.querySelector('nav, [role="navigation"], .monaco-editor, textarea, [contenteditable="true"], [data-testid]') ||
+              (document.getElementById('root') && document.getElementById('root').querySelectorAll('*').length > 18) ||
+              document.body.querySelectorAll('*').length > 30
+            )
+          )
+        `);
+      }} catch (_) {{
+        isUiReady = true; // 异常时容错放行
+      }}
+    }}
+
+    // 3. 如果底层 UI 仍在构建且未超过最大保底时间，稍等 250ms 继续探测
+    if (!isUiReady && elapsed < MAX_TIMEOUT) {{
+      setTimeout(checkAndDismiss, 250);
+      return;
+    }}
+
+    // 4. 正式平滑淡出与交接 (0.85 秒浮世绘水墨深度消隐与微膨胀)
+    isRemoved = true;
+    try {{
+      view.webContents.executeJavaScript(`
+        const splashNode = document.getElementById('splash-node');
+        if (splashNode) {{
+          splashNode.style.transition = 'opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1)';
+          splashNode.style.opacity = '0';
+          splashNode.style.transform = 'scale(1.04)';
+        }}
+        document.body.style.transition = 'opacity 0.85s ease';
+        document.body.style.opacity = '0';
+      `).catch(() => {{}});
+    }} catch (_) {{}}
+
+    setTimeout(() => {{
+      try {{
+        if (!win.isDestroyed()) {{
+          win.contentView.removeChildView(view);
+        }}
+      }} catch (_) {{}}
+      win.off('resize', updateBounds);
+    }}, 900);
+  }};
+
+  // 触发首轮就绪检查 (11.5 秒)
+  setTimeout(checkAndDismiss, MIN_DISPLAY_TIME);
+  // 最大保底强制执行 (15.0 秒)
+  setTimeout(() => {{
+    if (!isRemoved) checkAndDismiss();
+  }}, MAX_TIMEOUT);
+}}
+'''
+
+loading_overlay_path = REPO_ROOT / "resources" / "loadingOverlay-zh.js"
+loading_overlay_path.write_text(overlay_js_content, encoding="utf-8")
+print(f"成功更新主进程原生开屏遮罩: {loading_overlay_path} ({loading_overlay_path.stat().st_size / 1024:.2f} KB)")

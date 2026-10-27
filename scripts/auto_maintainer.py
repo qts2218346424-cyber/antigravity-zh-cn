@@ -106,6 +106,35 @@ def get_active_ls_port() -> int | None:
                             return int(m.group(1))
             except Exception:
                 pass
+
+    # 若日志中未检索到，智能探测本地 language_server 进程监听的端口
+    if sys.platform == "win32":
+        try:
+            ps_cmd = (
+                "Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | "
+                "Where-Object { $_.LocalAddress -in @('127.0.0.1', '::1') -and $_.LocalPort -gt 1024 } | "
+                "ForEach-Object { "
+                "  $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; "
+                "  if ($p -and $p.ProcessName -match 'language_server') { $_.LocalPort } "
+                "}"
+            )
+            res = subprocess.run(["powershell.exe", "-NoProfile", "-Command", ps_cmd], capture_output=True, text=True, timeout=5)
+            for line in res.stdout.splitlines():
+                line = line.strip()
+                if line.isdigit():
+                    port = int(line)
+                    try:
+                        ctx = ssl.create_default_context()
+                        ctx.check_hostname = False
+                        ctx.verify_mode = ssl.CERT_NONE
+                        req = urllib.request.Request(f"https://127.0.0.1:{port}/main.js")
+                        with urllib.request.urlopen(req, context=ctx, timeout=1) as resp:
+                            if resp.status == 200:
+                                return port
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     return None
 
 

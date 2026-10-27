@@ -2,10 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#适用环境)
-[![Target](https://img.shields.io/badge/Antigravity-v2.25.0-blue.svg)](https://antigravity.google)
-[![Terms](https://img.shields.io/badge/Dictionary-3434%20Terms-brightgreen.svg)](#)
+[![Target](https://img.shields.io/badge/Antigravity-v2.26.0-blue.svg)](https://antigravity.google)
+[![Terms](https://img.shields.io/badge/Dictionary-3472%20Terms-brightgreen.svg)](#)
 
-一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.25.0**）打造的高性能本地中文汉化补丁与辅助工具。
+一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.26.0**）打造的高性能本地中文汉化补丁与辅助工具。
 
 支持 **简体中文 (zh-CN)**、**繁体中文（中国台湾 zh-TW）** 和 **繁体中文（中国香港 zh-HK）**。已覆盖 Chief of Staff 幕僚长仪表盘、自动化工作流、会话分叉、云端项目等最新特性。
 
@@ -40,8 +40,11 @@
   - 支持 `zh-CN`（简体中文）、`zh-TW`（繁体中文-台湾）、`zh-HK`（繁体中文-香港）。
 - **安全备份与一键无损还原**：
   - 首次安装自动创建 `app.asar.bak` 原始副本；随时可通过控制台选择 `还原` 恢复官方原貌。
-- **电影级奇点引力透镜启动动效 (Cinematic Singularity Splash)**：
-  - 应用冷启动阶段通过主进程原生 WebContentsView 于第 0 毫秒硬件加速直出，彻底杜绝白屏闪烁；呈现黑洞视界暗核、360° 全息精密刻度星轨、反向双电浆光流环、横贯变形宽银幕镜头光芒及 Canvas 物理星尘漩涡；7.0 秒平滑平稳时序并在底层 React/Monaco 引擎完全渲染就绪后执行 0.8 秒深度消隐与缩放交接，极致从容。
+- **《鬼灭之刃》全集中·反重力呼吸与版本检测启动动效 (Demon Slayer Breath Splash)**：
+  - 应用冷启动阶段通过主进程原生 WebContentsView 于第 0 毫秒硬件加速直出，彻底杜绝白屏闪烁；
+  - 采用飞碟社（Ufotable）顶级浮世绘美学：呈现**火之神神乐烈焰日轮刀锷**、**水之呼吸生生流转浪花**、炭治郎市松暗纹与漫天升腾的反重力烈焰余烬粒子；
+  - 独家集成**【鎹鸦巡检 · 鬼杀队版本检测矩阵】**，开屏期间自动非阻塞异步检定本地与云端 GitHub 版本状态；
+  - 展示时长扩展至 **11.5 秒舒缓黄金节奏**（8 大呼吸型态平稳推进），在底层 Monaco 与 React 深度渲染就绪后执行 **0.85 秒浮世绘水墨深度消隐与平滑交接**。
 - **更新管理支持**：
   - 内置禁止/恢复官方自动更新的快捷开关，防止应用静默升级覆盖汉化。
 

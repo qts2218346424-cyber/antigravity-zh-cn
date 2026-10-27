@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 生成电影级《星际穿越》黑洞启动动效 HTML 并同步至资源与工件预览
+升级版：延长展示时长至 10.8 秒，并集成在线版本检测 (Version Diagnostic) 功能。
 """
 import json
 from pathlib import Path
@@ -101,20 +102,20 @@ html_template = f"""<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       width: 100%;
-      max-width: 620px;
+      max-width: 640px;
       perspective: 1200px;
-      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
     }}
 
     /* 奇点与力场核心视窗 */
     .singularity-stage {{
       position: relative;
-      width: 280px;
-      height: 280px;
+      width: 270px;
+      height: 270px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       perspective: 1200px;
     }}
 
@@ -141,8 +142,8 @@ html_template = f"""<!DOCTYPE html>
     /* 外层 360° 全息精密刻度盘 (SVG Reticle) */
     .orbital-reticle {{
       position: absolute;
-      width: 270px;
-      height: 270px;
+      width: 260px;
+      height: 260px;
       pointer-events: none;
       animation: spinClockwise 36s linear infinite;
       opacity: 0.65;
@@ -151,8 +152,8 @@ html_template = f"""<!DOCTYPE html>
     /* 中层高速电浆逆流光环 */
     .plasma-ring {{
       position: absolute;
-      width: 210px;
-      height: 210px;
+      width: 200px;
+      height: 200px;
       border-radius: 50%;
       border: 1.5px solid transparent;
       border-top: 2px solid var(--cyan-glow);
@@ -170,16 +171,16 @@ html_template = f"""<!DOCTYPE html>
       border: 1.5px solid rgba(56, 189, 248, 0.6);
       pointer-events: none;
     }}
-    .hud-bracket.tl {{ top: 10px; left: 10px; border-right: none; border-bottom: none; }}
-    .hud-bracket.tr {{ top: 10px; right: 10px; border-left: none; border-bottom: none; }}
-    .hud-bracket.bl {{ bottom: 10px; left: 10px; border-right: none; border-top: none; }}
-    .hud-bracket.br {{ bottom: 10px; right: 10px; border-left: none; border-top: none; }}
+    .hud-bracket.tl {{ top: 8px; left: 8px; border-right: none; border-bottom: none; }}
+    .hud-bracket.tr {{ top: 8px; right: 8px; border-left: none; border-bottom: none; }}
+    .hud-bracket.bl {{ bottom: 8px; left: 8px; border-right: none; border-top: none; }}
+    .hud-bracket.br {{ bottom: 8px; right: 8px; border-left: none; border-top: none; }}
 
     /* 悬浮反重力量子徽标核心 */
     .horizon-core {{
       position: relative;
-      width: 92px;
-      height: 92px;
+      width: 88px;
+      height: 88px;
       border-radius: 50%;
       background: radial-gradient(circle at 40% 40%, rgba(13, 21, 39, 0.75) 0%, rgba(5, 7, 12, 0.85) 80%);
       box-shadow: 
@@ -196,8 +197,8 @@ html_template = f"""<!DOCTYPE html>
     }}
 
     .core-glyph {{
-      width: 46px;
-      height: 46px;
+      width: 44px;
+      height: 44px;
       filter: drop-shadow(0 0 8px rgba(0, 242, 254, 0.95)) drop-shadow(0 0 18px rgba(129, 140, 248, 0.7));
     }}
 
@@ -206,16 +207,16 @@ html_template = f"""<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-bottom: 22px;
+      margin-bottom: 16px;
     }}
     .title {{
-      font-size: 27px;
+      font-size: 26px;
       font-weight: 800;
       letter-spacing: 8px;
       background: linear-gradient(135deg, #ffffff 15%, #cffafe 50%, #93c5fd 80%, #a78bfa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 7px;
+      margin-bottom: 5px;
       text-transform: uppercase;
       text-shadow: 0 0 35px rgba(0, 242, 254, 0.4);
       display: flex;
@@ -228,9 +229,9 @@ html_template = f"""<!DOCTYPE html>
       filter: drop-shadow(0 0 6px var(--cyan-glow));
     }}
     .sub {{
-      font-size: 10px;
+      font-size: 9.5px;
       font-family: "SF Mono", Consolas, Menlo, monospace;
-      letter-spacing: 3.5px;
+      letter-spacing: 3px;
       color: #94a3b8;
       display: flex;
       align-items: center;
@@ -240,7 +241,7 @@ html_template = f"""<!DOCTYPE html>
     .sub::before, .sub::after {{
       content: "";
       display: inline-block;
-      width: 24px;
+      width: 20px;
       height: 1px;
       background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.6));
     }}
@@ -248,9 +249,51 @@ html_template = f"""<!DOCTYPE html>
       background: linear-gradient(90deg, rgba(56, 189, 248, 0.6), transparent);
     }}
 
+    /* 全息版本检测状态徽章 (Version HUD Badge) */
+    .version-badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 14px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      font-size: 10px;
+      font-family: "SF Mono", Consolas, Menlo, monospace;
+      letter-spacing: 0.8px;
+      color: #94a3b8;
+      margin-bottom: 14px;
+      box-shadow: 0 0 16px rgba(0, 0, 0, 0.5);
+      transition: all 0.4s ease;
+    }}
+    .version-badge .v-dot {{
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #eab308;
+      box-shadow: 0 0 8px #eab308;
+      animation: pulseBlink 1s infinite alternate;
+    }}
+    .version-badge.stable .v-dot {{
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }}
+    .version-badge.update .v-dot {{
+      background: #f97316;
+      box-shadow: 0 0 10px #f97316;
+    }}
+    .version-badge .v-title {{
+      color: #38bdf8;
+      font-weight: 600;
+    }}
+    .version-badge .v-status {{
+      color: #cbd5e1;
+    }}
+
     /* 分段式量子能量进度导轨 */
     .rail-wrapper {{
-      width: 380px;
+      width: 400px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -259,7 +302,7 @@ html_template = f"""<!DOCTYPE html>
     .rail-meta {{
       display: flex;
       justify-content: space-between;
-      font-size: 10.5px;
+      font-size: 10px;
       font-family: "SF Mono", Consolas, Menlo, monospace;
       color: #64748b;
       letter-spacing: 1px;
@@ -289,7 +332,7 @@ html_template = f"""<!DOCTYPE html>
       position: absolute;
       top: 0; left: 0; width: 60px; height: 100%;
       background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
-      animation: scanMove 2s infinite linear;
+      animation: scanMove 2.2s infinite linear;
     }}
 
     /* 状态遥测流水日志 */
@@ -388,7 +431,7 @@ html_template = f"""<!DOCTYPE html>
     }}
     @keyframes scanMove {{
       0% {{ transform: translateX(-100px); }}
-      100% {{ transform: translateX(380px); }}
+      100% {{ transform: translateX(400px); }}
     }}
   </style>
 </head>
@@ -461,6 +504,13 @@ html_template = f"""<!DOCTYPE html>
       <div class="sub">INTERSTELLAR GARGANTUA · QUANTUM SINGULARITY</div>
     </div>
 
+    <!-- 全息版本检测状态徽章 -->
+    <div class="version-badge" id="version-badge">
+      <span class="v-dot" id="v-dot"></span>
+      <span class="v-title">版本检测:</span>
+      <span class="v-status" id="v-status">正在巡检云端版本与兼容性矩阵...</span>
+    </div>
+
     <!-- 分段能量导轨进度条 -->
     <div class="rail-wrapper">
       <div class="rail-meta">
@@ -482,7 +532,7 @@ html_template = f"""<!DOCTYPE html>
   </div>
 
   <div class="control-panel">
-    <button class="btn" onclick="replayAnimation()">重新演练 (7.0 秒)</button>
+    <button class="btn" onclick="replayAnimation()">重新演练 (10.8 秒)</button>
     <button class="btn" onclick="toggleDismiss()">模拟就绪平滑淡出</button>
   </div>
 
@@ -527,15 +577,16 @@ html_template = f"""<!DOCTYPE html>
     }}
     requestAnimationFrame(renderDust);
 
-    // 7 秒平滑时序控制
+    // 10.8 秒舒缓时序控制（8 阶段高精推进）
     const stages = [
-      {{ p: 14.5, hex: '[0x00A1]', text: '正在唤醒卡冈图雅反重力奇点核心 (Interstellar Singularity)...' }},
-      {{ p: 32.0, hex: '[0x01BF]', text: '校准时空微曲率引擎与空间引力透镜吸积盘...' }},
-      {{ p: 48.5, hex: '[0x02DC]', text: '链接异构多智能体联邦总线 (Federation Backbone)...' }},
-      {{ p: 66.0, hex: '[0x03EA]', text: '挂载 3,404 词条全景汉化语义拓扑与工作区上下文...' }},
-      {{ p: 82.5, hex: '[0x04F8]', text: '编译 Monaco 语法树与语言服务集群 (LSP)...' }},
-      {{ p: 94.0, hex: '[0x05DE]', text: '预热 GPU 渲染管线与智能体拓扑视窗...' }},
-      {{ p: 100.0, hex: '[0x0600]', text: '引力透镜常数锁定完毕 · 正在平滑接入工作台...' }}
+      {{ p: 10.0, hex: '[0x00A1]', text: '正在唤醒卡冈图雅反重力奇点核心 (Interstellar Singularity)...' }},
+      {{ p: 22.0, hex: '[0x01B2]', text: '正在检索本地环境与客户端版本 (v2.24.0)...' }},
+      {{ p: 36.0, hex: '[0x02C4]', text: '联网巡检 GitHub 汉化更新与版本兼容性矩阵...' }},
+      {{ p: 50.0, hex: '[0x03D8]', text: '链接异构多智能体联邦总线 (Federation Backbone)...' }},
+      {{ p: 64.0, hex: '[0x04EA]', text: '挂载 3,404 词条全景汉化语义拓扑与工作区上下文...' }},
+      {{ p: 78.0, hex: '[0x05F2]', text: '编译 Monaco 语法树与语言服务集群 (LSP)...' }},
+      {{ p: 90.0, hex: '[0x06DE]', text: '预热 GPU 渲染管线与智能体拓扑视窗...' }},
+      {{ p: 100.0, hex: '[0x0700]', text: '引力透镜常数锁定完毕 · 正在平滑接入工作台...' }}
     ];
 
     let currentStage = 0;
@@ -549,6 +600,42 @@ html_template = f"""<!DOCTYPE html>
     const tagEl = document.getElementById('tag');
     const stEl = document.getElementById('st');
     const vid = document.getElementById('main-video');
+    const vBadge = document.getElementById('version-badge');
+    const vDot = document.getElementById('v-dot');
+    const vStatus = document.getElementById('v-status');
+
+    const LOCAL_VERSION = "2.24.0";
+
+    async function checkVersionAsync() {{
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2800);
+      try {{
+        const resp = await fetch('https://raw.githubusercontent.com/qts2218346424-cyber/antigravity-zh-cn/main/resources/version.json', {{
+          signal: controller.signal,
+          cache: 'no-cache'
+        }});
+        clearTimeout(timeoutId);
+        if (resp.ok) {{
+          const data = await resp.json();
+          const remoteVer = (data.version || '').replace(/^v/, '');
+          const isLatest = remoteVer <= LOCAL_VERSION;
+          if (isLatest) {{
+            if (vBadge) vBadge.className = 'version-badge stable';
+            if (vStatus) vStatus.innerHTML = `本地补丁: v${{LOCAL_VERSION}} · 目标版本: v${{data.target_antigravity_version || LOCAL_VERSION}} · <span style="color:#34d399">最新版本 ✅</span>`;
+            if (stages[2]) stages[2].text = `版本检测完成: v${{LOCAL_VERSION}} [最新稳定版] · 校验通过 ✅`;
+          }} else {{
+            if (vBadge) vBadge.className = 'version-badge update';
+            if (vStatus) vStatus.innerHTML = `发现新版本: v${{remoteVer}} · 建议前往更新 🚀`;
+            if (stages[2]) stages[2].text = `发现汉化新版本: v${{remoteVer}} · 提示更新 🔔`;
+          }}
+          return;
+        }}
+      }} catch (_) {{}}
+      // 离线环境兜底
+      if (vBadge) vBadge.className = 'version-badge stable';
+      if (vStatus) vStatus.innerHTML = `本地补丁: v${{LOCAL_VERSION}} · 客户端: v${{LOCAL_VERSION}} · <span style="color:#38bdf8">本地已就绪</span>`;
+      if (stages[2]) stages[2].text = `本地版本校验通过: v${{LOCAL_VERSION}} · 运行环境就绪`;
+    }}
 
     function startProgress() {{
       currentStage = 0;
@@ -559,19 +646,25 @@ html_template = f"""<!DOCTYPE html>
       if (vid) vid.currentTime = 0;
       if (tagEl) tagEl.textContent = stages[0].hex;
       if (stEl) stEl.textContent = stages[0].text;
+      if (vBadge) vBadge.className = 'version-badge';
+      if (vStatus) vStatus.textContent = '正在巡检云端版本与兼容性矩阵...';
 
       clearInterval(progressInterval);
       clearInterval(stageInterval);
 
+      // 启动异步版本检测
+      setTimeout(checkVersionAsync, 500);
+
       progressInterval = setInterval(() => {{
         if (currentPct < targetPct) {{
-          currentPct += (targetPct - currentPct) * 0.12 + 0.15;
+          currentPct += (targetPct - currentPct) * 0.08 + 0.12;
           if (currentPct > targetPct) currentPct = targetPct;
           if (pb) pb.style.width = currentPct.toFixed(1) + '%';
           if (pctVal) pctVal.textContent = currentPct.toFixed(1) + '%';
         }}
       }}, 40);
 
+      // 1250ms 步进一次，8 阶段平稳覆盖 10.8 秒黄金节奏
       stageInterval = setInterval(() => {{
         currentStage++;
         if (currentStage < stages.length) {{
@@ -582,7 +675,7 @@ html_template = f"""<!DOCTYPE html>
           targetPct = 100.0;
           clearInterval(stageInterval);
         }}
-      }}, 980);
+      }}, 1250);
     }}
 
     startProgress();
@@ -622,9 +715,9 @@ exports.attachLoadingOverlay = attachLoadingOverlay;
 const electron_1 = require("electron");
 
 /**
- * Antigravity 《星际穿越》电影级卡冈图雅黑洞与全息微引力场启动动效 (Cinematic Gargantua Splash)
+ * Antigravity 《星际穿越》电影级卡冈图雅黑洞与版本检测全息启动动效 (Cinematic Gargantua Splash)
  * 采用原生 WebContentsView 于窗口创建第 0 毫秒硬件加速直出。
- * 全屏沉浸式电影级黑洞吸积盘视频 (GPU 硬件解码) + 悬浮极简科技 HUD，彻底杜绝白屏断层。
+ * 全屏沉浸式黑洞吸积盘视频 (GPU 硬件解码) + 在线版本巡检矩阵 + 悬浮极简科技 HUD，彻底杜绝白屏断层。
  */
 function getLoadingHtml() {{
   return `{html_template.replace("<!-- 底部控制面板（仅演示环境有效） -->", "").replace('<div class="control-panel">', '<div class="control-panel" style="display:none">')}`;
@@ -650,10 +743,10 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
 
   let isRemoved = false;
   const startTime = Date.now();
-  // 电影级沉浸展示时长延长至 7.0 秒整，彻底消除急促感，确保底层 React+Monaco 完全渲染就绪
-  const MIN_DISPLAY_TIME = 7000;
-  // 最大超时保底提升至 9.5 秒
-  const MAX_TIMEOUT = 9500;
+  // 电影级沉浸展示时长提升至 10.8 秒整，充裕展现黑洞吸积盘旋转与版本在线巡检全流程
+  const MIN_DISPLAY_TIME = 10800;
+  // 最大超时保底提升至 14.5 秒
+  const MAX_TIMEOUT = 14500;
 
   let pageLoaded = false;
   win.webContents.once('did-finish-load', () => {{
@@ -664,7 +757,7 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
     if (isRemoved) return;
     const elapsed = Date.now() - startTime;
 
-    // 1. 如果时间尚未达到 7.0 秒最低沉浸展示时长，继续等待
+    // 1. 如果时间尚未达到 10.8 秒最低沉浸展示时长，继续等待
     if (elapsed < MIN_DISPLAY_TIME) {{
       setTimeout(checkAndDismiss, MIN_DISPLAY_TIME - elapsed);
       return;
@@ -694,22 +787,22 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
       return;
     }}
 
-    // 4. 正式平滑淡出与交接 (0.8 秒电影级深度消隐与微膨胀)
+    // 4. 正式平滑淡出与交接 (0.85 秒电影级深度消隐与微膨胀)
     isRemoved = true;
     try {{
       view.webContents.executeJavaScript(`
         const splashNode = document.getElementById('splash-node');
         const videoNode = document.querySelector('.cinematic-video');
         if (splashNode) {{
-          splashNode.style.transition = 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
+          splashNode.style.transition = 'opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1)';
           splashNode.style.opacity = '0';
           splashNode.style.transform = 'scale(1.04)';
         }}
         if (videoNode) {{
-          videoNode.style.transition = 'opacity 0.8s ease';
+          videoNode.style.transition = 'opacity 0.85s ease';
           videoNode.style.opacity = '0';
         }}
-        document.body.style.transition = 'opacity 0.8s ease';
+        document.body.style.transition = 'opacity 0.85s ease';
         document.body.style.opacity = '0';
       `).catch(() => {{}});
     }} catch (_) {{}}
@@ -721,12 +814,12 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
         }}
       }} catch (_) {{}}
       win.off('resize', updateBounds);
-    }}, 850);
+    }}, 900);
   }};
 
-  // 触发首轮就绪检查 (7.0 秒)
+  // 触发首轮就绪检查 (10.8 秒)
   setTimeout(checkAndDismiss, MIN_DISPLAY_TIME);
-  // 最大保底强制执行 (9.5 秒)
+  // 最大保底强制执行 (14.5 秒)
   setTimeout(() => {{
     if (!isRemoved) checkAndDismiss();
   }}, MAX_TIMEOUT);
@@ -736,4 +829,3 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
 loading_overlay_path = REPO_ROOT / "resources" / "loadingOverlay-zh.js"
 loading_overlay_path.write_text(overlay_js_content, encoding="utf-8")
 print(f"成功更新主进程原生开屏遮罩: {loading_overlay_path} ({loading_overlay_path.stat().st_size / 1024:.2f} KB)")
-
