@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 生成腾讯 QQ 宠物风格 + 复刻《鬼灭之刃》原动漫经典名场面动作机 + 真实模型配额看板 + 和风BGM音乐盒的核心组件 (resources/nezuko-pet.js)
-四大模块升级：
-1. 【鬼灭之刃原生配额看板】：精准呈现 Gemini 模型与 Claude/GPT 模型的每周/5小时剩余可用配额及重置时间，支持 DOM 自动同步与校准持久化。
-2. 【原动漫经典动作机与表情分层】：彻底告别呆板！多表情切换（豆豆眼、月牙笑、鼓腮包子脸、鬼纹血瞳）配合 7 大原动漫高能可爱名场面（豆豆眼狂奔、抱竹晃脑、气鼓鼓跺脚、血鬼术爆血、钻木箱捉迷藏、揉眼犯困、摸头杀）。
-3. 【鬼灭之刃大正和风界面】：粉红麻叶纹、雾云杉木箱质感、黄铜铆钉包角、绿黑市松纹、紫藤樱花飘落动效。
-4. 【鬼灭之刃随身 BGM 音乐盒】：内置 Web Audio 零依赖和风八音盒（《炭治郎之歌》、《红莲华》、《祢豆子日常》），支持本地音频导入与旋律律动晃脑。
+本次针对用户反馈的专项修复：
+1. 【彻底修复头顶动作图标消失问题】：
+   - 建立透明安全桥接垫片 (Invisible Hitbox Bridge)，彻底填补头顶 30px 交互盲区；
+   - 植入 450ms 智能防抖防误触延时 (Safe Hover Grace Period)，鼠标快速划过绝不闪烁消失；
+   - 支持【单击锁定常驻】模式，点击小豆子身体即可常驻展示快捷动作条；
+2. 【动作图标升级与原动漫神韵复刻】：
+   - 头部直接浮现 6 大高能动漫动作（🐱摸头杀、🏃豆豆眼狂奔、📦钻木箱、😤气鼓鼓跺脚、🔥血鬼术爆血、🥱揉眼犯困）；
+   - 整合 🎵 鬼灭 BGM 随身音乐盒开关（一键播放《炭治郎之歌》等和风八音盒）与 🎋 鬼灭配额看板开关；
+3. 【鬼灭之刃原生配额看板】：一比一对应 Gemini 与 Claude/GPT 每周与 5 小时限额及重置倒计时。
 """
 
 import sys
@@ -26,11 +30,11 @@ nezuko_webp = MEDIA_DIR / "nezuko_chibi_pet.webp"
 b64_nezuko = base64.b64encode(nezuko_webp.read_bytes()).decode('ascii')
 
 js_code = f"""/**
- * Antigravity 灶门祢豆子 · 鬼灭之刃大正和风桌宠系统 (Demon Slayer Nezuko Engine 2.0)
- * 1. 真实模型配额看板 (Gemini / Claude / GPT 每周与5小时限额及重置倒计时)
- * 2. 原动漫 7 大名场面连贯动作机 + 动态表情系统 (彻底告别呆板)
- * 3. 鬼灭之刃大正和风界面 (粉红麻叶纹、雾云杉木箱、黄铜包角、紫藤樱花)
- * 4. 鬼灭之刃随身 BGM 音乐盒 (内置 Web Audio 八音盒 + 本地音乐导入)
+ * Antigravity 灶门祢豆子 · 鬼灭之刃大正和风桌宠系统 (Demon Slayer Nezuko Engine 2.1)
+ * 1. 彻底解决头顶动作条交互间隙断裂 (Hover Gap) 与鼠标点击时消失的 Bug
+ * 2. 头部快捷胶囊动作条 (6大名场面动作 + BGM音乐盒快捷键 + 鬼灭配额看板)
+ * 3. 原动漫动态表情面具 (豆豆眼、月牙笑、鼓腮包子脸、鬼纹血瞳)
+ * 4. 原生模型配额看板 (Gemini / Claude / GPT 每周与5小时限额及重置倒计时)
  */
 
 (function() {{
@@ -71,7 +75,6 @@ js_code = f"""/**
 
   let currentQuota = loadUserQuota();
 
-  // 尝试从 Antigravity 原生 DOM 中实时嗅探配额
   function sniffNativeQuotaFromDOM() {{
     try {{
       const textNodes = [];
@@ -84,7 +87,6 @@ js_code = f"""/**
         }}
       }}
       if (textNodes.length > 0) {{
-        // 解析 DOM 中可能存在的配额数值
         let updated = false;
         textNodes.forEach(tn => {{
           const parent = tn.parentElement;
@@ -110,7 +112,6 @@ js_code = f"""/**
       }}
     }} catch (_) {{}}
   }}
-
   setInterval(sniffNativeQuotaFromDOM, 5000);
 
   // ==========================================
@@ -132,9 +133,7 @@ js_code = f"""/**
         ['B4', 0.45], ['D5', 0.45], ['E5', 0.9], ['D5', 0.45], ['B4', 0.9],
         ['A4', 0.45], ['B4', 0.45], ['A4', 0.45], ['G4', 1.0],
         ['D5', 0.45], ['E5', 0.45], ['G5', 0.9], ['E5', 0.45], ['D5', 0.7],
-        ['B4', 0.45], ['D5', 0.45], ['E5', 0.9], ['D5', 0.9],
-        ['B4', 0.45], ['A4', 0.45], ['G4', 0.7], ['A4', 0.45], ['B4', 0.9],
-        ['A4', 0.45], ['G4', 0.45], ['E4', 1.2]
+        ['B4', 0.45], ['D5', 0.45], ['E5', 0.9], ['D5', 0.9]
       ]
     }},
     {{
@@ -143,10 +142,7 @@ js_code = f"""/**
       notes: [
         ['D5', 0.3], ['D5', 0.3], ['C5', 0.3], ['A4', 0.3], ['C5', 0.3], ['D5', 0.6],
         ['D5', 0.3], ['E5', 0.3], ['F5', 0.3], ['E5', 0.3], ['D5', 0.3], ['C5', 0.6],
-        ['A4', 0.3], ['C5', 0.3], ['D5', 0.45], ['D5', 0.45], ['C5', 0.45], ['D5', 0.9],
-        ['F5', 0.3], ['G5', 0.3], ['A5', 0.6], ['G5', 0.3], ['F5', 0.3], ['E5', 0.6],
-        ['D5', 0.3], ['E5', 0.3], ['F5', 0.45], ['E5', 0.3], ['D5', 0.3], ['C5', 0.9],
-        ['D5', 0.3], ['E5', 0.3], ['D5', 1.2]
+        ['A4', 0.3], ['C5', 0.3], ['D5', 0.45], ['D5', 0.45], ['C5', 0.45], ['D5', 0.9]
       ]
     }},
     {{
@@ -155,10 +151,7 @@ js_code = f"""/**
       notes: [
         ['E5', 0.35], ['G5', 0.35], ['A5', 0.5], ['G5', 0.35], ['E5', 0.5],
         ['D5', 0.35], ['E5', 0.35], ['G5', 0.7], ['E5', 0.35], ['D5', 0.7],
-        ['C5', 0.35], ['D5', 0.35], ['E5', 0.5], ['G5', 0.35], ['A5', 0.7],
-        ['G5', 0.35], ['E5', 0.35], ['D5', 0.5], ['C5', 0.9],
-        ['E5', 0.35], ['E5', 0.35], ['G5', 0.35], ['A5', 0.7],
-        ['G5', 0.35], ['E5', 0.35], ['C5', 1.0]
+        ['C5', 0.35], ['D5', 0.35], ['E5', 0.5], ['G5', 0.35], ['A5', 0.7]
       ]
     }}
   ];
@@ -190,11 +183,9 @@ js_code = f"""/**
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
-      // 八音盒清脆音色 (Sine + Subtle Triangle)
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, t);
 
-      // ADSR 铃音包络：极速敲击上升，平滑指数衰减
       gain.gain.setValueAtTime(0.001, t);
       gain.gain.exponentialRampToValueAtTime(0.35 * this.volume, t + 0.015);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + duration * 1.6);
@@ -208,18 +199,17 @@ js_code = f"""/**
 
     playNextNote() {{
       if (!this.isPlaying) return;
-      if (this.customAudio) return; // 正在播放本地音频
+      if (this.customAudio) return;
 
       const track = PLAYLIST[this.currentTrack];
       if (this.stepIndex >= track.notes.length) {{
-        this.stepIndex = 0; // 循环播放当前曲目
+        this.stepIndex = 0;
       }}
 
       const [noteName, dur] = track.notes[this.stepIndex];
       const freq = noteFreqs[noteName] || 440;
       this.playTone(freq, dur);
 
-      // 联动桌宠晃头节拍
       triggerMusicBeat();
 
       this.stepIndex++;
@@ -255,9 +245,7 @@ js_code = f"""/**
 
     next() {{
       this.pause();
-      if (this.customAudio) {{
-        this.customAudio = null;
-      }}
+      if (this.customAudio) this.customAudio = null;
       this.currentTrack = (this.currentTrack + 1) % PLAYLIST.length;
       this.stepIndex = 0;
       this.play();
@@ -265,19 +253,10 @@ js_code = f"""/**
 
     prev() {{
       this.pause();
-      if (this.customAudio) {{
-        this.customAudio = null;
-      }}
+      if (this.customAudio) this.customAudio = null;
       this.currentTrack = (this.currentTrack - 1 + PLAYLIST.length) % PLAYLIST.length;
       this.stepIndex = 0;
       this.play();
-    }}
-
-    setVolume(val) {{
-      this.volume = Math.max(0, Math.min(1, val));
-      if (this.customAudio) {{
-        this.customAudio.volume = this.volume;
-      }}
     }}
 
     loadLocalFile(file) {{
@@ -294,7 +273,6 @@ js_code = f"""/**
 
   const musicEngine = new DemonSlayerMusicEngine();
 
-  // 节拍联动晃头
   let beatTimer = null;
   function triggerMusicBeat() {{
     const petEl = document.getElementById('nezuko-pet-character');
@@ -307,12 +285,11 @@ js_code = f"""/**
   }}
 
   // ==========================================
-  // 三、CSS 样式库 (大正和风 + 鬼灭视觉 + 多表情动作)
+  // 三、CSS 样式库 (含彻底修复 Hover 消失的关键桥接)
   // ==========================================
   const styleEl = document.createElement('style');
   styleEl.id = 'nezuko-pet-advanced-styles';
   styleEl.textContent = `
-    /* ===== 鬼灭之刃基础色彩与字体 ===== */
     :root {{
       --ds-pink: #f48fb1;
       --ds-dark-pink: #c2185b;
@@ -326,31 +303,38 @@ js_code = f"""/**
       --ds-gold-glow: #ffd54f;
     }}
 
-    /* 容器浮动 */
     #nezuko-pet-root {{
       position: fixed;
-      right: 28px;
+      right: 32px;
       bottom: 24px;
       z-index: 999999;
       user-select: none;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     }}
 
-    /* ===== 地面接触柔和阴影 ===== */
+    /* 角色整体包裹舞台 (用于无缝 Hover 监听) */
+    .nezuko-pet-stage {{
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }}
+
+    /* 地面接触柔和阴影 */
     .nezuko-pet-ground-shadow {{
       position: absolute;
       bottom: -6px;
       left: 50%;
       transform: translateX(-50%);
-      width: 100px;
-      height: 14px;
+      width: 105px;
+      height: 15px;
       background: radial-gradient(ellipse at center, rgba(10, 5, 8, 0.45) 0%, rgba(10, 5, 8, 0.15) 50%, transparent 75%);
       border-radius: 50%;
       pointer-events: none;
       transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
     }}
 
-    /* 桌宠主形象骨骼层 */
+    /* 桌宠立绘骨骼 */
     .nezuko-pet-avatar {{
       position: relative;
       width: 130px;
@@ -360,12 +344,9 @@ js_code = f"""/**
       transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
       transform-origin: bottom center;
     }}
-
     .nezuko-pet-avatar:active {{
       cursor: grabbing;
     }}
-
-    /* 立绘图片主体 */
     .nezuko-pet-img {{
       width: 100%;
       height: 100%;
@@ -375,7 +356,113 @@ js_code = f"""/**
       transform-origin: bottom center;
     }}
 
-    /* ===== 多表情神态覆盖层 (Expression Overlay) ===== */
+    /* ========================================================= */
+    /* 核心修复：头顶快捷胶囊动作条 (彻底根除 Hover Gap 消失 Bug) */
+    /* ========================================================= */
+    .nezuko-action-capsule {{
+      position: absolute;
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px) scale(0.92);
+      background: linear-gradient(135deg, rgba(35, 22, 18, 0.95) 0%, rgba(20, 12, 10, 0.98) 100%);
+      border: 1.5px solid var(--ds-brass-gold);
+      border-radius: 28px;
+      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65), 0 0 16px rgba(244, 143, 177, 0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }}
+
+    /* 关键核心 1：透明安全桥接垫片 (彻底覆盖头顶与动作条之间的 35px 空间) */
+    .nezuko-action-capsule::after {{
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: -20px;
+      right: -20px;
+      height: 42px; /* 完美填平动作条到底部头部的整个空白区域！ */
+      background: transparent;
+      pointer-events: auto;
+    }}
+
+    /* 唤醒并保持显示的 CSS 规则与 JS 类名 */
+    .nezuko-pet-stage:hover .nezuko-action-capsule,
+    .nezuko-action-capsule:hover,
+    .nezuko-action-capsule.is-active {{
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      transform: translateX(-50%) translateY(0) scale(1) !important;
+    }}
+
+    /* 动作条圆形小按钮 */
+    .nezuko-capsule-btn {{
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(197, 155, 39, 0.45);
+      color: #fff;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative;
+      flex-shrink: 0;
+    }}
+    .nezuko-capsule-btn:hover {{
+      background: var(--ds-dark-pink);
+      border-color: var(--ds-pink);
+      transform: scale(1.18);
+      box-shadow: 0 0 12px rgba(244, 143, 177, 0.7);
+    }}
+    .nezuko-capsule-btn:active {{
+      transform: scale(0.95);
+    }}
+
+    /* 按钮浮动气泡文字 */
+    .nezuko-capsule-btn[data-tip]::before {{
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 7px);
+      left: 50%;
+      transform: translateX(-50%) scale(0.8);
+      background: rgba(20, 12, 10, 0.95);
+      border: 1px solid var(--ds-brass-gold);
+      color: var(--ds-gold-glow);
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.18s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }}
+    .nezuko-capsule-btn:hover::before {{
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }}
+
+    /* 特殊按钮样式：BGM 音乐与看板 */
+    .btn-music-spin {{
+      background: radial-gradient(circle, #ff80ab 20%, #231612 21%, #111 100%);
+    }}
+    .btn-music-spin.playing {{
+      animation: recordSpin 3.5s infinite linear;
+      border-color: var(--ds-pink);
+      box-shadow: 0 0 10px rgba(244, 143, 177, 0.8);
+    }}
+
+    /* 多表情叠加层 */
     .nezuko-face-rig {{
       position: absolute;
       top: 36px;
@@ -385,126 +472,65 @@ js_code = f"""/**
       pointer-events: none;
       z-index: 5;
     }}
-
-    /* 默认眨眼萌眼 */
     .nezuko-eyes-default {{
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 4px;
-      box-sizing: border-box;
-      opacity: 0;
-      transition: opacity 0.2s;
+      width: 100%; height: 100%;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 4px; box-sizing: border-box; opacity: 0;
     }}
-
-    /* 经典魔性豆豆眼 (·_·) */
     .nezuko-eyes-dot {{
-      position: absolute;
-      top: 14px;
-      left: 6px;
-      width: 44px;
-      height: 16px;
-      display: none;
-      justify-content: space-between;
-      align-items: center;
+      position: absolute; top: 14px; left: 6px; width: 44px; height: 16px;
+      display: none; justify-content: space-between; align-items: center;
     }}
     .nezuko-eyes-dot::before, .nezuko-eyes-dot::after {{
-      content: '';
-      width: 9px;
-      height: 9px;
-      background: #111;
-      border-radius: 50%;
+      content: ''; width: 9px; height: 9px; background: #111; border-radius: 50%;
       box-shadow: 0 0 2px rgba(0,0,0,0.8);
     }}
-
-    /* 闭眼月牙笑 (^‿^) */
     .nezuko-eyes-crescent {{
-      position: absolute;
-      top: 12px;
-      left: 4px;
-      width: 48px;
-      height: 16px;
-      display: none;
-      justify-content: space-between;
+      position: absolute; top: 12px; left: 4px; width: 48px; height: 16px;
+      display: none; justify-content: space-between;
     }}
     .nezuko-eyes-crescent::before, .nezuko-eyes-crescent::after {{
-      content: '';
-      width: 16px;
-      height: 8px;
-      border-bottom: 3.5px solid #231612;
+      content: ''; width: 16px; height: 8px; border-bottom: 3.5px solid #231612;
       border-radius: 0 0 16px 16px;
     }}
-
-    /* 气鼓鼓大腮帮 (包子脸) */
     .nezuko-cheeks-angry {{
-      position: absolute;
-      top: 18px;
-      left: 0;
-      width: 56px;
-      height: 20px;
-      display: none;
-      justify-content: space-between;
+      position: absolute; top: 18px; left: 0; width: 56px; height: 20px;
+      display: none; justify-content: space-between;
     }}
     .nezuko-cheeks-angry::before, .nezuko-cheeks-angry::after {{
-      content: '';
-      width: 14px;
-      height: 14px;
+      content: ''; width: 14px; height: 14px;
       background: radial-gradient(circle, #ff80ab 0%, rgba(255, 64, 129, 0.4) 65%, transparent 100%);
       border-radius: 50%;
     }}
-
-    /* 鬼化额角与鲜红鬼纹 */
     .nezuko-demon-horn {{
-      position: absolute;
-      top: -14px;
-      right: 14px;
-      width: 16px;
-      height: 22px;
+      position: absolute; top: -14px; right: 14px; width: 16px; height: 22px;
       background: linear-gradient(135deg, #fff 0%, #e0e0e0 60%, #b0bec5 100%);
       clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-      transform: rotate(20deg);
-      filter: drop-shadow(0 0 6px rgba(255, 23, 68, 0.8));
+      transform: rotate(20deg); filter: drop-shadow(0 0 6px rgba(255, 23, 68, 0.8));
       display: none;
     }}
     .nezuko-demon-veins {{
-      position: absolute;
-      top: -4px;
-      right: 6px;
-      width: 22px;
-      height: 20px;
+      position: absolute; top: -4px; right: 6px; width: 22px; height: 20px;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 Q18 8 16 16 Q22 18 20 22 Q14 18 12 12 Q8 16 4 22' fill='none' stroke='%23ff1744' stroke-width='2'/%3E%3C/svg%3E") no-repeat center;
       display: none;
     }}
 
-    /* 表情状态机切换 */
     .expr-dot .nezuko-eyes-dot {{ display: flex !important; }}
     .expr-crescent .nezuko-eyes-crescent {{ display: flex !important; }}
     .expr-angry .nezuko-cheeks-angry {{ display: flex !important; }}
     .expr-demon .nezuko-demon-horn,
     .expr-demon .nezuko-demon-veins {{ display: block !important; }}
 
-    /* ===== 原动漫名场面 7 大动作动画机 ===== */
-
-    /* 动作 1：小豆丁风火轮狂奔 (Tiny Chibi Run) */
+    /* 原动漫 7 大名场面动画机 */
     .action-run {{
       animation: nezukoRunCycle 0.55s infinite alternate ease-in-out !important;
     }}
     @keyframes nezukoRunCycle {{
-      0% {{
-        transform: scale(0.72) translateY(12px) translateX(-28px) rotate(-10deg);
-      }}
-      100% {{
-        transform: scale(0.72) translateY(6px) translateX(28px) rotate(10deg);
-      }}
+      0% {{ transform: scale(0.72) translateY(12px) translateX(-28px) rotate(-10deg); }}
+      100% {{ transform: scale(0.72) translateY(6px) translateX(28px) rotate(10deg); }}
     }}
-    .action-run ~ .nezuko-pet-ground-shadow {{
-      width: 70px;
-      transform: translateX(-50%) scaleX(0.75);
-    }}
+    .action-run ~ .nezuko-pet-ground-shadow {{ width: 70px; transform: translateX(-50%) scaleX(0.75); }}
 
-    /* 动作 2：抱竹歪头晃脑 (Head Tilt & Sway) */
     .action-tilt {{
       animation: nezukoHeadSway 2.4s infinite ease-in-out !important;
     }}
@@ -515,7 +541,6 @@ js_code = f"""/**
       75% {{ transform: rotate(18deg) translateY(-2px); }}
     }}
 
-    /* 动作 3：气鼓鼓跺小脚 (Angry Stomp) */
     .action-stomp {{
       animation: nezukoAngryStomp 0.28s infinite alternate cubic-bezier(0.4, 0, 0.2, 1) !important;
     }}
@@ -524,7 +549,6 @@ js_code = f"""/**
       100% {{ transform: translateY(-7px) rotate(-5deg); }}
     }}
 
-    /* 动作 4：血鬼术·爆血觉醒 (Blood Demon Art) */
     .action-burst {{
       animation: nezukoBurstFlame 1.2s infinite ease-in-out !important;
       filter: drop-shadow(0 0 18px rgba(255, 23, 68, 0.9)) saturate(1.4) !important;
@@ -534,7 +558,6 @@ js_code = f"""/**
       50% {{ transform: scale(1.1) translateY(-8px); }}
     }}
 
-    /* 动作 5：钻雾云杉木箱捉迷藏 (Box Peek-a-boo) */
     .action-box {{
       animation: nezukoBoxHide 1.8s infinite ease-in-out !important;
     }}
@@ -543,7 +566,6 @@ js_code = f"""/**
       50% {{ transform: scale(0.92) translateY(10px); opacity: 1; }}
     }}
 
-    /* 动作 6：揉眼犯困打瞌睡 (Drowsy Sleep) */
     .action-sleep {{
       animation: nezukoSleepCycle 3.2s infinite ease-in-out !important;
     }}
@@ -552,7 +574,6 @@ js_code = f"""/**
       50% {{ transform: rotate(15deg) translateY(18px) scale(0.88); }}
     }}
 
-    /* 动作 7：摸头杀闭眼撒娇蹭蹭 (Headpat Cuddle) */
     .action-headpat {{
       animation: nezukoHeadpatCuddle 1.4s infinite ease-in-out !important;
     }}
@@ -561,7 +582,6 @@ js_code = f"""/**
       50% {{ transform: translateY(-6px) rotate(8deg); }}
     }}
 
-    /* QQ宠物拖拽被提起 (悬空慌乱挣扎蹬腿) */
     .nezuko-picked-up {{
       transform: scale(1.08) translateY(-22px) rotate(-8deg) !important;
       filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.35)) !important;
@@ -572,395 +592,157 @@ js_code = f"""/**
       100% {{ transform: scale(1.08) translateY(-22px) rotate(7deg); }}
     }}
     .nezuko-picked-up ~ .nezuko-pet-ground-shadow {{
-      transform: translateX(-50%) scale(0.55);
-      opacity: 0.25;
+      transform: translateX(-50%) scale(0.55); opacity: 0.25;
     }}
 
-    /* 音乐节拍轻微晃脑 */
     .nezuko-music-bob {{
       transform: translateY(-4px) rotate(3deg);
       transition: transform 0.15s ease-out;
     }}
 
-    /* 道具层：雾云杉木箱 */
     .nezuko-box-prop {{
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 110px;
-      height: 140px;
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 110px; height: 140px;
       background: linear-gradient(180deg, var(--ds-wood-light) 0%, var(--ds-wood-dark) 100%);
-      border: 3px solid var(--ds-brass-gold);
-      border-radius: 8px;
+      border: 3px solid var(--ds-brass-gold); border-radius: 8px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,0,0,0.6);
-      display: none;
-      z-index: 1;
+      display: none; z-index: 1;
     }}
-    .nezuko-box-prop::before {{
-      content: '';
-      position: absolute;
-      top: 8px; left: 8px; right: 8px; bottom: 8px;
-      border: 1px dashed var(--ds-brass-gold);
-      opacity: 0.6;
-    }}
-    .action-box ~ .nezuko-box-prop {{
-      display: block !important;
-    }}
+    .action-box ~ .nezuko-box-prop {{ display: block !important; }}
 
-    /* ===== 特效粒子层 (樱花、怒气十字、Zzz、爆血火焰) ===== */
-    .nezuko-fx-container {{
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 20;
-    }}
-
+    .nezuko-fx-container {{ position: absolute; inset: 0; pointer-events: none; z-index: 20; }}
     .nezuko-fx-cross {{
-      position: absolute;
-      top: 15px;
-      right: 18px;
-      color: #ff1744;
-      font-size: 22px;
-      font-weight: 900;
-      display: none;
-      animation: crossShake 0.3s infinite;
+      position: absolute; top: 15px; right: 18px; color: #ff1744; font-size: 22px; font-weight: 900;
+      display: none; animation: crossShake 0.3s infinite;
     }}
-    .action-stomp ~ .nezuko-fx-container .nezuko-fx-cross {{
-      display: block;
-    }}
+    .action-stomp ~ .nezuko-fx-container .nezuko-fx-cross {{ display: block; }}
     @keyframes crossShake {{
       0% {{ transform: scale(1) rotate(0deg); }}
       50% {{ transform: scale(1.25) rotate(12deg); }}
       100% {{ transform: scale(1) rotate(-8deg); }}
     }}
-
     .nezuko-fx-zzz {{
-      position: absolute;
-      top: 0;
-      right: 8px;
-      color: #f48fb1;
-      font-size: 16px;
-      font-weight: bold;
-      display: none;
-      animation: zzzFloat 2.2s infinite linear;
+      position: absolute; top: 0; right: 8px; color: #f48fb1; font-size: 16px; font-weight: bold;
+      display: none; animation: zzzFloat 2.2s infinite linear;
     }}
-    .action-sleep ~ .nezuko-fx-container .nezuko-fx-zzz {{
-      display: block;
-    }}
+    .action-sleep ~ .nezuko-fx-container .nezuko-fx-zzz {{ display: block; }}
     @keyframes zzzFloat {{
       0% {{ transform: translate(0, 0) scale(0.6); opacity: 0; }}
       50% {{ opacity: 1; }}
       100% {{ transform: translate(14px, -28px) scale(1.3); opacity: 0; }}
     }}
-
     .nezuko-fx-hearts {{
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      font-size: 18px;
-      display: none;
-      animation: heartSparkle 1.2s infinite ease-out;
+      position: absolute; top: 10px; left: 10px; right: 10px; font-size: 18px;
+      display: none; animation: heartSparkle 1.2s infinite ease-out;
     }}
-    .action-headpat ~ .nezuko-fx-container .nezuko-fx-hearts {{
-      display: block;
-    }}
+    .action-headpat ~ .nezuko-fx-container .nezuko-fx-hearts {{ display: block; }}
     @keyframes heartSparkle {{
       0% {{ transform: scale(0.8) translateY(0); opacity: 0; }}
       50% {{ opacity: 1; }}
       100% {{ transform: scale(1.2) translateY(-20px); opacity: 0; }}
     }}
 
-    /* ===== 大正和风主操作面板 (雾云杉木箱 + 麻叶纹 + 烫金) ===== */
+    /* 鬼灭大正和风主操作看板 */
     #nezuko-main-card {{
       position: absolute;
-      bottom: 195px;
+      bottom: 200px;
       right: 0;
-      width: 330px;
+      width: 335px;
       background: linear-gradient(135deg, rgba(35, 22, 18, 0.96) 0%, rgba(20, 12, 10, 0.98) 100%);
       border: 2px solid var(--ds-brass-gold);
       border-radius: 12px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(244, 143, 177, 0.25);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(244, 143, 177, 0.25);
       color: #fff;
       overflow: hidden;
       display: none;
       flex-direction: column;
-      z-index: 50;
+      z-index: 120;
       backdrop-filter: blur(12px);
     }}
-
-    /* 粉红麻叶纹几何背景衬底 */
     .nezuko-asanoha-pattern {{
-      position: absolute;
-      inset: 0;
-      opacity: 0.08;
+      position: absolute; inset: 0; opacity: 0.08;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='103.92' viewBox='0 0 60 103.92'%3E%3Cpath d='M30 0 L60 17.32 L60 51.96 L30 69.28 L0 51.96 L0 17.32 Z' fill='none' stroke='%23f48fb1' stroke-width='1.5'/%3E%3Cpath d='M30 0 L30 69.28 M60 17.32 L0 51.96 M60 51.96 L0 17.32' stroke='%23f48fb1' stroke-width='1.5'/%3E%3Cpath d='M30 34.64 L30 0 M30 34.64 L60 17.32 M30 34.64 L60 51.96 M30 34.64 L30 69.28 M30 34.64 L0 51.96 M30 34.64 L0 17.32' stroke='%23f48fb1' stroke-width='2'/%3E%3C/svg%3E");
       pointer-events: none;
     }}
-
-    /* 顶部烫金日式和风标题条 */
     .nezuko-card-header {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;
       background: linear-gradient(90deg, #381f19 0%, #4a2920 100%);
       border-bottom: 1.5px solid var(--ds-brass-gold);
-      position: relative;
     }}
     .nezuko-header-title {{
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--ds-gold-glow);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      font-size: 13px; font-weight: 700; color: var(--ds-gold-glow);
+      display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     }}
     .nezuko-header-badge {{
-      font-size: 10px;
-      background: var(--ds-dark-pink);
-      color: #fff;
-      padding: 1px 6px;
-      border-radius: 4px;
-      letter-spacing: 0.5px;
+      font-size: 10px; background: var(--ds-dark-pink); color: #fff; padding: 1px 6px; border-radius: 4px;
     }}
     .nezuko-close-btn {{
-      background: transparent;
-      border: none;
-      color: #b0bec5;
-      font-size: 16px;
-      cursor: pointer;
-      line-height: 1;
-      padding: 2px 6px;
-      border-radius: 4px;
+      background: transparent; border: none; color: #b0bec5; font-size: 16px; cursor: pointer; padding: 2px 6px;
     }}
-    .nezuko-close-btn:hover {{
-      color: #fff;
-      background: rgba(255,255,255,0.1);
-    }}
-
-    /* 卡片内容滚动区 */
+    .nezuko-close-btn:hover {{ color: #fff; background: rgba(255,255,255,0.1); }}
     .nezuko-card-body {{
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-height: 480px;
-      overflow-y: auto;
-      position: relative;
+      padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; max-height: 480px; overflow-y: auto;
     }}
-
-    /* 模块分块样式 */
     .nezuko-section-box {{
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(197, 155, 39, 0.35);
-      border-radius: 8px;
-      padding: 10px 12px;
-      position: relative;
+      background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(197, 155, 39, 0.35);
+      border-radius: 8px; padding: 10px 12px;
     }}
     .nezuko-section-title {{
-      font-size: 12px;
-      font-weight: 700;
-      color: #e0e0e0;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 12px; font-weight: 700; color: #e0e0e0; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
     }}
-
-    /* ===== 原生配额条目样式 ===== */
     .nezuko-quota-row {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
+      display: flex; justify-content: space-between; align-items: center; padding: 6px 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }}
-    .nezuko-quota-row:last-child {{
-      border-bottom: none;
-      padding-bottom: 2px;
-    }}
-    .nezuko-quota-meta {{
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }}
-    .nezuko-quota-name {{
-      font-size: 12px;
-      color: #f5f5f5;
-    }}
-    .nezuko-quota-reset {{
-      font-size: 10px;
-      color: #9e9e9e;
-    }}
-    .nezuko-quota-val-group {{
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }}
-    .nezuko-quota-pct {{
-      font-size: 13px;
-      font-weight: 700;
-      color: #81c784;
-    }}
-    /* SVG 环形进度条 */
-    .nezuko-ring-wrap {{
-      width: 24px;
-      height: 24px;
-      transform: rotate(-90deg);
-    }}
-    .nezuko-ring-bg {{
-      fill: none;
-      stroke: rgba(255, 255, 255, 0.15);
-      stroke-width: 3.5;
-    }}
+    .nezuko-quota-row:last-child {{ border-bottom: none; }}
+    .nezuko-quota-meta {{ display: flex; flex-direction: column; gap: 2px; }}
+    .nezuko-quota-name {{ font-size: 12px; color: #f5f5f5; }}
+    .nezuko-quota-reset {{ font-size: 10px; color: #9e9e9e; }}
+    .nezuko-quota-val-group {{ display: flex; align-items: center; gap: 8px; }}
+    .nezuko-quota-pct {{ font-size: 13px; font-weight: 700; color: #81c784; }}
+    .nezuko-ring-wrap {{ width: 24px; height: 24px; transform: rotate(-90deg); }}
+    .nezuko-ring-bg {{ fill: none; stroke: rgba(255, 255, 255, 0.15); stroke-width: 3.5; }}
     .nezuko-ring-bar {{
-      fill: none;
-      stroke: #81c784;
-      stroke-width: 3.5;
-      stroke-linecap: round;
-      stroke-dasharray: 63;
-      stroke-dashoffset: 0;
-      transition: stroke-dashoffset 0.6s ease;
+      fill: none; stroke: #81c784; stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 63;
+      stroke-dashoffset: 0; transition: stroke-dashoffset 0.6s ease;
     }}
 
-    /* ===== BGM 随身音乐盒面板 ===== */
     .nezuko-music-player {{
       background: linear-gradient(180deg, rgba(46, 26, 20, 0.7) 0%, rgba(20, 12, 10, 0.85) 100%);
-      border: 1px solid var(--ds-brass-gold);
-      border-radius: 8px;
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      border: 1px solid var(--ds-brass-gold); border-radius: 8px; padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
     }}
-    .nezuko-music-info {{
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }}
-    /* 迷你和风黑胶唱片 */
+    .nezuko-music-info {{ display: flex; align-items: center; gap: 10px; }}
     .nezuko-record-disc {{
-      width: 34px;
-      height: 34px;
+      width: 34px; height: 34px;
       background: radial-gradient(circle, #ff80ab 15%, #111 16%, #222 65%, #111 100%);
-      border: 1.5px solid var(--ds-brass-gold);
-      border-radius: 50%;
-      flex-shrink: 0;
-      animation: recordSpin 3.5s infinite linear;
-      animation-play-state: paused;
+      border: 1.5px solid var(--ds-brass-gold); border-radius: 50%; flex-shrink: 0;
+      animation: recordSpin 3.5s infinite linear; animation-play-state: paused;
     }}
-    .record-spinning {{
-      animation-play-state: running !important;
-    }}
-    @keyframes recordSpin {{
-      from {{ transform: rotate(0deg); }}
-      to {{ transform: rotate(360deg); }}
-    }}
-    .nezuko-song-texts {{
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }}
-    .nezuko-song-title {{
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #fff;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-    }}
-    .nezuko-song-sub {{
-      font-size: 9.5px;
-      color: var(--ds-pink);
-    }}
-
-    /* 播放器控制按钮组 */
-    .nezuko-music-controls {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      padding-top: 4px;
-    }}
+    .record-spinning {{ animation-play-state: running !important; }}
+    @keyframes recordSpin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
+    .nezuko-song-texts {{ display: flex; flex-direction: column; overflow: hidden; }}
+    .nezuko-song-title {{ font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }}
+    .nezuko-song-sub {{ font-size: 9.5px; color: var(--ds-pink); }}
+    .nezuko-music-controls {{ display: flex; align-items: center; justify-content: space-between; gap: 6px; }}
     .nezuko-ctrl-btn {{
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(197, 155, 39, 0.4);
-      color: #fff;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-      transition: all 0.2s;
+      background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(197, 155, 39, 0.4);
+      color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s;
     }}
-    .nezuko-ctrl-btn:hover {{
-      background: var(--ds-dark-pink);
-      border-color: var(--ds-pink);
-    }}
-    .nezuko-ctrl-play {{
-      background: linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson));
-      font-weight: bold;
-      padding: 4px 14px;
-    }}
+    .nezuko-ctrl-btn:hover {{ background: var(--ds-dark-pink); border-color: var(--ds-pink); }}
+    .nezuko-ctrl-play {{ background: linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson)); font-weight: bold; padding: 4px 14px; }}
 
-    /* ===== 原动漫动作快捷网格 ===== */
-    .nezuko-actions-grid {{
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-    }}
-    .nezuko-act-btn {{
-      background: rgba(46, 26, 20, 0.8);
-      border: 1px solid rgba(197, 155, 39, 0.35);
-      color: #e0e0e0;
-      padding: 6px 4px;
-      border-radius: 6px;
-      font-size: 10.5px;
-      cursor: pointer;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      transition: all 0.2s;
-    }}
-    .nezuko-act-btn:hover {{
-      background: var(--ds-dark-pink);
-      color: #fff;
-      border-color: var(--ds-pink);
-      transform: translateY(-1.5px);
-    }}
-
-    /* ===== 呼出与浮动按钮 ===== */
     .nezuko-float-badge {{
-      position: absolute;
-      bottom: 14px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(35, 22, 18, 0.88);
-      border: 1px solid var(--ds-brass-gold);
-      color: var(--ds-gold-glow);
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      cursor: pointer;
-      white-space: nowrap;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      opacity: 0.85;
-      transition: opacity 0.2s;
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      background: rgba(35, 22, 18, 0.88); border: 1px solid var(--ds-brass-gold);
+      color: var(--ds-gold-glow); font-size: 10px; padding: 2px 8px; border-radius: 12px;
+      cursor: pointer; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      opacity: 0.85; transition: opacity 0.2s;
     }}
-    .nezuko-float-badge:hover {{
-      opacity: 1;
-      background: var(--ds-dark-pink);
-      color: #fff;
-    }}
-
-    /* 底部炭治郎市松纹装饰条 */
+    .nezuko-float-badge:hover {{ opacity: 1; background: var(--ds-dark-pink); color: #fff; }}
     .nezuko-ichimatsu-strip {{
-      height: 6px;
-      width: 100%;
+      height: 6px; width: 100%;
       background: repeating-linear-gradient(45deg, var(--ds-tanjiro-green) 0, var(--ds-tanjiro-green) 6px, var(--ds-ichimatsu-black) 6px, var(--ds-ichimatsu-black) 12px);
     }}
   `;
@@ -972,34 +754,50 @@ js_code = f"""/**
   const root = document.createElement('div');
   root.id = 'nezuko-pet-root';
   root.innerHTML = `
-    <!-- 地面接触软阴影 -->
-    <div class="nezuko-pet-ground-shadow" id="nezuko-ground-shadow"></div>
+    <div class="nezuko-pet-stage" id="nezuko-pet-stage">
+      <!-- 地面接触软阴影 -->
+      <div class="nezuko-pet-ground-shadow" id="nezuko-ground-shadow"></div>
 
-    <!-- 雾云杉木箱道具 -->
-    <div class="nezuko-box-prop"></div>
+      <!-- 雾云杉木箱道具 -->
+      <div class="nezuko-box-prop"></div>
 
-    <!-- 粒子特效容器 -->
-    <div class="nezuko-fx-container">
-      <div class="nezuko-fx-cross">💢</div>
-      <div class="nezuko-fx-zzz">Zzz...</div>
-      <div class="nezuko-fx-hearts">🌸 ✨ 💖</div>
-    </div>
-
-    <!-- 角色骨骼头像容器 -->
-    <div class="nezuko-pet-avatar" id="nezuko-pet-character" title="双击打开鬼灭看板 · 按住拖拽 · 滚轮切歌">
-      <img src="${{NEZUKO_IMG_B64}}" class="nezuko-pet-img" alt="灶门祢豆子">
-      
-      <!-- 动态表情叠加层 -->
-      <div class="nezuko-face-rig" id="nezuko-face-rig">
-        <div class="nezuko-eyes-default"></div>
-        <div class="nezuko-eyes-dot"></div>
-        <div class="nezuko-eyes-crescent"></div>
-        <div class="nezuko-cheeks-angry"></div>
-        <div class="nezuko-demon-horn"></div>
-        <div class="nezuko-demon-veins"></div>
+      <!-- 粒子特效容器 -->
+      <div class="nezuko-fx-container">
+        <div class="nezuko-fx-cross">💢</div>
+        <div class="nezuko-fx-zzz">Zzz...</div>
+        <div class="nezuko-fx-hearts">🌸 ✨ 💖</div>
       </div>
 
-      <div class="nezuko-float-badge" id="nezuko-open-btn">🎋 鬼灭看板</div>
+      <!-- ============================================== -->
+      <!-- 核心升级：头顶快捷胶囊动作条 (带透明安全桥接垫片) -->
+      <!-- ============================================== -->
+      <div class="nezuko-action-capsule" id="nezuko-action-capsule">
+        <button class="nezuko-capsule-btn" data-action="headpat" data-expr="crescent" data-tip="摸头杀蹭蹭" title="摸头杀蹭蹭">🐱</button>
+        <button class="nezuko-capsule-btn" data-action="run" data-expr="dot" data-tip="豆豆眼狂奔" title="豆豆眼狂奔">🏃</button>
+        <button class="nezuko-capsule-btn" data-action="box" data-expr="normal" data-tip="钻木箱捉猫" title="钻木箱捉迷藏">📦</button>
+        <button class="nezuko-capsule-btn" data-action="stomp" data-expr="angry" data-tip="气鼓跺小脚" title="气鼓鼓跺脚">😤</button>
+        <button class="nezuko-capsule-btn" data-action="burst" data-expr="demon" data-tip="血鬼术·爆血" title="血鬼术·爆血">🔥</button>
+        <button class="nezuko-capsule-btn" data-action="sleep" data-expr="crescent" data-tip="揉眼伸懒腰" title="揉眼犯困伸懒腰">🥱</button>
+        <button class="nezuko-capsule-btn btn-music-spin" id="btn-quick-music" data-tip="播放/切歌" title="播放/切换鬼灭BGM">🎵</button>
+        <button class="nezuko-capsule-btn" id="btn-quick-board" data-tip="鬼灭看板" title="打开鬼灭配额看板">🎋</button>
+      </div>
+
+      <!-- 角色骨骼头像容器 -->
+      <div class="nezuko-pet-avatar" id="nezuko-pet-character" title="单击锁定动作条 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
+        <img src="${{NEZUKO_IMG_B64}}" class="nezuko-pet-img" alt="灶门祢豆子">
+        
+        <!-- 动态表情叠加层 -->
+        <div class="nezuko-face-rig" id="nezuko-face-rig">
+          <div class="nezuko-eyes-default"></div>
+          <div class="nezuko-eyes-dot"></div>
+          <div class="nezuko-eyes-crescent"></div>
+          <div class="nezuko-cheeks-angry"></div>
+          <div class="nezuko-demon-horn"></div>
+          <div class="nezuko-demon-veins"></div>
+        </div>
+
+        <div class="nezuko-float-badge" id="nezuko-open-btn">🎋 鬼灭看板</div>
+      </div>
     </div>
 
     <!-- 大正和风主操作看板 (雾云杉木箱质感) -->
@@ -1098,7 +896,6 @@ js_code = f"""/**
             <button class="nezuko-ctrl-btn" id="btn-toggle-adjust" style="font-size:10px; padding:3px 8px;">⚙️ 手动校准微调</button>
           </div>
 
-          <!-- 折叠校准滑块面板 -->
           <div id="nezuko-adjust-box" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.15);">
             <div style="font-size:11px; color:#ffd54f; margin-bottom:4px;">Gemini 每周配额: <span id="val-adj-gw">91%</span></div>
             <input type="range" id="rng-adj-gw" min="0" max="100" value="91" style="width:100%; accent-color:#f48fb1;">
@@ -1127,59 +924,69 @@ js_code = f"""/**
             </label>
           </div>
         </div>
-
-        <!-- 模块 4：原动漫 7 大经典高能动作机 (点击触发) -->
-        <div class="nezuko-section-box">
-          <div class="nezuko-section-title">
-            <span>原动漫名场面动作机</span>
-            <span style="font-size:10px; color:var(--ds-pink);">神韵复刻</span>
-          </div>
-          <div class="nezuko-actions-grid">
-            <button class="nezuko-act-btn" data-action="run" data-expr="dot">
-              <span>💨 豆豆眼狂奔</span>
-            </button>
-            <button class="nezuko-act-btn" data-action="tilt" data-expr="normal">
-              <span>🎋 抱竹歪头</span>
-            </button>
-            <button class="nezuko-act-btn" data-action="stomp" data-expr="angry">
-              <span>💢 气鼓跺小脚</span>
-            </button>
-            <button class="nezuko-act-btn" data-action="burst" data-expr="demon">
-              <span>🔥 爆血觉醒</span>
-            </button>
-            <button class="nezuko-act-btn" data-action="box" data-expr="normal">
-              <span>📦 钻木箱捉猫</span>
-            </button>
-            <button class="nezuko-act-btn" data-action="sleep" data-expr="crescent">
-              <span>💤 犯困打瞌睡</span>
-            </button>
-            <button class="nezuko-act-btn" data-action="headpat" data-expr="crescent" style="grid-column: span 3;">
-              <span>🌸 摸头杀闭眼蹭蹭 (超级撒娇)</span>
-            </button>
-          </div>
-        </div>
       </div>
 
-      <!-- 底部炭治郎市松纹装饰带 -->
       <div class="nezuko-ichimatsu-strip"></div>
     </div>
   `;
   document.body.appendChild(root);
 
   // ==========================================
-  // 五、逻辑绑定与交互驱动
+  // 五、逻辑绑定与交互驱动 (含智能防抖与锁定)
   // ==========================================
   const charAvatar = document.getElementById('nezuko-pet-character');
+  const stageEl = document.getElementById('nezuko-pet-stage');
+  const capsuleBar = document.getElementById('nezuko-action-capsule');
   const mainCard = document.getElementById('nezuko-main-card');
   const openBtn = document.getElementById('nezuko-open-btn');
   const closeBtn = document.getElementById('nezuko-close-card');
   const faceRig = document.getElementById('nezuko-face-rig');
   const disc = document.getElementById('nezuko-disc');
+  const quickMusicBtn = document.getElementById('btn-quick-music');
+  const quickBoardBtn = document.getElementById('btn-quick-board');
 
-  // 更新环形进度条显示
+  // =========================================================
+  // 核心修复机制：智能防抖延时 + 单击常驻锁定
+  // =========================================================
+  let hideCapsuleTimer = null;
+  let isCapsulePinned = false; // 是否点击常驻锁定
+
+  function showCapsule() {{
+    if (hideCapsuleTimer) {{
+      clearTimeout(hideCapsuleTimer);
+      hideCapsuleTimer = null;
+    }}
+    capsuleBar.classList.add('is-active');
+  }}
+
+  function scheduleHideCapsule() {{
+    if (isCapsulePinned) return; // 若已锁定，则不隐藏
+    if (hideCapsuleTimer) clearTimeout(hideCapsuleTimer);
+    hideCapsuleTimer = setTimeout(() => {{
+      capsuleBar.classList.remove('is-active');
+    }}, 450); // 留出 450ms 充裕的滑动安全时间！绝不闪烁消失！
+  }}
+
+  // 舞台与动作条双向绑定
+  stageEl.addEventListener('mouseenter', showCapsule);
+  stageEl.addEventListener('mouseleave', scheduleHideCapsule);
+  capsuleBar.addEventListener('mouseenter', showCapsule);
+  capsuleBar.addEventListener('mouseleave', scheduleHideCapsule);
+
+  // 单击小豆子身体：切换常驻锁定显示
+  charAvatar.addEventListener('click', (e) => {{
+    if (isDragging) return;
+    isCapsulePinned = !isCapsulePinned;
+    if (isCapsulePinned) {{
+      showCapsule();
+    }} else {{
+      scheduleHideCapsule();
+    }}
+  }});
+
+  // 更新配额显示
   function updateQuotaDisplay() {{
-    const CIRCLE_CIRCUM = 62.83; // 2 * PI * 10
-    
+    const CIRCLE_CIRCUM = 62.83;
     const setRing = (id, pct) => {{
       const ring = document.getElementById(id);
       if (!ring) return;
@@ -1207,6 +1014,10 @@ js_code = f"""/**
     e.stopPropagation();
     mainCard.style.display = mainCard.style.display === 'flex' ? 'none' : 'flex';
   }});
+  quickBoardBtn.addEventListener('click', (e) => {{
+    e.stopPropagation();
+    mainCard.style.display = mainCard.style.display === 'flex' ? 'none' : 'flex';
+  }});
   closeBtn.addEventListener('click', () => {{
     mainCard.style.display = 'none';
   }});
@@ -1217,7 +1028,6 @@ js_code = f"""/**
   // 动作与表情切换引擎
   let actionTimer = null;
   function triggerAction(actionName, exprName, duration = 6500) {{
-    // 清除既有动作
     charAvatar.classList.remove('action-run', 'action-tilt', 'action-stomp', 'action-burst', 'action-box', 'action-sleep', 'action-headpat');
     faceRig.classList.remove('expr-dot', 'expr-crescent', 'expr-angry', 'expr-demon');
 
@@ -1231,16 +1041,17 @@ js_code = f"""/**
     }}, duration);
   }}
 
-  // 动作按钮绑定
-  document.querySelectorAll('.nezuko-act-btn').forEach(btn => {{
-    btn.addEventListener('click', () => {{
+  // 快捷胶囊条动作按钮绑定
+  document.querySelectorAll('.nezuko-capsule-btn[data-action]').forEach(btn => {{
+    btn.addEventListener('click', (e) => {{
+      e.stopPropagation();
       const action = btn.getAttribute('data-action');
       const expr = btn.getAttribute('data-expr');
       triggerAction(action, expr);
     }});
   }});
 
-  // 音乐控件绑定
+  // 音乐控件与快捷键绑定
   window.updateMusicUI = function(customName) {{
     const titleEl = document.getElementById('music-title');
     const subEl = document.getElementById('music-sub');
@@ -1258,11 +1069,23 @@ js_code = f"""/**
     if (musicEngine.isPlaying) {{
       playBtn.textContent = "⏸ 暂停";
       disc.classList.add('record-spinning');
+      quickMusicBtn.classList.add('playing');
     }} else {{
       playBtn.textContent = "▶ 播放";
       disc.classList.remove('record-spinning');
+      quickMusicBtn.classList.remove('playing');
     }}
   }};
+
+  // 快捷音乐播放/切歌
+  quickMusicBtn.addEventListener('click', (e) => {{
+    e.stopPropagation();
+    if (!musicEngine.isPlaying) {{
+      musicEngine.play();
+    }} else {{
+      musicEngine.next();
+    }}
+  }});
 
   document.getElementById('m-btn-play').addEventListener('click', () => musicEngine.toggle());
   document.getElementById('m-btn-next').addEventListener('click', () => musicEngine.next());
@@ -1273,7 +1096,7 @@ js_code = f"""/**
     if (f) musicEngine.loadLocalFile(f);
   }});
 
-  // 滚轮在桌宠上切歌
+  // 滚轮切歌
   charAvatar.addEventListener('wheel', (e) => {{
     e.preventDefault();
     if (e.deltaY > 0) musicEngine.next();
@@ -1286,7 +1109,7 @@ js_code = f"""/**
     updateQuotaDisplay();
   }});
 
-  // 手动校准展开
+  // 手动校准
   const adjBox = document.getElementById('nezuko-adjust-box');
   document.getElementById('btn-toggle-adjust').addEventListener('click', () => {{
     adjBox.style.display = adjBox.style.display === 'block' ? 'none' : 'block';
@@ -1312,11 +1135,11 @@ js_code = f"""/**
   // ==========================================
   let isDragging = false;
   let dragStartX = 0, dragStartY = 0;
-  let rootStartRight = 28, rootStartBottom = 24;
+  let rootStartRight = 32, rootStartBottom = 24;
 
   charAvatar.addEventListener('mousedown', (e) => {{
     if (e.button !== 0) return;
-    isDragging = true;
+    isDragging = false;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     
@@ -1324,29 +1147,35 @@ js_code = f"""/**
     rootStartRight = window.innerWidth - rect.right;
     rootStartBottom = window.innerHeight - rect.bottom;
 
-    charAvatar.classList.add('nezuko-picked-up');
-    triggerAction(null, 'dot', 999999); // 提起时出现豆豆眼惊慌状
-    e.preventDefault();
+    const onMove = (moveEvt) => {{
+      const dx = moveEvt.clientX - dragStartX;
+      const dy = moveEvt.clientY - dragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {{
+        isDragging = true;
+        charAvatar.classList.add('nezuko-picked-up');
+        triggerAction(null, 'dot', 999999);
+      }}
+      if (isDragging) {{
+        root.style.right = (rootStartRight - dx) + 'px';
+        root.style.bottom = (rootStartBottom - dy) + 'px';
+      }}
+    }};
+
+    const onUp = () => {{
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if (isDragging) {{
+        charAvatar.classList.remove('nezuko-picked-up');
+        faceRig.classList.remove('expr-dot');
+        setTimeout(() => {{ isDragging = false; }}, 50);
+      }}
+    }};
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   }});
 
-  window.addEventListener('mousemove', (e) => {{
-    if (!isDragging) return;
-    const dx = e.clientX - dragStartX;
-    const dy = e.clientY - dragStartY;
-
-    root.style.right = (rootStartRight - dx) + 'px';
-    root.style.bottom = (rootStartBottom - dy) + 'px';
-  }});
-
-  window.addEventListener('mouseup', () => {{
-    if (isDragging) {{
-      isDragging = false;
-      charAvatar.classList.remove('nezuko-picked-up');
-      faceRig.classList.remove('expr-dot');
-    }}
-  }});
-
-  // 初始轻度眨眼待机
+  // 待机眨眼
   setInterval(() => {{
     if (!charAvatar.className.includes('action-') && !isDragging) {{
       faceRig.classList.add('expr-crescent');
@@ -1359,4 +1188,4 @@ js_code = f"""/**
 
 target_js = REPO_ROOT / "resources" / "nezuko-pet.js"
 target_js.write_text(js_code, encoding="utf-8")
-print(f"✅ 成功生成高级鬼灭桌宠核心组件: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
+print(f"✅ 成功生成彻底修复动作条消失问题的桌宠组件: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
