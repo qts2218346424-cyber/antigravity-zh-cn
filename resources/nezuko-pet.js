@@ -1,4 +1,4 @@
-// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼桌宠 + 电脑 QQ 音乐无缝联动 + 额度告急与疲劳关怀中枢
+// 灶门祢豆子 & 小王子 (B612) · 双角色二头身骨骼桌宠 + 电脑 QQ 音乐无缝联动 + 额度告急与疲劳关怀中枢 + 四维配额立体同步引擎
 (function() {
   if (typeof window === 'undefined' || window.__AGY_NEZUKO_PET_INITIALIZED__) return;
   window.__AGY_NEZUKO_PET_INITIALIZED__ = true;
@@ -264,7 +264,7 @@
   }
 
   // ==========================================
-  // 五、模型配额与额度低于 10% 警报引擎
+  // 五、模型配额与四维立体同步引擎
   // ==========================================
   const defaultQuotaState = {
     geminiWeeklyPct: 91,
@@ -291,6 +291,122 @@
     } catch (_) {}
   }
   let currentQuota = loadUserQuota();
+
+  // (5.1) 网络拦截器：抓取真实配额响应
+  function initNetworkQuotaInterceptor() {
+    try {
+      const _origFetch = window.fetch;
+      if (_origFetch && !_origFetch.__agyIntercepted) {
+        window.fetch = async function(...args) {
+          const response = await _origFetch.apply(this, args);
+          try {
+            const url = (args[0] && typeof args[0] === 'string') ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+            if (url.includes('quota') || url.includes('limit') || url.includes('model') || url.includes('user') || url.includes('account')) {
+              const clone = response.clone();
+              clone.json().then(data => parseQuotaFromPayload(data)).catch(() => {});
+            }
+          } catch (_) {}
+          return response;
+        };
+        window.fetch.__agyIntercepted = true;
+      }
+    } catch (_) {}
+  }
+  initNetworkQuotaInterceptor();
+
+  function parseQuotaFromPayload(data) {
+    if (!data || typeof data !== 'object') return;
+    let updated = false;
+    function deepScan(obj) {
+      if (!obj || typeof obj !== 'object') return;
+      for (const [k, v] of Object.entries(obj)) {
+        const kl = k.toLowerCase();
+        if (typeof v === 'number') {
+          if (kl.includes('gemini') && kl.includes('week')) {
+            currentQuota.geminiWeeklyPct = Math.round(v > 1 ? v : v * 100);
+            updated = true;
+          } else if (kl.includes('gemini') && (kl.includes('5h') || kl.includes('hour'))) {
+            currentQuota.gemini5hPct = Math.round(v > 1 ? v : v * 100);
+            updated = true;
+          } else if (kl.includes('claude') && kl.includes('week')) {
+            currentQuota.claudeWeeklyPct = Math.round(v > 1 ? v : v * 100);
+            updated = true;
+          } else if (kl.includes('claude') && (kl.includes('5h') || kl.includes('hour'))) {
+            currentQuota.claude5hPct = Math.round(v > 1 ? v : v * 100);
+            updated = true;
+          }
+        } else if (typeof v === 'object') {
+          deepScan(v);
+        }
+      }
+    }
+    deepScan(data);
+    if (updated) {
+      currentQuota.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      saveUserQuota(currentQuota);
+      updateQuotaDisplay();
+      checkQuotaAlert();
+    }
+  }
+
+  // (5.2) 泛化 DOM 深度嗅探器
+  function sniffNativeQuotaFromDOM() {
+    let updated = false;
+    try {
+      const textNodes = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+      let node;
+      while (node = walker.nextNode()) {
+        const txt = node.nodeValue.trim();
+        if (!txt) continue;
+        if (
+          txt.includes('每周剩余') || txt.includes('Weekly limit') || txt.includes('Weekly request') ||
+          txt.includes('5 小时') || txt.includes('5小时') || txt.includes('5-hour') || txt.includes('5h limit') ||
+          txt.includes('剩余可用配额') || txt.includes('Remaining quota')
+        ) {
+          textNodes.push(node);
+        }
+      }
+
+      textNodes.forEach(tn => {
+        const container = tn.parentElement ? (tn.parentElement.closest('.quota-section, .monaco-list-row, div') || tn.parentElement) : null;
+        if (!container) return;
+        const text = container.textContent || '';
+
+        const mGW = text.match(/(?:每周|Weekly)[^\d%]*?(\d(1, 3))%/i);
+        if (mGW) {
+          const val = parseInt(mGW[1], 10);
+          if (val >= 0 && val <= 100) { currentQuota.geminiWeeklyPct = val; updated = true; }
+        }
+        const mG5 = text.match(/(?:5\s*(?:小时|hour|h))[^\d%]*?(\d(1, 3))%/i);
+        if (mG5) {
+          const val = parseInt(mG5[1], 10);
+          if (val >= 0 && val <= 100) { currentQuota.gemini5hPct = val; updated = true; }
+        }
+
+        if (text.toLowerCase().includes('claude') || text.toLowerCase().includes('gpt')) {
+          const mCW = text.match(/(?:每周|Weekly)[^\d%]*?(\d(1, 3))%/i);
+          if (mCW) { currentQuota.claudeWeeklyPct = parseInt(mCW[1], 10); updated = true; }
+          const mC5 = text.match(/(?:5\s*(?:小时|hour|h))[^\d%]*?(\d(1, 3))%/i);
+          if (mC5) { currentQuota.claude5hPct = parseInt(mC5[1], 10); updated = true; }
+        }
+
+        const mResetW = text.match(/(\d+\s*天.*?重置|\d+\s*days?\s*remaining)/i);
+        if (mResetW) { currentQuota.geminiWeeklyReset = mResetW[1].trim(); updated = true; }
+        const mReset5 = text.match(/(\d+\s*分钟.*?重置|\d+\s*minutes?\s*remaining)/i);
+        if (mReset5) { currentQuota.gemini5hReset = mReset5[1].trim(); updated = true; }
+      });
+
+      if (updated) {
+        currentQuota.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        saveUserQuota(currentQuota);
+        updateQuotaDisplay();
+        checkQuotaAlert();
+      }
+    } catch (_) {}
+    return updated;
+  }
+  setInterval(sniffNativeQuotaFromDOM, 5000);
 
   // 额度告急提醒状态
   let lastQuotaAlertKey = '';
@@ -329,14 +445,12 @@
 
     const now = Date.now();
     const alertKey = alertItems.map(it => `${it.name}_${it.period}_${it.pct}`).join('|');
-    // 防骚扰：同一级别警报 15 分钟内不重复弹窗，除非强制触发
     if (!force && lastQuotaAlertKey === alertKey && (now - lastQuotaAlertTime < 15 * 60 * 1000)) {
       return false;
     }
     lastQuotaAlertKey = alertKey;
     lastQuotaAlertTime = now;
 
-    // 触发警报
     triggerQuotaAlertUI(alertItems[0]);
     return true;
   }
@@ -371,46 +485,6 @@
     }
   }
 
-  function sniffNativeQuotaFromDOM() {
-    try {
-      const textNodes = [];
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-      let node;
-      while (node = walker.nextNode()) {
-        const txt = node.nodeValue.trim();
-        if (txt.includes('每周剩余可用配额') || txt.includes('5 小时剩余可用配额') || txt.includes('Weekly limit')) {
-          textNodes.push(node);
-        }
-      }
-      if (textNodes.length > 0) {
-        let updated = false;
-        textNodes.forEach(tn => {
-          const parent = tn.parentElement;
-          if (!parent) return;
-          const container = parent.closest('.quota-section, div') || parent;
-          const text = container.textContent || '';
-          const matchWeekly = text.match(/每周剩余可用配额[^\d]*(\d+)%/);
-          if (matchWeekly) {
-            currentQuota.geminiWeeklyPct = parseInt(matchWeekly[1], 10);
-            updated = true;
-          }
-          const match5h = text.match(/5\s*小时剩余可用配额[^\d]*(\d+)%/);
-          if (match5h) {
-            currentQuota.gemini5hPct = parseInt(match5h[1], 10);
-            updated = true;
-          }
-        });
-        if (updated) {
-          currentQuota.lastSynced = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-          saveUserQuota(currentQuota);
-          updateQuotaDisplay();
-          checkQuotaAlert();
-        }
-      }
-    } catch (_) {}
-  }
-  setInterval(sniffNativeQuotaFromDOM, 5000);
-
   // ==========================================
   // 六、工作时间过长久坐疲劳关怀引擎
   // ==========================================
@@ -423,7 +497,6 @@
 
   function onUserActive() {
     const now = Date.now();
-    // 离开电脑超过 10 分钟，自动视为已起身休息，重置工作计时
     if (now - lastActiveTime > 10 * 60 * 1000) {
       workStartTime = now;
       continuousWorkMinutes = 0;
@@ -746,9 +819,7 @@
       transform: scale(0.95) translateY(4px) !important;
     }
 
-    /* ========================================================= */
-    /* 多态智能气泡引擎 (Smart Multi-State Bubble) */
-    /* ========================================================= */
+    /* 多态智能气泡引擎 */
     .pet-smart-bubble {
       position: absolute;
       bottom: calc(100% + 22px);
@@ -776,38 +847,30 @@
       border: 8px solid transparent; border-top-color: var(--lp-star-gold);
     }
 
-    /* 额度低于10%告急警报模式 */
     .pet-smart-bubble.mode-alert {
       background: linear-gradient(135deg, rgba(69, 10, 10, 0.97) 0%, rgba(35, 10, 10, 0.98) 100%) !important;
       border-color: #ef4444 !important;
       box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75), 0 0 24px rgba(239, 68, 68, 0.6) !important;
       animation: alertPulseBorder 1.5s infinite alternate !important;
     }
-    .pet-smart-bubble.mode-alert::after {
-      border-top-color: #ef4444 !important;
-    }
+    .pet-smart-bubble.mode-alert::after { border-top-color: #ef4444 !important; }
     @keyframes alertPulseBorder {
       0% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }
       100% { box-shadow: 0 0 28px rgba(239, 68, 68, 0.9); border-color: #f87171; }
     }
 
-    /* 久坐疲劳健康关怀模式 */
     .pet-smart-bubble.mode-fatigue {
       background: linear-gradient(135deg, rgba(6, 78, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
       border-color: #10b981 !important;
       box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(16, 185, 129, 0.45) !important;
     }
-    .pet-smart-bubble.mode-fatigue::after {
-      border-top-color: #10b981 !important;
-    }
+    .pet-smart-bubble.mode-fatigue::after { border-top-color: #10b981 !important; }
 
     .bubble-tag-bar {
       display: flex; justify-content: space-between; align-items: center;
       font-size: 10px; font-weight: bold; margin-bottom: 5px;
     }
-    .bubble-tag-text {
-      color: var(--lp-star-gold); display: flex; align-items: center; gap: 4px;
-    }
+    .bubble-tag-text { color: var(--lp-star-gold); display: flex; align-items: center; gap: 4px; }
     .mode-alert .bubble-tag-text { color: #fca5a5 !important; }
     .mode-fatigue .bubble-tag-text { color: #6ee7b7 !important; }
 
@@ -817,34 +880,22 @@
     }
     .bubble-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.15); }
 
-    .bubble-main-txt {
-      font-size: 12px; line-height: 1.55; color: #f8fafc; font-weight: 500;
-    }
+    .bubble-main-txt { font-size: 12px; line-height: 1.55; color: #f8fafc; font-weight: 500; }
     .mode-alert .bubble-main-txt { color: #fee2e2 !important; font-weight: 600; }
     .mode-fatigue .bubble-main-txt { color: #ecfdf5 !important; }
 
-    .bubble-sub-txt {
-      font-size: 9.5px; color: #94a3b8; font-style: italic; margin-top: 4px; line-height: 1.35;
-    }
+    .bubble-sub-txt { font-size: 9.5px; color: #94a3b8; font-style: italic; margin-top: 4px; line-height: 1.35; }
 
-    .bubble-actions-row {
-      display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end;
-    }
+    .bubble-actions-row { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
     .bubble-act-btn {
       font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: 1px solid;
       transition: all 0.2s;
     }
-    .bubble-act-primary {
-      background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #fecaca;
-    }
+    .bubble-act-primary { background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #fecaca; }
     .bubble-act-primary:hover { background: #ef4444; color: #fff; }
-    .bubble-act-green {
-      background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #a7f3d0;
-    }
+    .bubble-act-green { background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #a7f3d0; }
     .bubble-act-green:hover { background: #10b981; color: #fff; }
-    .bubble-act-subtle {
-      background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); color: #cbd5e1;
-    }
+    .bubble-act-subtle { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); color: #cbd5e1; }
     .bubble-act-subtle:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
     /* 快捷胶囊条 */
@@ -972,10 +1023,7 @@
     .nezuko-song-title { font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
     .nezuko-song-sub { font-size: 10px; color: #a7f3d0; }
 
-    /* 跳动声波柱动效 */
-    .sound-waves-box {
-      display: flex; align-items: flex-end; gap: 2px; height: 14px;
-    }
+    .sound-waves-box { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
     .sound-bar {
       width: 3px; background: #10b981; border-radius: 2px;
       animation: barJump 0.8s infinite ease-in-out alternate;
@@ -1025,6 +1073,14 @@
     .nezuko-ring-prog {
       fill: none; stroke: #81c784; stroke-width: 3.5; stroke-linecap: round;
       stroke-dasharray: 62.83; stroke-dashoffset: 6.28; transition: stroke-dashoffset 0.6s ease;
+    }
+
+    @keyframes spinSync {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .is-syncing {
+      animation: spinSync 1s infinite linear; display: inline-block;
     }
   `;
   document.head.appendChild(styleEl);
@@ -1169,22 +1225,17 @@
           </div>
         </div>
 
-        <!-- 软件界面鬼灭全套主题开关 -->
-        <div class="nezuko-section-box" style="background: rgba(194, 24, 91, 0.15); border-color: var(--ds-pink);">
+        <!-- 模型配额总看板 (Gemini 与 Claude / GPT) -->
+        <div class="nezuko-section-box" style="background: rgba(30, 20, 15, 0.7); border-color: var(--ds-brass-gold);">
           <div class="nezuko-section-title">
-            <span style="color:#ffd54f;">🌸 软件界面《鬼灭之刃》全局主题</span>
-            <span id="theme-status-tag" style="font-size:10px; color:#81c784;">● 已激活</span>
+            <span style="color:var(--ds-gold-glow);">📊 模型配额实时监控</span>
+            <span id="quota-sync-time-tag" style="font-size:10px; color:#81c784;">刚刚已同步</span>
           </div>
-          <button class="nezuko-ctrl-btn" id="btn-toggle-ide-theme" style="width:100%; padding:5px; background:linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson)); font-weight:bold;">
-            🎋 切换软件鬼灭主题 (开/关)
-          </button>
-        </div>
 
-        <!-- Gemini 模型专属配额 (对应截图) -->
-        <div class="nezuko-section-box">
-          <div class="nezuko-section-title">
+          <!-- Gemini 配额组 -->
+          <div style="font-size:10.5px; font-weight:bold; color:#fbcfe8; margin-bottom:4px; display:flex; justify-content:space-between;">
             <span>Gemini 模型</span>
-            <span style="font-size:10px; color:#81c784;">● 活跃</span>
+            <span style="font-size:9.5px; color:#81c784;">● 状态活跃</span>
           </div>
           <div class="nezuko-quota-row">
             <div class="nezuko-quota-meta">
@@ -1216,13 +1267,11 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Claude 模型配额 (对应截图) -->
-        <div class="nezuko-section-box">
-          <div class="nezuko-section-title">
-            <span>Claude 模型</span>
-            <span style="font-size:10px; color:#81c784;">● 活跃</span>
+          <!-- Claude 与 GPT 配额组 -->
+          <div style="font-size:10.5px; font-weight:bold; color:#93c5fd; margin-top:8px; margin-bottom:4px; display:flex; justify-content:space-between;">
+            <span>Claude 与 GPT 模型</span>
+            <span style="font-size:9.5px; color:#81c784;">● 充足</span>
           </div>
           <div class="nezuko-quota-row">
             <div class="nezuko-quota-meta">
@@ -1254,6 +1303,73 @@
               </div>
             </div>
           </div>
+
+          <!-- 核心操作按钮：自动同步 与 手动校准 -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:8px;">
+            <button class="nezuko-ctrl-btn" id="btn-sync-quota" style="flex:1; padding:5px 8px; font-weight:bold; background:linear-gradient(135deg, #ec4899, #be185d); border-color:#f472b6;">
+              <span id="sync-icon">🔄</span> 自动同步原生配额
+            </button>
+            <button class="nezuko-ctrl-btn" id="btn-toggle-adjust" style="flex:1; padding:5px 8px; background:linear-gradient(135deg, #4b5563, #374151); border-color:#9ca3af;">
+              ⚙️ 手动校准微调
+            </button>
+          </div>
+
+          <!-- 全功能手动校准抽屉 -->
+          <div id="nezuko-adjust-box" style="display:none; margin-top:10px; padding:10px; background:rgba(0,0,0,0.5); border-radius:6px; border:1px dashed rgba(244,143,177,0.4);">
+            <div style="font-size:11px; font-weight:bold; color:#ffd54f; margin-bottom:8px; display:flex; justify-content:space-between;">
+              <span>⚙️ 模型配额精准微调</span>
+              <span style="font-size:9px; color:#cbd5e1;">实时生效 · 本地记忆</span>
+            </div>
+
+            <!-- Gemini 调整 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
+              <span>Gemini 每周配额:</span>
+              <b id="val-adj-gw" style="color:#ffd54f;">91%</b>
+            </div>
+            <input type="range" id="rng-adj-gw" min="0" max="100" value="91" style="width:100%; accent-color:#f48fb1; margin-bottom:6px;">
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
+              <span>Gemini 5小时配额:</span>
+              <b id="val-adj-g5" style="color:#ffd54f;">72%</b>
+            </div>
+            <input type="range" id="rng-adj-g5" min="0" max="100" value="72" style="width:100%; accent-color:#f48fb1; margin-bottom:8px;">
+
+            <!-- Claude 调整 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
+              <span>Claude 每周配额:</span>
+              <b id="val-adj-cw" style="color:#60a5fa;">100%</b>
+            </div>
+            <input type="range" id="rng-adj-cw" min="0" max="100" value="100" style="width:100%; accent-color:#60a5fa; margin-bottom:6px;">
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:#e0e0e0; margin-bottom:2px;">
+              <span>Claude 5小时配额:</span>
+              <b id="val-adj-c5" style="color:#60a5fa;">100%</b>
+            </div>
+            <input type="range" id="rng-adj-c5" min="0" max="100" value="100" style="width:100%; accent-color:#60a5fa; margin-bottom:8px;">
+
+            <!-- 快捷预设按钮 -->
+            <div style="display:flex; gap:4px; margin-bottom:8px;">
+              <button class="nezuko-ctrl-btn" id="btn-preset-100" style="flex:1; font-size:9.5px; padding:2px;">💯 100%</button>
+              <button class="nezuko-ctrl-btn" id="btn-preset-80" style="flex:1; font-size:9.5px; padding:2px;">🔋 80%</button>
+              <button class="nezuko-ctrl-btn" id="btn-preset-50" style="flex:1; font-size:9.5px; padding:2px;">⚡ 50%</button>
+              <button class="nezuko-ctrl-btn" id="btn-preset-8" style="flex:1; font-size:9.5px; padding:2px; color:#f87171; border-color:#ef4444;">🚨 8%</button>
+            </div>
+
+            <button class="nezuko-ctrl-btn" id="btn-save-adjust" style="width:100%; padding:4px; font-weight:bold; background:linear-gradient(135deg, #10b981, #059669); border-color:#34d399;">
+              💾 保存校准并收起
+            </button>
+          </div>
+        </div>
+
+        <!-- 软件界面鬼灭全套主题开关 -->
+        <div class="nezuko-section-box" style="background: rgba(194, 24, 91, 0.15); border-color: var(--ds-pink);">
+          <div class="nezuko-section-title">
+            <span style="color:#ffd54f;">🌸 软件界面《鬼灭之刃》全局主题</span>
+            <span id="theme-status-tag" style="font-size:10px; color:#81c784;">● 已激活</span>
+          </div>
+          <button class="nezuko-ctrl-btn" id="btn-toggle-ide-theme" style="width:100%; padding:5px; background:linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson)); font-weight:bold;">
+            🎋 切换软件鬼灭主题 (开/关)
+          </button>
         </div>
 
       </div>
@@ -1369,7 +1485,6 @@
     }
   };
 
-  // 播放按钮控制
   document.getElementById('m-btn-play').addEventListener('click', () => qqBridge.playPause());
   document.getElementById('m-btn-next').addEventListener('click', () => qqBridge.nextTrack());
   document.getElementById('m-btn-prev').addEventListener('click', () => qqBridge.prevTrack());
@@ -1380,14 +1495,12 @@
     qqBridge.playPause();
   });
 
-  // 滚轮在桌宠上切歌
   stageEl.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (e.deltaY > 0) qqBridge.nextTrack();
     else qqBridge.prevTrack();
   });
 
-  // 角色切换与动作渲染
   let activePet = getActivePet();
   let currentQuoteIndex = 0;
   let quoteAutoTimer = null;
@@ -1482,20 +1595,16 @@
   document.getElementById('btn-select-nezuko').addEventListener('click', () => switchPet('nezuko'));
   document.getElementById('btn-select-prince').addEventListener('click', () => switchPet('prince'));
 
-  // 小王子身体点击
   petPrince.addEventListener('click', (e) => {
     if (isDragging) return;
     showNextQuote();
     triggerCurrentPetAction('rose', 2000);
   });
-
-  // 祢豆子身体点击
   petNezuko.addEventListener('click', (e) => {
     if (isDragging) return;
     triggerCurrentPetAction('headpat', 2200);
   });
 
-  // 气泡点击
   smartBubble.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!smartBubble.classList.contains('mode-alert') && !smartBubble.classList.contains('mode-fatigue')) {
@@ -1503,7 +1612,7 @@
     }
   });
 
-  // 疲劳与告急按钮交互绑定
+  // 疲劳与告急按钮交互
   document.getElementById('btn-test-fatigue').addEventListener('click', () => {
     triggerFatigueAlertUI(continuousWorkMinutes >= 30 ? continuousWorkMinutes : 45);
   });
@@ -1519,6 +1628,155 @@
     saveUserQuota(currentQuota);
     updateQuotaDisplay();
     checkQuotaAlert(true);
+  });
+
+  // ==========================================
+  // 十、配额自动同步与全功能手动校准交互
+  // ==========================================
+  const btnSyncQuota = document.getElementById('btn-sync-quota');
+  const syncIcon = document.getElementById('sync-icon');
+  const syncTimeTag = document.getElementById('quota-sync-time-tag');
+
+  btnSyncQuota.addEventListener('click', () => {
+    syncIcon.classList.add('is-syncing');
+    btnSyncQuota.disabled = true;
+    btnSyncQuota.innerHTML = '<span class="is-syncing">🔄</span> 正在探测同步原生配额...';
+
+    // 1. 尝试直接嗅探
+    let success = sniffNativeQuotaFromDOM();
+
+    // 2. 若未捕获，尝试模拟轻微触发状态栏模型项展开
+    if (!success) {
+      try {
+        const statusBarItems = document.querySelectorAll('.statusbar-item, [aria-label*="Gemini"], [aria-label*="Model"], [aria-label*="quota"], [title*="配额"]');
+        statusBarItems.forEach(el => {
+          try { el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true })); } catch (_) {}
+        });
+      } catch (_) {}
+    }
+
+    setTimeout(() => {
+      success = sniffNativeQuotaFromDOM() || success;
+      btnSyncQuota.disabled = false;
+      syncIcon.classList.remove('is-syncing');
+
+      if (success) {
+        btnSyncQuota.innerHTML = '✅ 同步成功！(刚刚)';
+        btnSyncQuota.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        btnSyncQuota.style.borderColor = '#34d399';
+        syncTimeTag.textContent = '● 刚刚同步成功';
+        syncTimeTag.style.color = '#81c784';
+        showSmartBubble({
+          type: 'notice',
+          tag: '🎉 原生配额同步完成',
+          zh: `✅ 已成功从 Antigravity 原生环境抓取最新配额数据！<br>Gemini: 每周 ${currentQuota.geminiWeeklyPct}% · 5小时 ${currentQuota.gemini5hPct}%`,
+          sub: "Synchronisation des quotas réussie avec succès."
+        }, 5000);
+      } else {
+        btnSyncQuota.innerHTML = '💡 待展开原生卡片';
+        btnSyncQuota.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        btnSyncQuota.style.borderColor = '#fcd34d';
+        syncTimeTag.textContent = '○ 监听中 (请点击底栏)';
+        syncTimeTag.style.color = '#fbbf24';
+
+        showSmartBubble({
+          type: 'notice',
+          tag: '💡 原生配额同步提示',
+          zh: `📡 <b>实时监听已激活！</b><br>请在下方状态栏点击一下<b>【模型名称】</b>（或配额图标）展开原生弹窗，桌宠将立即秒级捕获真实额度；或者您也可以使用下方的<b>【手动校准】</b>直接设定哦~`,
+          sub: "Cliquez sur la barre d'état pour ouvrir les quotas.",
+          actions: [
+            { text: '⚙️ 打开手动校准', cls: 'bubble-act-primary', onClick: () => {
+              openMainCard();
+              document.getElementById('nezuko-adjust-box').style.display = 'block';
+            } },
+            { text: '知道了', cls: 'bubble-act-subtle', onClick: () => hideSmartBubble() }
+          ]
+        }, 9000);
+
+        // 自动展开手动微调抽屉
+        document.getElementById('nezuko-adjust-box').style.display = 'block';
+      }
+
+      setTimeout(() => {
+        btnSyncQuota.innerHTML = '<span id="sync-icon">🔄</span> 自动同步原生配额';
+        btnSyncQuota.style.background = 'linear-gradient(135deg, #ec4899, #be185d)';
+        btnSyncQuota.style.borderColor = '#f472b6';
+      }, 3000);
+    }, 450);
+  });
+
+  // 手动校准微调面板控制
+  const adjBox = document.getElementById('nezuko-adjust-box');
+  document.getElementById('btn-toggle-adjust').addEventListener('click', () => {
+    adjBox.style.display = adjBox.style.display === 'block' ? 'none' : 'block';
+  });
+
+  const rngGW = document.getElementById('rng-adj-gw');
+  const rngG5 = document.getElementById('rng-adj-g5');
+  const rngCW = document.getElementById('rng-adj-cw');
+  const rngC5 = document.getElementById('rng-adj-c5');
+
+  function syncAdjustInputs() {
+    rngGW.value = currentQuota.geminiWeeklyPct;
+    rngG5.value = currentQuota.gemini5hPct;
+    rngCW.value = currentQuota.claudeWeeklyPct;
+    rngC5.value = currentQuota.claude5hPct;
+
+    document.getElementById('val-adj-gw').textContent = currentQuota.geminiWeeklyPct + '%';
+    document.getElementById('val-adj-g5').textContent = currentQuota.gemini5hPct + '%';
+    document.getElementById('val-adj-cw').textContent = currentQuota.claudeWeeklyPct + '%';
+    document.getElementById('val-adj-c5').textContent = currentQuota.claude5hPct + '%';
+  }
+  syncAdjustInputs();
+
+  rngGW.addEventListener('input', (e) => {
+    currentQuota.geminiWeeklyPct = parseInt(e.target.value, 10);
+    document.getElementById('val-adj-gw').textContent = e.target.value + '%';
+    saveUserQuota(currentQuota);
+    updateQuotaDisplay();
+  });
+  rngG5.addEventListener('input', (e) => {
+    currentQuota.gemini5hPct = parseInt(e.target.value, 10);
+    document.getElementById('val-adj-g5').textContent = e.target.value + '%';
+    saveUserQuota(currentQuota);
+    updateQuotaDisplay();
+  });
+  rngCW.addEventListener('input', (e) => {
+    currentQuota.claudeWeeklyPct = parseInt(e.target.value, 10);
+    document.getElementById('val-adj-cw').textContent = e.target.value + '%';
+    saveUserQuota(currentQuota);
+    updateQuotaDisplay();
+  });
+  rngC5.addEventListener('input', (e) => {
+    currentQuota.claude5hPct = parseInt(e.target.value, 10);
+    document.getElementById('val-adj-c5').textContent = e.target.value + '%';
+    saveUserQuota(currentQuota);
+    updateQuotaDisplay();
+  });
+
+  // 快捷预设按钮
+  const applyPreset = (gw, g5, cw, c5) => {
+    currentQuota.geminiWeeklyPct = gw;
+    currentQuota.gemini5hPct = g5;
+    currentQuota.claudeWeeklyPct = cw;
+    currentQuota.claude5hPct = c5;
+    syncAdjustInputs();
+    saveUserQuota(currentQuota);
+    updateQuotaDisplay();
+    checkQuotaAlert();
+  };
+
+  document.getElementById('btn-preset-100').addEventListener('click', () => applyPreset(100, 100, 100, 100));
+  document.getElementById('btn-preset-80').addEventListener('click', () => applyPreset(80, 80, 80, 80));
+  document.getElementById('btn-preset-50').addEventListener('click', () => applyPreset(50, 50, 50, 50));
+  document.getElementById('btn-preset-8').addEventListener('click', () => applyPreset(8, 8, 8, 8));
+
+  document.getElementById('btn-save-adjust').addEventListener('click', () => {
+    saveUserQuota(currentQuota);
+    updateQuotaDisplay();
+    adjBox.style.display = 'none';
+    syncTimeTag.textContent = '● 已手动校准保存';
+    syncTimeTag.style.color = '#81c784';
   });
 
   document.getElementById('btn-toggle-ide-theme').addEventListener('click', () => {
