@@ -352,6 +352,27 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     save_current_theme(selected_char)
     theme_info = THEMES[selected_char]
     print(f"• 选定启动动画角色: {theme_info['name']} ({theme_info['breath']})")
+
+    # 部署或清理全屏电影级动作视频资产 (resources/splash_video.mp4)
+    target_splash_video = install_dir / "resources" / "splash_video.mp4"
+    video_file = theme_info.get("video_file")
+    if video_file:
+        src_video = res_dir / "media" / video_file
+        if src_video.is_file():
+            try:
+                target_splash_video.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_video, target_splash_video)
+                print(f"  [OK] 电影级角色动作原片已部署 ({video_file} -> resources/splash_video.mp4)")
+            except Exception as e:
+                print(f"  [!] 视频部署提示: {e}")
+        else:
+            print(f"  [!] 未找到角色动作视频源文件: {src_video.name}")
+    else:
+        if target_splash_video.is_file():
+            try:
+                target_splash_video.unlink(missing_ok=True)
+            except Exception:
+                pass
     dict_file = res_dir / f"antigravity-{lang}.json"
     if not dict_file.is_file():
         dict_file = res_dir / "antigravity-zh-CN.json"
@@ -722,6 +743,13 @@ def restore_backup(install_dir: Path):
 
     print(f"正在从备份文件还原: {backup_path.name} -> {asar_path.name}...")
     shutil.copy2(backup_path, asar_path)
+    target_splash_video = install_dir / "resources" / "splash_video.mp4"
+    if target_splash_video.is_file():
+        try:
+            target_splash_video.unlink(missing_ok=True)
+            print("  [OK] 已清理自定义动画视频文件 (splash_video.mp4)。")
+        except Exception:
+            pass
     print("[OK] 已成功还原为官方原版！")
     return True
 
