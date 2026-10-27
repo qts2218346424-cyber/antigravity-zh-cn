@@ -616,8 +616,18 @@ const __AGY_ZH_CODE__ = {js_raw};
 """
             utils_content = hook_code + "\n" + utils_content
 
+            # 默认启动即最大化铺满整屏 (保留系统任务栏)，彻底消除官方 1400x900 局促小窗口
+            maximize_target = "    (0, loadingOverlay_1.attachLoadingOverlay)(win, foregroundColor, backgroundColor);"
+            maximize_replacement = """    try {
+        win.maximize();
+    } catch (_) {}
+    (0, loadingOverlay_1.attachLoadingOverlay)(win, foregroundColor, backgroundColor);"""
+            if maximize_target in utils_content:
+                utils_content = utils_content.replace(maximize_target, maximize_replacement, 1)
+
             target_str = "void win.loadURL(url);"
             replacement_str = """
+    (() => { try { if (win && !win.isMaximized()) win.maximize(); } catch (_) {} })();
     win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
         console.log(`[Renderer L${level}] ${message}`);
     });
@@ -640,7 +650,7 @@ const __AGY_ZH_CODE__ = {js_raw};
                 utils_content = utils_content.replace(target_str, replacement_str, 1)
                 validate_js_syntax(utils_content, "dist/utils.js")
                 asar_data = replace_asar_file_content(asar_data, "dist/utils.js", utils_content.encode("utf-8"))
-                print("  [OK] 主世界注入通道挂载完成 (dist/utils.js)")
+                print("  [OK] 主世界注入通道与默认最大化启动挂载完成 (dist/utils.js)")
             else:
                 print("  [!] 未在 dist/utils.js 中找到 void win.loadURL(url); 锚点")
     except Exception as e:
