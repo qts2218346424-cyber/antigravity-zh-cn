@@ -1,20 +1,29 @@
 # -*- coding: utf-8 -*-
 """
-生成腾讯 QQ 宠物风格 + 复刻《鬼灭之刃》原动漫经典名场面动作机 + 真实模型配额看板 + 和风BGM音乐盒的核心组件 (resources/nezuko-pet.js)
-本次针对用户反馈的专项修复：
-1. 【彻底修复头顶动作图标消失问题】：
-   - 建立透明安全桥接垫片 (Invisible Hitbox Bridge)，彻底填补头顶 30px 交互盲区；
-   - 植入 450ms 智能防抖防误触延时 (Safe Hover Grace Period)，鼠标快速划过绝不闪烁消失；
-   - 支持【单击锁定常驻】模式，点击小豆子身体即可常驻展示快捷动作条；
-2. 【动作图标升级与原动漫神韵复刻】：
-   - 头部直接浮现 6 大高能动漫动作（🐱摸头杀、🏃豆豆眼狂奔、📦钻木箱、😤气鼓鼓跺脚、🔥血鬼术爆血、🥱揉眼犯困）；
-   - 整合 🎵 鬼灭 BGM 随身音乐盒开关（一键播放《炭治郎之歌》等和风八音盒）与 🎋 鬼灭配额看板开关；
-3. 【鬼灭之刃原生配额看板】：一比一对应 Gemini 与 Claude/GPT 每周与 5 小时限额及重置倒计时。
+生成腾讯 QQ 宠物风格 + 复刻《鬼灭之刃》原动漫真实手脚骨骼肢体动作机 + Antigravity 软件全局大正和风主题的核心组件 (resources/nezuko-pet.js)
+两大突破性升级：
+1. 【手脚身体真正独立运动的 2D 骨骼分肢动画机】：
+   - 彻底告别“单张死图在抖动”！
+   - 将角色精准拆解为 6 大独立解剖骨骼关节图层（头部、和服躯干、左手臂、右手臂、左脚、右脚）；
+   - 豆豆眼风火轮狂奔：手臂以肩膀为轴前后狂甩，双腿以髋关节为轴交替快速迈步蹬地，身体上下颠簸，真正的手脚动态！
+   - 气鼓鼓跺脚：右腿真实高频抬起踩地（连续跺脚），双手叉腰，身体震颤！
+   - 摸头蹭蹭：头部主动仰头左右蹭，双手捧脸！
+   - 揉眼打哈欠：手臂真正抬起揉眼睛！
+   - 血鬼术爆血：双手真正推到胸前合十，全身喷涌爆血烈焰！
+2. 【Antigravity 软件界面的《鬼灭之刃》大正和风全套全局主题】：
+   - 真正将鬼灭之刃主题注入整个 Antigravity 软件界面！
+   - 活动栏：炭治郎绿黑市松纹锦缎饰边 + 大正黑胡桃木纹 + 日之呼吸烫金指示器；
+   - 侧边栏：祢豆子深粉黑木纹 + 矢量粉金麻叶纹底纹 + 烫金大正标题；
+   - 状态栏：炭治郎绿黑市松格大正装饰带 + 黄铜金边 + [ 鬼滅の刃 · 竈門禰豆子 ] 专属日式印章；
+   - 标题栏与标签栏：大正木箱质感 + 祢豆子粉红流光激活标签；
+   - 滚动条：大正竹节黄铜滑块。
 """
 
 import sys
 import base64
+from io import BytesIO
 from pathlib import Path
+from PIL import Image
 
 if hasattr(sys.stdout, 'reconfigure'):
     try:
@@ -26,25 +35,186 @@ if hasattr(sys.stdout, 'reconfigure'):
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MEDIA_DIR = REPO_ROOT / "resources" / "media"
 
-nezuko_webp = MEDIA_DIR / "nezuko_chibi_pet.webp"
-b64_nezuko = base64.b64encode(nezuko_webp.read_bytes()).decode('ascii')
+source_png = MEDIA_DIR / "nezuko_chibi_pet.png"
+im = Image.open(source_png).convert('RGBA')
+w, h = im.size
+
+# 1. 精确裁剪 6 大独立骨骼肢体切片
+crop_boxes = {
+    'head': (0, 0, w, 180),
+    'torso': (50, 160, 142, 275),
+    'arm_l': (0, 160, 75, 265),
+    'arm_r': (120, 160, w, 265),
+    'leg_l': (60, 265, 102, h),
+    'leg_r': (98, 265, 140, h)
+}
+
+b64_parts = {}
+for name, box in crop_boxes.items():
+    cropped = im.crop(box)
+    buf = BytesIO()
+    cropped.save(buf, format='WEBP', quality=92)
+    b64_parts[name] = base64.b64encode(buf.getvalue()).decode('ascii')
 
 js_code = f"""/**
- * Antigravity 灶门祢豆子 · 鬼灭之刃大正和风桌宠系统 (Demon Slayer Nezuko Engine 2.1)
- * 1. 彻底解决头顶动作条交互间隙断裂 (Hover Gap) 与鼠标点击时消失的 Bug
- * 2. 头部快捷胶囊动作条 (6大名场面动作 + BGM音乐盒快捷键 + 鬼灭配额看板)
- * 3. 原动漫动态表情面具 (豆豆眼、月牙笑、鼓腮包子脸、鬼纹血瞳)
+ * Antigravity 灶门祢豆子 · 鬼灭之刃全套主题与真实手脚骨骼动作引擎 (Demon Slayer Engine 3.0)
+ * 1. 2D 骨骼关节分肢动画机 (头部、躯干、左臂、右臂、左脚、右脚独立物理摆动，手脚真在动)
+ * 2. Antigravity 软件界面全套《鬼灭之刃》大正和风全局主题 (活动栏、侧边栏、状态栏、标签栏、滚动条)
+ * 3. 彻底修复动作条 Hover Gap 消失 Bug (透明安全桥接 + 450ms防抖 + 单击锁定)
  * 4. 原生模型配额看板 (Gemini / Claude / GPT 每周与5小时限额及重置倒计时)
+ * 5. 鬼灭之刃随身 BGM 音乐盒 (内置 Web Audio 八音盒 + 本地音乐导入)
  */
 
 (function() {{
   if (typeof window === 'undefined' || window.__NEZUKO_PET_INITIALIZED__) return;
   window.__NEZUKO_PET_INITIALIZED__ = true;
 
-  const NEZUKO_IMG_B64 = "data:image/webp;base64,{b64_nezuko}";
+  // 6 大骨骼解剖图层 Base64
+  const BONE_HEAD = "data:image/webp;base64,{b64_parts['head']}";
+  const BONE_TORSO = "data:image/webp;base64,{b64_parts['torso']}";
+  const BONE_ARM_L = "data:image/webp;base64,{b64_parts['arm_l']}";
+  const BONE_ARM_R = "data:image/webp;base64,{b64_parts['arm_r']}";
+  const BONE_LEG_L = "data:image/webp;base64,{b64_parts['leg_l']}";
+  const BONE_LEG_R = "data:image/webp;base64,{b64_parts['leg_r']}";
 
   // ==========================================
-  // 一、模型配额中枢 (Gemini 与 Claude/GPT 原生对应)
+  // 一、Antigravity 软件界面《鬼灭之刃》全局主题注入
+  // ==========================================
+  const ideThemeStyle = document.createElement('style');
+  ideThemeStyle.id = 'agy-demon-slayer-ide-theme';
+  ideThemeStyle.textContent = `
+    /* 1. 活动栏 (Activity Bar) - 炭治郎黑绿市松纹与大正黑胡桃木 */
+    .part.activitybar,
+    #workbench\\\\.parts\\\\.activitybar,
+    .activitybar {{
+      background: linear-gradient(180deg, #1f130e 0%, #150c09 100%) !important;
+      border-right: 2px solid #c59b27 !important;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.45) !important;
+      position: relative !important;
+    }}
+    .part.activitybar::before,
+    #workbench\\\\.parts\\\\.activitybar::before,
+    .activitybar::before {{
+      content: '' !important;
+      position: absolute !important;
+      top: 0 !important; left: 0 !important; bottom: 0 !important;
+      width: 5px !important;
+      background: repeating-linear-gradient(45deg, #2e7d32 0, #2e7d32 6px, #111 6px, #111 12px) !important;
+      z-index: 10 !important;
+    }}
+    .activitybar .action-item.checked,
+    .activitybar .action-item.active {{
+      border-left: 3px solid #ffd54f !important;
+    }}
+    .activitybar .action-item.checked .action-label,
+    .activitybar .action-item.active .action-label {{
+      color: #ffd54f !important;
+      filter: drop-shadow(0 0 6px rgba(255, 213, 79, 0.6)) !important;
+    }}
+
+    /* 2. 侧边栏 (Sidebar) - 祢豆子深粉黑木纹 + 麻叶纹底纹 */
+    .part.sidebar,
+    #workbench\\\\.parts\\\\.sidebar,
+    .sidebar {{
+      background: linear-gradient(135deg, rgba(28, 17, 13, 0.98) 0%, rgba(18, 10, 8, 0.99) 100%) !important;
+      border-right: 1.5px solid rgba(197, 155, 39, 0.4) !important;
+      position: relative !important;
+    }}
+    .sidebar .title-label h2,
+    .sidebar .pane-header .title {{
+      color: #ffd54f !important;
+      font-weight: 700 !important;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8) !important;
+      letter-spacing: 0.5px !important;
+    }}
+    .monaco-list.focused .monaco-list-row.selected,
+    .monaco-list .monaco-list-row.selected {{
+      background: linear-gradient(90deg, rgba(194, 24, 91, 0.35) 0%, rgba(35, 22, 18, 0.5) 100%) !important;
+      color: #fff !important;
+      border-left: 2px solid #f48fb1 !important;
+    }}
+    .monaco-list .monaco-list-row:hover:not(.selected) {{
+      background: rgba(244, 143, 177, 0.12) !important;
+    }}
+
+    /* 3. 底部状态栏 (Status Bar) - 炭治郎绿黑市松纹锦缎带 */
+    .part.statusbar,
+    #workbench\\\\.parts\\\\.statusbar,
+    .statusbar {{
+      background: repeating-linear-gradient(45deg, #1b3820 0, #1b3820 8px, #111a13 8px, #111a13 16px) !important;
+      border-top: 1.5px solid #c59b27 !important;
+      color: #fff9c4 !important;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3) !important;
+    }}
+    .statusbar .statusbar-item a,
+    .statusbar .statusbar-item {{
+      color: #fff9c4 !important;
+    }}
+    .statusbar .statusbar-item:hover {{
+      background: rgba(244, 143, 177, 0.25) !important;
+    }}
+
+    /* 4. 标题栏 (Titlebar) - 大正云杉木纹与黄铜下边框 */
+    .part.titlebar,
+    #workbench\\\\.parts\\\\.titlebar,
+    .titlebar {{
+      background: linear-gradient(90deg, #2b1711 0%, #1a0f0a 100%) !important;
+      border-bottom: 1.5px solid #c59b27 !important;
+    }}
+    .titlebar .window-title {{
+      color: #ffd54f !important;
+      font-weight: 600 !important;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+    }}
+
+    /* 5. 编辑区标签栏 (Editor Tabs) - 祢豆子粉红呼吸流光 */
+    .tabs-and-actions-container,
+    .tab {{
+      background: #140c09 !important;
+    }}
+    .tab.active {{
+      background: linear-gradient(180deg, rgba(46, 26, 20, 0.9) 0%, #1f120d 100%) !important;
+      border-top: 2.5px solid #f48fb1 !important;
+      color: #fff !important;
+      box-shadow: inset 0 1px 8px rgba(244, 143, 177, 0.2) !important;
+    }}
+    .tab:hover:not(.active) {{
+      background: rgba(46, 26, 20, 0.5) !important;
+    }}
+
+    /* 6. 全局滚动条 (Scrollbars) - 大正黄铜竹节质感 */
+    .monaco-scrollable-element .scrollbar .slider {{
+      background: rgba(197, 155, 39, 0.45) !important;
+      border-radius: 4px !important;
+    }}
+    .monaco-scrollable-element .scrollbar .slider:hover {{
+      background: #f48fb1 !important;
+      box-shadow: 0 0 6px rgba(244, 143, 177, 0.8) !important;
+    }}
+  `;
+
+  // 根据本地设置决定是否启用软件全局主题 (默认开启)
+  function isIdeThemeEnabled() {{
+    const val = localStorage.getItem('__agy_demon_slayer_ide_theme__');
+    return val === null || val === 'true';
+  }}
+  function setIdeTheme(enabled) {{
+    localStorage.setItem('__agy_demon_slayer_ide_theme__', enabled ? 'true' : 'false');
+    if (enabled) {{
+      if (!document.getElementById('agy-demon-slayer-ide-theme')) {{
+        document.head.appendChild(ideThemeStyle);
+      }}
+    }} else {{
+      const el = document.getElementById('agy-demon-slayer-ide-theme');
+      if (el) el.remove();
+    }}
+  }}
+  if (isIdeThemeEnabled()) {{
+    document.head.appendChild(ideThemeStyle);
+  }}
+
+  // ==========================================
+  // 二、模型配额中枢 (Gemini 与 Claude/GPT 原生对应)
   // ==========================================
   const defaultQuotaState = {{
     username: "qts2218346424@gmail.com",
@@ -93,12 +263,12 @@ js_code = f"""/**
           if (!parent) return;
           const container = parent.closest('.quota-section, div') || parent;
           const text = container.textContent || '';
-          const matchWeekly = text.match(/每周剩余可用配额[^\d]*(\d+)%/);
+          const matchWeekly = text.match(/每周剩余可用配额[^\\d]*(\\d+)%/);
           if (matchWeekly) {{
             currentQuota.geminiWeeklyPct = parseInt(matchWeekly[1], 10);
             updated = true;
           }}
-          const match5h = text.match(/5\s*小时剩余可用配额[^\d]*(\d+)%/);
+          const match5h = text.match(/5\\s*小时剩余可用配额[^\\d]*(\\d+)%/);
           if (match5h) {{
             currentQuota.gemini5hPct = parseInt(match5h[1], 10);
             updated = true;
@@ -115,7 +285,7 @@ js_code = f"""/**
   setInterval(sniffNativeQuotaFromDOM, 5000);
 
   // ==========================================
-  // 二、鬼灭之刃 Web Audio 随身八音盒引擎
+  // 三、鬼灭之刃 Web Audio 随身八音盒引擎
   // ==========================================
   const noteFreqs = {{
     'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
@@ -275,17 +445,17 @@ js_code = f"""/**
 
   let beatTimer = null;
   function triggerMusicBeat() {{
-    const petEl = document.getElementById('nezuko-pet-character');
-    if (!petEl || !musicEngine.isPlaying) return;
-    petEl.classList.add('nezuko-music-bob');
+    const headEl = document.getElementById('bone-head');
+    if (!headEl || !musicEngine.isPlaying) return;
+    headEl.classList.add('head-music-bob');
     if (beatTimer) clearTimeout(beatTimer);
     beatTimer = setTimeout(() => {{
-      petEl.classList.remove('nezuko-music-bob');
+      headEl.classList.remove('head-music-bob');
     }}, 400);
   }}
 
   // ==========================================
-  // 三、CSS 样式库 (含彻底修复 Hover 消失的关键桥接)
+  // 四、CSS 样式库 (含 2D 骨骼关节分肢连动动画机)
   // ==========================================
   const styleEl = document.createElement('style');
   styleEl.id = 'nezuko-pet-advanced-styles';
@@ -312,7 +482,6 @@ js_code = f"""/**
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     }}
 
-    /* 角色整体包裹舞台 (用于无缝 Hover 监听) */
     .nezuko-pet-stage {{
       position: relative;
       display: flex;
@@ -320,7 +489,6 @@ js_code = f"""/**
       align-items: center;
     }}
 
-    /* 地面接触柔和阴影 */
     .nezuko-pet-ground-shadow {{
       position: absolute;
       bottom: -6px;
@@ -334,30 +502,292 @@ js_code = f"""/**
       transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
     }}
 
-    /* 桌宠立绘骨骼 */
-    .nezuko-pet-avatar {{
+    /* ========================================================= */
+    /* 核心突破：2D 骨骼肢体解剖画框与关节图层 (手脚真正独立运动) */
+    /* ========================================================= */
+    .nezuko-pet-rig {{
       position: relative;
       width: 130px;
-      height: 180px;
+      height: 215px;
       cursor: grab;
       filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
       transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
       transform-origin: bottom center;
     }}
-    .nezuko-pet-avatar:active {{
+    .nezuko-pet-rig:active {{
       cursor: grabbing;
     }}
-    .nezuko-pet-img {{
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+
+    /* 6 大骨骼肢体独立图层 */
+    .bone-layer {{
+      position: absolute;
+      background-size: contain;
+      background-repeat: no-repeat;
       pointer-events: none;
-      display: block;
-      transform-origin: bottom center;
+      transition: transform 0.15s ease-out;
+    }}
+
+    /* 1. 头部 (含长发与发带): 支点在颈部 */
+    #bone-head {{
+      top: 0;
+      left: 0;
+      width: 130px;
+      height: 121px;
+      background-image: url('${{BONE_HEAD}}');
+      transform-origin: 50% 90%;
+      z-index: 10;
+    }}
+
+    /* 2. 躯干 (和服主袍): 支点在腰腹 */
+    #bone-torso {{
+      top: 108px;
+      left: 34px;
+      width: 62px;
+      height: 77px;
+      background-image: url('${{BONE_TORSO}}');
+      transform-origin: 50% 100%;
+      z-index: 6;
+    }}
+
+    /* 3. 左手臂 (画面左侧): 支点在左肩关节 */
+    #bone-arm-l {{
+      top: 108px;
+      left: 0;
+      width: 50px;
+      height: 71px;
+      background-image: url('${{BONE_ARM_L}}');
+      transform-origin: 75% 20%;
+      z-index: 8;
+    }}
+
+    /* 4. 右手臂 (画面右侧): 支点在右肩关节 */
+    #bone-arm-r {{
+      top: 108px;
+      left: 81px;
+      width: 49px;
+      height: 71px;
+      background-image: url('${{BONE_ARM_R}}');
+      transform-origin: 25% 20%;
+      z-index: 8;
+    }}
+
+    /* 5. 左小脚: 支点在左大腿髋关节 */
+    #bone-leg-l {{
+      top: 178px;
+      left: 40px;
+      width: 28px;
+      height: 37px;
+      background-image: url('${{BONE_LEG_L}}');
+      transform-origin: 50% 10%;
+      z-index: 4;
+    }}
+
+    /* 6. 右小脚: 支点在右大腿髋关节 */
+    #bone-leg-r {{
+      top: 178px;
+      left: 66px;
+      width: 28px;
+      height: 37px;
+      background-image: url('${{BONE_LEG_R}}');
+      transform-origin: 50% 10%;
+      z-index: 4;
     }}
 
     /* ========================================================= */
-    /* 核心修复：头顶快捷胶囊动作条 (彻底根除 Hover Gap 消失 Bug) */
+    /* 核心：原动漫 7 大名场面多骨骼关节分肢协同动力学 */
+    /* ========================================================= */
+
+    /* ===== 动作 1：小豆丁风火轮疾走狂奔 (手脚极速大摆动) ===== */
+    .action-run #bone-arm-l {{
+      animation: runArmL 0.16s infinite alternate ease-in-out !important;
+    }}
+    .action-run #bone-arm-r {{
+      animation: runArmR 0.16s infinite alternate ease-in-out !important;
+    }}
+    .action-run #bone-leg-l {{
+      animation: runLegL 0.16s infinite alternate ease-in-out !important;
+    }}
+    .action-run #bone-leg-r {{
+      animation: runLegR 0.16s infinite alternate ease-in-out !important;
+    }}
+    .action-run #bone-torso {{
+      animation: runTorso 0.16s infinite alternate ease-in-out !important;
+    }}
+    .action-run #bone-head {{
+      animation: runHead 0.16s infinite alternate ease-in-out !important;
+    }}
+    .action-run {{
+      animation: runStageHop 0.55s infinite alternate ease-in-out !important;
+    }}
+
+    @keyframes runArmL {{
+      0% {{ transform: rotate(-55deg) translateY(-2px); }}
+      100% {{ transform: rotate(55deg) translateY(2px); }}
+    }}
+    @keyframes runArmR {{
+      0% {{ transform: rotate(55deg) translateY(2px); }}
+      100% {{ transform: rotate(-55deg) translateY(-2px); }}
+    }}
+    @keyframes runLegL {{
+      0% {{ transform: rotate(50deg) translateY(-3px); }}
+      100% {{ transform: rotate(-50deg) translateY(3px); }}
+    }}
+    @keyframes runLegR {{
+      0% {{ transform: rotate(-50deg) translateY(3px); }}
+      100% {{ transform: rotate(50deg) translateY(-3px); }}
+    }}
+    @keyframes runTorso {{
+      0% {{ transform: translateY(0) scaleY(0.96); }}
+      100% {{ transform: translateY(-4px) scaleY(1.02); }}
+    }}
+    @keyframes runHead {{
+      0% {{ transform: translateY(0) rotate(-3deg); }}
+      100% {{ transform: translateY(-3px) rotate(3deg); }}
+    }}
+    @keyframes runStageHop {{
+      0% {{ transform: scale(0.75) translateX(-32px) rotate(-6deg); }}
+      100% {{ transform: scale(0.75) translateX(32px) rotate(6deg); }}
+    }}
+
+    /* ===== 动作 2：气鼓鼓跺小脚 (右腿高频连续跺地，身体剧烈震颤) ===== */
+    .action-stomp #bone-arm-l {{
+      transform: rotate(-28deg) translateY(-2px) !important;
+    }}
+    .action-stomp #bone-arm-r {{
+      transform: rotate(28deg) translateY(-2px) !important;
+    }}
+    .action-stomp #bone-leg-r {{
+      animation: stompRightFoot 0.2s infinite cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }}
+    .action-stomp #bone-torso {{
+      animation: stompShockTorso 0.2s infinite ease-out !important;
+    }}
+    .action-stomp #bone-head {{
+      animation: stompShockHead 0.2s infinite ease-out !important;
+    }}
+
+    @keyframes stompRightFoot {{
+      0% {{ transform: rotate(-35deg) translateY(-10px); }}
+      55% {{ transform: rotate(0deg) translateY(0); }}
+      65% {{ transform: rotate(4deg) translateY(2px); }}
+      100% {{ transform: rotate(-35deg) translateY(-10px); }}
+    }}
+    @keyframes stompShockTorso {{
+      0%, 100% {{ transform: translateY(0); }}
+      60% {{ transform: translateY(3px); }}
+    }}
+    @keyframes stompShockHead {{
+      0%, 100% {{ transform: translateY(0) rotate(0deg); }}
+      60% {{ transform: translateY(2px) rotate(-3deg); }}
+    }}
+
+    /* ===== 动作 3：抱竹歪头晃脑 (双手紧抱竹筒，小脑瓜节奏摆动) ===== */
+    .action-tilt #bone-arm-l {{
+      transform: rotate(18deg) translateY(-6px) !important;
+    }}
+    .action-tilt #bone-arm-r {{
+      transform: rotate(-18deg) translateY(-6px) !important;
+    }}
+    .action-tilt #bone-head {{
+      animation: tiltHeadSway 2.4s infinite ease-in-out !important;
+    }}
+    @keyframes tiltHeadSway {{
+      0%, 100% {{ transform: rotate(0deg) translateY(0); }}
+      25% {{ transform: rotate(-22deg) translateY(-3px); }}
+      50% {{ transform: rotate(0deg) translateY(0); }}
+      75% {{ transform: rotate(22deg) translateY(-3px); }}
+    }}
+
+    /* ===== 动作 4：血鬼术·爆血觉醒 (双手合十向前推，烈焰爆发) ===== */
+    .action-burst #bone-arm-l {{
+      transform: rotate(38deg) translateX(12px) translateY(-8px) !important;
+    }}
+    .action-burst #bone-arm-r {{
+      transform: rotate(-38deg) translateX(-12px) translateY(-8px) !important;
+    }}
+    .action-burst #bone-head {{
+      animation: burstHeadFlame 1.2s infinite ease-in-out !important;
+    }}
+    .action-burst {{
+      filter: drop-shadow(0 0 20px rgba(255, 23, 68, 0.95)) saturate(1.4) !important;
+    }}
+    @keyframes burstHeadFlame {{
+      0%, 100% {{ transform: scale(1); }}
+      50% {{ transform: scale(1.08) translateY(-4px); }}
+    }}
+
+    /* ===== 动作 5：揉眼犯困打瞌睡 (手臂抬起揉眼睛，慢慢耷拉倒下) ===== */
+    .action-sleep #bone-arm-l {{
+      animation: sleepRubEye 1.6s infinite ease-in-out !important;
+    }}
+    .action-sleep #bone-arm-r {{
+      transform: rotate(35deg) translateY(6px) !important;
+    }}
+    .action-sleep #bone-head {{
+      transform: rotate(16deg) translateY(12px) !important;
+    }}
+    .action-sleep #bone-torso {{
+      transform: rotate(6deg) translateY(8px) scale(0.95) !important;
+    }}
+    @keyframes sleepRubEye {{
+      0%, 100% {{ transform: rotate(-65deg) translateX(4px) translateY(-14px); }}
+      50% {{ transform: rotate(-80deg) translateX(8px) translateY(-18px); }}
+    }}
+
+    /* ===== 动作 6：摸头杀闭眼撒娇蹭蹭 (仰头向上拱，左右轻蹭) ===== */
+    .action-headpat #bone-head {{
+      animation: headpatCuddleMotion 1.4s infinite ease-in-out !important;
+    }}
+    .action-headpat #bone-arm-l {{
+      transform: rotate(12deg) translateY(-4px) !important;
+    }}
+    .action-headpat #bone-arm-r {{
+      transform: rotate(-12deg) translateY(-4px) !important;
+    }}
+    @keyframes headpatCuddleMotion {{
+      0%, 100% {{ transform: translateY(0) rotate(0deg); }}
+      50% {{ transform: translateY(-7px) rotate(10deg); }}
+    }}
+
+    /* ===== 动作 7：钻木箱捉迷藏 ===== */
+    .action-box {{
+      animation: boxPeekaboo 1.8s infinite ease-in-out !important;
+    }}
+    @keyframes boxPeekaboo {{
+      0%, 100% {{ transform: scale(0.85) translateY(22px); opacity: 0.88; }}
+      50% {{ transform: scale(0.92) translateY(8px); opacity: 1; }}
+    }}
+
+    /* QQ宠物拖拽被提起 (两腿空中慌乱蹬水挣扎) */
+    .nezuko-picked-up {{
+      transform: scale(1.08) translateY(-22px) rotate(-8deg) !important;
+      filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.35)) !important;
+    }}
+    .nezuko-picked-up #bone-leg-l {{
+      animation: struggleLegL 0.18s infinite alternate ease-in-out !important;
+    }}
+    .nezuko-picked-up #bone-leg-r {{
+      animation: struggleLegR 0.18s infinite alternate ease-in-out !important;
+    }}
+    @keyframes struggleLegL {{
+      0% {{ transform: rotate(45deg); }}
+      100% {{ transform: rotate(-45deg); }}
+    }}
+    @keyframes struggleLegR {{
+      0% {{ transform: rotate(-45deg); }}
+      100% {{ transform: rotate(45deg); }}
+    }}
+    .nezuko-picked-up ~ .nezuko-pet-ground-shadow {{
+      transform: translateX(-50%) scale(0.55); opacity: 0.25;
+    }}
+
+    .head-music-bob {{
+      transform: translateY(-4px) rotate(3deg) !important;
+      transition: transform 0.15s ease-out;
+    }}
+
+    /* ========================================================= */
+    /* 头顶快捷胶囊动作条 (带透明安全桥接垫片，彻底防消失) */
     /* ========================================================= */
     .nezuko-action-capsule {{
       position: absolute;
@@ -378,20 +808,16 @@ js_code = f"""/**
       z-index: 100;
       backdrop-filter: blur(8px);
     }}
-
-    /* 关键核心 1：透明安全桥接垫片 (彻底覆盖头顶与动作条之间的 35px 空间) */
     .nezuko-action-capsule::after {{
       content: '';
       position: absolute;
       top: 100%;
       left: -20px;
       right: -20px;
-      height: 42px; /* 完美填平动作条到底部头部的整个空白区域！ */
+      height: 44px;
       background: transparent;
       pointer-events: auto;
     }}
-
-    /* 唤醒并保持显示的 CSS 规则与 JS 类名 */
     .nezuko-pet-stage:hover .nezuko-action-capsule,
     .nezuko-action-capsule:hover,
     .nezuko-action-capsule.is-active {{
@@ -400,7 +826,6 @@ js_code = f"""/**
       transform: translateX(-50%) translateY(0) scale(1) !important;
     }}
 
-    /* 动作条圆形小按钮 */
     .nezuko-capsule-btn {{
       width: 32px;
       height: 32px;
@@ -426,8 +851,6 @@ js_code = f"""/**
     .nezuko-capsule-btn:active {{
       transform: scale(0.95);
     }}
-
-    /* 按钮浮动气泡文字 */
     .nezuko-capsule-btn[data-tip]::before {{
       content: attr(data-tip);
       position: absolute;
@@ -452,7 +875,6 @@ js_code = f"""/**
       transform: translateX(-50%) scale(1);
     }}
 
-    /* 特殊按钮样式：BGM 音乐与看板 */
     .btn-music-spin {{
       background: radial-gradient(circle, #ff80ab 20%, #231612 21%, #111 100%);
     }}
@@ -470,11 +892,10 @@ js_code = f"""/**
       width: 56px;
       height: 44px;
       pointer-events: none;
-      z-index: 5;
+      z-index: 15;
     }}
     .nezuko-eyes-default {{
-      width: 100%; height: 100%;
-      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; height: 100%; display: flex; justify-content: space-between; align-items: center;
       padding: 0 4px; box-sizing: border-box; opacity: 0;
     }}
     .nezuko-eyes-dot {{
@@ -521,85 +942,6 @@ js_code = f"""/**
     .expr-demon .nezuko-demon-horn,
     .expr-demon .nezuko-demon-veins {{ display: block !important; }}
 
-    /* 原动漫 7 大名场面动画机 */
-    .action-run {{
-      animation: nezukoRunCycle 0.55s infinite alternate ease-in-out !important;
-    }}
-    @keyframes nezukoRunCycle {{
-      0% {{ transform: scale(0.72) translateY(12px) translateX(-28px) rotate(-10deg); }}
-      100% {{ transform: scale(0.72) translateY(6px) translateX(28px) rotate(10deg); }}
-    }}
-    .action-run ~ .nezuko-pet-ground-shadow {{ width: 70px; transform: translateX(-50%) scaleX(0.75); }}
-
-    .action-tilt {{
-      animation: nezukoHeadSway 2.4s infinite ease-in-out !important;
-    }}
-    @keyframes nezukoHeadSway {{
-      0%, 100% {{ transform: rotate(0deg) translateY(0); }}
-      25% {{ transform: rotate(-18deg) translateY(-2px); }}
-      50% {{ transform: rotate(0deg) translateY(0); }}
-      75% {{ transform: rotate(18deg) translateY(-2px); }}
-    }}
-
-    .action-stomp {{
-      animation: nezukoAngryStomp 0.28s infinite alternate cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }}
-    @keyframes nezukoAngryStomp {{
-      0% {{ transform: translateY(0) rotate(0deg); }}
-      100% {{ transform: translateY(-7px) rotate(-5deg); }}
-    }}
-
-    .action-burst {{
-      animation: nezukoBurstFlame 1.2s infinite ease-in-out !important;
-      filter: drop-shadow(0 0 18px rgba(255, 23, 68, 0.9)) saturate(1.4) !important;
-    }}
-    @keyframes nezukoBurstFlame {{
-      0%, 100% {{ transform: scale(1) translateY(0); }}
-      50% {{ transform: scale(1.1) translateY(-8px); }}
-    }}
-
-    .action-box {{
-      animation: nezukoBoxHide 1.8s infinite ease-in-out !important;
-    }}
-    @keyframes nezukoBoxHide {{
-      0%, 100% {{ transform: scale(0.85) translateY(24px); opacity: 0.9; }}
-      50% {{ transform: scale(0.92) translateY(10px); opacity: 1; }}
-    }}
-
-    .action-sleep {{
-      animation: nezukoSleepCycle 3.2s infinite ease-in-out !important;
-    }}
-    @keyframes nezukoSleepCycle {{
-      0%, 100% {{ transform: rotate(12deg) translateY(14px) scale(0.9); }}
-      50% {{ transform: rotate(15deg) translateY(18px) scale(0.88); }}
-    }}
-
-    .action-headpat {{
-      animation: nezukoHeadpatCuddle 1.4s infinite ease-in-out !important;
-    }}
-    @keyframes nezukoHeadpatCuddle {{
-      0%, 100% {{ transform: translateY(0) rotate(0deg); }}
-      50% {{ transform: translateY(-6px) rotate(8deg); }}
-    }}
-
-    .nezuko-picked-up {{
-      transform: scale(1.08) translateY(-22px) rotate(-8deg) !important;
-      filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.35)) !important;
-      animation: nezukoStruggleLegs 0.22s infinite alternate ease-in-out !important;
-    }}
-    @keyframes nezukoStruggleLegs {{
-      0% {{ transform: scale(1.08) translateY(-22px) rotate(-7deg); }}
-      100% {{ transform: scale(1.08) translateY(-22px) rotate(7deg); }}
-    }}
-    .nezuko-picked-up ~ .nezuko-pet-ground-shadow {{
-      transform: translateX(-50%) scale(0.55); opacity: 0.25;
-    }}
-
-    .nezuko-music-bob {{
-      transform: translateY(-4px) rotate(3deg);
-      transition: transform 0.15s ease-out;
-    }}
-
     .nezuko-box-prop {{
       position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
       width: 110px; height: 140px;
@@ -610,7 +952,7 @@ js_code = f"""/**
     }}
     .action-box ~ .nezuko-box-prop {{ display: block !important; }}
 
-    .nezuko-fx-container {{ position: absolute; inset: 0; pointer-events: none; z-index: 20; }}
+    .nezuko-fx-container {{ position: absolute; inset: 0; pointer-events: none; z-index: 25; }}
     .nezuko-fx-cross {{
       position: absolute; top: 15px; right: 18px; color: #ff1744; font-size: 22px; font-weight: 900;
       display: none; animation: crossShake 0.3s infinite;
@@ -645,9 +987,9 @@ js_code = f"""/**
     /* 鬼灭大正和风主操作看板 */
     #nezuko-main-card {{
       position: absolute;
-      bottom: 200px;
+      bottom: 225px;
       right: 0;
-      width: 335px;
+      width: 340px;
       background: linear-gradient(135deg, rgba(35, 22, 18, 0.96) 0%, rgba(20, 12, 10, 0.98) 100%);
       border: 2px solid var(--ds-brass-gold);
       border-radius: 12px;
@@ -734,7 +1076,7 @@ js_code = f"""/**
     .nezuko-ctrl-play {{ background: linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson)); font-weight: bold; padding: 4px 14px; }}
 
     .nezuko-float-badge {{
-      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
       background: rgba(35, 22, 18, 0.88); border: 1px solid var(--ds-brass-gold);
       color: var(--ds-gold-glow); font-size: 10px; padding: 2px 8px; border-radius: 12px;
       cursor: pointer; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
@@ -749,7 +1091,7 @@ js_code = f"""/**
   document.head.appendChild(styleEl);
 
   // ==========================================
-  // 四、DOM 结构组装
+  // 五、DOM 结构组装 (2D 骨骼关节分层)
   // ==========================================
   const root = document.createElement('div');
   root.id = 'nezuko-pet-root';
@@ -768,32 +1110,43 @@ js_code = f"""/**
         <div class="nezuko-fx-hearts">🌸 ✨ 💖</div>
       </div>
 
-      <!-- ============================================== -->
-      <!-- 核心升级：头顶快捷胶囊动作条 (带透明安全桥接垫片) -->
-      <!-- ============================================== -->
+      <!-- 头顶快捷胶囊动作条 (带透明安全桥接垫片) -->
       <div class="nezuko-action-capsule" id="nezuko-action-capsule">
         <button class="nezuko-capsule-btn" data-action="headpat" data-expr="crescent" data-tip="摸头杀蹭蹭" title="摸头杀蹭蹭">🐱</button>
-        <button class="nezuko-capsule-btn" data-action="run" data-expr="dot" data-tip="豆豆眼狂奔" title="豆豆眼狂奔">🏃</button>
-        <button class="nezuko-capsule-btn" data-action="box" data-expr="normal" data-tip="钻木箱捉猫" title="钻木箱捉迷藏">📦</button>
-        <button class="nezuko-capsule-btn" data-action="stomp" data-expr="angry" data-tip="气鼓跺小脚" title="气鼓鼓跺脚">😤</button>
-        <button class="nezuko-capsule-btn" data-action="burst" data-expr="demon" data-tip="血鬼术·爆血" title="血鬼术·爆血">🔥</button>
-        <button class="nezuko-capsule-btn" data-action="sleep" data-expr="crescent" data-tip="揉眼伸懒腰" title="揉眼犯困伸懒腰">🥱</button>
+        <button class="nezuko-capsule-btn" data-action="run" data-expr="dot" data-tip="风火轮狂奔" title="豆豆眼风火轮疾走">🏃</button>
+        <button class="nezuko-capsule-btn" data-action="box" data-expr="normal" data-tip="钻木箱捉猫" title="钻雾云杉木箱捉迷藏">📦</button>
+        <button class="nezuko-capsule-btn" data-action="stomp" data-expr="angry" data-tip="气鼓跺小脚" title="气鼓鼓跺小脚">😤</button>
+        <button class="nezuko-capsule-btn" data-action="burst" data-expr="demon" data-tip="血鬼术·爆血" title="血鬼术·爆血觉醒">🔥</button>
+        <button class="nezuko-capsule-btn" data-action="sleep" data-expr="crescent" data-tip="揉眼伸懒腰" title="揉眼睛伸懒腰打瞌睡">🥱</button>
         <button class="nezuko-capsule-btn btn-music-spin" id="btn-quick-music" data-tip="播放/切歌" title="播放/切换鬼灭BGM">🎵</button>
         <button class="nezuko-capsule-btn" id="btn-quick-board" data-tip="鬼灭看板" title="打开鬼灭配额看板">🎋</button>
       </div>
 
-      <!-- 角色骨骼头像容器 -->
-      <div class="nezuko-pet-avatar" id="nezuko-pet-character" title="单击锁定动作条 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
-        <img src="${{NEZUKO_IMG_B64}}" class="nezuko-pet-img" alt="灶门祢豆子">
+      <!-- 2D 骨骼关节分层人体机架 (手脚身体真正独立运动) -->
+      <div class="nezuko-pet-rig" id="nezuko-pet-character" title="单击锁定动作条 · 双击打开看板 · 按住拖拽 · 滚轮切歌">
         
-        <!-- 动态表情叠加层 -->
-        <div class="nezuko-face-rig" id="nezuko-face-rig">
-          <div class="nezuko-eyes-default"></div>
-          <div class="nezuko-eyes-dot"></div>
-          <div class="nezuko-eyes-crescent"></div>
-          <div class="nezuko-cheeks-angry"></div>
-          <div class="nezuko-demon-horn"></div>
-          <div class="nezuko-demon-veins"></div>
+        <!-- 骨骼 5 & 6：左右小短腿 (置于躯干后层) -->
+        <div class="bone-layer" id="bone-leg-l"></div>
+        <div class="bone-layer" id="bone-leg-r"></div>
+
+        <!-- 骨骼 2：和服躯干本体 -->
+        <div class="bone-layer" id="bone-torso"></div>
+
+        <!-- 骨骼 3 & 4：左右手臂 (以肩膀为轴自由摆动) -->
+        <div class="bone-layer" id="bone-arm-l"></div>
+        <div class="bone-layer" id="bone-arm-r"></div>
+
+        <!-- 骨骼 1：头部与长发 (以颈部为轴点头歪头) -->
+        <div class="bone-layer" id="bone-head">
+          <!-- 动态表情叠加层 -->
+          <div class="nezuko-face-rig" id="nezuko-face-rig">
+            <div class="nezuko-eyes-default"></div>
+            <div class="nezuko-eyes-dot"></div>
+            <div class="nezuko-eyes-crescent"></div>
+            <div class="nezuko-cheeks-angry"></div>
+            <div class="nezuko-demon-horn"></div>
+            <div class="nezuko-demon-veins"></div>
+          </div>
         </div>
 
         <div class="nezuko-float-badge" id="nezuko-open-btn">🎋 鬼灭看板</div>
@@ -812,6 +1165,20 @@ js_code = f"""/**
       </div>
 
       <div class="nezuko-card-body">
+        <!-- 模块 0：软件界面《鬼灭之刃》全套主题开关 -->
+        <div class="nezuko-section-box" style="background: rgba(194, 24, 91, 0.15); border-color: var(--ds-pink);">
+          <div class="nezuko-section-title">
+            <span style="color:#ffd54f;">🌸 软件界面《鬼灭之刃》全局主题</span>
+            <span id="theme-status-tag" style="font-size:10px; color:#81c784;">● 已激活</span>
+          </div>
+          <div style="font-size:11px; color:#cfd8dc; margin-bottom:8px; line-height:1.5;">
+            活动栏黑绿市松纹、侧边栏麻叶和纸木纹、状态栏大正锦缎、烫金标题与粉红流光标签页已全量生效。
+          </div>
+          <button class="nezuko-ctrl-btn" id="btn-toggle-ide-theme" style="width:100%; padding:5px; background:linear-gradient(135deg, var(--ds-dark-pink), var(--ds-crimson)); font-weight:bold;">
+            🎋 切换软件鬼灭主题 (开/关)
+          </button>
+        </div>
+
         <!-- 模块 1：Gemini 模型专属配额 (对应截图) -->
         <div class="nezuko-section-box">
           <div class="nezuko-section-title">
@@ -932,7 +1299,7 @@ js_code = f"""/**
   document.body.appendChild(root);
 
   // ==========================================
-  // 五、逻辑绑定与交互驱动 (含智能防抖与锁定)
+  // 六、交互驱动与防消失逻辑绑定
   // ==========================================
   const charAvatar = document.getElementById('nezuko-pet-character');
   const stageEl = document.getElementById('nezuko-pet-stage');
@@ -945,11 +1312,19 @@ js_code = f"""/**
   const quickMusicBtn = document.getElementById('btn-quick-music');
   const quickBoardBtn = document.getElementById('btn-quick-board');
 
-  // =========================================================
-  // 核心修复机制：智能防抖延时 + 单击常驻锁定
-  // =========================================================
+  // 主题开关按钮
+  const btnToggleTheme = document.getElementById('btn-toggle-ide-theme');
+  const themeStatusTag = document.getElementById('theme-status-tag');
+  btnToggleTheme.addEventListener('click', () => {{
+    const current = isIdeThemeEnabled();
+    const next = !current;
+    setIdeTheme(next);
+    themeStatusTag.textContent = next ? '● 已激活' : '○ 已停用';
+    themeStatusTag.style.color = next ? '#81c784' : '#e0e0e0';
+  }});
+
   let hideCapsuleTimer = null;
-  let isCapsulePinned = false; // 是否点击常驻锁定
+  let isCapsulePinned = false;
 
   function showCapsule() {{
     if (hideCapsuleTimer) {{
@@ -960,31 +1335,25 @@ js_code = f"""/**
   }}
 
   function scheduleHideCapsule() {{
-    if (isCapsulePinned) return; // 若已锁定，则不隐藏
+    if (isCapsulePinned) return;
     if (hideCapsuleTimer) clearTimeout(hideCapsuleTimer);
     hideCapsuleTimer = setTimeout(() => {{
       capsuleBar.classList.remove('is-active');
-    }}, 450); // 留出 450ms 充裕的滑动安全时间！绝不闪烁消失！
+    }}, 450);
   }}
 
-  // 舞台与动作条双向绑定
   stageEl.addEventListener('mouseenter', showCapsule);
   stageEl.addEventListener('mouseleave', scheduleHideCapsule);
   capsuleBar.addEventListener('mouseenter', showCapsule);
   capsuleBar.addEventListener('mouseleave', scheduleHideCapsule);
 
-  // 单击小豆子身体：切换常驻锁定显示
   charAvatar.addEventListener('click', (e) => {{
     if (isDragging) return;
     isCapsulePinned = !isCapsulePinned;
-    if (isCapsulePinned) {{
-      showCapsule();
-    }} else {{
-      scheduleHideCapsule();
-    }}
+    if (isCapsulePinned) showCapsule();
+    else scheduleHideCapsule();
   }});
 
-  // 更新配额显示
   function updateQuotaDisplay() {{
     const CIRCLE_CIRCUM = 62.83;
     const setRing = (id, pct) => {{
@@ -1009,7 +1378,6 @@ js_code = f"""/**
   }}
   updateQuotaDisplay();
 
-  // 看板开启/关闭
   openBtn.addEventListener('click', (e) => {{
     e.stopPropagation();
     mainCard.style.display = mainCard.style.display === 'flex' ? 'none' : 'flex';
@@ -1025,7 +1393,7 @@ js_code = f"""/**
     mainCard.style.display = mainCard.style.display === 'flex' ? 'none' : 'flex';
   }});
 
-  // 动作与表情切换引擎
+  // 骨骼动作与表情协同驱动
   let actionTimer = null;
   function triggerAction(actionName, exprName, duration = 6500) {{
     charAvatar.classList.remove('action-run', 'action-tilt', 'action-stomp', 'action-burst', 'action-box', 'action-sleep', 'action-headpat');
@@ -1041,7 +1409,6 @@ js_code = f"""/**
     }}, duration);
   }}
 
-  // 快捷胶囊条动作按钮绑定
   document.querySelectorAll('.nezuko-capsule-btn[data-action]').forEach(btn => {{
     btn.addEventListener('click', (e) => {{
       e.stopPropagation();
@@ -1051,7 +1418,6 @@ js_code = f"""/**
     }});
   }});
 
-  // 音乐控件与快捷键绑定
   window.updateMusicUI = function(customName) {{
     const titleEl = document.getElementById('music-title');
     const subEl = document.getElementById('music-sub');
@@ -1077,14 +1443,10 @@ js_code = f"""/**
     }}
   }};
 
-  // 快捷音乐播放/切歌
   quickMusicBtn.addEventListener('click', (e) => {{
     e.stopPropagation();
-    if (!musicEngine.isPlaying) {{
-      musicEngine.play();
-    }} else {{
-      musicEngine.next();
-    }}
+    if (!musicEngine.isPlaying) musicEngine.play();
+    else musicEngine.next();
   }});
 
   document.getElementById('m-btn-play').addEventListener('click', () => musicEngine.toggle());
@@ -1096,20 +1458,17 @@ js_code = f"""/**
     if (f) musicEngine.loadLocalFile(f);
   }});
 
-  // 滚轮切歌
   charAvatar.addEventListener('wheel', (e) => {{
     e.preventDefault();
     if (e.deltaY > 0) musicEngine.next();
     else musicEngine.prev();
   }});
 
-  // 自动同步按钮
   document.getElementById('btn-sync-quota').addEventListener('click', () => {{
     sniffNativeQuotaFromDOM();
     updateQuotaDisplay();
   }});
 
-  // 手动校准
   const adjBox = document.getElementById('nezuko-adjust-box');
   document.getElementById('btn-toggle-adjust').addEventListener('click', () => {{
     adjBox.style.display = adjBox.style.display === 'block' ? 'none' : 'block';
@@ -1130,9 +1489,7 @@ js_code = f"""/**
     updateQuotaDisplay();
   }});
 
-  // ==========================================
-  // 六、QQ 宠物级拖拽悬空挣扎与重力落地
-  // ==========================================
+  // 物理拖拽与悬空摇腿
   let isDragging = false;
   let dragStartX = 0, dragStartY = 0;
   let rootStartRight = 32, rootStartBottom = 24;
@@ -1175,7 +1532,6 @@ js_code = f"""/**
     window.addEventListener('mouseup', onUp);
   }});
 
-  // 待机眨眼
   setInterval(() => {{
     if (!charAvatar.className.includes('action-') && !isDragging) {{
       faceRig.classList.add('expr-crescent');
@@ -1188,4 +1544,4 @@ js_code = f"""/**
 
 target_js = REPO_ROOT / "resources" / "nezuko-pet.js"
 target_js.write_text(js_code, encoding="utf-8")
-print(f"✅ 成功生成彻底修复动作条消失问题的桌宠组件: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
+print(f"✅ 成功生成 2D 骨骼分肢动力学与软件鬼灭主题引擎: {target_js} ({len(js_code.encode('utf-8'))} 字节)")
