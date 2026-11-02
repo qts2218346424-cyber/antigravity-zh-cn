@@ -1,5 +1,25 @@
 [
   [
+    "^yaml:\\s*line\\s*(\\d+):\\s*did\\s*not\\s*find\\s*expected\\s*key",
+    "YAML 第 $1 行: 未找到预期的键 (格式缺失错误)"
+  ],
+  [
+    "^yaml:\\s*line\\s*(\\d+):\\s*mapping\\s*values\\s*are\\s*not\\s*allowed\\s*in\\s*this\\s*context",
+    "YAML 第 $1 行: 此上下文中不允许映射值 (格式缩进错误)"
+  ],
+  [
+    "^failed\\s+to\\s+parse\\s+frontmatter:\\s*(.*)$",
+    "元数据 (Frontmatter) 解析失败: $1"
+  ],
+  [
+    "^customizations?\\s+failed\\s+to\\s+load$",
+    "自定义扩展配置加载失败"
+  ],
+  [
+    "^(\\d+)\\s+customizations?\\s+failed\\s+to\\s+load$",
+    "$1 项自定义扩展配置加载失败"
+  ],
+  [
     "^(\\d+) agents? running$",
     "$1 个智能体正在运行"
   ],

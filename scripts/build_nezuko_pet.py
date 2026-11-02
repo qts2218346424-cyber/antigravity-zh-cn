@@ -59,7 +59,14 @@ b64_box_sheet = base64.b64encode(box_sheet_webp.read_bytes()).decode('ascii')
 box_fx_webp = MEDIA_DIR / "box_impact_shockwave.webp"
 b64_box_fx = base64.b64encode(box_fx_webp.read_bytes()).decode('ascii')
 
-# 3. 读取小王子核心与动作素材
+# 3. 裁剪并读取小王子 2.5D 骨骼肢体与核心动作素材
+prince_png = MEDIA_DIR / "little_prince_pet.png"
+im_prince = Image.open(prince_png).convert('RGBA')
+pw, ph = im_prince.size
+
+# 小王子手绘原画完整保留，杜绝生硬矩形切片导致玻璃罩玫瑰斩半与肢体撕裂
+b64_prince_parts = {'head': '', 'torso': '', 'leg_l': '', 'leg_r': ''}
+
 prince_webp = MEDIA_DIR / "little_prince_pet.webp"
 b64_prince = base64.b64encode(prince_webp.read_bytes()).decode('ascii')
 
@@ -96,6 +103,10 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
   const BOX_IMPACT_FX = "data:image/webp;base64,{b64_box_fx}";
 
   const PRINCE_IMG = "data:image/webp;base64,{b64_prince}";
+  const PRINCE_HEAD = "data:image/webp;base64,{b64_prince_parts['head']}";
+  const PRINCE_TORSO = "data:image/webp;base64,{b64_prince_parts['torso']}";
+  const PRINCE_LEG_L = "data:image/webp;base64,{b64_prince_parts['leg_l']}";
+  const PRINCE_LEG_R = "data:image/webp;base64,{b64_prince_parts['leg_r']}";
   const PRINCE_FOX_IMG = "data:image/webp;base64,{b64_prince_fox}";
   const PRINCE_ROSE_IMG = "data:image/webp;base64,{b64_prince_rose}";
   const PRINCE_SUNSET_IMG = "data:image/webp;base64,{b64_prince_sunset}";
@@ -186,8 +197,18 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
       this.localAudioEl = null;
       this.bridge = null;
       this.ipc = null;
+      this.externalTitle = '';
+      this.externalArtist = '';
+      this.externalLrc = '';
+      this.lastSyncTime = 0;
       this.initIPC();
       this.loadTrack(0);
+      // QQ 音乐定时无感嗅探
+      setInterval(() => {{
+        if (this.mode === 'qqmusic') {{
+          this.syncQQMusicStatus(false);
+        }}
+      }}, 4000);
     }}
 
     initIPC() {{
@@ -197,6 +218,16 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
           if (window.require) {{
             const electron = window.require('electron');
             if (electron && electron.ipcRenderer) this.ipc = electron.ipcRenderer;
+          }}
+          if (this.ipc && typeof this.ipc.on === 'function') {{
+            this.ipc.on('__agy_media_status_update__', (_evt, data) => {{
+              if (data) this.applyExternalMusicStatus(data);
+            }});
+          }}
+          if (this.bridge && typeof this.bridge.onStatus === 'function') {{
+            this.bridge.onStatus((data) => {{
+              if (data) this.applyExternalMusicStatus(data);
+            }});
           }}
         }}
       }} catch (_) {{}}
@@ -227,10 +258,60 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
       }} catch (_) {{}}
     }}
 
+    applyExternalMusicStatus(data, showFeedback = false) {{
+      if (!data) return;
+      if (data.title) this.externalTitle = data.title;
+      if (data.artist) this.externalArtist = data.artist;
+      if (typeof data.isPlaying === 'boolean') this.isPlaying = data.isPlaying;
+
+      if (data.lrc) {{
+        this.externalLrc = data.lrc;
+        this.parseLRC(data.lrc);
+        this.currentLrcIdx = 0;
+        this.renderLRC();
+      }}
+
+      this.updateUI();
+
+      if (showFeedback && typeof showSmartBubble === 'function' && this.externalTitle) {{
+        showSmartBubble({{
+          type: 'music',
+          tag: '🎵 本地 QQ 音乐实时同步',
+          zh: `正在同步播放：<b>${{this.externalTitle}}</b><br><span style="color:#6ee7b7;">歌手：${{this.externalArtist || 'QQ音乐'}}</span> · 歌词已同步载入！`,
+          sub: 'Titre et paroles synchronisés avec succès.'
+        }}, 4500);
+      }}
+    }}
+
+    syncQQMusicStatus(showFeedback = false) {{
+      this.lastSyncTime = Date.now();
+      // 1. 发送 IPC 状态查询指令
+      this.sendIPCCommand('status');
+
+      // 2. 本地 Node 进程直连备用嗅探
+      try {{
+        if (window.require) {{
+          const {{ exec }} = window.require('child_process');
+          const pyCmd = 'python -X utf8 "e:\\antigravity-cn\\resources\\media_helper.py" status';
+          exec(pyCmd, {{ encoding: 'utf-8' }}, (err, stdout) => {{
+            if (!err && stdout) {{
+              try {{
+                const info = JSON.parse(stdout);
+                this.applyExternalMusicStatus(info, showFeedback);
+              }} catch (_) {{}}
+            }}
+          }});
+        }}
+      }} catch (_) {{}}
+    }}
+
     setMode(mode) {{
       this.mode = mode;
       if (this.isPlaying && mode === 'qqmusic') {{
         this.pauseBuiltin();
+      }}
+      if (mode === 'qqmusic') {{
+        this.syncQQMusicStatus(true);
       }}
       this.updateUI();
     }}
@@ -648,8 +729,203 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
         osc.start(now); osc.stop(now + 0.06);
       }} catch (_) {{}}
     }}
+    // 小王子治愈星尘微鸣音
+    playStardust() {{
+      try {{
+        this.ensureCtx();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.18);
+        gain.gain.setValueAtTime(0.035, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.22);
+      }} catch (_) {{}}
+    }}
+    // 小王子流星滑落治愈琶音
+    playShootingStar() {{
+      try {{
+        this.ensureCtx();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [1046.5, 1318.5, 1567.98, 2093].forEach((freq, idx) => {{
+          const t = now + idx * 0.06;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.03, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.26);
+        }});
+      }} catch (_) {{}}
+    }}
   }}
   const petAudio = new PetAudioSynth();
+  // ==========================================
+  // 二、小王子 Verlet 积分质点物理流体长围巾模拟引擎 (Verlet Physics Scarf Engine)
+  // ==========================================
+  class PrinceVerletScarfEngine {{
+    constructor(canvas) {{
+      this.canvas = canvas;
+      this.ctx = canvas ? canvas.getContext('2d') : null;
+      this.numPoints = 8;
+      this.segmentLength = 13.5;
+      this.gravity = 0.24;
+      this.friction = 0.935;
+      this.points = [];
+      this.velocityPetX = 0;
+      this.velocityPetY = 0;
+      this.isRunning = false;
+      this.initPoints();
+    }}
+
+    initPoints() {{
+      this.points = [];
+      // 锚定于小王子颈部：(110, 68)
+      for (let i = 0; i < this.numPoints; i++) {{
+        this.points.push({{
+          x: 110 - i * this.segmentLength,
+          y: 68 + i * 2.2,
+          oldX: 110 - i * this.segmentLength,
+          oldY: 68 + i * 2.2,
+          pinned: (i === 0)
+        }});
+      }}
+    }}
+
+    start() {{
+      if (this.isRunning) return;
+      this.isRunning = true;
+      const loop = (timestamp) => {{
+        if (!this.isRunning) return;
+        this.update(timestamp);
+        this.render();
+        requestAnimationFrame(loop);
+      }};
+      requestAnimationFrame(loop);
+    }}
+
+    stop() {{
+      this.isRunning = false;
+    }}
+
+    update(timestamp) {{
+      if (!this.ctx || !this.points.length) return;
+      const t = timestamp * 0.0032;
+      const breeze = Math.sin(t) * 0.42 + Math.sin(t * 2.1) * 0.22;
+
+      // 锚点始终固定在小王子颈部
+      this.points[0].x = 110;
+      this.points[0].y = 68;
+
+      const windForceX = -this.velocityPetX * 0.55 + breeze;
+      const windForceY = -this.velocityPetY * 0.45 + this.gravity;
+
+      this.velocityPetX *= 0.82;
+      this.velocityPetY *= 0.82;
+
+      // Verlet 积分质点位置推进
+      for (let i = 1; i < this.points.length; i++) {{
+        const p = this.points[i];
+        const vx = (p.x - p.oldX) * this.friction;
+        const vy = (p.y - p.oldY) * this.friction;
+        p.oldX = p.x;
+        p.oldY = p.y;
+        p.x += vx + windForceX * (1 + i * 0.2);
+        p.y += vy + windForceY * (1 + i * 0.12);
+      }}
+
+      // 距离约束松弛迭代 (5 次确保织物拉伸自然不畸变)
+      for (let iter = 0; iter < 5; iter++) {{
+        for (let i = 0; i < this.points.length - 1; i++) {{
+          const p1 = this.points[i];
+          const p2 = this.points[i + 1];
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist === 0) continue;
+          const diff = (this.segmentLength - dist) / dist;
+          const offsetX = dx * diff * 0.5;
+          const offsetY = dy * diff * 0.5;
+
+          if (!p1.pinned) {{
+            p1.x -= offsetX;
+            p1.y -= offsetY;
+          }}
+          if (!p2.pinned) {{
+            p2.x += offsetX;
+            p2.y += offsetY;
+          }}
+        }}
+      }}
+    }}
+
+    render() {{
+      if (!this.ctx || this.points.length < 2) return;
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+      this.ctx.save();
+      const pStart = this.points[0];
+      const pEnd = this.points[this.points.length - 1];
+      const grad = this.ctx.createLinearGradient(pStart.x, pStart.y, pEnd.x, pEnd.y);
+      grad.addColorStop(0, '#f59e0b');
+      grad.addColorStop(0.4, '#eab308');
+      grad.addColorStop(0.8, '#fde047');
+      grad.addColorStop(1, '#fef08a');
+
+      // 绘制流体缎带曲线
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.points[0].x, this.points[0].y);
+      for (let i = 1; i < this.points.length - 1; i++) {{
+        const xc = (this.points[i].x + this.points[i + 1].x) / 2;
+        const yc = (this.points[i].y + this.points[i + 1].y) / 2;
+        this.ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
+      }}
+      const last = this.points[this.points.length - 1];
+      this.ctx.lineTo(last.x, last.y);
+
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+      this.ctx.lineWidth = 14;
+      this.ctx.strokeStyle = grad;
+      this.ctx.shadowColor = 'rgba(245, 158, 11, 0.45)';
+      this.ctx.shadowBlur = 8;
+      this.ctx.stroke();
+
+      // 丝绸高光
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.points[0].x, this.points[0].y - 2);
+      for (let i = 1; i < this.points.length - 1; i++) {{
+        const xc = (this.points[i].x + this.points[i + 1].x) / 2;
+        const yc = (this.points[i].y + this.points[i + 1].y) / 2 - 2;
+        this.ctx.quadraticCurveTo(this.points[i].x, this.points[i].y - 2, xc, yc);
+      }}
+      this.ctx.lineTo(last.x, last.y - 1);
+      this.ctx.lineWidth = 3.5;
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      this.ctx.shadowBlur = 0;
+      this.ctx.stroke();
+
+      // 围巾末端流苏金色星尘
+      this.ctx.fillStyle = '#fef08a';
+      this.ctx.beginPath();
+      this.ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      this.ctx.restore();
+    }}
+
+    injectImpulse(vx, vy) {{
+      this.velocityPetX += vx;
+      this.velocityPetY += vy;
+    }}
+  }}
 
   // ==========================================
   // 三、《小王子》12 句中法经典名言
@@ -676,12 +952,15 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
   // 四、模型配额与同步体系
   // ==========================================
   const defaultQuotaState = {{
-    geminiWeeklyPct: 91,
-    geminiWeeklyReset: "6 天 19 小时后重置",
-    gemini5hPct: 72,
-    gemini5hReset: "46 分钟后重置",
+    email: "qts2218346424@gmail.com",
+    geminiWeeklyPct: 100,
+    geminiWeeklyReset: "已重置 / 额度已全满",
+    gemini5hPct: 100,
+    gemini5hReset: "已重置 / 额度已全满",
     claudeWeeklyPct: 100,
-    claudeWeeklyReset: "7 天后重置",
+    claudeWeeklyReset: "已重置 / 额度已全满",
+    claude5hPct: 100,
+    claude5hReset: "已重置 / 额度已全满",
     lastSynced: "刚刚"
   }};
   function loadUserQuota() {{
@@ -725,7 +1004,17 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
       flex-direction: column;
       align-items: center;
       transform-origin: bottom center;
-      transition: transform 0.22s ease-out;
+    }}
+
+    /* 角色专用物理视口 (受 updateFacing 控制翻转，与 UI 气泡彻底解耦) */
+    .pet-character-viewport {{
+      position: relative;
+      width: 130px;
+      height: 215px;
+      margin: 0 auto;
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transform-origin: 50% 100%;
+      pointer-events: auto;
     }}
 
     /* 真实随步伐与跳跃缩放的地面阴影 */
@@ -1123,14 +1412,172 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
     .action-sleep #bone-head {{ transform: translateY(14px) rotate(9deg) scale(0.95) !important; }}
     .action-sleep #bone-arm-r {{ transform: rotate(-38deg) translateY(-8px) !important; }}
 
-    /* 小王子立绘样式 */
-    .prince-avatar-img {{
-      width: 100%; height: 100%; object-fit: contain; pointer-events: none;
-      filter: drop-shadow(0 6px 14px rgba(250, 204, 21, 0.25));
-      transform-origin: bottom center; transition: transform 0.2s ease-out;
+    /* 小王子 B612 手绘高保真全身立绘与 2.5D 有机弹性动力学 (零切片完整画质) */
+    .prince-pet-rig {{
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
+      transform-origin: 50% 95%;
+      transition: filter 0.3s ease;
     }}
-    .head-music-bob {{ transform: rotate(7deg) scale(1.05) !important; }}
-    .prince-music-bob {{ transform: rotate(5deg) scale(1.04) !important; }}
+
+    /* B612 小行星地表微光光环底座 */
+    .prince-planet-pedestal {{
+      position: absolute;
+      bottom: -4px; left: 50%;
+      transform: translateX(-50%);
+      width: 124px; height: 18px;
+      background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.45) 0%, rgba(59, 130, 246, 0.22) 50%, transparent 75%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1;
+      animation: pedestalGlow 4s infinite ease-in-out alternate;
+    }}
+    @keyframes pedestalGlow {{
+      0% {{ transform: translateX(-50%) scale(0.95); opacity: 0.7; }}
+      100% {{ transform: translateX(-50%) scale(1.08); opacity: 1; filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.55)); }}
+    }}
+
+    /* 小王子完整无瑕手绘全身立绘主体 (彻底杜绝生硬矩形切片，玫瑰玻璃罩100%完整) */
+    .prince-avatar-img {{
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 126px; height: 216px;
+      object-fit: contain;
+      pointer-events: none;
+      filter: drop-shadow(0 6px 14px rgba(250, 204, 21, 0.35));
+      transform-origin: 50% 95%;
+      animation: princeIdleBreath 3.6s infinite ease-in-out alternate;
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease;
+      z-index: 5;
+      opacity: 1 !important;
+    }}
+    @keyframes princeIdleBreath {{
+      0% {{ transform: translateX(-50%) translateY(0) scale(1, 1); }}
+      50% {{ transform: translateX(-50%) translateY(-2.5px) scale(1.018, 0.982); }}
+      100% {{ transform: translateX(-50%) translateY(0.5px) scale(0.99, 1.01); }}
+    }}
+
+    /* 胸前双手捧着的玻璃罩红玫瑰微光呼吸脉冲 (守护生命之光) */
+    .prince-rose-pulse {{
+      position: absolute;
+      top: 104px; left: 50%;
+      transform: translateX(-50%);
+      width: 36px; height: 36px;
+      background: radial-gradient(circle, rgba(239, 68, 68, 0.5) 0%, rgba(244, 63, 94, 0.22) 50%, transparent 80%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: roseHeartbeat 2.8s infinite ease-in-out alternate;
+      z-index: 7;
+    }}
+    @keyframes roseHeartbeat {{
+      0% {{ transform: translateX(-50%) scale(0.9); opacity: 0.5; filter: blur(2px); }}
+      100% {{ transform: translateX(-50%) scale(1.25); opacity: 0.95; filter: blur(3px) drop-shadow(0 0 8px rgba(244, 63, 94, 0.85)); }}
+    }}
+
+    /* 金黄流体丝绸长围巾 (柔和微风燕尾披帛，告别僵直粗黄条) */
+    .prince-silk-scarf {{
+      position: absolute;
+      top: 56px; left: -26px;
+      width: 78px; height: 34px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.95) 0%, rgba(250, 204, 21, 0.9) 60%, rgba(253, 230, 138, 0.3) 100%);
+      clip-path: polygon(100% 30%, 75% 20%, 40% 10%, 0% 0%, 15% 45%, 0% 90%, 45% 75%, 80% 65%, 100% 55%);
+      filter: drop-shadow(-2px 4px 6px rgba(245, 158, 11, 0.45));
+      transform-origin: 95% 40%;
+      pointer-events: none;
+      z-index: 6;
+      animation: silkScarfBreeze 3.2s infinite ease-in-out alternate;
+    }}
+    @keyframes silkScarfBreeze {{
+      0% {{ transform: rotate(-8deg) skewY(-4deg) scale(0.96, 0.92); }}
+      50% {{ transform: rotate(6deg) skewY(6deg) scale(1.05, 1.06) translateY(-3px); }}
+      100% {{ transform: rotate(-3deg) skewY(-1deg) scale(1, 0.98); }}
+    }}
+
+    /* 手绘动画级真实弹性步态动力学 (Bipedal Locomotion IK) */
+    .is-walking .prince-avatar-img {{
+      animation: princeWalkBounce 0.48s infinite alternate ease-in-out !important;
+    }}
+    @keyframes princeWalkBounce {{
+      0% {{ transform: translateX(-50%) translateY(0) rotate(-2.5deg) scale(1.028, 0.972); }}
+      25% {{ transform: translateX(-50%) translateY(-7.5px) rotate(0deg) scale(0.98, 1.02); }}
+      50% {{ transform: translateX(-50%) translateY(0) rotate(2.5deg) scale(1.028, 0.972); }}
+      75% {{ transform: translateX(-50%) translateY(-7.5px) rotate(0deg) scale(0.98, 1.02); }}
+      100% {{ transform: translateX(-50%) translateY(0) rotate(-2.5deg) scale(1.028, 0.972); }}
+    }}
+
+    /* 行走时围巾迎风向后舒展展开 */
+    .is-walking .prince-silk-scarf {{
+      animation: silkScarfWalk 0.48s infinite alternate ease-in-out !important;
+      width: 96px;
+      left: -42px;
+    }}
+    @keyframes silkScarfWalk {{
+      0% {{ transform: rotate(-16deg) skewY(-10deg) scale(1.08, 0.88); }}
+      100% {{ transform: rotate(12deg) skewY(10deg) scale(1.22, 1.15) translateY(-5px); }}
+    }}
+
+    /* 小王子面部自然眨眼效果 */
+    .prince-eyelid-overlay {{
+      position: absolute;
+      top: 36px; left: 50%;
+      transform: translateX(-50%);
+      width: 44px; height: 12px;
+      pointer-events: none; opacity: 0;
+      background: radial-gradient(ellipse at center, rgba(254, 243, 199, 0.95) 0%, rgba(253, 230, 138, 0.9) 70%, transparent 100%);
+      border-bottom: 2px solid #b45309;
+      border-radius: 0 0 8px 8px;
+      transition: opacity 0.08s ease;
+      z-index: 14;
+    }}
+    .prince-eyelid-overlay.blink {{ opacity: 1 !important; }}
+
+    /* 剧情动作触发时主体平滑过渡 */
+    .action-fox .prince-avatar-img,
+    .action-rose .prince-avatar-img,
+    .action-sunset .prince-avatar-img,
+    .action-volcano .prince-avatar-img {{
+      opacity: 0.1 !important;
+    }}
+    .action-fox .prince-silk-scarf,
+    .action-rose .prince-silk-scarf {{
+      opacity: 0.3 !important;
+    }}
+    /* 小王子抓起悬空与落地弹性缓冲 */
+    .prince-pet-rig.pet-picked-up {{
+      transform: scale(1.08) translateY(-22px) rotate(-6deg) !important;
+      filter: drop-shadow(0 16px 24px rgba(250, 204, 21, 0.45)) !important;
+      animation: princeDangle 1.2s infinite ease-in-out alternate !important;
+    }}
+    @keyframes princeDangle {{
+      0% {{ transform: scale(1.08) translateY(-22px) rotate(-6deg); }}
+      100% {{ transform: scale(1.06) translateY(-18px) rotate(5deg); }}
+    }}
+    .prince-landing-squash {{
+      animation: princeLandSquash 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }}
+    @keyframes princeLandSquash {{
+      0% {{ transform: scale(1.12, 0.86) translateY(6px); }}
+      50% {{ transform: scale(0.95, 1.05) translateY(-3px); }}
+      100% {{ transform: scale(1, 1) translateY(0); }}
+    }}
+
+    /* 星尘足迹粒子效果 */
+    .prince-stardust {{
+      position: absolute;
+      width: 8px; height: 8px;
+      background: radial-gradient(circle, #fef08a 0%, #f59e0b 60%, transparent 100%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: stardustFade 0.65s ease-out forwards;
+      z-index: 8;
+    }}
+    @keyframes stardustFade {{
+      0% {{ transform: translate(0, 0) scale(1); opacity: 1; }}
+      100% {{ transform: translate(var(--dx, -15px), -20px) scale(0.2); opacity: 0; }}
+    }}
 
     /* 小王子动作层 */
     .prince-action-layer {{
@@ -1203,6 +1650,47 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
       0% {{ transform: translateX(-50%) translateY(-25px) scale(0.92); opacity: 0.75; }}
       50% {{ transform: translateX(-50%) translateY(5px) scale(1.05); opacity: 1; }}
       100% {{ transform: translateX(-50%) translateY(32px) scale(0.98); opacity: 0.85; }}
+    }}
+
+    /* 动作 6：打扫火山与拔除猴面包树幼苗 */
+    .action-volcano #layer-action-volcano {{ opacity: 1 !important; pointer-events: auto !important; }}
+    .action-volcano #prince-avatar-body {{ transform: scale(1.02) translateY(2px) rotate(2deg) !important; }}
+    .volcano-smoke-puff {{
+      position: absolute; width: 14px; height: 14px; background: rgba(255, 255, 255, 0.85);
+      border-radius: 50%; bottom: 65px; left: 32px; filter: blur(2px);
+      animation: volcanoSmoke 1.6s infinite ease-out;
+    }}
+    .volcano-smoke-puff.v2 {{ animation-delay: 0.8s; left: 38px; }}
+    @keyframes volcanoSmoke {{
+      0% {{ transform: translateY(0) scale(0.6); opacity: 0.9; }}
+      100% {{ transform: translateY(-45px) scale(2.2); opacity: 0; }}
+    }}
+    .baobab-sprout-icon {{
+      position: absolute; bottom: 20px; right: 22px; font-size: 26px;
+      animation: baobabUproot 2.5s infinite ease-in-out alternate;
+      filter: drop-shadow(0 2px 8px rgba(34, 197, 94, 0.6));
+    }}
+    @keyframes baobabUproot {{
+      0% {{ transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }}
+      60% {{ transform: translateY(-28px) scale(1.2) rotate(15deg); opacity: 0.9; }}
+      100% {{ transform: translateY(-40px) scale(0.6) rotate(35deg); opacity: 0; }}
+    }}
+    .volcano-chimney-icon {{
+      position: absolute; bottom: 8px; left: 16px; font-size: 28px;
+      filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7));
+    }}
+    .shooting-star-streak {{
+      position: absolute; top: -10px; right: -20px; width: 65px; height: 3px;
+      background: linear-gradient(90deg, transparent, #fff, #fef08a);
+      border-radius: 50%; opacity: 0; transform: rotate(-35deg);
+    }}
+    .action-stars .shooting-star-streak {{
+      animation: shootingStarShoot 2.4s infinite ease-out;
+    }}
+    @keyframes shootingStarShoot {{
+      0% {{ transform: translate(40px, -40px) rotate(-35deg) scaleX(0.2); opacity: 0; }}
+      30% {{ transform: translate(-20px, 20px) rotate(-35deg) scaleX(1.4); opacity: 1; }}
+      60%, 100% {{ transform: translate(-80px, 80px) rotate(-35deg) scaleX(0.1); opacity: 0; }}
     }}
 
     /* 气泡与看板 */
@@ -1361,9 +1849,7 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
   root.id = 'nezuko-pet-root';
   root.innerHTML = `
     <div class="nezuko-pet-stage" id="nezuko-pet-stage">
-      <div class="nezuko-pet-ground-shadow" id="nezuko-ground-shadow"></div>
-
-      <!-- 智能多态交互气泡中枢 -->
+      <!-- 智能多态交互气泡中枢 (UI文本层：绝对正向，永不镜像) -->
       <div class="pet-smart-bubble" id="pet-smart-bubble">
         <div class="bubble-tag-bar">
           <span class="bubble-tag-text" id="bubble-tag-text">🦊 狐狸的秘密 · B612星球</span>
@@ -1373,7 +1859,7 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
         <div class="bubble-sub-txt" id="bubble-sub-txt">L'essentiel est invisible pour les yeux.</div>
       </div>
 
-      <!-- 头顶快捷胶囊条 -->
+      <!-- 头顶快捷胶囊条 (UI交互层：绝对正向) -->
       <div class="nezuko-action-capsule" id="nezuko-action-capsule">
         <button class="nezuko-capsule-btn btn-switch-pet" id="btn-quick-switch" data-tip="切换角色 (祢豆子/小王子)" title="切换角色">🔁</button>
         <button class="nezuko-capsule-btn btn-roam-mode roaming" id="btn-quick-roam" data-tip="自主走动漫步 (已开启)" title="切换自主漫步/锁定">🚶</button>
@@ -1382,70 +1868,90 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
         <button class="nezuko-capsule-btn" id="btn-quick-board" data-tip="配额看板" title="打开配额看板">🎋</button>
       </div>
 
-      <!-- 情绪浮动微气泡 -->
+      <!-- 情绪浮动微气泡 (UI表情层：绝对正向) -->
       <div class="floating-mood-bubble" id="floating-mood-bubble">🌸</div>
 
-      <!-- 角色 1：祢豆子 2D 骨骼机架 (支持双关节行走与风火轮飞奔) -->
-      <div class="nezuko-pet-rig" id="pet-nezuko" style="display:none;" title="双击打开看板 · 单击摸头 · 拖拽移动 · 滚轮切歌">
-        <div class="bone-layer" id="bone-leg-l"></div>
-        <div class="bone-layer" id="bone-leg-r"></div>
-        <div class="bone-layer" id="bone-torso"></div>
-        <div class="bone-layer" id="bone-arm-l"></div>
-        <div class="bone-layer" id="bone-arm-r"></div>
-        <div class="bone-layer" id="bone-head">
-          <div class="nezuko-eyelid-overlay" id="nezuko-eyelid"></div>
-        </div>
-      </div>
+      <!-- 角色专用物理视口 (受 updateFacing 控制翻转，与 UI 气泡彻底解耦) -->
+      <div class="pet-character-viewport" id="pet-character-viewport">
+        <div class="nezuko-pet-ground-shadow" id="nezuko-ground-shadow"></div>
 
-      <!-- 角色 2：大正雾云杉木箱 (8帧360°旋转分镜 + 探头探脑视窗) -->
-      <div class="box-action-container" id="box-action-container">
-        <!-- 8 帧分镜精灵视窗 (用于 360 度转木箱神技) -->
-        <div class="box-sprite-viewport" id="box-sprite-viewport">
-          <div class="box-sprite-strip"></div>
-        </div>
-
-        <!-- 落地冲击波光环图层 -->
-        <div class="box-impact-ring"></div>
-
-        <!-- 飞旋的枫叶樱花粒子 -->
-        <div class="box-spin-particles">
-          <span class="spin-petal sp1" style="--tx:-50px; --ty:-40px;">🍁</span>
-          <span class="spin-petal sp2" style="--tx:60px; --ty:-45px;">🌸</span>
-          <span class="spin-petal sp3" style="--tx:-55px; --ty:30px;">🍂</span>
-          <span class="spin-petal sp4" style="--tx:50px; --ty:35px;">🌸</span>
-        </div>
-
-        <!-- 探头探脑专属视窗 (用于钻木箱动作) -->
-        <div class="box-peek-container" id="box-peek-container">
-          <div class="peek-box-body">
-            <div class="peek-box-interior">
-              <img src="${{NEZUKO_PEEKER_HEAD}}" class="peeker-chibi-img" alt="木箱里的祢豆子">
-            </div>
-            <div class="peek-box-door"></div>
+        <!-- 角色 1：祢豆子 2D 骨骼机架 (支持双关节行走与风火轮飞奔) -->
+        <div class="nezuko-pet-rig" id="pet-nezuko" style="display:none;" title="双击打开看板 · 单击摸头 · 拖拽移动 · 滚轮切歌">
+          <div class="bone-layer" id="bone-leg-l"></div>
+          <div class="bone-layer" id="bone-leg-r"></div>
+          <div class="bone-layer" id="bone-torso"></div>
+          <div class="bone-layer" id="bone-arm-l"></div>
+          <div class="bone-layer" id="bone-arm-r"></div>
+          <div class="bone-layer" id="bone-head">
+            <div class="nezuko-eyelid-overlay" id="nezuko-eyelid"></div>
           </div>
         </div>
-      </div>
 
-      <!-- 冲刺奔跑烟尘粒子容器 -->
-      <div class="dash-dust-container" id="dash-dust-container"></div>
+        <!-- 角色 2：大正雾云杉木箱 (8帧360°旋转分镜 + 探头探脑视窗) -->
+        <div class="box-action-container" id="box-action-container">
+          <div class="box-sprite-viewport" id="box-sprite-viewport">
+            <div class="box-sprite-strip"></div>
+          </div>
+          <div class="box-impact-ring"></div>
+          <div class="box-spin-particles">
+            <span class="spin-petal sp1" style="--tx:-50px; --ty:-40px;">🍁</span>
+            <span class="spin-petal sp2" style="--tx:60px; --ty:-45px;">🌸</span>
+            <span class="spin-petal sp3" style="--tx:-55px; --ty:30px;">🍂</span>
+            <span class="spin-petal sp4" style="--tx:50px; --ty:35px;">🌸</span>
+          </div>
+          <div class="box-peek-container" id="box-peek-container">
+            <div class="peek-box-body">
+              <div class="peek-box-interior">
+                <img src="${{NEZUKO_PEEKER_HEAD}}" class="peeker-chibi-img" alt="木箱里的祢豆子">
+              </div>
+              <div class="peek-box-door"></div>
+            </div>
+          </div>
+        </div>
 
-      <!-- 角色 3：小王子 B612 治愈多图层动态机架 -->
-      <div class="prince-pet-rig" id="pet-prince" style="display:none;" title="单击听名言 · 双击打开看板 · 拖拽移动 · 滚轮切歌">
-        <img src="${{PRINCE_IMG}}" class="prince-avatar-img" id="prince-avatar-body" alt="小王子">
-        <div class="prince-action-layer" id="layer-action-fox">
-          <img src="${{PRINCE_FOX_IMG}}" class="prince-fox-img" alt="小王子与小狐狸">
-        </div>
-        <div class="prince-action-layer" id="layer-action-rose">
-          <img src="${{PRINCE_ROSE_IMG}}" class="rose-dome-img" alt="玻璃罩红玫瑰">
-        </div>
-        <div class="prince-action-layer" id="layer-action-scarf">
-          <div class="wind-scarf-ribbon"></div>
-        </div>
-        <div class="prince-action-layer" id="layer-action-stars">
-          <img src="${{PRINCE_STARS_IMG}}" class="stars-orbit-img" alt="繁星小行星">
-        </div>
-        <div class="prince-action-layer" id="layer-action-sunset">
-          <img src="${{PRINCE_SUNSET_IMG}}" class="sunset-glow-img" alt="日落夕阳">
+        <!-- 冲刺奔跑烟尘粒子容器 -->
+        <div class="dash-dust-container" id="dash-dust-container"></div>
+
+        <!-- 角色 3：小王子 B612 手绘高保真全身立绘与 2.5D 有机动力学体系 -->
+        <div class="prince-pet-rig" id="pet-prince" style="display:none;" title="单击听名言 · 双击打开看板 · 拖拽移动 · 滚轮切歌">
+          <!-- B612 星球地表光环底座 -->
+          <div class="prince-planet-pedestal" id="prince-planet-pedestal"></div>
+
+          <!-- 金黄流体丝绸微风长围巾 -->
+          <div class="prince-silk-scarf" id="prince-silk-scarf"></div>
+
+          <!-- 手绘高保真全身完整立绘主体 (带玫瑰与玻璃罩，100%连贯无断层) -->
+          <img src="${{PRINCE_IMG}}" class="prince-avatar-img" id="prince-avatar-body" alt="小王子">
+
+          <!-- 玻璃罩红玫瑰柔光脉冲 (守护生命之光) -->
+          <div class="prince-rose-pulse" id="prince-rose-pulse"></div>
+
+          <!-- 面部眼眸微闭遮罩 (自然眨眼) -->
+          <div class="prince-eyelid-overlay" id="prince-eyelid"></div>
+
+          <!-- 独立剧情动作图层 (自然淡入淡出) -->
+          <div class="prince-action-layer" id="layer-action-fox">
+            <img src="${{PRINCE_FOX_IMG}}" class="prince-fox-img" alt="小王子与小狐狸">
+          </div>
+          <div class="prince-action-layer" id="layer-action-rose">
+            <img src="${{PRINCE_ROSE_IMG}}" class="rose-dome-img" alt="玻璃罩红玫瑰">
+          </div>
+          <div class="prince-action-layer" id="layer-action-scarf">
+            <div class="wind-scarf-ribbon"></div>
+          </div>
+          <div class="prince-action-layer" id="layer-action-stars">
+            <img src="${{PRINCE_STARS_IMG}}" class="stars-orbit-img" alt="繁星小行星">
+            <div class="shooting-star-streak"></div>
+          </div>
+          <div class="prince-action-layer" id="layer-action-sunset">
+            <img src="${{PRINCE_SUNSET_IMG}}" class="sunset-glow-img" alt="日落夕阳">
+          </div>
+          <div class="prince-action-layer" id="layer-action-volcano">
+            <div class="volcano-smoke-puff"></div>
+            <div class="volcano-smoke-puff v2"></div>
+            <div class="baobab-sprout-icon">🌱</div>
+            <div class="volcano-chimney-icon">🌋</div>
+          </div>
         </div>
       </div>
 
@@ -1474,9 +1980,14 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
           <!-- QQ 音乐专属控制栏 (切到 QQ 模式时显示) -->
           <div class="qq-status-bar" id="qq-extra-ctrls" style="display:none;">
             <span><span class="qq-pulse-dot"></span>已直通电脑 QQ 音乐客户端</span>
-            <button class="nezuko-ctrl-btn" id="m-btn-wake-qq" style="font-size:9px; padding:2px 6px; background:rgba(16,185,129,0.25); border-color:#10b981;">
-              🚀 唤醒/置顶QQ音乐
-            </button>
+            <div style="display:flex; gap:6px;">
+              <button class="nezuko-ctrl-btn" id="m-btn-sync-qq" style="font-size:9px; padding:2px 7px; background:rgba(16,185,129,0.3); border-color:#10b981;">
+                🔄 同步歌名歌词
+              </button>
+              <button class="nezuko-ctrl-btn" id="m-btn-wake-qq" style="font-size:9px; padding:2px 7px; background:rgba(16,185,129,0.25); border-color:#10b981;">
+                🚀 置顶客户端
+              </button>
+            </div>
           </div>
 
           <!-- 歌曲与唱片信息 -->
@@ -1530,6 +2041,63 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
           </div>
         </div>
 
+        <!-- 核心模型配额实时看板 -->
+        <div class="nezuko-section-box" style="background: rgba(30, 41, 59, 0.65); border-color: #3b82f6;">
+          <div class="nezuko-section-title" style="flex-wrap:wrap; gap:4px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="color:#60a5fa; font-weight:bold;">⚡ Cockpit 真实配额看板</span>
+              <span id="quota-alert-status-tag" style="font-size:10px; color:#81c784;">● 配额充裕</span>
+            </div>
+            <span id="lbl-quota-account" style="font-size:9.5px; color:#93c5fd; background:rgba(59,130,246,0.2); padding:1px 6px; border-radius:4px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="Cockpit 当前检测到的活跃账号">qts2218346424@gmail.com</span>
+          </div>
+
+          <div class="nezuko-quota-row">
+            <div class="nezuko-quota-meta">
+              <span class="nezuko-quota-name">Gemini 每周可用配额</span>
+              <span class="nezuko-quota-reset" id="lbl-gemini-weekly-reset">6 天 19 小时后重置</span>
+            </div>
+            <div class="nezuko-quota-val-group">
+              <span class="nezuko-quota-pct" id="lbl-gemini-weekly-pct">91%</span>
+              <div class="nezuko-ring-box">
+                <svg viewBox="0 0 26 26"><circle class="nezuko-ring-bg" cx="13" cy="13" r="10" /><circle class="nezuko-ring-prog" id="ring-gemini-weekly" cx="13" cy="13" r="10" /></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="nezuko-quota-row">
+            <div class="nezuko-quota-meta">
+              <span class="nezuko-quota-name">Gemini 5小时可用配额</span>
+              <span class="nezuko-quota-reset" id="lbl-gemini-5h-reset">46 分钟后重置</span>
+            </div>
+            <div class="nezuko-quota-val-group">
+              <span class="nezuko-quota-pct" id="lbl-gemini-5h-pct">72%</span>
+              <div class="nezuko-ring-box">
+                <svg viewBox="0 0 26 26"><circle class="nezuko-ring-bg" cx="13" cy="13" r="10" /><circle class="nezuko-ring-prog" id="ring-gemini-5h" cx="13" cy="13" r="10" /></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="nezuko-quota-row">
+            <div class="nezuko-quota-meta">
+              <span class="nezuko-quota-name">Claude / 辅助模型配额</span>
+              <span class="nezuko-quota-reset" id="lbl-claude-weekly-reset">7 天后重置</span>
+            </div>
+            <div class="nezuko-quota-val-group">
+              <span class="nezuko-quota-pct" id="lbl-claude-weekly-pct">100%</span>
+              <div class="nezuko-ring-box">
+                <svg viewBox="0 0 26 26"><circle class="nezuko-ring-bg" cx="13" cy="13" r="10" /><circle class="nezuko-ring-prog" id="ring-claude-weekly" cx="13" cy="13" r="10" /></svg>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:9.5px; color:#94a3b8;">
+            <span id="lbl-quota-last-sync">同步时间: 刚刚</span>
+            <button class="nezuko-ctrl-btn" id="btn-manual-sync-quota" style="font-size:9px; padding:2px 8px; background:rgba(59,130,246,0.3); border-color:#60a5fa;">
+              🔄 立即同步配额
+            </button>
+          </div>
+        </div>
+
         <!-- 动画级走动漫步与冲刺飞奔控制区 -->
         <div class="nezuko-section-box" style="background: rgba(16, 185, 129, 0.15); border-color: #10b981;">
           <div class="nezuko-section-title">
@@ -1558,6 +2126,7 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
   // 七、DOM 元素引用与交互绑定
   // ==========================================
   const stageEl = document.getElementById('nezuko-pet-stage');
+  const charViewport = document.getElementById('pet-character-viewport');
   const petNezuko = document.getElementById('pet-nezuko');
   const petPrince = document.getElementById('pet-prince');
   const boxContainer = document.getElementById('box-action-container');
@@ -1698,13 +2267,21 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
 
   function updateFacing(direction) {{
     facingDirection = direction;
-    stageEl.style.transform = `scaleX(${{direction}})`;
-    smartBubble.style.transform = direction === 1 
-      ? 'translateX(-50%) translateY(0) scale(1)' 
-      : 'translateX(50%) translateY(0) scale(1) scaleX(-1)';
-    capsuleBar.style.transform = direction === 1 
-      ? 'translateX(-50%) translateY(0) scale(1)' 
-      : 'translateX(50%) translateY(0) scale(1) scaleX(-1)';
+    if (charViewport) {{
+      charViewport.style.transform = `scaleX(${{direction}})`;
+      charViewport.style.transformOrigin = '50% 100%';
+    }}
+  }}
+
+  function spawnPrinceStardust() {{
+    if (!charViewport) return;
+    const dust = document.createElement('div');
+    dust.className = 'prince-stardust';
+    dust.style.left = (facingDirection > 0 ? '42%' : '58%');
+    dust.style.bottom = '12px';
+    dust.style.setProperty('--dx', (facingDirection > 0 ? '22px' : '-22px'));
+    charViewport.appendChild(dust);
+    setTimeout(() => dust.remove(), 650);
   }}
 
   function spawnDustPuff() {{
@@ -1739,8 +2316,23 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
     curRight = targetRight;
 
     petAudio.playFootstep();
+    let princeDustTimer = null;
+    if (activePet === 'prince') {{
+      if (window.__PRINCE_SCARF_ENGINE__) {{
+        // 行走时持续注入风力冲击
+        window.__PRINCE_SCARF_ENGINE__.injectImpulse(dir * -8, -4);
+      }}
+      princeDustTimer = setInterval(() => {{
+        if (!isMoving) {{ clearInterval(princeDustTimer); return; }}
+        spawnPrinceStardust();
+        if (window.__PRINCE_SCARF_ENGINE__) {{
+          window.__PRINCE_SCARF_ENGINE__.injectImpulse((Math.random() - 0.5) * 6, -3);
+        }}
+      }}, 150);
+    }}
 
     setTimeout(() => {{
+      if (princeDustTimer) clearInterval(princeDustTimer);
       activeRig.classList.remove('is-walking');
       isMoving = false;
       if (onComplete) onComplete();
@@ -1909,6 +2501,14 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
       return;
     }}
 
+    if (actionName === 'stars') {{
+      petAudio.playShootingStar();
+    }} else if (actionName === 'rose' || actionName === 'fox') {{
+      petAudio.playStardust();
+    }} else if (actionName === 'volcano') {{
+      petAudio.playWoodThud();
+    }}
+
     const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
     currentRig.className = (activePet === 'nezuko' ? 'nezuko-pet-rig' : 'prince-pet-rig');
     if (actionName) currentRig.classList.add('action-' + actionName);
@@ -1956,6 +2556,7 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
         <button class="nezuko-capsule-btn" data-action="fox" data-tip="驯养小狐狸" title="与小狐狸相互依偎">🦊</button>
         <button class="nezuko-capsule-btn" data-action="stars" data-tip="仰望繁星" title="仰望夜空寻找属于自己的星星">✨</button>
         <button class="nezuko-capsule-btn" data-action="sunset" data-tip="四十四次日落" title="看第四十四次日落">🌅</button>
+        <button class="nezuko-capsule-btn" data-action="volcano" data-tip="拔幼苗理火山" title="拔除猴面包树幼苗与打理火山">🌋</button>
         <button class="nezuko-capsule-btn" data-action="quote" data-tip="抽取哲思名句" title="抽取《小王子》经典名言">📖</button>
       `;
     }}
@@ -1979,6 +2580,9 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
     if (targetPet === 'nezuko') {{
       petNezuko.style.display = 'block';
       petPrince.style.display = 'none';
+      if (window.__PRINCE_SCARF_ENGINE__) {{
+        window.__PRINCE_SCARF_ENGINE__.stop();
+      }}
       hideSmartBubble();
       boardTitleChar.textContent = "🌸 竈門禰豆子";
       boardRoleBadge.textContent = "大正和风 · 鬼灭桌宠";
@@ -1988,6 +2592,9 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
     }} else {{
       petNezuko.style.display = 'none';
       petPrince.style.display = 'block';
+      if (window.__PRINCE_SCARF_ENGINE__) {{
+        window.__PRINCE_SCARF_ENGINE__.start();
+      }}
       boardTitleChar.textContent = "👑 小王子 (B612)";
       boardRoleBadge.textContent = "B612星球 · 治愈桌宠";
       curPetLabel.textContent = "当前: 小王子";
@@ -2006,14 +2613,69 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
   document.getElementById('btn-select-nezuko').addEventListener('click', () => switchPet('nezuko'));
   document.getElementById('btn-select-prince').addEventListener('click', () => switchPet('prince'));
 
+  const princeActionPool = ['rose', 'fox', 'scarf', 'stars', 'sunset', 'volcano'];
+  let princeActionIdx = 0;
   petPrince.addEventListener('click', () => {{
     if (isDragging) return;
     showNextQuote();
-    triggerCurrentPetAction('rose', 2000);
+    const chosenAction = princeActionPool[princeActionIdx % princeActionPool.length];
+    princeActionIdx++;
+    triggerCurrentPetAction(chosenAction, 3200);
+    petAudio.playStardust();
+    moodBubble.textContent = chosenAction === 'rose' ? '🌹' : chosenAction === 'fox' ? '🦊' : chosenAction === 'stars' ? '✨' : chosenAction === 'sunset' ? '🌅' : chosenAction === 'volcano' ? '🌋' : '⭐';
+    moodBubble.classList.add('active');
+    setTimeout(() => moodBubble.classList.remove('active'), 1800);
   }});
   petNezuko.addEventListener('click', () => {{
     if (isDragging) return;
     triggerCurrentPetAction('headpat', 2200);
+  }});
+
+  // 初始化小王子物理引擎
+  const princeCanvas = document.getElementById('prince-scarf-canvas');
+  if (princeCanvas) {{
+    window.__PRINCE_SCARF_ENGINE__ = new PrinceVerletScarfEngine(princeCanvas);
+  }}
+
+  // 小王子自然眨眼微表情系统 (3.5 ~ 6 秒自然闭眼一次)
+  const princeEyelid = document.getElementById('prince-eyelid');
+  function schedulePrinceBlink() {{
+    const delay = 3500 + Math.random() * 2500;
+    setTimeout(() => {{
+      if (activePet === 'prince' && princeEyelid) {{
+        princeEyelid.classList.add('blink');
+        setTimeout(() => {{
+          princeEyelid.classList.remove('blink');
+          schedulePrinceBlink();
+        }}, 120);
+      }} else {{
+        schedulePrinceBlink();
+      }}
+    }}, delay);
+  }}
+  schedulePrinceBlink();
+
+  // 2.5D 视线与头部跟随追踪系统 (Look-At Tracking)
+  window.addEventListener('mousemove', (e) => {{
+    if (activePet !== 'prince' || isDragging || isActionPlaying) return;
+    const princeRig = document.getElementById('pet-prince');
+    if (!princeRig) return;
+    const rect = princeRig.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + 45;
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const headEl = document.getElementById('prince-bone-head');
+    if (headEl) {{
+      if (dist < 500) {{
+        const rotY = Math.max(-10, Math.min(10, dx / 38));
+        const rotX = Math.max(-8, Math.min(6, -dy / 48));
+        headEl.style.transform = `rotateY(${{rotY}}deg) rotateX(${{rotX}}deg) rotate(${{rotY * 0.35}}deg)`;
+      }} else if (headEl.style.transform) {{
+        headEl.style.transform = '';
+      }}
+    }}
   }});
 
   switchPet(activePet);
@@ -2069,6 +2731,9 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
         currentRig.classList.add('pet-picked-up');
         curRight = origRight - dx;
         curBottom = origBottom - dy;
+        if (activePet === 'prince' && window.__PRINCE_SCARF_ENGINE__) {{
+          window.__PRINCE_SCARF_ENGINE__.injectImpulse(-dx * 0.18, -dy * 0.18);
+        }}
         root.style.transition = 'none';
         root.style.right = curRight + 'px';
         root.style.bottom = curBottom + 'px';
@@ -2081,6 +2746,11 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
       if (isDragging) {{
         const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
         currentRig.classList.remove('pet-picked-up');
+        currentRig.classList.add('prince-landing-squash');
+        setTimeout(() => currentRig.classList.remove('prince-landing-squash'), 320);
+        if (activePet === 'prince') {{
+          petAudio.playStardust();
+        }}
         root.style.transition = 'right 0.75s cubic-bezier(0.25, 1, 0.5, 1), bottom 0.3s ease';
         setTimeout(() => {{ isDragging = false; }}, 50);
       }}
@@ -2091,6 +2761,217 @@ js_code = f"""// 灶门祢豆子 & 小王子 (B612) · 动画级别动作引擎 
 
   petNezuko.addEventListener('mousedown', onDragDown);
   petPrince.addEventListener('mousedown', onDragDown);
+
+  // ==========================================
+  // 基于 Cockpit 原理的真实模型配额与悬浮徽章实时更新体系
+  // ==========================================
+  function saveUserQuota(state) {{
+    try {{ localStorage.setItem('__nezuko_model_quota_v2__', JSON.stringify(state)); }} catch (_) {{}}
+  }}
+
+  function fetchCockpitRealQuota(showFeedback = false) {{
+    // 1. 如果有 Node child_process，直接调用官方 quota_helper
+    try {{
+      if (window.require) {{
+        const {{ exec }} = window.require('child_process');
+        const qCmd = 'python -X utf8 "e:\\antigravity-cn\\resources\\quota_helper.py"';
+        exec(qCmd, {{ encoding: 'utf-8' }}, (err, stdout) => {{
+          if (!err && stdout) {{
+            try {{
+              const data = JSON.parse(stdout);
+              if (data && !data.error) {{
+                applyRealQuotaData(data, showFeedback);
+                return;
+              }}
+            }} catch (_) {{}}
+          }}
+        }});
+      }}
+    }} catch (_) {{}}
+
+    // 2. 如果有 Electron IPC 通道，发送请求
+    try {{
+      if (window.require) {{
+        const electron = window.require('electron');
+        if (electron && electron.ipcRenderer) {{
+          electron.ipcRenderer.send('__agy_get_real_quota__');
+        }}
+      }}
+    }} catch (_) {{}}
+
+    // 3. 作为保底，尝试 DOM 嗅探
+    sniffNativeQuotaFromDOM();
+  }}
+
+  function applyRealQuotaData(data, showFeedback = false) {{
+    if (!data) return;
+    if (typeof data.geminiWeeklyPct === 'number') currentQuota.geminiWeeklyPct = data.geminiWeeklyPct;
+    if (typeof data.gemini5hPct === 'number') currentQuota.gemini5hPct = data.gemini5hPct;
+    if (typeof data.claudeWeeklyPct === 'number') currentQuota.claudeWeeklyPct = data.claudeWeeklyPct;
+    if (typeof data.claude5hPct === 'number') currentQuota.claude5hPct = data.claude5hPct;
+    if (data.geminiWeeklyReset) currentQuota.geminiWeeklyReset = data.geminiWeeklyReset;
+    if (data.gemini5hReset) currentQuota.gemini5hReset = data.gemini5hReset;
+    if (data.claudeWeeklyReset) currentQuota.claudeWeeklyReset = data.claudeWeeklyReset;
+    if (data.email) currentQuota.email = data.email;
+    currentQuota.lastSynced = data.lastSynced || new Date().toLocaleTimeString('zh-CN', {{ hour12: false }});
+
+    saveUserQuota(currentQuota);
+    updateQuotaDisplay();
+
+    if (showFeedback && typeof showSmartBubble === 'function') {{
+      showSmartBubble({{
+        type: 'notice',
+        tag: '⚡ Cockpit 真实配额',
+        zh: `已同步 Cockpit 最新数据：<br><b>Gemini 每周：${{currentQuota.geminiWeeklyPct}}%</b> · 5小时：${{currentQuota.gemini5hPct}}%<br><span style="color:#93c5fd; font-size:11px;">账号：${{currentQuota.email || '已连接'}}</span>`,
+        sub: 'Données de quota Cockpit synchronisées.'
+      }}, 4500);
+    }}
+  }}
+
+  function updateQuotaDisplay() {{
+    const CIRCLE_CIRCUM = 62.83;
+    const setRing = (id, pct) => {{
+      const ring = document.getElementById(id);
+      if (!ring) return;
+      const offset = CIRCLE_CIRCUM * (1 - (pct / 100));
+      ring.style.strokeDashoffset = offset;
+      ring.style.stroke = pct > 75 ? '#81c784' : (pct > 30 ? '#ffd54f' : '#e57373');
+    }};
+    setRing('ring-gemini-weekly', currentQuota.geminiWeeklyPct);
+    setRing('ring-gemini-5h', currentQuota.gemini5hPct);
+    setRing('ring-claude-weekly', currentQuota.claudeWeeklyPct);
+
+    const gw = document.getElementById('lbl-gemini-weekly-pct');
+    if (gw) gw.textContent = currentQuota.geminiWeeklyPct + '%';
+    const g5 = document.getElementById('lbl-gemini-5h-pct');
+    if (g5) g5.textContent = currentQuota.gemini5hPct + '%';
+    const cw = document.getElementById('lbl-claude-weekly-pct');
+    if (cw) cw.textContent = currentQuota.claudeWeeklyPct + '%';
+
+    const rgw = document.getElementById('lbl-gemini-weekly-reset');
+    if (rgw && currentQuota.geminiWeeklyReset) rgw.textContent = currentQuota.geminiWeeklyReset;
+    const rg5 = document.getElementById('lbl-gemini-5h-reset');
+    if (rg5 && currentQuota.gemini5hReset) rg5.textContent = currentQuota.gemini5hReset;
+    const rcw = document.getElementById('lbl-claude-weekly-reset');
+    if (rcw && currentQuota.claudeWeeklyReset) rcw.textContent = currentQuota.claudeWeeklyReset;
+
+    const accEl = document.getElementById('lbl-quota-account');
+    if (accEl && currentQuota.email) {{
+      accEl.textContent = currentQuota.email;
+      accEl.title = '当前账号: ' + currentQuota.email;
+    }}
+
+    const alertTag = document.getElementById('quota-alert-status-tag');
+    if (alertTag) {{
+      const minPct = Math.min(currentQuota.geminiWeeklyPct || 100, currentQuota.gemini5hPct || 100);
+      if (minPct <= 15) {{
+        alertTag.textContent = '🚨 配额告急';
+        alertTag.style.color = '#ef4444';
+      }} else if (minPct <= 40) {{
+        alertTag.textContent = '⚠️ 消耗过半';
+        alertTag.style.color = '#f59e0b';
+      }} else {{
+        alertTag.textContent = '● 配额充裕';
+        alertTag.style.color = '#81c784';
+      }}
+    }}
+
+    const syncEl = document.getElementById('lbl-quota-last-sync');
+    if (syncEl) syncEl.textContent = '同步时间: ' + (currentQuota.lastSynced || '刚刚');
+
+    // 悬浮徽章动态显示当前角色与配额
+    const openBtn = document.getElementById('nezuko-open-btn');
+    if (openBtn) {{
+      const pct = currentQuota.geminiWeeklyPct || 91;
+      if (activePet === 'prince') {{
+        openBtn.textContent = `👑 星球守护 · ⚡ ${{pct}}%`;
+      }} else {{
+        openBtn.textContent = `🎋 桌面守护 · ⚡ ${{pct}}%`;
+      }}
+    }}
+  }}
+
+  function sniffNativeQuotaFromDOM() {{
+    let updated = false;
+    try {{
+      const textNodes = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+      let node;
+      while (node = walker.nextNode()) {{
+        const txt = node.nodeValue.trim();
+        if (!txt) continue;
+        if (
+          txt.includes('每周剩余') || txt.includes('Weekly limit') || txt.includes('Weekly request') ||
+          txt.includes('5 小时') || txt.includes('5小时') || txt.includes('5-hour') || txt.includes('5h limit') ||
+          txt.includes('剩余可用配额') || txt.includes('Remaining quota')
+        ) {{
+          textNodes.push(node);
+        }}
+      }}
+
+      textNodes.forEach(tn => {{
+        const container = tn.parentElement ? (tn.parentElement.closest('.quota-section, .monaco-list-row, div') || tn.parentElement) : null;
+        if (!container) return;
+        const text = container.textContent || '';
+
+        const mGW = text.match(/(?:每周|Weekly)[^\d%]*?(\d{{1,3}})%/i);
+        if (mGW) {{
+          const val = parseInt(mGW[1], 10);
+          if (val >= 0 && val <= 100) {{ currentQuota.geminiWeeklyPct = val; updated = true; }}
+        }}
+        const mG5 = text.match(/(?:5\s*(?:小时|hour|h))[^\d%]*?(\d{{1,3}})%/i);
+        if (mG5) {{
+          const val = parseInt(mG5[1], 10);
+          if (val >= 0 && val <= 100) {{ currentQuota.gemini5hPct = val; updated = true; }}
+        }}
+        if (text.toLowerCase().includes('claude') || text.toLowerCase().includes('gpt')) {{
+          const mCW = text.match(/(?:每周|Weekly)[^\d%]*?(\d{{1,3}})%/i);
+          if (mCW) {{ currentQuota.claudeWeeklyPct = parseInt(mCW[1], 10); updated = true; }}
+        }}
+      }});
+
+      if (updated) {{
+        currentQuota.lastSynced = new Date().toLocaleTimeString('zh-CN', {{ hour12: false }});
+        saveUserQuota(currentQuota);
+        updateQuotaDisplay();
+      }}
+    }} catch (_) {{}}
+    return updated;
+  }}
+  setInterval(sniffNativeQuotaFromDOM, 5000);
+
+  // 初始化配额与按钮绑定
+  setTimeout(() => {{
+    updateQuotaDisplay();
+    sniffNativeQuotaFromDOM();
+    const btnSyncQuota = document.getElementById('btn-manual-sync-quota');
+    if (btnSyncQuota) {{
+      btnSyncQuota.onclick = () => {{
+        fetchCockpitRealQuota(true);
+      }};
+    }}
+
+    // 监听主进程配额广播
+    try {{
+      if (window.require) {{
+        const electron = window.require('electron');
+        if (electron && electron.ipcRenderer) {{
+          electron.ipcRenderer.on('__agy_quota_update__', (_evt, data) => {{
+            if (data) applyRealQuotaData(data, false);
+          }});
+        }}
+      }}
+    }} catch (_) {{}}
+
+    // 定期 8 秒无感自动刷新 Cockpit 真实配额
+    setInterval(() => {{ fetchCockpitRealQuota(false); }}, 8000);
+    const btnSyncQQ = document.getElementById('m-btn-sync-qq');
+    if (btnSyncQQ) {{
+      btnSyncQQ.onclick = () => {{
+        musicStation.syncQQMusicStatus(true);
+      }};
+    }}
+  }}, 300);
 
 }})();
 """

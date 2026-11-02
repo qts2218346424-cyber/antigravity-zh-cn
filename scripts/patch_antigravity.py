@@ -569,10 +569,31 @@ function __agyTranslateMenu(m) {{
             if (skillMap[skillName]) {{
               const targetZh = skillMap[skillName];
               const content = fs.readFileSync(fullPath, 'utf8');
-              const match = content.match(/^description:\\s*(.*?)$/m);
-              if (match && !/[\\u4e00-\\u9fa5]/.test(match[1])) {{
-                const newContent = content.replace(match[0], 'description: "' + targetZh.replace(/"/g, '\\\\"') + '"');
-                fs.writeFileSync(fullPath, newContent, 'utf8');
+              if (!/[\u4e00-\u9fa5]/.test(content.slice(0, 500))) {{
+                const lines = content.split(String.fromCharCode(10));
+                let inDesc = false;
+                let replaced = false;
+                const newLines = [];
+                for (let i = 0; i < lines.length; i++) {{
+                  const line = lines[i];
+                  if (!replaced && /^description:\s*/.test(line)) {{
+                    inDesc = true;
+                    replaced = true;
+                    newLines.push('description: ' + JSON.stringify(targetZh));
+                  }} else if (inDesc) {{
+                    if (/^\s+/.test(line)) {{
+                      continue; // 跳过原英文的多行缩进行
+                    }} else {{
+                      inDesc = false;
+                      newLines.push(line);
+                    }}
+                  }} else {{
+                    newLines.push(line);
+                  }}
+                }}
+                if (replaced) {{
+                  fs.writeFileSync(fullPath, newLines.join(String.fromCharCode(10)), 'utf8');
+                }}
               }}
             }}
           }}
@@ -640,6 +661,9 @@ try {
   electron_1.contextBridge.exposeInMainWorld('__agy_media_bridge__', {
     send: (action) => {
       try { electron_1.ipcRenderer.send('__agy_media_command__', action); } catch(_) {}
+    },
+    onStatus: (cb) => {
+      try { electron_1.ipcRenderer.on('__agy_media_status_update__', (_evt, d) => cb(d)); } catch(_) {}
     }
   });
 } catch (_) {}
@@ -736,6 +760,17 @@ try {{
     const {{ exec: __agyExec }} = require('child_process');
     if (__agyIpcMain && !__agyIpcMain.__agyMediaRegistered) {{
         __agyIpcMain.__agyMediaRegistered = true;
+        __agyIpcMain.on('__agy_get_real_quota__', (_evt) => {{
+            try {{
+                const qHelper = 'e:\\\\antigravity-cn\\\\resources\\\\quota_helper.py';
+                __agyExec(`python -X utf8 "${{qHelper}}"`, (err, stdout) => {{
+                    if (!err && stdout && _evt && _evt.sender) {{
+                        try {{ _evt.sender.send('__agy_quota_update__', JSON.parse(stdout)); }} catch (_) {{}}
+                    }}
+                }});
+            }} catch (_) {{}}
+        }});
+
         __agyIpcMain.on('__agy_media_command__', (_evt, action) => {{
             try {{
                 if (action === 'open_qq') {{
@@ -757,12 +792,18 @@ try {{
                     return;
                 }}
                 const __resHelper = 'e:\\\\antigravity-cn\\\\resources\\\\media_helper.py';
-                const __runHelper = `python "${{__resHelper}}" ${{action}}`;
-                __agyExec(__runHelper, (err) => {{
-                    if (err) {{
+                const __runHelper = `python -X utf8 "${{__resHelper}}" ${{action}}`;
+                __agyExec(__runHelper, (err, stdout) => {{
+                    if (!err && stdout && _evt && _evt.sender) {{
+                        try {{
+                            const statusData = JSON.parse(stdout);
+                            _evt.sender.send('__agy_media_status_update__', statusData);
+                        }} catch (_) {{}}
+                    }}
+                    if (err && action !== 'status') {{
                         const vkMap = {{ play_pause: '0xB3', next: '0xB0', prev: '0xB1' }};
                         const vk = vkMap[action] || '0xB3';
-                        const cmd = `powershell -WindowStyle Hidden -NoProfile -Command "$w=Add-Type -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern void keybd_event(byte b, byte s, uint f, uint e);' -Name K$([guid]::NewGuid().ToString('N')) -Namespace U -PassThru; $w::keybd_event(${{vk}},0,1,0); $w::keybd_event(${{vk}},0,3,0)"`;
+                        const cmd = `powershell -WindowStyle Hidden -NoProfile -Command "$w=Add-Type -MemberDefinition '[DllImport(\\\"user32.dll\\\")] public static extern void keybd_event(byte b, byte s, uint f, uint e);' -Name K$([guid]::NewGuid().ToString('N')) -Namespace U -PassThru; $w::keybd_event(${{vk}},0,1,0); $w::keybd_event(${{vk}},0,3,0)"`;
                         __agyExec(cmd);
                     }}
                 }});
