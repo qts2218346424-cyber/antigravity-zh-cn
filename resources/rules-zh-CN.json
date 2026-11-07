@@ -1,5 +1,25 @@
 [
   [
+    "^to be installed\\.\\s*The browser subagent can be invoked by typing /browser in the conversation input box\\.?$",
+    "环境。可在对话输入框中键入 /browser 唤出浏览器子智能体。"
+  ],
+  [
+    "^(.+?),\\s*voice\\s*(\\d+)\\s*of\\s*(\\d+)$",
+    "$1，第 $2 / $3 种音色"
+  ],
+  [
+    "^Use\\s+(.+)$",
+    "使用 $1 音色"
+  ],
+  [
+    "^Choose\\s+(.+?)'s\\s+Voice$",
+    "选择 $1 音色"
+  ],
+  [
+    "^System default\\s*\\((.+?)\\)$",
+    "系统默认 ($1)"
+  ],
+  [
     "^yaml:\\s*line\\s*(\\d+):\\s*did\\s*not\\s*find\\s*expected\\s*key",
     "YAML 第 $1 行: 未找到预期的键 (格式缺失错误)"
   ],
