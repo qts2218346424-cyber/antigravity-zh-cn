@@ -1657,6 +1657,50 @@
       opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) scale(1) !important;
     }
 
+        #nezuko-pet-restore-pill {
+      position: fixed;
+      right: 18px;
+      bottom: 12px;
+      z-index: 999999;
+      height: 26px;
+      padding: 0 12px;
+      border-radius: 13px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 24px;
+      cursor: pointer;
+      user-select: none;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      opacity: 0.55;
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    #nezuko-pet-restore-pill:hover {
+      opacity: 1;
+      color: #f8fafc;
+      background: rgba(30, 41, 59, 0.96);
+      border-color: rgba(96, 165, 250, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    }
+    .btn-close-pet {
+      background: rgba(239, 68, 68, 0.22) !important;
+      border-color: rgba(239, 68, 68, 0.45) !important;
+      color: #fca5a5 !important;
+    }
+    .btn-close-pet:hover {
+      background: rgba(239, 68, 68, 0.55) !important;
+      border-color: #ef4444 !important;
+      color: #ffffff !important;
+      transform: scale(1.12);
+    }
+
     .nezuko-capsule-btn {
       width: 32px; height: 32px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(197, 155, 39, 0.45);
@@ -1783,6 +1827,7 @@
         <div id="action-buttons-container" style="display:flex; gap:7px;"></div>
         <button class="nezuko-capsule-btn btn-music-spin" id="btn-quick-music" data-tip="QQ音乐播放/切歌" title="遥控电脑QQ音乐">🎵</button>
         <button class="nezuko-capsule-btn" id="btn-quick-board" data-tip="配额看板" title="打开配额看板">🎋</button>
+        <button class="nezuko-capsule-btn btn-close-pet" id="btn-quick-close-pet" data-tip="关闭/隐藏桌宠" title="关闭/隐藏桌宠">❌</button>
       </div>
 
       <!-- 情绪浮动微气泡 (UI表情层：绝对正向) -->
@@ -1882,7 +1927,10 @@
           <span id="board-title-char">🌸 灶门祢豆子</span>
           <span class="nezuko-header-badge" id="board-role-badge">桌宠中枢</span>
         </div>
-        <button class="nezuko-close-btn" id="nezuko-close-card" title="关闭面板">✕</button>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <button class="nezuko-close-btn" id="btn-header-hide-pet" title="隐藏/休眠桌宠" style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.35); color:#fca5a5; cursor:pointer;">🚪 隐藏桌宠</button>
+          <button class="nezuko-close-btn" id="nezuko-close-card" title="关闭面板">✕</button>
+        </div>
       </div>
 
       <div class="nezuko-card-body">
@@ -2034,7 +2082,29 @@
           </div>
         </div>
 
+        <!-- 桌宠显示与休眠设置专属卡片 -->
+        <div class="nezuko-section-box" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.35);">
+          <div class="nezuko-section-title">
+            <span style="color:#fca5a5;">🚪 桌宠显示与休眠设置</span>
+            <span style="font-size:10px; color:#f87171;">● 可随时唤醒</span>
+          </div>
+          <div style="font-size:10px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;">
+            如果桌宠遮挡了代码或视线，可暂时休眠或彻底关闭。关闭后右下角仅保留极简折叠胶囊，点击即可一键召回。
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="nezuko-ctrl-btn" id="btn-hide-pet-temp" style="flex:1; padding:6px; background:linear-gradient(135deg, #475569, #334155); border-color:#64748b; font-weight:bold;">
+              👁️ 暂时隐藏/休眠
+            </button>
+            <button class="nezuko-ctrl-btn" id="btn-disable-pet-perm" style="flex:1; padding:6px; background:linear-gradient(135deg, #dc2626, #991b1b); border-color:#ef4444; font-weight:bold;">
+              ❌ 彻底关闭 (记住选择)
+            </button>
+          </div>
+        </div>
       </div>
+    </div>
+    <!-- 极简唤醒胶囊 (桌宠隐藏时显示) -->
+    <div id="nezuko-pet-restore-pill" title="点击唤醒桌宠并展开">
+      <span>🐾 唤醒桌宠</span>
     </div>
   `;
   document.body.appendChild(root);
@@ -2067,6 +2137,82 @@
   const quickMusicBtn = document.getElementById('btn-quick-music');
   const quickBoardBtn = document.getElementById('btn-quick-board');
   const soundWaves = document.getElementById('sound-waves');
+  const restorePill = document.getElementById('nezuko-pet-restore-pill');
+  const btnQuickClosePet = document.getElementById('btn-quick-close-pet');
+  const btnHeaderHidePet = document.getElementById('btn-header-hide-pet');
+  const btnHidePetTemp = document.getElementById('btn-hide-pet-temp');
+  const btnDisablePetPerm = document.getElementById('btn-disable-pet-perm');
+
+  // 隐藏/休眠桌宠
+  function hidePet(saveState = false, permanent = false) {
+    if (stageEl) stageEl.style.display = 'none';
+    if (mainCard) mainCard.style.display = 'none';
+    if (restorePill) restorePill.style.display = 'flex';
+    if (typeof stopRoamLoop === 'function') {
+      try { stopRoamLoop(); } catch (_) {}
+    }
+    if (saveState) {
+      try {
+        localStorage.setItem('__AGY_PET_HIDDEN__', 'true');
+        if (permanent) {
+          localStorage.setItem('__AGY_PET_DISABLED__', 'true');
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 展开/唤醒桌宠
+  function showPet() {
+    if (stageEl) stageEl.style.display = 'flex';
+    if (restorePill) restorePill.style.display = 'none';
+    try {
+      localStorage.removeItem('__AGY_PET_HIDDEN__');
+      localStorage.removeItem('__AGY_PET_DISABLED__');
+    } catch (_) {}
+    if (typeof startRoamLoop === 'function' && isRoamEnabled) {
+      try { startRoamLoop(); } catch (_) {}
+    }
+    showSmartBubble({
+      tag: '🌸 桌宠已唤醒',
+      zh: '主人，我又回来陪伴您写代码啦！随时可以在头顶或面板中将我休眠哦~',
+      sub: 'Pet restored successfully.'
+    }, 4000);
+  }
+
+  // 绑定各关闭与唤醒入口
+  if (btnQuickClosePet) btnQuickClosePet.onclick = (e) => { e.stopPropagation(); hidePet(true, false); };
+  if (btnHeaderHidePet) btnHeaderHidePet.onclick = (e) => { e.stopPropagation(); hidePet(true, false); };
+  if (btnHidePetTemp) btnHidePetTemp.onclick = (e) => { e.stopPropagation(); hidePet(true, false); };
+  if (btnDisablePetPerm) btnDisablePetPerm.onclick = (e) => { e.stopPropagation(); hidePet(true, true); };
+  if (restorePill) restorePill.onclick = (e) => { e.stopPropagation(); showPet(); };
+
+  // 右键视口快速休眠
+  const viewportEl = document.getElementById('pet-character-viewport');
+  if (viewportEl) {
+    viewportEl.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hidePet(true, false);
+    });
+  }
+
+  // 全局 API 暴露
+  window.__AGY_HIDE_PET__ = () => hidePet(true, false);
+  window.__AGY_DISABLE_PET__ = () => hidePet(true, true);
+  window.__AGY_SHOW_PET__ = () => showPet();
+  window.__AGY_TOGGLE_PET__ = () => {
+    if (stageEl && stageEl.style.display === 'none') showPet();
+    else hidePet(true, false);
+  };
+
+  // 初始化时检查持久化休眠状态
+  try {
+    const isHidden = localStorage.getItem('__AGY_PET_HIDDEN__') === 'true' || localStorage.getItem('__AGY_PET_DISABLED__') === 'true';
+    if (isHidden) {
+      hidePet(false, false);
+    }
+  } catch (_) {}
+
   const dustContainer = document.getElementById('dash-dust-container');
 
   function openMainCard() { mainCard.style.display = 'flex'; }

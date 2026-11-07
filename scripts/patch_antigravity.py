@@ -341,7 +341,7 @@ def get_asar_path(install_dir: Path) -> Path:
     return install_dir / "resources" / "app.asar"
 
 
-def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, character: str = None):
+def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, character: str = None, enable_pet: bool = True):
     """
     完整安装补丁流程：
     采用原位无损修改技术，精准替换 menu.js、tray.js、updater.js 和 preload.js。
@@ -441,7 +441,7 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
         runtime_js_code = f.read()
 
     nezuko_pet_file = res_dir / "nezuko-pet.js"
-    nezuko_pet_code = nezuko_pet_file.read_text(encoding="utf-8") if nezuko_pet_file.exists() else ""
+    nezuko_pet_code = (nezuko_pet_file.read_text(encoding="utf-8") if nezuko_pet_file.exists() else "") if enable_pet else ""
     real_user_quota = get_local_user_quota_info()
 
     # 始终基于纯净备份读取，确保多次重复运行不受影响
@@ -1065,6 +1065,7 @@ def main():
     parser.add_argument("--character", "-c", choices=["tanjiro", "zenitsu", "inosuke", "nezuko", "all"],
                         default=None, help="启动动画展示角色: tanjiro(炭治郎), zenitsu(善逸), inosuke(伊之助), nezuko(祢豆子), all(四象合集)")
     parser.add_argument("--dir", help="Antigravity 安装目录路径 (默认自动检测)")
+    parser.add_argument("--no-pet", action="store_true", help="不挂载桌面宠物模块 (彻底纯净模式)")
 
     args = parser.parse_args()
 
@@ -1077,7 +1078,7 @@ def main():
     repo_root = Path(__file__).resolve().parent.parent
 
     if args.action == "install":
-        apply_patch(install_dir, args.lang, repo_root, character=args.character)
+        apply_patch(install_dir, args.lang, repo_root, character=args.character, enable_pet=not args.no_pet)
     elif args.action == "restore":
         restore_backup(install_dir)
     elif args.action == "disable-updates":
