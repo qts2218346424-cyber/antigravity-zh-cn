@@ -1634,7 +1634,23 @@
       opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) scale(1) !important;
     }
 
-        #nezuko-pet-restore-pill {
+        .btn-scale-pet:hover {
+      background: rgba(168, 85, 247, 0.4) !important;
+      border-color: #c084fc !important;
+      color: #ffffff !important;
+      transform: scale(1.12);
+    }
+    .scale-val-badge {
+      font-size: 10.5px;
+      color: #facc15;
+      font-weight: bold;
+      background: rgba(168, 85, 247, 0.25);
+      border: 1px solid rgba(168, 85, 247, 0.45);
+      padding: 1px 7px;
+      border-radius: 4px;
+    }
+
+    #nezuko-pet-restore-pill {
       position: fixed;
       right: 18px;
       bottom: 12px;
@@ -1803,6 +1819,7 @@
         <button class="nezuko-capsule-btn btn-roam-mode roaming" id="btn-quick-roam" data-tip="自主走动漫步 (已开启)" title="切换自主漫步/锁定">🚶</button>
         <div id="action-buttons-container" style="display:flex; gap:7px;"></div>
         <button class="nezuko-capsule-btn btn-music-spin" id="btn-quick-music" data-tip="QQ音乐播放/切歌" title="遥控电脑QQ音乐">🎵</button>
+        <button class="nezuko-capsule-btn btn-scale-pet" id="btn-quick-scale" data-tip="缩放身材 (点击循环切换)" title="放大/缩小宠物身材">📏</button>
         <button class="nezuko-capsule-btn" id="btn-quick-board" data-tip="桌宠面板" title="打开桌宠中枢面板">🎋</button>
         <button class="nezuko-capsule-btn btn-close-pet" id="btn-quick-close-pet" data-tip="关闭/隐藏桌宠" title="关闭/隐藏桌宠">❌</button>
       </div>
@@ -1984,6 +2001,32 @@
         </div>
 
 
+        <!-- 宠物大小缩放专属控制卡片 -->
+        <div class="nezuko-section-box" style="background: rgba(168, 85, 247, 0.14); border-color: rgba(168, 85, 247, 0.4);">
+          <div class="nezuko-section-title">
+            <span style="color:#d8b4fe;">📏 宠物身材大小调节</span>
+            <span class="scale-val-badge" id="pet-scale-badge">100%</span>
+          </div>
+          <div style="font-size:10px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;">
+            支持自由缩放宠物身材大小；可拖动滑块、点击预设档位，或在宠物身上按住 <b>Ctrl + 滚轮</b> 快速微调。
+          </div>
+          <!-- 滑块与增减按钮 -->
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <button class="nezuko-ctrl-btn" id="btn-scale-dec" title="缩小 (-5%)" style="padding:3px 9px; font-weight:bold; font-size:12px;">➖</button>
+            <input type="range" id="pet-scale-slider" min="50" max="180" step="5" value="100" style="flex:1; accent-color:#a855f7; cursor:pointer;" />
+            <button class="nezuko-ctrl-btn" id="btn-scale-inc" title="放大 (+5%)" style="padding:3px 9px; font-weight:bold; font-size:12px;">➕</button>
+            <button class="nezuko-ctrl-btn" id="btn-scale-reset" title="恢复默认大小 (100%)" style="padding:3px 8px; font-size:10px;">↺ 100%</button>
+          </div>
+          <!-- 预设档位快捷键 -->
+          <div style="display:flex; gap:6px;">
+            <button class="nezuko-ctrl-btn btn-scale-preset" data-scale="0.65" style="flex:1; padding:4px 2px; font-size:10px;">迷你 65%</button>
+            <button class="nezuko-ctrl-btn btn-scale-preset" data-scale="0.80" style="flex:1; padding:4px 2px; font-size:10px;">小巧 80%</button>
+            <button class="nezuko-ctrl-btn btn-scale-preset" data-scale="1.00" style="flex:1; padding:4px 2px; font-size:10px;">标准 100%</button>
+            <button class="nezuko-ctrl-btn btn-scale-preset" data-scale="1.25" style="flex:1; padding:4px 2px; font-size:10px;">醒目 125%</button>
+            <button class="nezuko-ctrl-btn btn-scale-preset" data-scale="1.50" style="flex:1; padding:4px 2px; font-size:10px;">超大 150%</button>
+          </div>
+        </div>
+
         <!-- 动画级走动漫步与冲刺飞奔控制区 -->
         <div class="nezuko-section-box" style="background: rgba(16, 185, 129, 0.15); border-color: #10b981;">
           <div class="nezuko-section-title">
@@ -2126,6 +2169,133 @@
     else hidePet(true, false);
   };
 
+  // ==========================================
+  // 九、宠物身材尺寸放大缩小引擎 (Scale Engine)
+  // ==========================================
+  let currentPetScale = 1.0;
+  const scalePresetCycle = [1.0, 1.25, 1.5, 0.65, 0.8];
+  let scaleCycleIdx = 0;
+
+  function loadSavedPetScale() {
+    try {
+      const saved = localStorage.getItem('__AGY_PET_SCALE__');
+      if (saved) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 0.4 && parsed <= 2.2) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return 1.0;
+  }
+
+  let scaleNoticeTimer = null;
+  function showScaleNotice(pct) {
+    if (floatingMoodBubble) {
+      floatingMoodBubble.textContent = '📏 ' + pct + '%';
+      floatingMoodBubble.classList.add('show');
+      if (scaleNoticeTimer) clearTimeout(scaleNoticeTimer);
+      scaleNoticeTimer = setTimeout(() => {
+        floatingMoodBubble.classList.remove('show');
+        floatingMoodBubble.textContent = activePet === 'prince' ? '⭐' : '🌸';
+      }, 1400);
+    }
+  }
+
+  function setPetScale(val, showNotice = false) {
+    const clamped = Math.round(Math.max(0.5, Math.min(1.8, parseFloat(val) || 1.0)) * 100) / 100;
+    currentPetScale = clamped;
+    if (stageEl) {
+      stageEl.style.transform = 'scale(' + currentPetScale + ')';
+      stageEl.style.transformOrigin = 'bottom center';
+    }
+    try {
+      localStorage.setItem('__AGY_PET_SCALE__', String(currentPetScale));
+    } catch (_) {}
+
+    const pct = Math.round(currentPetScale * 100);
+    const badge = document.getElementById('pet-scale-badge');
+    if (badge) badge.textContent = pct + '%';
+
+    const slider = document.getElementById('pet-scale-slider');
+    if (slider) slider.value = String(pct);
+
+    document.querySelectorAll('.btn-scale-preset').forEach(btn => {
+      const s = parseFloat(btn.getAttribute('data-scale') || '0');
+      if (Math.abs(s - currentPetScale) < 0.03) {
+        btn.style.background = 'linear-gradient(135deg, #7c3aed, #6d28d9)';
+        btn.style.borderColor = '#c084fc';
+        btn.style.fontWeight = 'bold';
+      } else {
+        btn.style.background = 'rgba(255, 255, 255, 0.08)';
+        btn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+        btn.style.fontWeight = 'normal';
+      }
+    });
+
+    if (showNotice) {
+      showScaleNotice(pct);
+    }
+  }
+
+  // 绑定滑块拖动
+  const petScaleSlider = document.getElementById('pet-scale-slider');
+  if (petScaleSlider) {
+    petScaleSlider.addEventListener('input', (e) => {
+      setPetScale(parseFloat(e.target.value) / 100, true);
+    });
+  }
+
+  // 绑定加减与重置
+  const btnScaleInc = document.getElementById('btn-scale-inc');
+  if (btnScaleInc) {
+    btnScaleInc.onclick = (e) => {
+      e.stopPropagation();
+      setPetScale(currentPetScale + 0.05, true);
+    };
+  }
+  const btnScaleDec = document.getElementById('btn-scale-dec');
+  if (btnScaleDec) {
+    btnScaleDec.onclick = (e) => {
+      e.stopPropagation();
+      setPetScale(currentPetScale - 0.05, true);
+    };
+  }
+  const btnScaleReset = document.getElementById('btn-scale-reset');
+  if (btnScaleReset) {
+    btnScaleReset.onclick = (e) => {
+      e.stopPropagation();
+      setPetScale(1.0, true);
+    };
+  }
+
+  // 绑定预设档位
+  document.querySelectorAll('.btn-scale-preset').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const s = parseFloat(btn.getAttribute('data-scale') || '1.0');
+      setPetScale(s, true);
+    };
+  });
+
+  // 绑定头顶胶囊栏快速循环缩放
+  const btnQuickScale = document.getElementById('btn-quick-scale');
+  if (btnQuickScale) {
+    btnQuickScale.onclick = (e) => {
+      e.stopPropagation();
+      scaleCycleIdx = (scaleCycleIdx + 1) % scalePresetCycle.length;
+      setPetScale(scalePresetCycle[scaleCycleIdx], true);
+    };
+  }
+
+  // 全局 API
+  window.__AGY_SET_PET_SCALE__ = (val) => setPetScale(val, true);
+  window.__AGY_GET_PET_SCALE__ = () => currentPetScale;
+
+  // 初始化生效已保存缩放比例
+  currentPetScale = loadSavedPetScale();
+  setPetScale(currentPetScale, false);
+
   // 初始化时检查持久化休眠状态
   try {
     const isHidden = localStorage.getItem('__AGY_PET_HIDDEN__') === 'true' || localStorage.getItem('__AGY_PET_DISABLED__') === 'true';
@@ -2205,8 +2375,14 @@
 
   stageEl.addEventListener('wheel', (e) => {
     e.preventDefault();
-    if (e.deltaY > 0) musicStation.nextTrack();
-    else musicStation.prevTrack();
+    e.stopPropagation();
+    if (e.ctrlKey) {
+      const step = e.deltaY < 0 ? 0.05 : -0.05;
+      setPetScale(currentPetScale + step, true);
+    } else {
+      if (e.deltaY > 0) musicStation.nextTrack();
+      else musicStation.prevTrack();
+    }
   });
 
   // ==========================================
