@@ -83,7 +83,17 @@ SKILL_TRANSLATION_MAP = {
     "unibind-database": "查询 UniBind 经实验验证的转录因子结合位点数据集，获取高可信度的 TF-DNA 直接相互作用区域坐标数据。",
     "uniprot-database": "访问 UniProtKB、UniParc 与 UniRef 蛋白质核心数据库。检索蛋白质详细注释、功能、分类学谱系、序列与文献证据。",
     "uv": "检查并管理 Python uv 极速包管理器。确保 uv 已安装并正确配置在系统 PATH 环境变量中。",
-    "workflow-skill-creator": "将已完成的用户工作流或交互操作沉淀提炼为可复用的自定义智能体技能 (Skill)。"
+    "workflow-skill-creator": "将已完成的用户工作流或交互操作沉淀提炼为可复用的自定义智能体技能 (Skill)。",
+    "tabbit": "通过 Tabbit 已安装的命令行界面 (CLI) 执行浏览器自动化导航、页面检查、元素交互与视觉验证。",
+    "cheminformatics-cofolding": "预测蛋白质-配体、蛋白质-核酸及共价抑制剂复合物的协同折叠三维构象：生成 AlphaFold 3 JSON 与 Boltz-2 输入配置，从 mmCIF/PDB 提取结合态配体姿态，并计算 3D 蛋白-配体相互作用指纹 (PLIF) 与药效团重叠度。",
+    "cheminformatics-core": "计算 RDKit 分子理化性质描述符（MW、cLogP、TPSA、CNS MPO、SA 评分）、PAINS/Brenk 结构警示、pH 7.4 电离状态、同系物活性断崖 (Activity Cliffs)、组合化学分子库枚举及有机金属空间位阻 %V_bur。",
+    "cheminformatics-doc2mol": "从专利、学术文献与合成方案中抽取并校验化学结构式：通过 OPSIN 与 PubChem 解析 IUPAC 命名与 Markush 骨架/R基团表，检索 Google Patents 全文与生物测定数据并导出规范 SDF/CSV。",
+    "cheminformatics-ml": "训练、基准评估并校验化学分子系列的预测性 SAR 与 QSAR/ADMET 机器学习模型：支持小样本正则化回归、嵌套交叉验证、基于 Tukey HSD 的模型分层、分子骨架/时间切分、匹配分子对 (MMPA) 分析与候选分子评分。",
+    "cheminformatics-physics": "模拟 3D 分子物理场、构象系综与计算机辅助药物设计 (CADD) 工作流：考虑 pH 依赖的质子化状态、ETKDGv3 3D 构象生成、二面角/PES 扭转扫描、AutoDock Vina/smina 分子对接、PROTAC/大环分子三维几何结构及 OpenMM 分子动力学模拟。",
+    "cheminformatics-reactions": "推导并模拟有机化学反应、逆合成路线、多步合成路径、分子内环化及反应 SMARTS：优先检索实验前例，校验原子守恒、前手性 (pro-R/pro-S, Re/Si)、立体异构与 NMR 等价性，并渲染二维电子转移弯箭头机理图。",
+    "rdkit-general": "基于 ACS 1996 出版级样式生成 2D 化学结构示意图 (PNG/SVG)、交互式 HTML 分子网格、化学可视化微件及 ChemDraw (.cdxml/.cdx) 格式文件，校验 IUPAC 与立体化学命名法并提供 RDKit 版本兼容辅助。",
+    "permissioned-github": "GitHub 平台受控交互规范。当命令由于代理沙箱环境权限限制而失败时，指导安全地向用户申请必要的授权与凭据。",
+    "run-workflow": "通过 `run_workflow` 工具编写并运行动态多智能体工作流脚本：使用 Python 脚本编排多个代理（支持 `agent`、`parallel`、`pipeline` 与 `phase`），适用于多模块并发分析、多维度审查与复杂阶段聚合任务。"
 }
 
 def get_skill_search_roots() -> list[Path]:
@@ -107,44 +117,70 @@ def find_all_skills() -> list[Path]:
 def localize_skill_file(skill_file: Path, dry_run: bool = False) -> tuple[bool, str, str]:
     """
     稳健汉化单个技能的 SKILL.md 文件中的 description 元数据。
-    彻底杜绝多行缩进文本遗留与 YAML 损坏问题。
+    支持从 YAML Frontmatter 解析真实技能名、下划线与中划线自适应匹配、以及特殊目录结构映射。
     返回: (是否修改, 技能名, 描述信息)
     """
-    skill_name = skill_file.parent.name
-    if skill_name not in SKILL_TRANSLATION_MAP:
-        return False, skill_name, "未在汉化字典中收录"
-
-    target_desc = SKILL_TRANSLATION_MAP[skill_name]
     try:
         content = skill_file.read_text(encoding="utf-8")
     except Exception as e:
-        return False, skill_name, f"读取失败: {e}"
+        return False, skill_file.parent.name, f"读取失败: {e}"
 
     if not content.startswith("---"):
-        return False, skill_name, "无 Frontmatter 标记"
+        return False, skill_file.parent.name, "无 Frontmatter 标记"
 
     parts = content.split("---", 2)
     if len(parts) < 3:
-        return False, skill_name, "Frontmatter 不完整"
+        return False, skill_file.parent.name, "Frontmatter 不完整"
 
     fm_text = parts[1]
     body_text = parts[2]
 
-    # 解析 YAML 检查是否已包含中文
+    # 解析 YAML 提取元数据
+    yaml_name = ""
+    cur_desc = ""
     try:
         data = yaml.safe_load(fm_text)
         if isinstance(data, dict):
-            cur = str(data.get("description", ""))
-            if any('\u4e00' <= char <= '\u9fa5' for char in cur):
-                return False, skill_name, "已包含中文说明"
+            yaml_name = str(data.get("name", "")).strip()
+            cur_desc = str(data.get("description", ""))
+            if any('\u4e00' <= char <= '\u9fa5' for char in cur_desc):
+                return False, yaml_name or skill_file.parent.name, "已包含中文说明"
     except Exception:
         pass
 
+    parent_name = skill_file.parent.name
+    # 构建所有候选技能标识符
+    candidates = []
+    if yaml_name:
+        candidates.extend([yaml_name, yaml_name.replace('_', '-'), yaml_name.replace('-', '_')])
+    if parent_name:
+        candidates.extend([parent_name, parent_name.replace('_', '-'), parent_name.replace('-', '_')])
+
+    # 特殊相对路径特征映射
+    norm_path = str(skill_file).replace('\\', '/').lower()
+    if 'android-cli-plugin/skills/skill.md' in norm_path or 'android-cli-plugin\\skills\\skill.md' in norm_path:
+        candidates.append('android-cli')
+    elif 'device-hub/skill.md' in norm_path or 'device-hub\\skill.md' in norm_path:
+        candidates.append('android-device-hub')
+    elif 'compose-preview/skill.md' in norm_path or 'compose-preview\\skill.md' in norm_path:
+        candidates.append('compose-preview')
+
+    matched_key = None
+    for cand in candidates:
+        if cand in SKILL_TRANSLATION_MAP:
+            matched_key = cand
+            break
+
+    display_name = yaml_name or parent_name
+    if not matched_key:
+        return False, display_name, "未在汉化字典中收录"
+
+    target_desc = SKILL_TRANSLATION_MAP[matched_key]
+
     if dry_run:
-        return True, skill_name, f"待汉化 -> {target_desc[:40]}..."
+        return True, display_name, f"待汉化 -> {target_desc[:40]}..."
 
     # 安全重构 Frontmatter 的 description 块
-    # 匹配从 ^description: 开始，到下一个非缩进键名（如 ^[a-zA-Z0-9_-]+:）或 Frontmatter 结尾的所有行
     pattern = r"(?m)^description:(?:[ \t]*[^\r\n]*)?(?:\r?\n[ \t]+[^\r\n]*)*"
     safe_desc = target_desc.replace('"', '\\"')
     new_desc_field = f'description: "{safe_desc}"'
@@ -158,14 +194,16 @@ def localize_skill_file(skill_file: Path, dry_run: bool = False) -> tuple[bool, 
     try:
         parsed_new = yaml.safe_load(new_fm)
         if not isinstance(parsed_new, dict):
-            return False, skill_name, "生成的新 Frontmatter 不是合法的映射结构，跳过替换"
+            return False, display_name, "生成的新 Frontmatter 不是合法的映射结构，跳过替换"
     except Exception as e:
-        return False, skill_name, f"YAML 语法校验未通过: {e}"
+        return False, display_name, f"YAML 语法校验未通过: {e}"
 
     new_content = f"---{new_fm}---{body_text}"
     if new_content != content:
         skill_file.write_text(new_content, encoding="utf-8")
-        return True, skill_name, target_desc
+        return True, display_name, target_desc
+
+    return False, display_name, "无变更"
 
     return False, skill_name, "无变更"
 

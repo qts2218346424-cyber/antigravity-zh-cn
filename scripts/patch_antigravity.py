@@ -566,10 +566,22 @@ function __agyTranslateMenu(m) {{
             scanDir(fullPath, depth + 1);
           }} else if (ent.name === 'SKILL.md') {{
             const skillName = path.basename(dir);
-            if (skillMap[skillName]) {{
-              const targetZh = skillMap[skillName];
-              const content = fs.readFileSync(fullPath, 'utf8');
-              if (!/[\u4e00-\u9fa5]/.test(content.slice(0, 500))) {{
+            const content = fs.readFileSync(fullPath, 'utf8');
+            let yamlName = '';
+            for (const l of content.slice(0, 1000).split(String.fromCharCode(10))) {{
+              const trimmed = l.trim();
+              if (trimmed.startsWith('name:')) {{
+                yamlName = trimmed.slice(5).trim().replace(/^['"]|['"]$/g, '');
+                break;
+              }}
+            }}
+            let targetZh = skillMap[skillName] || skillMap[skillName.replace(/_/g, '-')] || (yamlName && (skillMap[yamlName] || skillMap[yamlName.replace(/_/g, '-')]));
+            if (!targetZh && fullPath.includes('android-cli-plugin')) {{
+              if (fullPath.includes('device-hub')) targetZh = skillMap['android-device-hub'];
+              else if (fullPath.includes('compose-preview')) targetZh = skillMap['compose-preview'];
+              else targetZh = skillMap['android-cli'];
+            }}
+            if (targetZh && !/[\u4e00-\u9fa5]/.test(content.slice(0, 500))) {{
                 const lines = content.split(String.fromCharCode(10));
                 let inDesc = false;
                 let replaced = false;
@@ -597,8 +609,7 @@ function __agyTranslateMenu(m) {{
               }}
             }}
           }}
-        }}
-      }} catch (_) {{}}
+        }} catch (_) {{}}
     }};
     setTimeout(() => {{
       roots.forEach(r => {{ if (fs.existsSync(r)) scanDir(r); }});
