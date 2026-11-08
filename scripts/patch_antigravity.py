@@ -581,6 +581,9 @@ function __agyTranslateMenu(m) {{
         updater_content = updater_content.replace('"Checking for Updates..."', '"正在检查更新..."')
         updater_content = updater_content.replace('"Downloading Update..."', '"正在下载更新..."')
         updater_content = updater_content.replace('"Restart to Update"', '"重启以更新"')
+        updater_content = updater_content.replace("title: 'Check for Updates'", "title: '检查更新'")
+        updater_content = updater_content.replace("message: 'No updates available'", "message: '当前已是最新版本'")
+        updater_content = updater_content.replace("buttons: ['OK']", "buttons: ['确定']")
         # 禁止后台静默自动下载与退出时静默覆盖安装，防止破坏汉化
         updater_content = updater_content.replace(
             "electron_updater_1.autoUpdater.autoDownload = true;",
@@ -879,11 +882,11 @@ function __agyTranslateNotif(text) {{
                 pass
 
     print("[OK] Antigravity 汉化补丁无损安装成功！所有解包索引 100% 保留！")
-    # 默认自动禁止静默更新，防止重启后被官方静默覆盖
+    # 确保官方更新配置文件 app-update.yml 正常就绪（防静默覆盖已由 updater.js 代码级 autoDownload=false 全程保障）
     try:
-        toggle_auto_updates(install_dir, disable=True)
+        toggle_auto_updates(install_dir, disable=False)
     except Exception as e:
-        print(f"  [!] 自动禁用更新提示: {e}")
+        print(f"  [!] 自动更新配置同步提示: {e}")
 
     # 自动固化与同步“源头中文深度思考协议”，实现“源头指令 + 客户端 DOM 网关”双层协同
     try:

@@ -14,6 +14,24 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 NEW_TRANSLATIONS = {
+    # Antigravity v2.29.1 新增界面与特性文本
+    "Attach terminal output": "附加终端输出",
+    "Browse MCP resources": "浏览 MCP 资源",
+    "Browse rules": "浏览规则",
+    "Docs, Sheets, Slides, and folders": "文档、表格、幻灯片与文件夹",
+    "Drive": "云端硬盘",
+    "Extension (Antigravity IDE)": "扩展 (Antigravity IDE)",
+    "Failed to create remote project": "创建远程项目失败",
+    "For example: every morning, summarize new bugs assigned to me and anything that changed overnight.": "例如：每天早晨，汇总分配给我的新缺陷以及通宵发生的所有变更。",
+    "From": "来自",
+    "New Conversation Button": "新建对话按钮",
+    "Open in New Tab": "在新标签页中打开",
+    "Reads": "读取",
+    "Search conversations": "搜索对话",
+    "This Computer": "这台电脑",
+    "Try again": "重试",
+    "e.g. work": "例如：工作",
+
     # Antigravity v2.26.0 新增界面与特性文本
     "Authenticate": "认证",
     "Set up authentication": "设置认证",
