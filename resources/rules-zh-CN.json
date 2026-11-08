@@ -1,5 +1,21 @@
 [
   [
+    "^Clear visited URLs and autocomplete suggestions from (?:the built-in browser|side panel preview)\\.?$",
+    "清除内置浏览器中已访问的网址与自动补全建议。"
+  ],
+  [
+    "^Folder where files downloaded in the built-in browser are saved\\.?$",
+    "保存内置浏览器中所下载文件的文件夹。"
+  ],
+  [
+    "^what\\s+can\\s+we\\s+get\\s+done\\s+today\\??$",
+    "今天想做些什么？"
+  ],
+  [
+    "^(?:Hi|Hello|Hey)\\s+(.+?),\\s*what\\s+can\\s+we\\s+get\\s+done\\s+today\\??$",
+    "你好 $1，今天想做些什么？"
+  ],
+  [
     "^to be installed\\.\\s*The browser subagent can be invoked by typing /browser in the conversation input box\\.?$",
     "环境。可在对话输入框中键入 /browser 唤出浏览器子智能体。"
   ],

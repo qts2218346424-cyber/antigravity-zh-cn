@@ -287,6 +287,15 @@
         return '欢迎使用 ';
       }
 
+      // 1.23.1 首页个性化问候语动态匹配 (Hi {name}, what can we get done today? / What can we get done today?)
+      const homeGreetingMatch = text.match(/^(?:Hi|Hello|Hey)\s+(.+?),\s*what\s+can\s+we\s+get\s+done\s+today\??$/i);
+      if (homeGreetingMatch) {
+        return `你好 ${homeGreetingMatch[1]}，今天想做些什么？`;
+      }
+      if (/^what\s+can\s+we\s+get\s+done\s+today\??$/i.test(text)) {
+        return '今天想做些什么？';
+      }
+
       // 1.24 动态空状态与通知提示
       if (/^No\s+changes\s+to\s+review\.?$/i.test(text)) {
         return '没有需要审查的更改';
