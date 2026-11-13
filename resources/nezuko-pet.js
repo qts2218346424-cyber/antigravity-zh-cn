@@ -117,11 +117,12 @@
       this.externalArtist = '';
       this.externalLrc = '';
       this.lastSyncTime = 0;
+      this.syncInFlight = false;
       this.initIPC();
       this.loadTrack(0);
-      // QQ 音乐定时无感嗅探
+      // QQ 音乐定时无感嗅探（页面隐藏时跳过；上一次查询未返回时不叠加新查询）
       setInterval(() => {
-        if (this.mode === 'qqmusic') {
+        if (this.mode === 'qqmusic' && !(typeof document !== 'undefined' && document.hidden)) {
           this.syncQQMusicStatus(false);
         }
       }, 4000);
@@ -169,6 +170,12 @@
         this.ipc.send('__agy_media_command__', cmd);
         return;
       }
+      // 独立桌面桌宠窗口：交给 Python 桥发送系统媒体键
+      const api = window.pywebview && window.pywebview.api;
+      if (api && cmd !== 'status' && typeof api.send_media_command === 'function') {
+        try { api.send_media_command(cmd); } catch (_) {}
+        return;
+      }
       try {
         window.postMessage({ type: '__agy_media_cmd__', action: cmd }, '*');
       } catch (_) {}
@@ -204,12 +211,24 @@
       // 1. 发送 IPC 状态查询指令
       this.sendIPCCommand('status');
 
-      // 2. 本地 Node 进程直连备用嗅探
+      // 2. 独立桌面桌宠窗口 (pywebview)：直接调用 Python 桥
+      if (this.syncInFlight) return;
       try {
-        if (window.require) {
-          const { exec } = window.require('child_process');
-          const pyCmd = 'python -X utf8 "e:\antigravity-cn\resources\media_helper.py" status';
-          exec(pyCmd, { encoding: 'utf-8' }, (err, stdout) => {
+        const api = window.pywebview && window.pywebview.api;
+        if (api && typeof api.get_media_status === 'function') {
+          this.syncInFlight = true;
+          Promise.resolve(api.get_media_status()).then((info) => {
+            if (info) this.applyExternalMusicStatus(info, showFeedback);
+          }).catch(() => {}).then(() => { this.syncInFlight = false; });
+          return;
+        }
+        // 3. 具备 Node 能力的窗口：使用补丁时解析好的助手命令（绝不写死盘符路径），execFile 不经过 shell
+        const helperCmd = window.__AGY_MEDIA_HELPER_CMD__;
+        if (window.require && Array.isArray(helperCmd) && helperCmd.length) {
+          const { execFile } = window.require('child_process');
+          this.syncInFlight = true;
+          execFile(helperCmd[0], helperCmd.slice(1).concat(['status']), { encoding: 'utf8', windowsHide: true, timeout: 15000 }, (err, stdout) => {
+            this.syncInFlight = false;
             if (!err && stdout) {
               try {
                 const info = JSON.parse(stdout);
@@ -218,7 +237,7 @@
             }
           });
         }
-      } catch (_) {}
+      } catch (_) { this.syncInFlight = false; }
     }
 
     setMode(mode) {
@@ -699,6 +718,7 @@
       this.velocityPetX = 0;
       this.velocityPetY = 0;
       this.isRunning = false;
+      this.rafId = 0;
       this.initPoints();
     }
 
@@ -719,17 +739,21 @@
     start() {
       if (this.isRunning) return;
       this.isRunning = true;
+      if (this.rafId) cancelAnimationFrame(this.rafId);
       const loop = (timestamp) => {
+        this.rafId = 0;
         if (!this.isRunning) return;
         this.update(timestamp);
         this.render();
-        requestAnimationFrame(loop);
+        this.rafId = requestAnimationFrame(loop);
       };
-      requestAnimationFrame(loop);
+      this.rafId = requestAnimationFrame(loop);
     }
 
     stop() {
       this.isRunning = false;
+      // 取消已排队的帧：否则 stop() 后马上 start() 会留下旧循环，两条循环叠加、每切换一次多一份开销
+      if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = 0; }
     }
 
     update(timestamp) {
@@ -1372,9 +1396,10 @@
       z-index: 1;
       animation: pedestalGlow 4s infinite ease-in-out alternate;
     }
+    /* 性能：只动画 transform/opacity（原先逐帧动画 filter: drop-shadow 会导致每帧重绘） */
     @keyframes pedestalGlow {
       0% { transform: translateX(-50%) scale(0.95); opacity: 0.7; }
-      100% { transform: translateX(-50%) scale(1.08); opacity: 1; filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.55)); }
+      100% { transform: translateX(-50%) scale(1.08); opacity: 1; }
     }
 
     /* 小王子完整无瑕手绘全身立绘主体 (彻底杜绝生硬矩形切片，玫瑰玻璃罩100%完整) */
@@ -1409,10 +1434,13 @@
       pointer-events: none;
       animation: roseHeartbeat 2.8s infinite ease-in-out alternate;
       z-index: 7;
+      /* 模糊固定为静态值（只栅格化一次），动画只改 transform/opacity，避免逐帧重绘滤镜 */
+      filter: blur(2.5px);
+      box-shadow: 0 0 10px 2px rgba(244, 63, 94, 0.45);
     }
     @keyframes roseHeartbeat {
-      0% { transform: translateX(-50%) scale(0.9); opacity: 0.5; filter: blur(2px); }
-      100% { transform: translateX(-50%) scale(1.25); opacity: 0.95; filter: blur(3px) drop-shadow(0 0 8px rgba(244, 63, 94, 0.85)); }
+      0% { transform: translateX(-50%) scale(0.9); opacity: 0.5; }
+      100% { transform: translateX(-50%) scale(1.25); opacity: 0.95; }
     }
 
     /* 金黄流体丝绸长围巾 (柔和微风燕尾披帛，告别僵直粗黄条) */
@@ -1820,12 +1848,13 @@
     .nezuko-song-title { font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
     .nezuko-song-sub { font-size: 10px; color: #a7f3d0; }
     .sound-waves-box { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
-    .sound-bar { width: 3px; background: #10b981; border-radius: 2px; animation: barJump 0.8s infinite ease-in-out alternate; }
+    .sound-bar { width: 3px; height: 14px; background: #10b981; border-radius: 2px; transform-origin: 50% 100%; animation: barJump 0.8s infinite ease-in-out alternate; }
     .sound-bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
     .sound-bar:nth-child(2) { height: 14px; animation-delay: 0.3s; }
     .sound-bar:nth-child(3) { height: 9px; animation-delay: 0.2s; }
     .sound-bar:nth-child(4) { height: 12px; animation-delay: 0.4s; }
-    @keyframes barJump { 0% { height: 3px; } 100% { height: 14px; } }
+    /* 性能：用 scaleY 代替逐帧修改 height（后者每帧触发重排） */
+    @keyframes barJump { 0% { transform: scaleY(0.22); } 100% { transform: scaleY(1); } }
     .nezuko-music-controls { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
     .nezuko-ctrl-play { background: linear-gradient(135deg, #059669, #047857) !important; border-color: #34d399 !important; font-weight: bold; padding: 5px 16px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
 
@@ -2453,6 +2482,7 @@
 
   const MOOD_LIST = ['🌸', '✨', '💤', '❓', '💖', '🍵', '🍂'];
   function showRandomMood() {
+    if (document.hidden) return;
     if (Math.random() < 0.45) {
       const mood = MOOD_LIST[Math.floor(Math.random() * MOOD_LIST.length)];
       moodBubble.textContent = mood;
@@ -2871,27 +2901,35 @@
   schedulePrinceBlink();
 
   // 2.5D 视线与头部跟随追踪系统 (Look-At Tracking)
-  window.addEventListener('mousemove', (e) => {
+  // 性能：mousemove 只记录坐标，每帧最多计算一次；包围盒缓存 250ms，避免每个鼠标事件都强制同步布局
+  const lookAt = { x: 0, y: 0, raf: 0, rect: null, rectAt: 0, head: null, last: '' };
+  function applyLookAt() {
+    lookAt.raf = 0;
     if (activePet !== 'prince' || isDragging || isActionPlaying) return;
     const princeRig = document.getElementById('pet-prince');
     if (!princeRig) return;
-    const rect = princeRig.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + 45;
-    const dx = e.clientX - centerX;
-    const dy = e.clientY - centerY;
+    const now = performance.now();
+    if (!lookAt.rect || now - lookAt.rectAt > 250) { lookAt.rect = princeRig.getBoundingClientRect(); lookAt.rectAt = now; }
+    const rect = lookAt.rect;
+    const dx = lookAt.x - (rect.left + rect.width / 2);
+    const dy = lookAt.y - (rect.top + 45);
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const headEl = document.getElementById('prince-bone-head');
-    if (headEl) {
-      if (dist < 500) {
-        const rotY = Math.max(-10, Math.min(10, dx / 38));
-        const rotX = Math.max(-8, Math.min(6, -dy / 48));
-        headEl.style.transform = `rotateY(${rotY}deg) rotateX(${rotX}deg) rotate(${rotY * 0.35}deg)`;
-      } else if (headEl.style.transform) {
-        headEl.style.transform = '';
-      }
+    const headEl = lookAt.head || (lookAt.head = document.getElementById('prince-bone-head'));
+    if (!headEl) return;
+    let next = '';
+    if (dist < 500) {
+      const rotY = Math.max(-10, Math.min(10, dx / 38));
+      const rotX = Math.max(-8, Math.min(6, -dy / 48));
+      next = `rotateY(${rotY.toFixed(2)}deg) rotateX(${rotX.toFixed(2)}deg) rotate(${(rotY * 0.35).toFixed(2)}deg)`;
     }
-  });
+    if (next !== lookAt.last) { headEl.style.transform = next; lookAt.last = next; }
+  }
+  window.addEventListener('mousemove', (e) => {
+    if (activePet !== 'prince' || isDragging || isActionPlaying) return;
+    lookAt.x = e.clientX; lookAt.y = e.clientY;
+    if (!lookAt.raf) lookAt.raf = requestAnimationFrame(applyLookAt);
+  }, { passive: true });
+  window.addEventListener('resize', () => { lookAt.rect = null; }, { passive: true });
 
   switchPet(activePet);
 
@@ -2959,6 +2997,7 @@
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      lookAt.rect = null;
       if (petMotion) petMotion.onDragEnd();
       if (isDragging) {
         const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
@@ -3031,6 +3070,7 @@
       rafId: 0,
       slowTimer: 0,
       lastT: 0,
+      idleWake: false,
       time: Math.random() * 100,
       breathPhase: 0,
       sighUntil: 0,
@@ -3052,8 +3092,22 @@
     // 平滑伪噪声 (无理数频率叠加)，返回约 [-1, 1]
     const noise = (t, seed) => (Math.sin(t * 1.0 + seed) + Math.sin(t * 2.173 + seed * 1.7) * 0.5 + Math.sin(t * 0.531 + seed * 3.1) * 0.7) / 2.2;
 
+    // 是否真正可见：除了内联 display，还要识别被材质包 CSS 隐藏（pet.hidden）或整个舞台不在视口内的情况。
+    // 用 IntersectionObserver 获知，避免每帧读取布局。
+    let inView = true;
+    if (typeof IntersectionObserver === 'function') {
+      try {
+        const io = new IntersectionObserver((entries) => {
+          const e = entries[entries.length - 1];
+          const was = inView;
+          inView = !!(e && e.isIntersecting);
+          if (inView && !was) schedule();
+        });
+        io.observe(rig);
+      } catch (_) { inView = true; }
+    }
     function isNezukoVisible() {
-      return activePet === 'nezuko' && rig.style.display !== 'none' && (!stageEl || stageEl.style.display !== 'none');
+      return inView && activePet === 'nezuko' && rig.style.display !== 'none' && (!stageEl || stageEl.style.display !== 'none');
     }
 
     // ---------- 外部事件钩子 ----------
@@ -3073,6 +3127,7 @@
       st.lastHopAt = now;
       st.hop = { start: now, dur: 300 + h * 6, h: h };
       S.squash.v -= 1.2; // 起跳拉伸
+      wake();
     }
 
     function land(strength) {
@@ -3086,6 +3141,7 @@
     function onMoveStart(kind) {
       st.moveKind = kind;
       if (kind === 'dash') { S.squash.v += 1.5; }
+      wake();
     }
 
     function onMoveEnd(kind) {
@@ -3093,6 +3149,7 @@
       if (!st.enabled) return;
       if (kind === 'dash') { S.rot.v += 70; land(0.6); }
       else { S.rot.v += 18; }
+      wake();
     }
 
     function onAppear() {
@@ -3172,8 +3229,8 @@
       }
       d.vx = 0; d.vy = 0; d.source = null;
     }
-    function onDragMove(screenX, screenY) { dragSample(screenX, screenY, performance.now(), 'mouse'); }
-    function onDragEnd() { if (st.drag.source === 'mouse') dragEnd(); }
+    function onDragMove(screenX, screenY) { dragSample(screenX, screenY, performance.now(), 'mouse'); wake(); }
+    function onDragEnd() { if (st.drag.source === 'mouse') { dragEnd(); wake(); } }
 
     function pollDesktopWindow(now) {
       if (!isDesktop) return;
@@ -3226,7 +3283,8 @@
         if (st.drag.active) dragEnd();
         clearTransforms();
         st.lastT = 0;
-        st.slowTimer = setTimeout(() => { st.slowTimer = 0; schedule(); }, 300);
+        // 不可见时低频轮询（桌面窗口需同步坐标；1 秒一次足够，IntersectionObserver 会在重新可见时立即唤醒）
+        st.slowTimer = setTimeout(() => { st.slowTimer = 0; schedule(); }, isDesktop ? 500 : 1000);
         return;
       }
 
@@ -3234,7 +3292,8 @@
       pollDesktopWindow(now);
 
       const busy = st.moveKind || st.hop || st.drag.active || isActionPlaying;
-      if (st.lastT && !busy && now - st.lastT < 30) { schedule(); return; } // 待机约 30fps
+      const idleWake = st.idleWake; st.idleWake = false;
+      if (st.lastT && !busy && !idleWake && now - st.lastT < IDLE_FRAME_MS - 8) { scheduleIdle(now); return; }
       let dt = st.lastT ? (now - st.lastT) / 1000 : 1 / 60;
       st.lastT = now;
       dt = Math.min(dt, 1 / 20);
@@ -3307,6 +3366,7 @@
       }
 
       const sq = clamp(S.squash.x + breath * 0.008, -0.18, 0.2);
+      const busyAfter = st.moveKind || st.hop || st.drag.active || isActionPlaying || springsMoving();
       writeTransforms({
         ty: hopY + S.bounceY.x + breath * 1.2,
         rot: clamp(S.rot.x, -22, 22),
@@ -3317,12 +3377,36 @@
         legs: legs || Math.abs(S.legL.x) > 0.2 || Math.abs(S.legR.x) > 0.2,
         ll: S.legL.x, lr: S.legR.x
       });
-      schedule();
+      if (busyAfter) schedule(); else scheduleIdle(now);
+    }
+
+    // 待机（只有呼吸/张望）时约 30fps：用定时器等到下一帧时刻再申请 rAF，
+    // 而不是每个显示帧都唤醒一次回调再空跑返回（120/144Hz 屏上空跑次数更多）。
+    const IDLE_FRAME_MS = 33;
+    // 弹簧是否仍在明显回弹（跳跃/落地/甩动之后）：此时保持 60fps；呼吸、张望这类缓慢跟随算待机
+    function springsMoving() {
+      if (Math.abs(S.squash.v) > 0.3 || Math.abs(S.squash.x - S.squash.t) > 0.012) return true;
+      for (let i = 0; i < springList.length; i++) {
+        const sp = springList[i];
+        if (sp !== S.squash && (Math.abs(sp.v) > 8 || Math.abs(sp.x - sp.t) > 1.5)) return true;
+      }
+      return false;
+    }
+    function scheduleIdle(now) {
+      if (!st.enabled || document.hidden || st.rafId || st.slowTimer) return;
+      const elapsed = performance.now() - (st.lastT || now);
+      const wait = Math.max(0, IDLE_FRAME_MS - elapsed - 10);
+      st.slowTimer = setTimeout(() => { st.slowTimer = 0; st.idleWake = true; schedule(); }, wait);
     }
 
     function schedule() {
       if (!st.enabled || document.hidden || st.rafId || st.slowTimer) return;
       st.rafId = requestAnimationFrame(tick);
+    }
+    // 外部事件（跳跃、拖拽、动作）需要立刻进入 60fps：取消待机定时器
+    function wake() {
+      if (st.slowTimer) { clearTimeout(st.slowTimer); st.slowTimer = 0; }
+      schedule();
     }
     function stopLoop() {
       if (st.rafId) { cancelAnimationFrame(st.rafId); st.rafId = 0; }

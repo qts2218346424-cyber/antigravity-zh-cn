@@ -45,7 +45,8 @@ def validate_js_syntax(code: str, file_desc: str = "javascript") -> bool:
             temp_path = tf.name
 
         try:
-            res = subprocess.run(["node", "-c", temp_path], capture_output=True, text=True, timeout=5, **_NO_WINDOW)
+            res = subprocess.run(["node", "-c", temp_path], capture_output=True, text=True, encoding="utf-8",
+                                 errors="replace", timeout=30, **_NO_WINDOW)
             if res.returncode != 0:
                 err_msg = (res.stderr or res.stdout).strip()
                 print(f"  [CRITICAL ERROR] JS 语法校验失败 ({file_desc}):\n{err_msg}")
@@ -61,7 +62,9 @@ def validate_js_syntax(code: str, file_desc: str = "javascript") -> bool:
         return True
     except SyntaxError:
         raise
-    except Exception:
+    except Exception as e:  # noqa: BLE001
+        # 超时等异常：降级跳过，但要说明原因，避免“静默通过”
+        print(f"  [!] JS 语法校验未执行 ({file_desc}): {e}")
         return True
 
 
@@ -76,7 +79,7 @@ def _is_running_inside_antigravity() -> bool:
             while pid and pid > 1:
                 result = subprocess.run(
                     ["ps", "-p", str(pid), "-o", "ppid=,comm="],
-                    capture_output=True, text=True, timeout=3
+                    capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3
                 )
                 if result.returncode != 0:
                     break
@@ -105,9 +108,9 @@ def _is_running_inside_antigravity() -> bool:
         )
         result = subprocess.run(
             ["powershell.exe", "-NoProfile", "-Command", ps_script],
-            capture_output=True, text=True, timeout=5, **_NO_WINDOW
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5, **_NO_WINDOW
         )
-        return "FOUND" in result.stdout
+        return "FOUND" in (result.stdout or "")
     except Exception:
         return False
 
@@ -128,7 +131,7 @@ def stop_antigravity_processes():
                 "Get-Process -Name 'Antigravity', 'language_server' -ErrorAction SilentlyContinue | "
                 "Stop-Process -Force -ErrorAction SilentlyContinue"
             )
-            subprocess.run(["powershell.exe", "-NoProfile", "-Command", cmd], capture_output=True, text=True, timeout=5, **_NO_WINDOW)
+            subprocess.run(["powershell.exe", "-NoProfile", "-Command", cmd], capture_output=True, timeout=15, **_NO_WINDOW)
             import time; time.sleep(1)  # 等待文件锁释放
         except Exception:
             pass
@@ -149,6 +152,33 @@ def stop_antigravity_processes():
             pass
 
 
+
+
+MEDIA_ACTIONS = ("status", "play_pause", "next", "prev")
+
+
+def resolve_media_helper_command(res_dir: Path) -> list[str]:
+    """在打补丁时解析多媒体助手的完整启动命令（绝不写死盘符路径）。
+
+    - 源码版：当前 Python 解释器（绝对路径）+ 仓库内 resources/media_helper.py；
+    - 打包版：解包目录是临时的，先把 media_helper.py 复制到持久的用户配置目录
+      （与 PR #3 的做法一致），并直接调用本程序的 ``--media`` 模式运行内置助手，
+      这样用户电脑上即使没有安装 Python 也能联动 QQ 音乐。
+    返回值是 argv 列表，由 Electron 主进程以 execFile 方式调用（不经过 shell）。
+    """
+    helper = (Path(res_dir) / "media_helper.py").resolve()
+    if getattr(sys, "frozen", False):
+        try:
+            import skin_manager
+            persist = skin_manager.config_dir() / "media_helper.py"
+            persist.parent.mkdir(parents=True, exist_ok=True)
+            if helper.is_file():
+                shutil.copy2(helper, persist)
+        except Exception:
+            pass
+        return [str(Path(sys.executable).resolve()), "--media"]
+    py = Path(sys.executable).resolve() if sys.executable else Path("python")
+    return [str(py), "-X", "utf8", str(helper)]
 
 
 def align4(size: int) -> int:
@@ -401,6 +431,8 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     nezuko_pet_file = res_dir / "nezuko-pet.js"
     nezuko_pet_code = (nezuko_pet_file.read_text(encoding="utf-8") if nezuko_pet_file.exists() else "") if enable_pet else ""
 
+    media_helper_cmd = resolve_media_helper_command(res_dir)
+
     # 始终基于纯净备份读取，确保多次重复运行不受影响
     source_asar = backup_path if backup_path.exists() else asar_path
     print(f"[2/4] 正在读取并解析 ASAR 索引 (源: {source_asar.name})...")
@@ -415,6 +447,7 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     window.__AGY_ZH_LANG__ = {json.dumps(lang)};
     window.__AGY_ZH_DICT__ = {json.dumps(lang_dict, ensure_ascii=False)};
     window.__AGY_ZH_RULES__ = {json.dumps(rules_list, ensure_ascii=False)};
+    window.__AGY_MEDIA_HELPER_CMD__ = {json.dumps(media_helper_cmd if enable_pet else None, ensure_ascii=False)};
     {runtime_js_code}
     {nezuko_pet_code}
   }} catch(e) {{
@@ -544,12 +577,12 @@ function __agyTranslateMenu(m) {{
                 const newLines = [];
                 for (let i = 0; i < lines.length; i++) {{
                   const line = lines[i];
-                  if (!replaced && /^description:\s*/.test(line)) {{
+                  if (!replaced && /^description:\\s*/.test(line)) {{
                     inDesc = true;
                     replaced = true;
                     newLines.push('description: ' + JSON.stringify(targetZh));
                   }} else if (inDesc) {{
-                    if (/^\s+/.test(line)) {{
+                    if (/^\\s+/.test(line)) {{
                       continue; // 跳过原英文的多行缩进行
                     }} else {{
                       inDesc = false;
@@ -737,24 +770,17 @@ const __AGY_ZH_CODE__ = {js_raw};
         ipc_content = read_asar_file_content(asar_data, "dist/ipcHandlers.js").decode("utf-8")
         if PATCH_MARKER not in ipc_content:
             notif_dict_json = json.dumps(lang_dict, ensure_ascii=False)
-            media_helper_path = (res_dir / "media_helper.py").resolve()
-            if getattr(sys, "frozen", False):
-                # 打包版的解包目录是临时的，把多媒体助手复制到持久的用户配置目录
-                try:
-                    import skin_manager
-                    persist = skin_manager.config_dir() / "media_helper.py"
-                    persist.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(media_helper_path, persist)
-                    media_helper_path = persist
-                except Exception:
-                    pass
-            media_helper_js = json.dumps(str(media_helper_path))
+            media_helper_js = json.dumps(media_helper_cmd, ensure_ascii=False)
+            media_actions_js = json.dumps(list(MEDIA_ACTIONS))
             ipc_header_patch = f"""
 {PATCH_MARKER}
 // 全局多媒体与 QQ 音乐客户端联动主控通道
 try {{
     const {{ ipcMain: __agyIpcMain }} = require('electron');
-    const {{ exec: __agyExec }} = require('child_process');
+    const {{ exec: __agyExecRaw, execFile: __agyExecFile }} = require('child_process');
+    // windowsHide：后台调用不弹出黑色控制台窗口
+    const __agyExec = (cmd, cb) => __agyExecRaw(cmd, {{ windowsHide: true, timeout: 15000 }}, cb || (() => {{}}));
+    const __agyMediaActions = new Set({media_actions_js});
     if (__agyIpcMain && !__agyIpcMain.__agyMediaRegistered) {{
         __agyIpcMain.__agyMediaRegistered = true;
 
@@ -762,12 +788,17 @@ try {{
             try {{
                 if (action === 'open_qq') {{
                     const __agyFs = require('fs');
-                    const __agyPaths = [
-                        'e:\\\\浏览器\\\\电脑管家\\\\tencent\\\\qqmusic\\\\QQMusic.exe',
-                        'C:\\\\Program Files\\\\Tencent\\\\QQMusic\\\\QQMusic.exe',
-                        'C:\\\\Program Files (x86)\\\\Tencent\\\\QQMusic\\\\QQMusic.exe',
-                        'D:\\\\Program Files\\\\Tencent\\\\QQMusic\\\\QQMusic.exe'
-                    ];
+                    const __agyPath = require('path');
+                    const __agyEnv = process.env || {{}};
+                    // 按系统环境变量推导常见安装位置（不写死任何个人盘符路径）
+                    const __agyBases = [__agyEnv['ProgramFiles'], __agyEnv['ProgramFiles(x86)'], __agyEnv['ProgramW6432'],
+                        __agyEnv['LOCALAPPDATA'] && __agyPath.join(__agyEnv['LOCALAPPDATA'], 'Programs'),
+                        'D:\\\\Program Files', 'D:\\\\Program Files (x86)'].filter(Boolean);
+                    const __agyPaths = [];
+                    __agyBases.forEach(b => {{
+                        __agyPaths.push(__agyPath.join(b, 'Tencent', 'QQMusic', 'QQMusic.exe'));
+                        __agyPaths.push(__agyPath.join(b, 'QQMusic', 'QQMusic.exe'));
+                    }});
                     let __target = __agyPaths.find(p => {{ try {{ return __agyFs.existsSync(p); }} catch(_) {{ return false; }} }});
                     if (__target) {{
                         __agyExec(`start "" "${{__target}}"`);
@@ -778,9 +809,10 @@ try {{
                     setTimeout(() => {{ try {{ __agyExec(__focusCmd); }} catch(_) {{}} }}, 350);
                     return;
                 }}
-                const __resHelper = {media_helper_js};
-                const __runHelper = `python -X utf8 "${{__resHelper}}" ${{action}}`;
-                __agyExec(__runHelper, (err, stdout) => {{
+                if (!__agyMediaActions.has(action)) return;  // 只接受白名单动作，杜绝命令注入
+                const __helperCmd = {media_helper_js};
+                __agyExecFile(__helperCmd[0], __helperCmd.slice(1).concat([action]),
+                              {{ windowsHide: true, timeout: 15000, encoding: 'utf8' }}, (err, stdout) => {{
                     if (!err && stdout && _evt && _evt.sender) {{
                         try {{
                             const statusData = JSON.parse(stdout);
@@ -935,9 +967,11 @@ function __agyTranslateNotif(text) {{
                 skin_manager.recompile_active()
     except Exception as e:
         print(f"  [!] 自动重注入状态记录提示: {e}")
-    # 确保官方更新配置文件 app-update.yml 正常就绪（防静默覆盖已由 updater.js 代码级 autoDownload=false 全程保障）
+    # 确保官方更新配置文件 app-update.yml 正常就绪（防静默覆盖已由 updater.js 代码级 autoDownload=false 全程保障）。
+    # 但用户主动“禁止官方自动更新”后不能在重新安装 / 自动重注入时被悄悄恢复。
     try:
-        toggle_auto_updates(install_dir, disable=False)
+        if not _updates_disabled_by_user():
+            toggle_auto_updates(install_dir, disable=False)
     except Exception as e:
         print(f"  [!] 自动更新配置同步提示: {e}")
 
@@ -976,8 +1010,26 @@ def restore_backup(install_dir: Path):
     return True
 
 
-def toggle_auto_updates(install_dir: Path, disable: bool):
-    """切换自动更新开关状态"""
+def _updates_disabled_by_user() -> bool:
+    try:
+        import skin_manager
+        return bool(skin_manager.load_state().get("updates_disabled"))
+    except Exception:
+        return False
+
+
+def _remember_updates_choice(disable: bool) -> None:
+    try:
+        import skin_manager
+        skin_manager.update_state(updates_disabled=bool(disable))
+    except Exception:
+        pass
+
+
+def toggle_auto_updates(install_dir: Path, disable: bool, remember: bool = False):
+    """切换自动更新开关状态。remember=True 表示这是用户的主动选择（记录下来，重新打补丁时不会被改回）。"""
+    if remember:
+        _remember_updates_choice(disable)
     update_yml = install_dir / "resources" / "app-update.yml"
     disabled_yml = install_dir / "resources" / "app-update.yml.disabled"
 
@@ -1084,9 +1136,9 @@ def main():
     elif args.action == "restore":
         restore_backup(install_dir)
     elif args.action == "disable-updates":
-        toggle_auto_updates(install_dir, disable=True)
+        toggle_auto_updates(install_dir, disable=True, remember=True)
     elif args.action == "enable-updates":
-        toggle_auto_updates(install_dir, disable=False)
+        toggle_auto_updates(install_dir, disable=False, remember=True)
 
 
 if __name__ == "__main__":

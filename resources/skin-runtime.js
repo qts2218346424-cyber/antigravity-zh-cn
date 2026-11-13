@@ -11,6 +11,9 @@
     var PET_STYLE_ID = 'agzh-skin-pet-style';
     var SPRITE_ID = 'agzh-skin-pet-sprite';
     var LS_KEY = '__AGZH_SKIN_PET_APPLIED__';
+    // 每次执行递增代号：切换皮肤时旧一轮的重试定时器发现代号变了就自行停止，
+    // 避免旧定时器在新皮肤应用后又把旧皮肤的样式写回来。
+    var GEN = (window.__AGZH_SKIN_GEN__ = (window.__AGZH_SKIN_GEN__ || 0) + 1);
 
     function rm(id) { var n = document.getElementById(id); if (n && n.parentNode) n.parentNode.removeChild(n); }
     function addStyle(id, css) {
@@ -23,6 +26,7 @@
     }
 
     function applyOnce() {
+      if (GEN !== window.__AGZH_SKIN_GEN__) return true;  // 已被更新的一轮取代
       rm(STYLE_ID); rm(PET_STYLE_ID); rm(SPRITE_ID);
       var root = document.documentElement;
       if (!S) { root.removeAttribute('data-agzh-skin'); return true; }
@@ -57,7 +61,9 @@
       var stamp = (S.id || '') + '|' + (pet.character || '') + '|' + (pet.scale || '');
       var applied = '';
       try { applied = localStorage.getItem(LS_KEY) || ''; } catch (_) {}
-      if (stamp !== applied && document.getElementById('nezuko-pet-stage')) {
+      var stage = document.getElementById('nezuko-pet-stage');
+      var pending = stamp !== applied && !!(pet.character || pet.scale);
+      if (stamp !== applied && stage) {
         if (pet.character === 'nezuko' || pet.character === 'prince') {
           var btn = document.getElementById('btn-select-' + pet.character);
           if (btn) { try { btn.click(); } catch (_) {} }
@@ -67,8 +73,8 @@
         }
         try { localStorage.setItem(LS_KEY, stamp); } catch (_) {}
       }
-      // 桌宠节点尚未渲染时返回 false，等待重试
-      return !(pet.sprite && !viewport);
+      // 桌宠节点尚未渲染时返回 false，等待重试（自定义形象图或待应用的角色/缩放）
+      return !((pet.sprite && !viewport) || (pending && !stage));
     }
 
     function start() {
@@ -76,7 +82,7 @@
       var tries = 0;
       var timer = setInterval(function () {
         tries += 1;
-        if (applyOnce() || tries > 60) clearInterval(timer);
+        if (GEN !== window.__AGZH_SKIN_GEN__ || applyOnce() || tries > 60) clearInterval(timer);
       }, 500);
     }
 

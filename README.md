@@ -30,7 +30,7 @@
 | 🎨 **材质包皮肤系统** | 一个材质包同时控制**配色、背景图（整窗 / 编辑区 / 侧边栏 / 面板 / 终端 / 聊天区，可调透明度与模糊）、字体、图标、桌宠外观、追加 CSS**；支持个人覆盖层、`.zip` 导入导出与安全校验。Agent 桌面端切换**实时生效**，IDE 端自动修正校验和。 |
 | 🐾 **桌宠：祢豆子 / 小王子** | Agent 窗口内桌宠（可缩放、可关闭）；Windows 上还可启动**独立桌面透明桌宠**（可拖拽、系统托盘管理、QQ 音乐状态联动）。外观可由材质包调整，不改动动作代码。 |
 | 🎬 **启动动画** | 《鬼灭之刃》主题启动画面，可选 `tanjiro` / `zenitsu` / `inosuke` / `nezuko` / `all`。 |
-| 🧰 **一体化管理器** | 基于 Python 自带 tkinter 的轻量图形界面，五个标签页：材质包、自定义、汉化补丁、桌宠、自动维护；可由 GitHub Actions 打包为单文件 `AntigravityZhCN.exe`。 |
+| 🧰 **一体化管理器** | 基于 Python 自带 tkinter 的轻量图形界面（浅色 / 深色跟随系统），五个功能页：材质包、自定义、汉化补丁、桌宠、自动维护；可由 GitHub Actions 打包为单文件 `AntigravityZhCN.exe`。 |
 | ♻️ **更新后自动重新套用** | 记录补丁后的 `app.asar` 指纹；检测到被官方更新覆盖后，**等 Antigravity 退出**再用原参数自动重打汉化、重写 IDE 皮肤，macOS 自动 ad-hoc 重签名。 |
 | 🔒 **安全还原** | 首次安装生成 `app.asar.bak`；还原时同时剥离 IDE 样式块并恢复校验和；可禁止 / 恢复官方自动更新。 |
 
@@ -90,12 +90,16 @@ python scripts/agzh.py l10n install --lang zh-CN
 
 ## 🧰 一体化管理器
 
-`AntigravityZhCN.exe`（或 `python app/agzh_app.py`）打开后包含五个标签页，底部为日志区：
+`AntigravityZhCN.exe`（或 `python app/agzh_app.py`）打开后左侧为五个功能页，底部为状态栏（可展开日志）。界面支持浅色 / 深色并默认跟随系统，Windows 高分屏清晰显示；所有耗时操作都在后台执行，界面不会卡住。
 
-| 标签页 | 能做什么 |
+| 浅色 · 材质包画廊 | 深色 · 自定义与实时预览 |
+| :---: | :---: |
+| <img src="docs/images/manager-skins.png" width="420" alt="管理器 · 材质包"> | <img src="docs/images/manager-custom-dark.png" width="420" alt="管理器 · 自定义（深色）"> |
+
+| 功能页 | 能做什么 |
 | :--- | :--- |
-| **材质包** | 已安装材质包列表 + 预览图 + 说明；✨ 一键应用、关闭皮肤、打开材质包文件夹；导入 / 导出 `.zip`、以现有包为模板新建、删除；可勾选「同时应用到 Antigravity IDE 编辑器」 |
-| **自定义** | 写入个人覆盖层：配色（带取色器）、背景图（位置 / 对齐 / 缩放 / 不透明度 / 模糊）、界面与代码字体及字号、图标滤镜与颜色、桌宠外观（角色、自定义形象图、滤镜、强调色、默认缩放、隐藏窗口内桌宠）、追加 CSS；可切换为「全局设置（作用于所有材质包）」 |
+| **材质包** | 卡片式画廊（预览图后台加载并缓存）+ 详情；一键应用（双击卡片同样生效）、关闭皮肤、打开材质包文件夹；导入 / 导出 `.zip`、以现有包为模板新建、删除；可勾选「同时应用到 Antigravity IDE 编辑器」 |
+| **自定义** | 写入个人覆盖层：配色（点色块取色）、背景图（位置 / 对齐 / 缩放 / 不透明度 / 模糊）、界面与代码字体及字号、图标滤镜与颜色、桌宠外观（角色、自定义形象图、滤镜、强调色、默认缩放、隐藏窗口内桌宠）、追加 CSS；右侧实时预览；可切换为「全局设置（作用于所有材质包）」 |
 | **汉化补丁** | 安装目录（自动检测 / 浏览）、语言、启动动画角色、是否挂载窗口内桌宠、是否注入材质包加载器；安装 / 重新应用、还原官方原版、禁止 / 恢复官方自动更新 |
 | **桌宠** | 启动独立桌面桌宠（Windows）；跳转调整桌宠外观 |
 | **自动维护** | 开关「开机自动检测并在更新后重新注入」、立即检测并修复 |
@@ -107,6 +111,7 @@ AntigravityZhCN.exe                  打开图形界面
 AntigravityZhCN.exe --background     后台常驻检测（开机自启使用，无窗口）
 AntigravityZhCN.exe --check-once     检测一次并按需重新注入（macOS LaunchAgent 使用）
 AntigravityZhCN.exe --pet            启动独立桌面桌宠（Windows）
+AntigravityZhCN.exe --media status   多媒体助手（打过补丁的 Antigravity 用它联动 QQ 音乐，无需另装 Python）
 AntigravityZhCN.exe cli <参数...>    等同于 scripts/agzh.py 命令行
 ```
 
@@ -317,6 +322,8 @@ IDE 基于 VS Code：`Ctrl/Cmd + Shift + P` → `Configure Display Language` →
 ```text
 antigravity-zh-cn/
 ├─ app/agzh_app.py                 一体化管理器（tkinter 图形界面 + 无界面模式）
+├─ app/ui_kit.py                   界面基础设施：后台任务队列、手工 ttk 主题（浅/深色）、预览图缓存、提示组件
+├─ app/assets/                     应用图标
 ├─ scripts/
 │  ├─ agzh.py / agzh_core.py       统一命令行与核心逻辑
 │  ├─ patch_antigravity.py         汉化补丁核心（ASAR 解包 / 注入 / 备份还原 / 更新开关）
@@ -362,7 +369,7 @@ antigravity-zh-cn/
 python -m pip install pytest pillow pyyaml
 
 # 与 CI 相同的核心测试（材质包 / 注入 / 自动重注入 / 图形界面冒烟，Linux 需 Xvfb）
-xvfb-run -a python -m pytest -q tests/test_skin_manifest.py tests/test_skin_injection.py tests/test_agzh_app.py
+xvfb-run -a python -m pytest -q tests/test_skin_manifest.py tests/test_skin_injection.py tests/test_agzh_app.py tests/test_polish_fixes.py
 
 # 全量测试（tests/test_patcher.py 较慢，可用 --ignore 跳过）
 python -m pytest -q --ignore=tests/test_patcher.py

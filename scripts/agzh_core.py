@@ -127,7 +127,7 @@ def restore_localization(install_dir: Path, *, also_ide: bool = True) -> bool:
 
 def toggle_updates(install_dir: Path, disable: bool) -> None:
     import patch_antigravity as pa
-    pa.toggle_auto_updates(install_dir, disable=disable)
+    pa.toggle_auto_updates(install_dir, disable=disable, remember=True)
 
 
 # ---------------------------------------------------------------------------
