@@ -33,3 +33,6 @@ resources/untranslated_settings.json
 .agents/
 
 
+
+# PyInstaller build output
+build/

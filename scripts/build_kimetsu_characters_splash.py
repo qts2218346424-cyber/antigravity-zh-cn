@@ -16,7 +16,7 @@ import base64
 from pathlib import Path
 from PIL import Image
 
-REPO_ROOT = Path("e:/antigravity-cn")
+REPO_ROOT = Path(os.environ.get("AGZH_REPO_ROOT") or Path(__file__).resolve().parent.parent)
 MEDIA_DIR = REPO_ROOT / "resources" / "media"
 ARTIFACT_DIR = Path(r"C:\Users\QTS的天选\.gemini\antigravity\brain\158062cb-0b2d-485e-b84e-ad56b751e715")
 

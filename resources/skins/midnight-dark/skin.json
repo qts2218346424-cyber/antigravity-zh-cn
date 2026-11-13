@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "midnight-dark",
+  "name": "午夜深空 · 暗色",
+  "author": "antigravity-zh-cn",
+  "version": "1.0.0",
+  "description": "低饱和深蓝暗色主题，窗口铺一层极淡的星空背景，适合长时间夜间编码。",
+  "base": "dark",
+  "preview": "preview.png",
+  "colors": {
+    "background": "#0d1220",
+    "foreground": "#d5dcef",
+    "accent": "#5cc8ff",
+    "accentForeground": "#06121f",
+    "sidebar": "#0a0f1b",
+    "activityBar": "#080c16",
+    "titleBar": "#080c16",
+    "statusBar": "#0f2a44",
+    "panel": "#0b1020",
+    "border": "#1b2540",
+    "selection": "#22406688",
+    "input": "#121a2e",
+    "muted": "#7f8bab"
+  },
+  "background": {
+    "image": "starfield.webp",
+    "target": "window",
+    "opacity": 0.12,
+    "blur": 0,
+    "position": "center",
+    "size": "cover"
+  },
+  "font": {
+    "monoFamily": "Cascadia Code, JetBrains Mono, Consolas, monospace",
+    "ligatures": true
+  },
+  "icons": {
+    "filter": "saturate(1.15)"
+  },
+  "pet": {
+    "character": "prince",
+    "accent": "#5cc8ff"
+  }
+}

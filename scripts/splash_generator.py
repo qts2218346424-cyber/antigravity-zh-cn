@@ -15,9 +15,11 @@ import base64
 from pathlib import Path
 from PIL import Image
 
-REPO_ROOT = Path("e:/antigravity-cn")
+# 资源根目录：优先环境变量 AGZH_REPO_ROOT（打包版指向解包目录），否则为本仓库根目录。
+# 旧版硬编码 e:/antigravity-cn 会在非该路径的机器上生成错误目录，已移除。
+REPO_ROOT = Path(os.environ.get("AGZH_REPO_ROOT") or Path(__file__).resolve().parent.parent)
 MEDIA_DIR = REPO_ROOT / "resources" / "media"
-CONFIG_FILE = REPO_ROOT / "resources" / "splash_config.json"
+CONFIG_FILE = Path(os.environ.get("AGZH_SPLASH_CONFIG") or (REPO_ROOT / "resources" / "splash_config.json"))
 
 THEMES = {
     "zenitsu": {
