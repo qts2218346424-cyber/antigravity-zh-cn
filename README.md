@@ -1,241 +1,414 @@
-# Antigravity 简体中文汉化项目 (antigravity-zh-cn)
+<div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#适用环境)
-[![Target](https://img.shields.io/badge/Release-v2.26.1-blue.svg)](https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases)
-[![Antigravity](https://img.shields.io/badge/Antigravity-v2.26.0-blue.svg)](https://antigravity.google)
-[![Terms](https://img.shields.io/badge/Dictionary-3472%20Terms-brightgreen.svg)](#)
+# Antigravity 中文汉化 · 材质包 · 桌宠 · 一体化管理器
 
-一个专为 **Google Antigravity**（智能体桌面端与配套 IDE，当前支持至 **v2.26.0**）打造的高性能本地中文汉化补丁与辅助工具。
+**antigravity-zh-cn** —— 为 Google Antigravity 智能体桌面端与配套 IDE 打造的本地中文化与个性化工具箱
 
-支持 **简体中文 (zh-CN)**、**繁体中文（中国台湾 zh-TW）** 和 **繁体中文（中国香港 zh-HK）**。已覆盖 Chief of Staff 幕僚长仪表盘、自动化工作流、会话分叉、云端项目等最新特性。
+[![构建一体化管理器](https://github.com/qts2218346424-cyber/antigravity-zh-cn/actions/workflows/build-app.yml/badge.svg)](https://github.com/qts2218346424-cyber/antigravity-zh-cn/actions/workflows/build-app.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Latest](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqts2218346424-cyber%2Fantigravity-zh-cn%2Fmain%2Fresources%2Fversion.json&query=%24.version&label=latest&color=blue)](resources/version.json)
+[![适配 Antigravity](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqts2218346424-cyber%2Fantigravity-zh-cn%2Fmain%2Fresources%2Fversion.json&query=%24.target_antigravity_version&label=Antigravity&color=6f42c1)](resources/version.json)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 
----
+简体中文 · 繁體中文（台灣 / 香港） · 材质包皮肤系统 · 祢豆子 / 小王子桌宠 · 官方更新后自动重新套用
 
-## 目录
+[快速开始](#-快速开始) · [一体化管理器](#-一体化管理器) · [命令行](#-命令行参考-agzhpy) · [材质包](#-材质包格式速览) · [常见问题](#-常见问题与排错) · [English](#english)
 
-- [功能特点](#功能特点)
-- [适用环境](#适用环境)
-- [使用方法](#使用方法)
-  - [Windows](#windows)
-  - [macOS](#macos)
-  - [Linux](#linux)
-- [材质包 / 皮肤系统与一体化管理器](#材质包--皮肤系统与一体化管理器)
-- [Antigravity IDE 汉化说明](#antigravity-ide-汉化说明)
-- [技术原理与架构](#技术原理与架构)
-- [开发者指南：词条抽取与更新](#开发者指南词条抽取与更新)
-- [常见问题 (FAQ)](#常见问题-faq)
-- [免责声明](#免责声明)
+</div>
 
 ---
 
-## 功能特点
+> [!IMPORTANT]
+> 本项目为**非官方**社区工具，与 Google 无任何关联。它会修改本机 Antigravity 安装目录中的 `app.asar` 与 IDE 工作台样式文件；首次安装会自动备份原版，随时可一键还原。
 
-- **双层全景汉化**：
-  - **原生壳层 (Electron Main)**：汉化窗口顶栏菜单（`menu.js`）、系统托盘菜单（`tray.js`）、更新状态提示（`updater.js`）及 WSL 连接菜单。
-  - **渲染层 (Agent Web UI)**：通过 Preload 预加载注入高性能微型 DOM 翻译引擎，汉化全部会话、工件面板 (Artifacts)、设置中心、模型选择、差异比对 (Diff)、运行状态提示等。
-- **智能代码与输入保护**：
-  - 核心引擎严格排除代码编辑器（Monaco Editor / CodeMirror）、`<pre>`、`<code>`、终端容器（XTerm）、用户输入框（`contenteditable` / `textarea`）以及对话正文区域，**绝对不会篡改任何代码逻辑或用户输入内容**。
-- **流式防抖与截止时间控制**：
-  - 针对 AI 流式打字机输出进行节流监视（最长截止保护 250ms），既保证了界面的实时中文响应，又彻底杜绝了高频 DOM 变更引发的掉帧卡顿。
-- **多语言变体一键切换**：
-  - 支持 `zh-CN`（简体中文）、`zh-TW`（繁体中文-台湾）、`zh-HK`（繁体中文-香港）。
-- **安全备份与一键无损还原**：
-  - 首次安装自动创建 `app.asar.bak` 原始副本；随时可通过控制台选择 `还原` 恢复官方原貌。
-- **《鬼灭之刃》全屏主角动作与版本检测启动动效 (Demon Slayer Breath Splash)**：
-  - **支持全屏单角色/全员自由选择**：支持在安装时通过交互菜单或命令行参数选择您最喜爱的角色全屏展示：
-    - `tanjiro`：**灶门炭治郎**（全屏水之呼吸·生生流转巨浪斩击与青蓝水刃）；
-    - `zenitsu`：**我妻善逸**（全屏雷之呼吸·霹雳一闪狂暴折线雷霆与瞬时高曝光）；
-    - `inosuke`：**嘴平伊之助**（全屏兽之呼吸·猪突猛进野猪喷气与狂乱风刃）；
-    - `nezuko`：**灶门祢豆子**（全屏竹篓探头萌动呼吸、粉眸微眨与漫天樱花爆血）；
-    - `all`：**鬼杀四象合璧**（经典四宫格四主角轮巡大赏与全员共鸣）。
-  - 应用冷启动阶段通过主进程原生 WebContentsView 于第 0 毫秒硬件加速直出，彻底杜绝白屏闪烁；
-  - 独家集成**【鎹鸦巡检 · 鬼杀队版本检测矩阵】**，开屏期间自动非阻塞异步检定本地与云端 GitHub 版本状态；
-  - 展示时长扩展至 **11.5 秒舒缓黄金节奏**（8 大呼吸型态平稳推进），在底层 Monaco 与 React 深度渲染就绪后执行 **0.85 秒浮世绘水墨深度消隐与平滑交接**。
-- **更新管理支持**：
-  - 内置禁止/恢复官方自动更新的快捷开关，防止应用静默升级覆盖汉化。
+## ✨ 功能一览
 
----
+| 模块 | 说明 |
+| :--- | :--- |
+| 🈶 **界面汉化** | 支持 `zh-CN` / `zh-TW` / `zh-HK`。Electron 主进程（菜单、托盘、更新提示）+ 渲染层（会话、工件面板、设置、模型选择、Diff 等）双层汉化；约 4000 条界面词条 + 800 余条动态正则规则。代码编辑器、终端、`<pre>/<code>`、输入框与对话正文均被排除，不会改动代码或你输入的内容。 |
+| 🎨 **材质包皮肤系统** | 一个材质包同时控制**配色、背景图（整窗 / 编辑区 / 侧边栏 / 面板 / 终端 / 聊天区，可调透明度与模糊）、字体、图标、桌宠外观、追加 CSS**；支持个人覆盖层、`.zip` 导入导出与安全校验。Agent 桌面端切换**实时生效**，IDE 端自动修正校验和。 |
+| 🐾 **桌宠：祢豆子 / 小王子** | Agent 窗口内桌宠（可缩放、可关闭）；Windows 上还可启动**独立桌面透明桌宠**（可拖拽、系统托盘管理、QQ 音乐状态联动）。外观可由材质包调整，不改动动作代码。 |
+| 🎬 **启动动画** | 《鬼灭之刃》主题启动画面，可选 `tanjiro` / `zenitsu` / `inosuke` / `nezuko` / `all`。 |
+| 🧰 **一体化管理器** | 基于 Python 自带 tkinter 的轻量图形界面，五个标签页：材质包、自定义、汉化补丁、桌宠、自动维护；可由 GitHub Actions 打包为单文件 `AntigravityZhCN.exe`。 |
+| ♻️ **更新后自动重新套用** | 记录补丁后的 `app.asar` 指纹；检测到被官方更新覆盖后，**等 Antigravity 退出**再用原参数自动重打汉化、重写 IDE 皮肤，macOS 自动 ad-hoc 重签名。 |
+| 🔒 **安全还原** | 首次安装生成 `app.asar.bak`；还原时同时剥离 IDE 样式块并恢复校验和；可禁止 / 恢复官方自动更新。 |
 
-## 适用环境
+## 🖼️ 预览
 
-| 操作系统 | 支持情况 | 依赖要求 |
-| :--- | :--- | :--- |
-| **Windows** | ✅ 完美支持 (Windows 10 / 11) | 系统自带 PowerShell，建议已安装 Python 3 |
-| **macOS** | ✅ 支持 (Apple Silicon & Intel) | 系统自带 `python3`，执行脚本自动处理 ad-hoc 签名 |
-| **Linux** | ✅ 支持 (Ubuntu/Debian 等主流发行版) | 系统自带 `python3` |
+内置三套示例材质包（预览图取自 `resources/skins/*/preview.png`）：
+
+| 午夜深空 · 暗色 `midnight-dark` | 樱花 · 浅色 `sakura-light` | 祢豆子 · 竹筒与麻叶 `nezuko-bamboo` |
+| :---: | :---: | :---: |
+| <img src="resources/skins/midnight-dark/preview.png" width="260" alt="midnight-dark"> | <img src="resources/skins/sakura-light/preview.png" width="260" alt="sakura-light"> | <img src="resources/skins/nezuko-bamboo/preview.png" width="260" alt="nezuko-bamboo"> |
+| 低饱和深蓝暗色，极淡星空背景，适合夜间编码 | 柔和樱花粉浅色，编辑区飘落半透明樱花，示范图标替换与自定义 CSS | 麻叶纹与粉 / 墨红配色，窗口淡淡竹篓剪影，桌宠固定为祢豆子 |
+
+桌宠角色：
+
+| 祢豆子 | 小王子 |
+| :---: | :---: |
+| <img src="resources/media/nezuko_chibi_pet.png" width="140" alt="祢豆子桌宠"> | <img src="resources/media/little_prince_pet.png" width="140" alt="小王子桌宠"> |
 
 ---
 
-## 使用方法
+## 🚀 快速开始
 
-### Windows
+> 操作前请先**完全退出 Antigravity**（安装时会尝试关闭正在运行的进程以释放 `app.asar`）。
 
-1. 退出正在运行的 Antigravity；
-2. 下载或克隆本项目到本地；
-3. **鼠标双击运行 `install-windows.bat`**；
-   - 脚本会自动请求管理员权限（弹出 UAC 提权提示）；
-4. 在弹出的交互控制台中按数字键选择：
-   ```text
-   ============================================================
-            Antigravity 简体中文汉化补丁管理器
-   ============================================================
-   [1]  安装简体中文补丁 (zh-CN)
-   [2]  安装繁体中文补丁 (zh-TW - 台湾)
-   [3]  安装繁体中文补丁 (zh-HK - 香港)
-   [4]  还原原版 / 卸载补丁 (Restore)
-   [5]  禁止自动更新 (锁定当前版本)
-   [6]  恢复自动更新
-   [7]  查看 Antigravity IDE 汉化指引
-   [8]  开启/配置 版本更新自动维护看门狗 (Auto-Maintainer & GitHub 同步)
-   [Q]  退出
-   ```
-5. 输入 `1` 回车即可自动完成安装；
-6. 操作完成后会自动为您启动 Antigravity（安装补丁或卸载还原后均自动启动）。
+### 方式一：下载单文件管理器（推荐 · Windows）
 
-### macOS
+1. 打开 [Actions →「构建一体化管理器」](https://github.com/qts2218346424-cyber/antigravity-zh-cn/actions/workflows/build-app.yml)，点进最近一次成功（绿色 ✔）的运行；
+2. 在页面底部 **Artifacts** 中下载 `AntigravityZhCN-windows-x64`（另有 `AntigravityZhCN-macos`、`AntigravityZhCN-linux-x64`），解压得到 `AntigravityZhCN.exe`；
+3. 双击运行 →「汉化补丁」标签页 → **安装 / 重新应用汉化**。
 
-1. 退出 Antigravity；
-2. 打开终端，进入本项目目录；
-3. 执行 `./install-mac.command`（或在访达中双击 `install-mac.command`）；
-4. 选择对应的中文语言选项；
-5. 脚本自动备份、解包打补丁，并执行本机 ad-hoc 重签名，防止 macOS 安全拦截。
+> 下载 Artifacts 需要登录 GitHub；构建产物保留 30 天。本仓库不发布 Release，构建只上传为 Actions Artifacts。
 
-### Linux
+### 方式二：从源码运行
 
-1. 退出 Antigravity；
-2. 在终端运行：
-   ```bash
-   chmod +x install-linux.sh
-   ./install-linux.sh
-   ```
-3. 按屏幕提示选择所需功能。
-
----
-
-## 材质包 / 皮肤系统与一体化管理器
-
-一个材质包即可同时改变 **配色、背景图（整窗 / 编辑区 / 侧边栏，可调透明度与模糊）、字体、图标、桌宠外观**，并可在任意包之上叠加个人覆盖层。内置 `午夜深空 · 暗色`、`樱花 · 浅色`、`祢豆子 · 竹筒与麻叶` 三个示例包。
-
-- **一体化管理器**：图形界面集材质包切换（带预览）、逐项自定义、导入/导出 `.zip`、汉化安装/还原、桌宠启动、更新后自动重注入于一身。
-  - 单文件版：GitHub Actions →「构建一体化管理器」→ 下载构建产物 `AntigravityZhCN.exe`；
-  - 源码版：双击 `材质包与汉化管理器.bat`，或 `python app/agzh_app.py`。
-- **切换实时生效**：Agent 桌面端通过主进程皮肤加载器监听配置文件变化，无需重打补丁；IDE 编辑器写入工作台样式并自动修正校验和（不会出现“安装已损坏”提示）。
-- **更新不丢失**：材质包与设置存放在用户配置目录（Windows `%APPDATA%\antigravity-zh-cn`）；开启“自动维护”后，官方更新覆盖补丁时会在 Antigravity 退出后自动重新注入。
-- 命令行：`python scripts/agzh.py skin list | use <id> | import x.zip | export <id> 目录`。
-
-完整的包格式、制作教程与原理说明见 **[docs/skins.md](docs/skins.md)**。
-
----
-
-## Antigravity IDE 汉化说明
-
-Antigravity 套件中配套的 **Antigravity IDE**（代码编辑器）基于 VS Code 架构。如需将该编辑器汉化：
-
-1. 启动 **Antigravity IDE**；
-2. 按快捷键 `Ctrl + Shift + P`（macOS 为 `Cmd + Shift + P`）打开命令面板；
-3. 输入并选择：`Configure Display Language`（配置显示语言）；
-4. 在下拉列表中选择：`中文 (简体) (zh-cn)`；
-   - 若列表中未列出，选择 `Install Additional Languages...`，在左侧扩展市场搜索并安装 `Chinese (Simplified)` 官方中文语言包；
-5. 根据提示点击 **Restart** 重启 IDE 即可。
-
----
-
-## 技术原理与架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Google Antigravity                       │
-│                                                             │
-│  ┌───────────────────────┐       ┌───────────────────────┐  │
-│  │   Electron Shell      │       │     Agent Web UI      │  │
-│  │   (resources/app.asar)│       │  (Language Server:LS) │  │
-│  │                       │       │                       │  │
-│  │  • menu.js (主菜单)    │       │  • 对话面板 & 输入框   │  │
-│  │  • tray.js (系统托盘)  │       │  • Artifacts 工件视图 │  │
-│  │  • updater.js (更新器) │       │  • 任务规划与执行确认  │  │
-│  │  • preload.js (预加载) │       │  • 全局设置与模型选择 │  │
-│  └───────────┬───────────┘       └───────────▲───────────┘  │
-│              │                               │              │
-│              │ Injects Runtime Engine        │              │
-│              └───────────────────────────────┘              │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-                               ▲
-                               │
-            ┌──────────────────┴──────────────────┐
-            │       antigravity-zh-cn 补丁包       │
-            ├─────────────────────────────────────┤
-            │ • patch_antigravity.py (补丁核心)    │
-            │ • runtime-zh.js (DOM 遍历与监听引擎)│
-            │ • auto_maintainer.py (自动化引擎)   │
-            │ • antigravity-zh-CN.json (界面词典) │
-            │ • desktop-zh-CN.json (外壳词典)     │
-            │ • rules-zh-CN.json (动态正则规则)   │
-            └─────────────────────────────────────┘
-```
-
-1. **ASAR 智能处理**：内置原生 Python ASAR 编解码器（同时兼容检测并调用系统 `npx asar`），实现无损解包与重封；
-2. **Preload 无感桥接**：在 Electron 的 `preload.js` 启动阶段载入词典并注入微型翻译器；
-3. **高效率 DOM 替换**：
-   - 使用现代浏览器原生的 `TreeWalker` 单向流式检索文本节点，开销控制在毫秒级；
-   - 对动态新增的 DOM（例如 AI 回复、折叠菜单、弹窗），利用 `MutationObserver` 结合时间窗口截流（Max Deadline 250ms）处理。
-
----
-
-## 全自动版本跟踪与 GitHub 持续维护 (Auto-Maintainer)
-
-为了让开源项目在 Google 官方发布新版时能够**无人值守自动同步维护**，本项目内置了**双轨自动化维护系统**：
-
-### 1. 本地无人值守看门狗 (`scripts/setup_watchdog.bat`)
-- 双击运行 `scripts/setup_watchdog.bat` 并按 `1`，即可一键注册 Windows 后台计划任务；
-- 任务每小时静默检测本地 Antigravity 是否发生版本更新（如 2.17.0 升级至 2.23.0）；
-- 一旦检测到新版发布或程序被官方覆盖，脚本会自动：
-  1. 深度拉取新版 Bundle 并提取新增英文词条；
-  2. 自动增量翻译、同步繁体并运行测试集；
-  3. 为新版本原位重打补丁，并执行 `git commit` 与 `git push origin main` 自动同步至您的 GitHub 仓库！
-
-### 2. GitHub Actions 云端定时巡检 (`.github/workflows/auto-update.yml`)
-- 仓库已内置 CI/CD 定时工作流，每 6 小时在 GitHub 云端自动轮询 Google 官方版本清单；
-- 发现版本升级时，云端 Runner 自动编译校验词库并生成提交推送，保持远程仓库始终与官方最新版本同步。
-
----
-
-## 开发者指南：词条抽取与更新
-
-当 Antigravity 发布大版本更新导致界面新增英文词条时，维护者亦可手动执行自动化流水线：
+需要 Python 3（推荐 3.11+，需带 tkinter）。
 
 ```bash
-# 一键执行全自动维护（检测、提取、翻译、测试、打补丁与推送）
-python scripts/auto_maintainer.py
+git clone https://github.com/qts2218346424-cyber/antigravity-zh-cn.git
+cd antigravity-zh-cn
 
-# 或者手动抽取词条对比：
-python scripts/extract_strings.py
+# 图形界面（Windows 也可直接双击「材质包与汉化管理器.bat」）
+python app/agzh_app.py
+
+# 或纯命令行
+python scripts/agzh.py l10n install --lang zh-CN
 ```
 
-翻译 `untranslated.json` 中的新词条后，合并入 `resources/antigravity-zh-CN.json` 并提交 Pull Request 即可！
+### 方式三：经典安装脚本
+
+| 系统 | 操作 |
+| :--- | :--- |
+| Windows | 双击 `install-windows.bat`（自动请求管理员权限），按菜单选择：`[1]` 简体 / `[2]` 繁体台湾 / `[3]` 繁体香港 / `[4]` 还原 / `[5]` 禁止自动更新 / `[6]` 恢复自动更新 / `[7]` IDE 汉化指引 / `[8]` 维护者看门狗 |
+| macOS | 终端执行 `./install-mac.command`（或在访达中双击），要求应用位于 `/Applications/Antigravity.app`；安装后自动 ad-hoc 重签名 |
+| Linux | `chmod +x install-linux.sh && ./install-linux.sh`，按提示选择 |
 
 ---
 
-## 常见问题 (FAQ)
+## 🧰 一体化管理器
 
-#### Q: 汉化后会影响代码生成或终端命令吗？
-**不会**。我们的 DOM 引擎设置了多重白名单防线，代码编辑器区、Terminal 终端流、Markdown 代码块、用户输入框均被严格保护，只有按钮、标签、菜单等 UI 界面元素才会被中文化。
+`AntigravityZhCN.exe`（或 `python app/agzh_app.py`）打开后包含五个标签页，底部为日志区：
 
-#### Q: 为什么重启应用后汉化会掉？更新软件版本后会掉吗？
-**原因分析**：Google 官方客户端内置了后台静默更新机制（Electron autoUpdater），默认会在后台静默轮询并下载官方全量更新包（`installer.exe`）到 `%LOCALAPPDATA%\antigravity-updater\pending` 中。当用户退出或重启 Antigravity 时，更新器会自动执行静默覆盖安装，将整个安装目录及 `resources/app.asar` 还原为 Google 官方未汉化版。
+| 标签页 | 能做什么 |
+| :--- | :--- |
+| **材质包** | 已安装材质包列表 + 预览图 + 说明；✨ 一键应用、关闭皮肤、打开材质包文件夹；导入 / 导出 `.zip`、以现有包为模板新建、删除；可勾选「同时应用到 Antigravity IDE 编辑器」 |
+| **自定义** | 写入个人覆盖层：配色（带取色器）、背景图（位置 / 对齐 / 缩放 / 不透明度 / 模糊）、界面与代码字体及字号、图标滤镜与颜色、桌宠外观（角色、自定义形象图、滤镜、强调色、默认缩放、隐藏窗口内桌宠）、追加 CSS；可切换为「全局设置（作用于所有材质包）」 |
+| **汉化补丁** | 安装目录（自动检测 / 浏览）、语言、启动动画角色、是否挂载窗口内桌宠、是否注入材质包加载器；安装 / 重新应用、还原官方原版、禁止 / 恢复官方自动更新 |
+| **桌宠** | 启动独立桌面桌宠（Windows）；跳转调整桌宠外观 |
+| **自动维护** | 开关「开机自动检测并在更新后重新注入」、立即检测并修复 |
 
-**最新版本的永久解决方案**：
-1. **自动禁用静默更新**：最新补丁安装时，已默认将 `dist/updater.js` 中的 `autoDownload` 与 `autoInstallOnAppQuit` 关闭，从代码底层阻断静默下载；
-2. **清空并阻断静默缓存**：自动将 `app-update.yml` 重命名为 `app-update.yml.disabled`，并彻底清空本地残留的静默安装包，确保重启再也不会被静默覆盖；
-3. **版本升级后一键重打**：若未来您主动选择升级了新版 Antigravity，只需鼠标双击 `install-windows.bat` 按 `1`，2 秒内即可全自动无损重装最新汉化！
+管理器的无界面运行模式：
 
-#### Q: 如何彻底卸载汉化补丁？
-运行安装脚本并选择选项 `[4] 还原原版 / 卸载补丁`，程序会自动将 `app.asar.bak` 恢复为原样，没有任何残留文件。
+```text
+AntigravityZhCN.exe                  打开图形界面
+AntigravityZhCN.exe --background     后台常驻检测（开机自启使用，无窗口）
+AntigravityZhCN.exe --check-once     检测一次并按需重新注入（macOS LaunchAgent 使用）
+AntigravityZhCN.exe --pet            启动独立桌面桌宠（Windows）
+AntigravityZhCN.exe cli <参数...>    等同于 scripts/agzh.py 命令行
+```
+
+源码版把 `AntigravityZhCN.exe` 换成 `python app/agzh_app.py` 即可。
 
 ---
 
-## 免责声明
+## ⌨️ 命令行参考 (`agzh.py`)
 
-1. 本项目为开源社区第三方本地化辅助项目，与 Google 官方无关；
-2. 汉化逻辑仅在本地对界面显示文本进行本地化修饰，不收集任何用户隐私数据，亦不修改任何网络通信与模型请求。
+`python scripts/agzh.py <命令>`（打包版：`AntigravityZhCN.exe cli <命令>`）。
+
+| 命令 | 说明 |
+| :--- | :--- |
+| `status` | 查看汉化 / 皮肤 / 自动重注入状态（JSON） |
+| **材质包** | |
+| `skin list` | 列出材质包（`*` 为当前） |
+| `skin current` | 当前材质包 |
+| `skin use <id> [--no-ide] [--ide-dir DIR]` | 切换材质包；`--no-ide` 不写入 IDE 工作台，`--ide-dir` 手动指定 IDE 安装目录 |
+| `skin off` | 关闭皮肤（保留材质包） |
+| `skin validate <目录或.zip>` | 校验材质包 |
+| `skin import <x.zip> [--overwrite] [--use]` | 导入 `.zip` 材质包，`--use` 导入后立即启用 |
+| `skin export <id> <目标目录> [--no-override]` | 导出为 `.zip`；默认把个人覆盖层烘焙进导出包 |
+| `skin remove <id>` | 删除材质包 |
+| `skin new <源id> <新id> <名称>` | 以现有包为模板新建 |
+| `skin sync-builtin [--force]` | 重新同步内置示例包 |
+| `skin override show\|reset [--skin ID] [--global]` | 查看 / 重置覆盖层（默认当前包，`--global` 为全局覆盖层） |
+| `skin override set <键> <值> [--skin ID] [--global]` | 设置覆盖项，值按 JSON 解析，例如 `background.opacity 0.2`、`colors.accent '"#ff0"'` |
+| `skin override asset <键> <文件> [--skin ID] [--global]` | 把本地图片 / 字体复制进覆盖层并设置到某个键 |
+| **IDE 工作台** | |
+| `ide apply\|remove\|status [--dir DIR]` | 写入 / 移除 IDE 皮肤样式块（同步修正 `product.json` 校验和）/ 查看状态 |
+| **汉化补丁** | |
+| `l10n install [--lang zh-CN\|zh-TW\|zh-HK] [--character tanjiro\|zenitsu\|inosuke\|nezuko\|all] [--dir DIR] [--no-pet] [--no-skin]` | 安装汉化补丁 |
+| `l10n restore [--dir DIR] [--keep-ide]` | 还原官方原版（默认同时移除 IDE 皮肤，`--keep-ide` 保留） |
+| **自动重注入** | |
+| `reapply check [--apply] [--force-running]` | 检测一次；`--apply` 按需重新注入；`--force-running` 即使 Antigravity 正在运行也写入 |
+| `reapply watch [--interval 120]` | 前台常驻检测（秒） |
+| `reapply enable\|disable\|status` | 开启 / 关闭开机自启后台检测，查看状态 |
+| **桌宠** | |
+| `pet launch` | 启动桌面桌宠 |
+
+示例：
+
+```bash
+python scripts/agzh.py skin use sakura-light
+python scripts/agzh.py skin override set background.opacity 0.25
+python scripts/agzh.py skin import my-skin.zip --use
+python scripts/agzh.py l10n install --lang zh-TW --character nezuko
+python scripts/agzh.py reapply enable
+```
+
+> 底层补丁脚本也可直接调用：`python scripts/patch_antigravity.py install|restore|disable-updates|enable-updates [--lang] [--character/-c] [--dir] [--no-pet] [--no-skin]`。
+
+---
+
+## 🎨 材质包格式速览
+
+一个材质包就是一个文件夹（或其 `.zip`），根部放 `skin.json`，图片 / 字体 / CSS 一律用**包内相对路径**引用：
+
+```jsonc
+{
+  "schema": 1,
+  "id": "my-skin",            // 必填：小写字母/数字/._-，与文件夹名一致
+  "name": "我的皮肤",          // 必填
+  "version": "1.0.0",         // 必填
+  "base": "dark",             // dark | light
+  "preview": "preview.png",
+  "colors": { "background": "#1a0e14", "accent": "#f06292" },
+  "background": [{ "image": "bg.webp", "target": "window", "opacity": 0.15, "blur": 4 }],
+  "font": { "family": "HarmonyOS Sans SC, sans-serif", "monoFamily": "Sarasa Mono SC, monospace" },
+  "icons": { "filter": "hue-rotate(300deg)", "codicons": { "heart": "icons/sakura.svg" } },
+  "css": "/* 追加 CSS */",
+  "pet": { "character": "nezuko", "accent": "#f06292", "scale": 1.1 }
+}
+```
+
+- `background.target`：`window | editor | sidebar | panel | terminal | chat`；
+- 安全校验：禁止绝对路径与 `..`、扩展名受限、单文件 ≤ 8 MB；`.zip` 防 zip-slip，解压总量 ≤ 64 MB、文件数 ≤ 500，**校验通过才落盘**；
+- 个人覆盖层可在任意包之上微调，不修改原包。
+
+完整字段、制作教程与实现原理见 **[docs/skins.md](docs/skins.md)**。
+
+---
+
+## 📁 配置目录
+
+材质包、覆盖层、编译产物与状态都存放在用户配置目录中，**官方更新不会覆盖**：
+
+| 系统 | 位置 |
+| :--- | :--- |
+| Windows | `%APPDATA%\antigravity-zh-cn\` |
+| macOS | `~/Library/Application Support/antigravity-zh-cn/` |
+| Linux | `$XDG_CONFIG_HOME/antigravity-zh-cn/`（默认 `~/.config/antigravity-zh-cn/`） |
+
+设置环境变量 `AGZH_CONFIG_DIR` 可改为任意目录（便携模式 / 测试）。
+
+```text
+antigravity-zh-cn/
+├─ skins/<id>/skin.json        已安装的材质包（内置包首次运行时复制进来）
+├─ overrides/_global.json      全局覆盖层
+├─ overrides/<id>.json         针对某个材质包的覆盖层
+├─ overrides/assets/           界面中选择的图片 / 字体
+├─ compiled/active-skin.json   编译后的运行时载荷（Agent 主进程实时监听）
+├─ compiled/active-skin.css    同一份样式，便于调试
+├─ state.json                  当前材质包、自动维护开关、上次补丁参数与文件指纹
+└─ logs/auto-reapply.log       自动重注入日志
+```
+
+---
+
+## ♻️ 更新后自动重新套用
+
+在管理器「自动维护」中勾选，或执行 `python scripts/agzh.py reapply enable`。开机自启项均为**当前用户级，无需管理员**：
+
+| 系统 | 自启方式 |
+| :--- | :--- |
+| Windows | 注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\AntigravityZhCnAutoReapply` → `AntigravityZhCN.exe --background`（源码版为 `pythonw app\agzh_app.py --background`） |
+| macOS | `~/Library/LaunchAgents/com.antigravity-zh-cn.autoreapply.plist`，登录时及每 10 分钟执行一次 `--check-once` |
+| Linux | `~/.config/autostart/antigravity-zh-cn-autoreapply.desktop` |
+
+工作流程：
+
+1. 每次补丁成功后，在 `state.json` 记录补丁参数（语言、启动动画角色、是否桌宠 / 皮肤）与 `app.asar` 指纹（大小 + 修改时间 + sha256）；
+2. 后台默认每 120 秒只做一次 `stat`，指纹变化时才读取文件确认补丁标记是否还在；
+3. 标记丢失 ⇒ 判定被官方更新覆盖 ⇒ **等 Antigravity 退出后**（不会强杀正在使用的程序）用原参数自动重打；macOS 自动 ad-hoc 重签名；
+4. IDE 工作台样式块丢失或与当前皮肤不一致时自动重新写入并修正校验和；
+5. 主动「还原官方原版」后会被记录，**不会再被自动打回**；重新安装汉化即可恢复自动维护。
+
+> 与 `scripts/auto_maintainer.py` / `scripts/setup_watchdog.bat` 的区别：后者是**维护者**流水线（抓取新词条、翻译、跑测试、`git push`），普通用户无需使用。
+
+---
+
+## 🧹 卸载与还原
+
+| 想做的事 | 操作 |
+| :--- | :--- |
+| 暂时关闭皮肤 | 管理器「关闭皮肤」或 `skin off` |
+| 只撤销 IDE 修改 | `python scripts/agzh.py ide remove`（恢复原文件与校验和） |
+| 完全还原 | 管理器「还原官方原版」、`l10n restore`，或安装脚本 `[4]`：恢复 `app.asar.bak`、剥离 IDE 样式、停止自动重打 |
+| 关闭开机自启 | `reapply disable` 或取消勾选「自动维护」 |
+| 清除所有数据 | 删除上文的配置目录 |
+
+所有注入均为幂等操作：Agent 端总是基于纯净备份重新打补丁，IDE 端先剥离旧样式块再写入。
+
+---
+
+## ❓ 常见问题与排错
+
+<details>
+<summary><b>IDE 提示「安装似乎已损坏 (installation appears to be corrupt)」？</b></summary>
+
+VS Code 架构会对 `product.json` 中 `checksums` 列出的文件做 sha256 校验。本项目写入样式后会同步更新校验和（`base64(sha256)` 去掉尾部 `=`），正常情况下不会出现该提示。若仍出现：先执行 `python scripts/agzh.py ide remove` 恢复原文件，再 `ide apply` 重新写入；macOS 修改 `.app` 内文件后如被提示损坏，执行 `codesign --force --deep -s - /Applications/Antigravity.app`。
+</details>
+
+<details>
+<summary><b>杀毒软件把 AntigravityZhCN.exe 报为可疑？</b></summary>
+
+单文件 exe 由 PyInstaller 打包且未做代码签名，并且会写入其他程序的安装目录、添加当前用户开机自启项，部分杀毒软件会据此误报。可以：核对它来自本仓库 Actions 的构建产物；或改用源码方式 `python app/agzh_app.py` 运行（功能完全相同）；必要时将其加入白名单。
+</details>
+
+<details>
+<summary><b>找不到 Antigravity / IDE 安装目录？</b></summary>
+
+安装在非默认位置时请手动指定：
+
+```bash
+python scripts/agzh.py l10n install --dir "D:\Apps\Antigravity"
+python scripts/agzh.py ide apply --dir "IDE 安装目录"     # 会记住该路径
+python scripts/agzh.py skin use sakura-light --ide-dir "IDE 安装目录"
+```
+
+管理器「汉化补丁」页也可点「浏览…」选择目录。
+</details>
+
+<details>
+<summary><b>切换材质包后 Agent 桌面端没变化？</b></summary>
+
+需要先用当前版本补丁安装过一次汉化，且安装时**没有**取消「注入材质包加载器」（即不要加 `--no-skin`）。IDE 端需执行「开发人员: 重新加载窗口」或重启 IDE。
+</details>
+
+<details>
+<summary><b>写入 IDE 时报权限错误？</b></summary>
+
+IDE 安装在 `Program Files` 等受保护目录时，需要以管理员身份运行一次管理器。
+</details>
+
+<details>
+<summary><b>重启 / 更新后汉化消失了？</b></summary>
+
+官方自动更新会覆盖 `app.asar`。可在管理器中「禁止官方自动更新」，或开启「自动维护」让它在更新后自动重新套用；也可随时手动重新安装。
+</details>
+
+<details>
+<summary><b>会影响代码生成、终端或我的输入吗？</b></summary>
+
+不会。翻译引擎排除了代码编辑器、终端、代码块、输入框与对话正文；材质包只注入样式与桌宠外观层，背景覆盖层不接收鼠标事件。
+</details>
+
+<details>
+<summary><b>Antigravity IDE 本身的菜单如何汉化？</b></summary>
+
+IDE 基于 VS Code：`Ctrl/Cmd + Shift + P` → `Configure Display Language` → 选择「中文 (简体)」（如无则安装官方 Chinese (Simplified) 语言包）→ 重启。
+</details>
+
+---
+
+## 🗂️ 项目结构
+
+```text
+antigravity-zh-cn/
+├─ app/agzh_app.py                 一体化管理器（tkinter 图形界面 + 无界面模式）
+├─ scripts/
+│  ├─ agzh.py / agzh_core.py       统一命令行与核心逻辑
+│  ├─ patch_antigravity.py         汉化补丁核心（ASAR 解包 / 注入 / 备份还原 / 更新开关）
+│  ├─ skin_manager.py              材质包加载、校验、覆盖层、编译、导入导出
+│  ├─ skin_injector.py             IDE 工作台样式注入与 product.json 校验和修正
+│  ├─ auto_reapply.py              更新后自动重新注入与开机自启
+│  ├─ splash_generator.py          启动动画生成（调用 build_kimetsu_characters_splash.py 的 HTML 模板）
+│  ├─ desktop_pet_app.py           Windows 独立桌面桌宠宿主
+│  ├─ build_desktop_pet_html.py    生成独立桌宠窗口 HTML
+│  ├─ build_skin_assets.py         生成内置材质包图片素材
+│  ├─ generate_anime_box_sprites.py  桌宠木箱精灵图素材
+│  ├─ localize_skills.py           技能描述本地化
+│  ├─ auto_maintainer.py           维护者自动化流水线（抽词、翻译、测试、推送）
+│  ├─ extract_strings.py / extract_ui_strings.py / filter_ui_strings.py  词条抽取工具
+│  ├─ build_full_dictionary.py / translate_dictionary.py / update_rules_and_dict.py  词典与规则维护
+│  ├─ install_windows.ps1          Windows 安装菜单
+│  └─ setup_watchdog.bat / watchdog.ps1  维护者看门狗（计划任务）
+├─ resources/
+│  ├─ antigravity-zh-{CN,TW,HK}.json  界面词典
+│  ├─ desktop-zh-CN.json / rules-zh-CN.json  外壳词典 / 正则规则
+│  ├─ runtime-zh.js                渲染层翻译引擎
+│  ├─ skin-runtime.js              渲染层皮肤 / 桌宠外观运行时
+│  ├─ nezuko-pet.js / desktop_pet_window.html  窗口内桌宠 / 独立桌宠窗口
+│  ├─ loadingOverlay-zh.js / splash/  启动动画
+│  ├─ media_helper.py / quota_helper.py  桌宠辅助脚本
+│  ├─ media/                       角色图片与启动动画视频
+│  ├─ skins/{midnight-dark,sakura-light,nezuko-bamboo}/  内置材质包
+│  └─ version.json / splash_config.json
+├─ packaging/                      PyInstaller 打包（agzh_app.spec、build_exe.py、requirements-app.txt）
+├─ tests/                          pytest 测试
+├─ docs/skins.md                   材质包完整文档
+├─ .github/workflows/              build-app.yml（构建管理器）、auto-update.yml（定时巡检）
+├─ install-windows.bat / install-mac.command / install-linux.sh
+├─ 材质包与汉化管理器.bat / 启动独立桌面宠物.bat / 退出桌面桌宠.bat
+└─ LICENSE
+```
+
+---
+
+## 🛠️ 开发与测试
+
+```bash
+python -m pip install pytest pillow pyyaml
+
+# 与 CI 相同的核心测试（材质包 / 注入 / 自动重注入 / 图形界面冒烟，Linux 需 Xvfb）
+xvfb-run -a python -m pytest -q tests/test_skin_manifest.py tests/test_skin_injection.py tests/test_agzh_app.py
+
+# 全量测试（tests/test_patcher.py 较慢，可用 --ignore 跳过）
+python -m pytest -q --ignore=tests/test_patcher.py
+```
+
+本地打包单文件程序：
+
+```bash
+python -m pip install -r packaging/requirements-app.txt
+python packaging/build_exe.py      # 产物在 dist/：AntigravityZhCN.exe / AntigravityZhCN.app / AntigravityZhCN
+```
+
+CI：`.github/workflows/build-app.yml` 在手动触发（workflow_dispatch）或推送 `v*` / `app-v*` 标签时运行，先跑测试，再在 Windows / macOS / Linux 打包并做命令行自检，产物上传为 Actions Artifacts（Windows 为必须通过的目标）。
+
+维护者在 Antigravity 发布新版本后可运行 `python scripts/auto_maintainer.py`（自动抽取新词条、翻译、测试、打补丁并推送），或用 `python scripts/extract_strings.py` 手动抽取未翻译词条。
+
+## 🤝 参与贡献
+
+欢迎提交 Issue 与 Pull Request：
+
+- **补充 / 修正翻译**：编辑 `resources/antigravity-zh-CN.json`（繁体可由 `scripts/translate_dictionary.py` 转换）或 `resources/rules-zh-CN.json`；
+- **分享材质包**：按 [docs/skins.md](docs/skins.md) 制作，先用 `skin validate` 自查；
+- 提交前请运行上面的测试，确保没有新增失败。
+
+## 📄 许可证
+
+[MIT License](LICENSE)
+
+## ⚠️ 免责声明
+
+1. 本项目为开源社区第三方本地化与个性化工具，**非 Google 官方产品**，与 Google 无关；Antigravity 及相关商标归其所有者所有。
+2. 本工具仅在本地修改界面显示与样式，不收集任何用户数据，不修改网络通信与模型请求。
+3. 修改应用文件可能与官方更新冲突；使用前请了解还原方法，风险自负。
+4. 角色形象相关素材仅用于个人学习交流，版权归原作者所有。
+
+---
+
+## English
+
+**antigravity-zh-cn** is an unofficial, community-made toolkit for Google Antigravity (agent desktop app + companion IDE):
+
+- **Localization** — Simplified Chinese (`zh-CN`) and Traditional Chinese (`zh-TW`, `zh-HK`) for both the Electron shell and the web UI; code editors, terminals and user input are never touched.
+- **Skin packs** — colors, background images, fonts, icons, pet appearance and custom CSS in one `skin.json` pack; live switching on the agent app, checksum-safe injection into the IDE. See [docs/skins.md](docs/skins.md).
+- **Desktop pets** — Nezuko and The Little Prince, inside the app window or as a standalone transparent desktop pet on Windows.
+- **All-in-one manager** — a small tkinter GUI (`app/agzh_app.py`, packaged as `AntigravityZhCN.exe` by the [build workflow](https://github.com/qts2218346424-cyber/antigravity-zh-cn/actions/workflows/build-app.yml)) plus a CLI (`python scripts/agzh.py --help`).
+- **Auto re-apply** — after an official update overwrites the patch, it is re-applied automatically once Antigravity exits (`agzh.py reapply enable`).
+- **Restore** — `agzh.py l10n restore` puts back the original `app.asar` and IDE files.
+
+Quick start: download the `AntigravityZhCN-windows-x64` artifact from the latest successful build run, or run `python app/agzh_app.py` from a clone. Licensed under MIT. Not affiliated with Google.
