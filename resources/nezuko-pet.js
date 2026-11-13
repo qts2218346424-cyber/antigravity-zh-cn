@@ -1034,6 +1034,50 @@
     .nezuko-pet-rig #bone-arm-r { animation: armOrganicIdleR 3.6s infinite ease-in-out; }
 
     /* ========================================================= */
+    /* 核心 1.5：rAF 程序化动作层 (PetMotion)                      */
+    /* 启用后由 JS 阻尼弹簧驱动呼吸/头部/手臂，关闭固定 3.6s 循环   */
+    /* 行走/冲刺/动作类仍使用 !important 关键帧，优先级不受影响      */
+    /* ========================================================= */
+    .pm-motion-wrap {
+      position: absolute; left: 0; top: 0; width: 130px; height: 215px;
+      transform-origin: 50% 100%;
+      pointer-events: none;
+      will-change: transform;
+    }
+    .pm-motion-wrap > .nezuko-pet-rig { pointer-events: auto; }
+    .nezuko-pet-rig.pm-active { animation: none; }
+    .nezuko-pet-rig.pm-active #bone-head,
+    .nezuko-pet-rig.pm-active #bone-arm-l,
+    .nezuko-pet-rig.pm-active #bone-arm-r { animation: none; }
+    .nezuko-pet-rig.pm-active .bone-layer { transition: transform 0.06s linear; }
+    .pm-particle {
+      position: absolute; pointer-events: none; z-index: 45;
+      font-size: 15px; line-height: 1; opacity: 0;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+      animation: pmParticleFloat 0.95s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    }
+    @keyframes pmParticleFloat {
+      0% { opacity: 0; transform: translate(0, 0) scale(0.4) rotate(0deg); }
+      20% { opacity: 1; transform: translate(calc(var(--pdx, 0px) * 0.3), -14px) scale(1.15) rotate(calc(var(--prot, 0deg) * 0.3)); }
+      100% { opacity: 0; transform: translate(var(--pdx, 0px), var(--pdy, -46px)) scale(0.8) rotate(var(--prot, 0deg)); }
+    }
+    /* 木箱精灵淡入淡出 */
+    .box-action-container.show-box-action { animation: pmBoxFadeIn 0.22s ease-out both; }
+    .box-action-container.show-box-action.pm-box-fade-out { animation: pmBoxFadeOut 0.22s ease-in forwards; }
+    @keyframes pmBoxFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pmBoxFadeOut { from { opacity: 1; } to { opacity: 0; } }
+    .pm-appear { animation: pmAppear 0.26s ease-out both; }
+    @keyframes pmAppear { from { opacity: 0; } to { opacity: 1; } }
+    /* 系统“减少动态效果”：关闭待机循环，仅保留必要的位移动作 */
+    @media (prefers-reduced-motion: reduce) {
+      .nezuko-pet-rig { animation: none; }
+      .nezuko-pet-rig #bone-head,
+      .nezuko-pet-rig #bone-arm-l,
+      .nezuko-pet-rig #bone-arm-r { animation: none; }
+      .pm-particle { display: none; }
+    }
+
+    /* ========================================================= */
     /* 核心 2：迪士尼十二法则驱动的动画级步态行走 (Walk Cycle) */
     /* ========================================================= */
     .is-walking {
@@ -1832,6 +1876,8 @@
         <div class="nezuko-pet-ground-shadow" id="nezuko-ground-shadow"></div>
 
         <!-- 角色 1：祢豆子 2D 骨骼机架 (支持双关节行走与风火轮飞奔) -->
+        <!-- rAF 程序化动作层包裹 (倾斜/挤压/跳跃只作用于此层，不影响 viewport 的朝向翻转) -->
+        <div class="pm-motion-wrap" id="nezuko-motion-wrap">
         <div class="nezuko-pet-rig" id="pet-nezuko" style="display:none;" title="双击打开看板 · 单击摸头 · 拖拽移动 · 滚轮切歌">
           <div class="bone-layer" id="bone-leg-l"></div>
           <div class="bone-layer" id="bone-leg-r"></div>
@@ -1841,6 +1887,7 @@
           <div class="bone-layer" id="bone-head">
             <div class="nezuko-eyelid-overlay" id="nezuko-eyelid"></div>
           </div>
+        </div>
         </div>
 
         <!-- 角色 2：大正雾云杉木箱 (8帧360°旋转分镜 + 探头探脑视窗) -->
@@ -2418,6 +2465,7 @@
   // ==========================================
   // 九、动画级行走与冲刺位移引擎 (PetMotionController)
   // ==========================================
+  let petMotion = null; // rAF 程序化动作层 (见第十二节)
   let curRight = 32;
   let curBottom = 24;
   let facingDirection = 1; // 1: 朝左, -1: 朝右
@@ -2426,6 +2474,7 @@
   let isActionPlaying = false;
 
   function updateFacing(direction) {
+    if (petMotion && direction !== facingDirection) petMotion.onTurn();
     facingDirection = direction;
     if (charViewport) {
       charViewport.style.transform = `scaleX(${direction})`;
@@ -2471,9 +2520,10 @@
     isMoving = true;
 
     const durationSec = Math.max(0.65, Math.abs(dist) / (125 * speed));
-    root.style.transition = `right ${durationSec}s cubic-bezier(0.25, 1, 0.5, 1), bottom 0.3s ease`;
+    root.style.transition = `right ${durationSec}s cubic-bezier(0.42, 0.05, 0.3, 1), bottom 0.3s ease`;
     root.style.right = targetRight + 'px';
     curRight = targetRight;
+    if (petMotion) petMotion.onMoveStart('walk');
 
     petAudio.playFootstep();
     let princeDustTimer = null;
@@ -2495,6 +2545,7 @@
       if (princeDustTimer) clearInterval(princeDustTimer);
       activeRig.classList.remove('is-walking');
       isMoving = false;
+      if (petMotion) petMotion.onMoveEnd('walk');
       if (onComplete) onComplete();
     }, durationSec * 1000);
   }
@@ -2530,11 +2581,13 @@
     root.style.transition = `right ${durationSec}s cubic-bezier(0.12, 0.8, 0.32, 1)`;
     root.style.right = targetRight + 'px';
     curRight = targetRight;
+    if (petMotion) petMotion.onMoveStart('dash');
 
     setTimeout(() => {
       clearInterval(dustTimer);
       activeRig.classList.remove('is-running');
       activeRig.classList.add('action-skid');
+      if (petMotion) petMotion.onMoveEnd('dash');
       petAudio.playFootstep();
 
       setTimeout(() => {
@@ -2598,6 +2651,20 @@
   // 十、8 帧原画分镜 360° 转木箱神技动作引擎
   // ==========================================
   let boxSpinCount = 0;
+  // 木箱动作收尾：木箱淡出，祢豆子淡入 (仅当当前角色仍是祢豆子)
+  function finishBoxAction() {
+    moodBubble.classList.remove('active');
+    boxContainer.classList.add('pm-box-fade-out');
+    if (activePet === 'nezuko') {
+      petNezuko.style.display = 'block';
+      if (petMotion) petMotion.onAppear();
+    }
+    setTimeout(() => {
+      boxContainer.className = 'box-action-container';
+      isActionPlaying = false;
+    }, 230);
+  }
+
   function triggerDemonSlayerBoxAction() {
     if (isActionPlaying) return;
     isActionPlaying = true;
@@ -2624,13 +2691,7 @@
         moodBubble.textContent = '✨';
         moodBubble.classList.add('active');
 
-        setTimeout(() => {
-          moodBubble.classList.remove('active');
-          boxContainer.className = 'box-action-container';
-          boxContainer.classList.remove('show-box-action');
-          petNezuko.style.display = 'block';
-          isActionPlaying = false;
-        }, 2400);
+        setTimeout(finishBoxAction, 2400);
       }, 1300);
     } else {
       // 动作 B：钻木箱与探头探脑 (Peek-a-boo Box)
@@ -2639,13 +2700,7 @@
       moodBubble.textContent = '🌸';
       moodBubble.classList.add('active');
 
-      setTimeout(() => {
-        moodBubble.classList.remove('active');
-        boxContainer.className = 'box-action-container';
-        boxContainer.classList.remove('show-box-action');
-        petNezuko.style.display = 'block';
-        isActionPlaying = false;
-      }, 3200);
+      setTimeout(finishBoxAction, 3200);
     }
   }
 
@@ -2897,12 +2952,14 @@
         root.style.transition = 'none';
         root.style.right = curRight + 'px';
         root.style.bottom = curBottom + 'px';
+        if (petMotion && activePet === 'nezuko') petMotion.onDragMove(ev.screenX, ev.screenY);
       }
     };
 
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      if (petMotion) petMotion.onDragEnd();
       if (isDragging) {
         const currentRig = activePet === 'nezuko' ? petNezuko : petPrince;
         currentRig.classList.remove('pet-picked-up');
@@ -2921,6 +2978,390 @@
 
   petNezuko.addEventListener('mousedown', onDragDown);
   petPrince.addEventListener('mousedown', onDragDown);
+
+  // ==========================================
+  // 十二、rAF 程序化动作层 (PetMotion：阻尼弹簧 · 程序化呼吸 · 拖拽惯性 · 互动粒子)
+  // ==========================================
+  // 设计要点：
+  // - 只作用于祢豆子；transform 写在 #nezuko-motion-wrap 与骨骼内联样式上，
+  //   绝不触碰 charViewport (朝向翻转仍由 updateFacing 的 scaleX 独占)。
+  // - 行走/冲刺/动作类的 !important 关键帧优先级高于内联样式，因此它们播放时自动接管对应骨骼。
+  // - prefers-reduced-motion 时整层关闭；页面隐藏时暂停 rAF。
+  petMotion = (function createPetMotion() {
+    const wrap = document.getElementById('nezuko-motion-wrap');
+    const rig = petNezuko;
+    if (!wrap || !rig || typeof requestAnimationFrame !== 'function') return null;
+
+    const bones = {
+      head: document.getElementById('bone-head'),
+      torso: document.getElementById('bone-torso'),
+      armL: document.getElementById('bone-arm-l'),
+      armR: document.getElementById('bone-arm-r'),
+      legL: document.getElementById('bone-leg-l'),
+      legR: document.getElementById('bone-leg-r')
+    };
+    const eyelid = document.getElementById('nezuko-eyelid');
+    const shadow = document.getElementById('nezuko-ground-shadow');
+    const isDesktop = !!window.__IS_DESKTOP_STANDALONE_PET__;
+
+    // ---------- 阻尼弹簧 ----------
+    function spring(k, c) { return { x: 0, v: 0, t: 0, k: k, c: c }; }
+    function stepSpring(s, dt) {
+      const a = -s.k * (s.x - s.t) - s.c * s.v;
+      s.v += a * dt;
+      s.x += s.v * dt;
+    }
+    const S = {
+      rot: spring(140, 13),      // 整体倾斜 (deg，局部坐标)
+      squash: spring(260, 13),   // 挤压拉伸 (+ 为压扁)
+      bounceY: spring(220, 16),  // 落地回弹位移 (px)
+      headRot: spring(90, 12),
+      headX: spring(90, 12),
+      headY: spring(120, 14),
+      armL: spring(110, 10),
+      armR: spring(110, 10),
+      legL: spring(160, 12),
+      legR: spring(160, 12)
+    };
+    const springList = Object.keys(S).map(k => S[k]);
+
+    // ---------- 状态 ----------
+    const st = {
+      enabled: false,
+      rafId: 0,
+      slowTimer: 0,
+      lastT: 0,
+      time: Math.random() * 100,
+      breathPhase: 0,
+      sighUntil: 0,
+      nextSighAt: 0,
+      moveKind: null,       // 'walk' | 'dash' | null
+      hop: null,            // { start, dur, h }
+      lastHopAt: 0,
+      look: { until: 0, nextAt: 0 },
+      drag: { active: false, vx: 0, vy: 0, lastX: 0, lastY: 0, lastT: 0, stillSince: 0, source: null },
+      screen: { x: 0, y: 0, init: false },
+      lastHoverAt: 0,
+      lastClickFxAt: 0,
+      particles: 0,
+      cleared: true
+    };
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const r3 = (v) => Math.round(v * 1000) / 1000;
+    // 平滑伪噪声 (无理数频率叠加)，返回约 [-1, 1]
+    const noise = (t, seed) => (Math.sin(t * 1.0 + seed) + Math.sin(t * 2.173 + seed * 1.7) * 0.5 + Math.sin(t * 0.531 + seed * 3.1) * 0.7) / 2.2;
+
+    function isNezukoVisible() {
+      return activePet === 'nezuko' && rig.style.display !== 'none' && (!stageEl || stageEl.style.display !== 'none');
+    }
+
+    // ---------- 外部事件钩子 ----------
+    function blink(double) {
+      if (!eyelid) return;
+      rig.classList.add('is-blinking');
+      setTimeout(() => {
+        rig.classList.remove('is-blinking');
+        if (double) setTimeout(() => blink(false), 140);
+      }, 120);
+    }
+
+    function hop(h) {
+      if (!st.enabled) return;
+      const now = performance.now();
+      if (now - st.lastHopAt < 260) return;
+      st.lastHopAt = now;
+      st.hop = { start: now, dur: 300 + h * 6, h: h };
+      S.squash.v -= 1.2; // 起跳拉伸
+    }
+
+    function land(strength) {
+      if (!st.enabled) return;
+      S.squash.v += 2.2 * strength;
+      S.bounceY.v -= 60 * strength;
+    }
+
+    function onTurn() { hop(7); }
+
+    function onMoveStart(kind) {
+      st.moveKind = kind;
+      if (kind === 'dash') { S.squash.v += 1.5; }
+    }
+
+    function onMoveEnd(kind) {
+      if (st.moveKind === kind) st.moveKind = null;
+      if (!st.enabled) return;
+      if (kind === 'dash') { S.rot.v += 70; land(0.6); }
+      else { S.rot.v += 18; }
+    }
+
+    function onAppear() {
+      rig.classList.remove('pm-appear');
+      void rig.offsetWidth;
+      rig.classList.add('pm-appear');
+      setTimeout(() => rig.classList.remove('pm-appear'), 300);
+      if (st.enabled) { S.squash.x = 0.1; S.squash.v = -1.5; }
+    }
+
+    function spawnParticles(chars, count) {
+      if (!st.enabled || !stageEl || !charViewport) return;
+      for (let i = 0; i < count; i++) {
+        if (st.particles >= 10) return;
+        const p = document.createElement('div');
+        p.className = 'pm-particle';
+        p.textContent = chars[Math.floor(Math.random() * chars.length)];
+        const baseX = charViewport.offsetLeft + charViewport.offsetWidth / 2;
+        const baseY = charViewport.offsetTop + 22;
+        p.style.left = (baseX - 8 + (Math.random() - 0.5) * 60) + 'px';
+        p.style.top = (baseY + Math.random() * 20) + 'px';
+        p.style.setProperty('--pdx', ((Math.random() - 0.5) * 50).toFixed(1) + 'px');
+        p.style.setProperty('--pdy', (-36 - Math.random() * 26).toFixed(1) + 'px');
+        p.style.setProperty('--prot', ((Math.random() - 0.5) * 50).toFixed(1) + 'deg');
+        p.style.animationDelay = (i * 70) + 'ms';
+        stageEl.appendChild(p);
+        st.particles++;
+        setTimeout(() => { p.remove(); st.particles--; }, 1100 + i * 70);
+      }
+    }
+
+    function canPlay() {
+      return st.enabled && isNezukoVisible() && !isActionPlaying && !st.drag.active && !isDragging;
+    }
+
+    function onHover() {
+      const now = performance.now();
+      if (!canPlay() || isMoving || now - st.lastHoverAt < 3000) return;
+      st.lastHoverAt = now;
+      hop(5);
+      spawnParticles(['✨'], 1);
+    }
+
+    function onClick() {
+      const now = performance.now();
+      if (!canPlay() || now - st.lastClickFxAt < 700) return;
+      st.lastClickFxAt = now;
+      S.squash.x = 0.12; S.squash.v = 0;
+      hop(9);
+      spawnParticles(['💖', '💕', '✨'], 3);
+    }
+
+    // 拖拽：浏览器内嵌模式由 mousemove 提供屏幕坐标；桌面模式由 screenX/Y 轮询提供
+    function dragSample(x, y, now, source) {
+      const d = st.drag;
+      if (!d.active) {
+        d.active = true; d.source = source;
+        d.lastX = x; d.lastY = y; d.lastT = now; d.vx = 0; d.vy = 0; d.stillSince = now;
+        return;
+      }
+      const dt = Math.max(1, now - d.lastT) / 1000;
+      const ivx = (x - d.lastX) / dt;
+      const ivy = (y - d.lastY) / dt;
+      d.vx += (ivx - d.vx) * 0.35;
+      d.vy += (ivy - d.vy) * 0.35;
+      if (x !== d.lastX || y !== d.lastY) d.stillSince = now;
+      d.lastX = x; d.lastY = y; d.lastT = now;
+    }
+    function dragEnd() {
+      const d = st.drag;
+      if (!d.active) return;
+      d.active = false;
+      if (st.enabled) {
+        // 松手：按惯性甩一下 (wobble) + 落地回弹
+        S.rot.v += clamp(d.vx * 0.05, -120, 120) * facingDirection;
+        land(1);
+      }
+      d.vx = 0; d.vy = 0; d.source = null;
+    }
+    function onDragMove(screenX, screenY) { dragSample(screenX, screenY, performance.now(), 'mouse'); }
+    function onDragEnd() { if (st.drag.source === 'mouse') dragEnd(); }
+
+    function pollDesktopWindow(now) {
+      if (!isDesktop) return;
+      const x = window.screenX, y = window.screenY;
+      if (typeof x !== 'number' || typeof y !== 'number') return;
+      if (!st.screen.init) { st.screen.x = x; st.screen.y = y; st.screen.init = true; return; }
+      const dx = x - st.screen.x, dy = y - st.screen.y;
+      st.screen.x = x; st.screen.y = y;
+      if (Math.abs(dx) > 600 || Math.abs(dy) > 600) return; // 程序化瞬移/恢复位置，不当作拖拽
+      if (dx !== 0 || dy !== 0) {
+        dragSample(x, y, now, 'window');
+      } else if (st.drag.active && st.drag.source === 'window') {
+        dragSample(x, y, now, 'window');
+        if (now - st.drag.stillSince > 140) dragEnd();
+      }
+    }
+
+    // ---------- 主循环 ----------
+    function writeTransforms(o) {
+      wrap.style.transform = `translate3d(0, ${r3(o.ty)}px, 0) rotate(${r3(o.rot)}deg) scale(${r3(1 + o.sq)}, ${r3(1 - o.sq)})`;
+      if (bones.head) bones.head.style.transform = `translate(${r3(o.hx)}px, ${r3(o.hy)}px) rotate(${r3(o.hr)}deg)`;
+      if (bones.torso) bones.torso.style.transform = `scale(${r3(1 - o.breath * 0.006)}, ${r3(1 + o.breath * 0.016)})`;
+      if (bones.armL) bones.armL.style.transform = `rotate(${r3(o.al)}deg)`;
+      if (bones.armR) bones.armR.style.transform = `rotate(${r3(o.ar)}deg)`;
+      if (bones.legL) bones.legL.style.transform = o.legs ? `rotate(${r3(o.ll)}deg)` : '';
+      if (bones.legR) bones.legR.style.transform = o.legs ? `rotate(${r3(o.lr)}deg)` : '';
+      if (shadow) {
+        const lift = clamp(-o.ty / 30, 0, 0.6);
+        shadow.style.transform = `translateX(-50%) scale(${r3(1 - lift * 0.5)}, ${r3(1 - lift * 0.4)})`;
+        shadow.style.opacity = String(r3(1 - lift * 0.6));
+      }
+      st.cleared = false;
+    }
+
+    function clearTransforms() {
+      if (st.cleared) return;
+      wrap.style.transform = '';
+      Object.keys(bones).forEach(k => { if (bones[k]) bones[k].style.transform = ''; });
+      if (shadow) { shadow.style.transform = ''; shadow.style.opacity = ''; }
+      st.cleared = true;
+    }
+
+    function tick(now) {
+      st.rafId = 0;
+      if (!st.enabled || document.hidden) return;
+
+      if (!isNezukoVisible()) {
+        // 不可见时降频：仅同步窗口坐标，避免切回时误判为拖拽
+        if (isDesktop) { st.screen.x = window.screenX; st.screen.y = window.screenY; st.screen.init = true; }
+        if (st.drag.active) dragEnd();
+        clearTransforms();
+        st.lastT = 0;
+        st.slowTimer = setTimeout(() => { st.slowTimer = 0; schedule(); }, 300);
+        return;
+      }
+
+      if (!rig.classList.contains('pm-active')) rig.classList.add('pm-active');
+      pollDesktopWindow(now);
+
+      const busy = st.moveKind || st.hop || st.drag.active || isActionPlaying;
+      if (st.lastT && !busy && now - st.lastT < 30) { schedule(); return; } // 待机约 30fps
+      let dt = st.lastT ? (now - st.lastT) / 1000 : 1 / 60;
+      st.lastT = now;
+      dt = Math.min(dt, 1 / 20);
+      st.time += dt;
+      const t = st.time;
+
+      // ---- 程序化呼吸：节律缓慢漂移，偶尔深呼吸 ----
+      const rate = 0.26 + 0.06 * noise(t * 0.07, 1.3); // Hz
+      st.breathPhase += dt * rate * Math.PI * 2;
+      if (!st.nextSighAt) st.nextSighAt = now + 15000 + Math.random() * 20000;
+      if (now > st.nextSighAt && !st.moveKind) { st.sighUntil = now + 4200; st.nextSighAt = now + 18000 + Math.random() * 25000; }
+      let breathAmp = now < st.sighUntil ? 1.8 : 1;
+      if (st.moveKind || st.drag.active) breathAmp *= 0.35;
+      const breath = Math.sin(st.breathPhase) * breathAmp;
+      const breathLag = Math.sin(st.breathPhase - 0.6) * breathAmp;
+
+      // ---- 张望 ----
+      const look = st.look;
+      if (!look.nextAt) look.nextAt = now + 5000 + Math.random() * 6000;
+      let lookRot = 0, lookX = 0;
+      if (now > look.nextAt && !st.moveKind && !st.drag.active && !isActionPlaying) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        look.rot = side * (4 + Math.random() * 5);
+        look.x = side * (1.5 + Math.random() * 2);
+        look.until = now + 1200 + Math.random() * 1500;
+        look.nextAt = look.until + 5000 + Math.random() * 9000;
+        if (Math.random() < 0.55) blink(Math.random() < 0.25);
+      }
+      if (now < look.until) { lookRot = look.rot; lookX = look.x; }
+
+      // ---- 整体倾斜目标 ----
+      let leanTarget = 0;
+      if (st.moveKind === 'walk') leanTarget = -3.5;
+      else if (st.moveKind === 'dash') leanTarget = -7;
+      if (st.drag.active) {
+        // 拖拽：身体滞后于运动方向 (屏幕坐标 → 局部坐标需乘朝向)
+        leanTarget = clamp(-st.drag.vx * 0.012, -16, 16) * facingDirection;
+      }
+      S.rot.t = leanTarget;
+      S.squash.t = st.drag.active ? clamp(st.drag.vy * 0.00006, -0.05, 0.05) : 0;
+      S.bounceY.t = 0;
+
+      // ---- 头 / 手 / 腿 ----
+      S.headRot.t = 1.8 * noise(t * 0.45, 7.1) + lookRot - S.rot.x * 0.35;
+      S.headX.t = lookX;
+      S.headY.t = 1.4 * breathLag;
+      const armFollow = -S.rot.v * 0.04;
+      S.armL.t = -1 + 4 * Math.sin(t * 1.07 + 0.4) + breath * 1.5 + armFollow;
+      S.armR.t = 1 + 4 * Math.sin(t * 0.91 + 2.1) - breath * 1.5 + armFollow;
+      const legs = st.drag.active;
+      if (legs) {
+        const kick = Math.sin(t * 11) * 9;
+        S.legL.t = kick - S.rot.x * 0.5;
+        S.legR.t = -kick - S.rot.x * 0.5;
+      } else {
+        S.legL.t = 0; S.legR.t = 0;
+      }
+
+      // 子步进保证弹簧稳定
+      const steps = Math.ceil(dt / (1 / 120));
+      const h = dt / steps;
+      for (let i = 0; i < steps; i++) springList.forEach(s => stepSpring(s, h));
+
+      // ---- 跳跃 (抛物线) ----
+      let hopY = 0;
+      if (st.hop) {
+        const p = (now - st.hop.start) / st.hop.dur;
+        if (p >= 1) { st.hop = null; land(0.7); }
+        else hopY = -st.hop.h * 4 * p * (1 - p);
+      }
+
+      const sq = clamp(S.squash.x + breath * 0.008, -0.18, 0.2);
+      writeTransforms({
+        ty: hopY + S.bounceY.x + breath * 1.2,
+        rot: clamp(S.rot.x, -22, 22),
+        sq: sq,
+        hx: S.headX.x, hy: S.headY.x, hr: S.headRot.x,
+        breath: breath,
+        al: S.armL.x, ar: S.armR.x,
+        legs: legs || Math.abs(S.legL.x) > 0.2 || Math.abs(S.legR.x) > 0.2,
+        ll: S.legL.x, lr: S.legR.x
+      });
+      schedule();
+    }
+
+    function schedule() {
+      if (!st.enabled || document.hidden || st.rafId || st.slowTimer) return;
+      st.rafId = requestAnimationFrame(tick);
+    }
+    function stopLoop() {
+      if (st.rafId) { cancelAnimationFrame(st.rafId); st.rafId = 0; }
+      if (st.slowTimer) { clearTimeout(st.slowTimer); st.slowTimer = 0; }
+      st.lastT = 0;
+    }
+
+    function setEnabled(on) {
+      st.enabled = on;
+      if (on) {
+        rig.classList.add('pm-active');
+        schedule();
+      } else {
+        stopLoop();
+        rig.classList.remove('pm-active');
+        st.hop = null; st.drag.active = false;
+        springList.forEach(s => { s.x = 0; s.v = 0; s.t = 0; });
+        clearTransforms();
+      }
+    }
+
+    const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    setEnabled(!(mq && mq.matches));
+    if (mq) {
+      const onMq = () => setEnabled(!mq.matches);
+      if (mq.addEventListener) mq.addEventListener('change', onMq);
+      else if (mq.addListener) mq.addListener(onMq);
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopLoop();
+      else schedule();
+    });
+
+    rig.addEventListener('mouseenter', onHover);
+    rig.addEventListener('click', onClick);
+
+    return { onTurn, onMoveStart, onMoveEnd, onAppear, onDragMove, onDragEnd, hop, blink };
+  })();
+
 
 
   setTimeout(() => {
