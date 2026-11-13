@@ -18,7 +18,8 @@ from PIL import Image
 
 REPO_ROOT = Path(os.environ.get("AGZH_REPO_ROOT") or Path(__file__).resolve().parent.parent)
 MEDIA_DIR = REPO_ROOT / "resources" / "media"
-ARTIFACT_DIR = Path(r"C:\Users\QTS的天选\.gemini\antigravity\brain\158062cb-0b2d-485e-b84e-ad56b751e715")
+# 可选：额外把预览页写到某个目录（旧版写死了作者本机的用户目录路径，在其他电脑上直接报错）
+ARTIFACT_DIR = Path(os.environ["AGZH_SPLASH_PREVIEW_DIR"]) if os.environ.get("AGZH_SPLASH_PREVIEW_DIR") else None
 
 def get_base64_webp(name: str) -> str:
     webp_path = MEDIA_DIR / f"{name}.webp"
@@ -984,9 +985,11 @@ def main():
     print(f"已生成启动画面原型: {splash_file} ({splash_file.stat().st_size} 字节)")
 
     # 2. 写入工件目录下的实时预览文件
-    artifact_preview = ARTIFACT_DIR / "splash_characters_preview.html"
-    artifact_preview.write_text(html, encoding="utf-8")
-    print(f"已生成工件右侧实时预览: {artifact_preview}")
+    if ARTIFACT_DIR is not None:
+        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+        artifact_preview = ARTIFACT_DIR / "splash_characters_preview.html"
+        artifact_preview.write_text(html, encoding="utf-8")
+        print(f"已生成预览: {artifact_preview}")
 
     # 3. 生成可嵌入 Electron WebContentsView 的 loadingOverlay-zh.js
     escaped_html = html.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')

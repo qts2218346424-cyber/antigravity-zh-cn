@@ -72,18 +72,31 @@ const __agzhSkin = (() => {{
       return cache;
     }};
     const keys = new WeakMap();
+    const chains = new WeakMap();
     const tracked = new Set();
-    const applyTo = async (wc) => {{
+    const applyNow = async (wc) => {{
       try {{
         if (!wc || wc.isDestroyed()) return;
         const p = load();
         const prev = keys.get(wc);
         if (prev) {{ keys.delete(wc); try {{ await wc.removeInsertedCSS(prev); }} catch (_) {{}} }}
         const active = p && !p.disabled ? p : null;
-        if (active && active.css) keys.set(wc, await wc.insertCSS(active.css));
+        if (active && active.css && !wc.isDestroyed()) keys.set(wc, await wc.insertCSS(active.css));
         const slim = active ? {{ id: active.id, pet: active.pet || {{}} }} : null;
-        await wc.executeJavaScript('window.__AGZH_SKIN__ = ' + JSON.stringify(slim) + ';\\n' + RUNTIME);
+        if (!wc.isDestroyed()) await wc.executeJavaScript('window.__AGZH_SKIN__ = ' + JSON.stringify(slim) + ';\\n' + RUNTIME);
       }} catch (e) {{ try {{ console.log('[AGZH-SKIN] apply failed:', e && e.message); }} catch (_) {{}} }}
+    }};
+    // dom-ready 与 did-finish-load 几乎同时触发：两次 apply 并发时都会 insertCSS，
+    // 其中一份样式的 key 被覆盖丢失，之后切换皮肤再也移除不掉（旧皮肤残留）。
+    // 这里按 webContents 串行化，并合并排队中的重复请求。
+    const applyTo = (wc) => {{
+      if (!wc) return Promise.resolve();
+      const st = chains.get(wc) || {{ tail: Promise.resolve(), queued: false }};
+      chains.set(wc, st);
+      if (st.queued) return st.tail;
+      st.queued = true;
+      st.tail = st.tail.then(() => {{ st.queued = false; return applyNow(wc); }});
+      return st.tail;
     }};
     let watching = false;
     const watch = () => {{

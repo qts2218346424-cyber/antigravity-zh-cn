@@ -31,6 +31,19 @@ PATCH_MARKER = b"/* __ANTIGRAVITY_ZH_CN_PATCHED__ */"
 AUTOSTART_NAME = "AntigravityZhCnAutoReapply"
 MAC_LABEL = "com.antigravity-zh-cn.autoreapply"
 PROCESS_NAMES = ("Antigravity", "antigravity", "Antigravity.exe", "antigravity.exe")
+# 官方更新安装器替换 app.asar 期间文件处于“半写入”状态：最近 SETTLE_SECONDS 秒内被修改过的
+# 文件先不动，等更新器写完再重新注入，避免在不完整的 asar 上打补丁。
+SETTLE_SECONDS = 90
+# 正在运行时识别的官方更新/安装程序进程名（小写），存在时同样延后
+UPDATER_PROCESS_NAMES = ("antigravity setup.exe", "antigravitysetup.exe", "update.exe", "squirrel.exe")
+
+# 指纹变化后需要全文扫描补丁标记（app.asar 约 100~200 MB）。同一指纹只扫描一次。
+_MARKER_CACHE: dict[tuple, bool] = {}
+
+
+def _reapply_lock():
+    """重新注入 app.asar 的跨进程锁（界面“立即检测”与开机后台守护可能同时触发）。"""
+    return sm.FileLock(sm.config_dir() / ".reapply.lock", timeout=0.5, stale=600)
 
 
 def _log(msg: str) -> None:
@@ -114,7 +127,7 @@ def agent_status(asar_path: Path | None = None) -> str:
         return "missing"
     asar_path = Path(asar_path)
     if not st:
-        return "patched" if _contains_marker(asar_path) else "never"
+        return "patched" if _contains_marker_cached(asar_path) else "never"
     if st.get("enabled") is False:
         return "disabled"
     fp = st.get("fingerprint") or {}
@@ -122,9 +135,29 @@ def agent_status(asar_path: Path | None = None) -> str:
     if fp.get("size") == cur["size"] and fp.get("mtime_ns") == cur["mtime_ns"]:
         return "patched"
     # 指纹变化：可能是官方更新，也可能是其他工具重新打包，读取内容确认
-    if _contains_marker(asar_path):
+    if _contains_marker_cached(asar_path, cur):
         return "patched"
     return "needs_reapply"
+
+
+def _contains_marker_cached(path: Path, fp: dict | None = None) -> bool:
+    fp = fp or file_fingerprint(path)
+    key = (str(path), fp["size"], fp["mtime_ns"])
+    if key not in _MARKER_CACHE:
+        if len(_MARKER_CACHE) > 16:
+            _MARKER_CACHE.clear()
+        _MARKER_CACHE[key] = _contains_marker(path)
+    return _MARKER_CACHE[key]
+
+
+def recently_modified(path: Path, seconds: float | None = None) -> bool:
+    """文件是否在最近 seconds 秒内被修改（官方更新器可能仍在写入）。mtime 在未来（时钟偏差）时不阻塞。"""
+    seconds = SETTLE_SECONDS if seconds is None else seconds
+    try:
+        age = time.time() - Path(path).stat().st_mtime
+    except OSError:
+        return True
+    return 0 <= age < seconds
 
 
 # ---------------------------------------------------------------------------
@@ -132,19 +165,32 @@ def agent_status(asar_path: Path | None = None) -> str:
 # ---------------------------------------------------------------------------
 def is_antigravity_running() -> bool:
     try:
+        names = _process_names()
         if sys.platform == "win32":
-            out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True,
-                                 timeout=10, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
-            names = {line.split(",")[0].strip('"').lower() for line in out.splitlines() if line}
             return "antigravity.exe" in names
-        out = subprocess.run(["ps", "-A", "-o", "comm="], capture_output=True, text=True, timeout=10).stdout
-        for line in out.splitlines():
-            base = os.path.basename(line.strip())
-            if base in PROCESS_NAMES:
-                return True
+        return any(n in names for n in (p.lower() for p in PROCESS_NAMES))
     except Exception:
         return False
-    return False
+
+
+def is_updater_running() -> bool:
+    try:
+        names = _process_names()
+    except Exception:
+        return False
+    return any(n in names for n in UPDATER_PROCESS_NAMES)
+
+
+def _process_names() -> set[str]:
+    """当前用户可见的进程名（小写）。tasklist 在中文系统上输出 GBK，按 utf-8 宽松解码只用于匹配 ASCII 名称。"""
+    if sys.platform == "win32":
+        out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", timeout=10,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout or ""
+        return {line.split(",")[0].strip('"').lower() for line in out.splitlines() if line}
+    out = subprocess.run(["ps", "-A", "-o", "comm="], capture_output=True, text=True,
+                         encoding="utf-8", errors="replace", timeout=10).stdout or ""
+    return {os.path.basename(line.strip()).lower() for line in out.splitlines() if line.strip()}
 
 
 # ---------------------------------------------------------------------------
@@ -168,20 +214,36 @@ def check(apply: bool = False, *, allow_when_running: bool = False, repo_root: P
     a_status = agent_status()
     result["agent"] = a_status
     if a_status == "needs_reapply" and apply:
+        asar = Path(agent.get("asar_path") or "")
         if is_antigravity_running() and not allow_when_running:
             result["agent"] = "deferred_running"
             _log("检测到 Antigravity 已被更新覆盖，但程序正在运行，等待其退出后再重新注入。")
+        elif not allow_when_running and (recently_modified(asar) or is_updater_running()):
+            # 更新器刚替换完（或仍在替换）app.asar：等文件稳定后下一轮再处理
+            result["agent"] = "deferred_settling"
+            _log("检测到 Antigravity 正在更新，等待更新完成后再重新注入。")
         else:
-            _log("检测到 Antigravity 已被更新覆盖，开始自动重新注入汉化与皮肤加载器...")
-            try:
-                reapply_agent(agent, repo_root=repo_root)
-                result["agent"] = "reapplied"
-                result["actions"].append("reapplied_agent")
-                _log("Agent 桌面端重新注入完成。")
-            except Exception as e:
-                result["agent"] = "error"
-                result["error"] = str(e)
-                _log(f"重新注入失败: {e}")
+            lock = _reapply_lock()
+            if not lock.acquire():
+                result["agent"] = "deferred_locked"
+                _log("另一个进程正在重新注入，本次跳过。")
+            else:
+                try:
+                    # 拿到锁后再确认一次：可能另一进程刚刚完成了注入
+                    if agent_status() != "needs_reapply":
+                        result["agent"] = agent_status()
+                    else:
+                        _log("检测到 Antigravity 已被更新覆盖，开始自动重新注入汉化与皮肤加载器...")
+                        reapply_agent(agent, repo_root=repo_root)
+                        result["agent"] = "reapplied"
+                        result["actions"].append("reapplied_agent")
+                        _log("Agent 桌面端重新注入完成。")
+                except Exception as e:
+                    result["agent"] = "error"
+                    result["error"] = str(e)
+                    _log(f"重新注入失败: {e}")
+                finally:
+                    lock.release()
 
     ide_root = si.find_ide_app_root()
     i_status = si.ide_status(ide_root)
@@ -224,52 +286,46 @@ def watch(interval: int = 120, once: bool = False) -> None:
         _log("已有一个后台检测实例在运行，本实例退出。")
         return
     _log(f"后台自动重注入守护已启动，每 {interval} 秒检测一次。")
-    while True:
-        st = sm.load_state()
-        if st.get("auto_reapply", False):
+    try:
+        while True:
+            st = sm.load_state()
+            if not st.get("auto_reapply", False):
+                # 用户已关闭自动重注入：守护进程直接退出，而不是永远空转
+                _log("自动重注入已关闭，后台守护退出。")
+                return
             try:
                 check(apply=True)
             except Exception as e:
                 _log(f"检测异常: {e}")
-        if once:
-            return
-        time.sleep(max(30, interval))
+            if once:
+                return
+            time.sleep(max(30, interval))
+    finally:
+        _release_single_instance()
 
 
 def _pid_alive(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    if sys.platform == "win32":
-        try:
-            import ctypes
-            h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
-            if not h:
-                return False
-            code = ctypes.c_ulong()
-            ctypes.windll.kernel32.GetExitCodeProcess(h, ctypes.byref(code))
-            ctypes.windll.kernel32.CloseHandle(h)
-            return code.value == 259  # STILL_ACTIVE
-        except Exception:
-            return False
-    try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
+    return sm._pid_alive(pid)
+
+
+_INSTANCE_LOCK: "sm.FileLock | None" = None
 
 
 def _acquire_single_instance() -> bool:
-    p = sm.config_dir() / "background.pid"
-    try:
-        if p.is_file():
-            old = int(p.read_text().strip() or "0")
-            if old != os.getpid() and _pid_alive(old):
-                return False
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(str(os.getpid()))
-    except Exception:
-        pass
-    return True
+    """后台守护单实例：O_EXCL 锁文件 + 进程存活检测（旧实现先读后写，两个实例同时启动会都通过）。"""
+    global _INSTANCE_LOCK
+    lock = sm.FileLock(sm.config_dir() / "background.pid", timeout=0, stale=10 ** 9)
+    if lock.acquire():
+        _INSTANCE_LOCK = lock
+        return True
+    return False
+
+
+def _release_single_instance() -> None:
+    global _INSTANCE_LOCK
+    if _INSTANCE_LOCK is not None:
+        _INSTANCE_LOCK.release()
+        _INSTANCE_LOCK = None
 
 
 # ---------------------------------------------------------------------------

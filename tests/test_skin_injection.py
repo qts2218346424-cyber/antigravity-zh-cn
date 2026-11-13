@@ -45,6 +45,8 @@ def env(tmp_path, monkeypatch):
     import splash_generator
     monkeypatch.setattr(splash_generator, "CONFIG_FILE", tmp_path / "splash_config.json")
     monkeypatch.setattr(ar, "is_antigravity_running", lambda: False)
+    monkeypatch.setattr(ar, "is_updater_running", lambda: False)
+    monkeypatch.setattr(ar, "SETTLE_SECONDS", 0)
     monkeypatch.setattr(si, "_ide_candidates", lambda: [])
     sm.sync_builtin_packs()
     return tmp_path

@@ -177,10 +177,117 @@ def builtin_skins_dir() -> Path:
 # 2. 状态文件
 # ---------------------------------------------------------------------------
 def _atomic_write_text(path: Path, text: str) -> None:
+    """原子写入。
+
+    - 临时文件名带进程号与线程号：图形界面与后台守护进程同时写 state.json 时不会互相覆盖临时文件；
+    - Windows 上目标文件正被其他进程（例如 Antigravity 主进程读取 active-skin.json）短暂打开时，
+      os.replace 会抛 PermissionError，这里做短暂重试而不是直接失败。
+    """
+    import threading
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
+    last: Exception | None = None
+    for attempt in range(20):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError as e:  # pragma: no cover - 仅 Windows 文件共享冲突
+            last = e
+            time.sleep(0.05 * (attempt + 1))
+    try:
+        tmp.unlink()
+    except OSError:
+        pass
+    raise last  # type: ignore[misc]
+
+
+class FileLock:
+    """极简跨进程文件锁（O_CREAT | O_EXCL）。
+
+    用于保护 state.json 的“读-改-写”以及 app.asar 的重新注入，防止图形界面、
+    命令行与开机后台守护同时操作时互相覆盖。持锁进程已退出或锁文件超过 stale 秒视为失效。
+    """
+
+    def __init__(self, path: Path, timeout: float = 10.0, stale: float = 120.0):
+        self.path = Path(path)
+        self.timeout = timeout
+        self.stale = stale
+        self._fd: int | None = None
+
+    def _is_stale(self) -> bool:
+        try:
+            age = time.time() - self.path.stat().st_mtime
+            pid = int((self.path.read_text(encoding="utf-8").strip() or "0").split()[0])
+        except (OSError, ValueError):
+            return True
+        if age > self.stale:
+            return True
+        return pid > 0 and pid != os.getpid() and not _pid_alive(pid)
+
+    def acquire(self) -> bool:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        deadline = time.monotonic() + self.timeout
+        while True:
+            try:
+                self._fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(self._fd, f"{os.getpid()}\n".encode("ascii"))
+                return True
+            except FileExistsError:
+                if self._is_stale():
+                    try:
+                        self.path.unlink()
+                    except OSError:
+                        pass
+                    continue
+                if time.monotonic() >= deadline:
+                    return False
+                time.sleep(0.05)
+
+    def release(self) -> None:
+        if self._fd is not None:
+            try:
+                os.close(self._fd)
+            except OSError:
+                pass
+            self._fd = None
+            try:
+                self.path.unlink()
+            except OSError:
+                pass
+
+    def __enter__(self):
+        if not self.acquire():
+            raise TimeoutError(f"等待文件锁超时: {self.path}")
+        return self
+
+    def __exit__(self, *exc):
+        self.release()
+        return False
+
+
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if not h:
+                return False
+            code = ctypes.c_ulong()
+            ctypes.windll.kernel32.GetExitCodeProcess(h, ctypes.byref(code))
+            ctypes.windll.kernel32.CloseHandle(h)
+            return code.value == 259  # STILL_ACTIVE
+        except Exception:
+            return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except OSError:
+        return False
 
 
 def load_state() -> dict:
@@ -200,14 +307,21 @@ def save_state(state: dict) -> None:
 
 
 def update_state(**changes: Any) -> dict:
-    st = load_state()
-    for k, v in changes.items():
-        if isinstance(v, dict) and isinstance(st.get(k), dict):
-            st[k].update(v)
-        else:
-            st[k] = v
-    save_state(st)
-    return st
+    """读-改-写 state.json；跨进程加锁，避免界面与后台守护同时更新时丢失字段。"""
+    lock = FileLock(config_dir() / ".state.lock", timeout=5.0, stale=30.0)
+    locked = lock.acquire()
+    try:
+        st = load_state()
+        for k, v in changes.items():
+            if isinstance(v, dict) and isinstance(st.get(k), dict):
+                st[k].update(v)
+            else:
+                st[k] = v
+        save_state(st)
+        return st
+    finally:
+        if locked:
+            lock.release()
 
 
 # ---------------------------------------------------------------------------
@@ -591,6 +705,7 @@ def sync_builtin_packs(force: bool = False) -> list[str]:
         return installed
     dst_root = skins_dir()
     dst_root.mkdir(parents=True, exist_ok=True)
+    removed = set(load_state().get("removed_builtin") or [])
     for src in sorted(src_root.iterdir()):
         if not (src / MANIFEST_NAME).is_file():
             continue
@@ -599,6 +714,8 @@ def sync_builtin_packs(force: bool = False) -> list[str]:
         except SkinError:
             continue
         dst = dst_root / pack.id
+        if not force and not dst.exists() and pack.id in removed:
+            continue  # 用户主动删除过的内置包，不在每次启动时“复活”
         if dst.exists() and not force:
             try:
                 cur = json.loads((dst / MANIFEST_NAME).read_text(encoding="utf-8-sig"))
@@ -613,6 +730,8 @@ def sync_builtin_packs(force: bool = False) -> list[str]:
         m["builtin"] = True
         (dst / MANIFEST_NAME).write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
         installed.append(pack.id)
+    if force and removed:
+        update_state(removed_builtin=[])
     return installed
 
 
@@ -941,9 +1060,17 @@ def remove_pack(skin_id: str) -> None:
     d = skins_dir() / skin_id
     if not _ID_RE.match(skin_id or "") or not d.is_dir():
         raise SkinError(f"未找到材质包: {skin_id}")
+    was_builtin = False
+    try:
+        was_builtin = bool(json.loads((d / MANIFEST_NAME).read_text(encoding="utf-8-sig")).get("builtin"))
+    except Exception:
+        pass
     shutil.rmtree(d)
     reset_override(skin_id)
     st = load_state()
+    if was_builtin:
+        removed = list(dict.fromkeys(list(st.get("removed_builtin") or []) + [skin_id]))
+        update_state(removed_builtin=removed)
     if st.get("active_skin") == skin_id:
         deactivate()
         update_state(active_skin=None)
@@ -1001,6 +1128,19 @@ def export_pack(skin_id: str, dest: Path, include_override: bool = True) -> Path
     return dest
 
 
+class _zip_errors:
+    """把 zipfile / zlib 的底层异常（CRC 错误、数据损坏、头部大小被篡改）统一转换为可读的 SkinError。"""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, ev, tb):
+        import zlib
+        if et is not None and issubclass(et, (zipfile.BadZipFile, zlib.error, EOFError)):
+            raise SkinError(f"压缩包已损坏或被篡改: {ev}") from ev
+        return False
+
+
 def import_pack(zip_path: Path, overwrite: bool = False) -> SkinPack:
     """从 .zip 导入材质包（防 zip-slip、限制体积与文件数，校验通过后才落盘）。"""
     zip_path = Path(zip_path)
@@ -1021,10 +1161,11 @@ def import_pack(zip_path: Path, overwrite: bool = False) -> SkinPack:
         for n in names:
             if n.startswith("/") or ".." in n.split("/") or re.match(r"^[A-Za-z]:", n):
                 raise SkinError(f"压缩包包含不安全路径: {n}")
-        staging = config_dir() / ".import-staging"
+        staging = config_dir() / f".import-staging-{os.getpid()}"
         if staging.exists():
             shutil.rmtree(staging)
         staging.mkdir(parents=True)
+        written = 0
         try:
             for info in infos:
                 n = info.filename.replace("\\", "/")
@@ -1036,8 +1177,16 @@ def import_pack(zip_path: Path, overwrite: bool = False) -> SkinPack:
                 target = (staging / rel).resolve()
                 target.relative_to(staging.resolve())
                 target.parent.mkdir(parents=True, exist_ok=True)
-                with zf.open(info) as src, open(target, "wb") as dst:
-                    shutil.copyfileobj(src, dst)
+                with _zip_errors(), zf.open(info) as src, open(target, "wb") as dst:
+                    # zip 头中的 file_size 可被伪造（zip 炸弹），按实际解压字节数限制
+                    while True:
+                        chunk = src.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        if written > MAX_ZIP_TOTAL_BYTES:
+                            raise SkinError("压缩包解压后体积过大（上限 64 MB）")
+                        dst.write(chunk)
             pack = load_pack(staging)
             dst_dir = skins_dir() / pack.id
             if dst_dir.exists():
