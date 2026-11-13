@@ -359,7 +359,7 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     res_dir = repo_root / "resources"
 
     # 角色选择交互与配置解析
-    from splash_generator import THEMES, build_overlay_js, get_current_theme, save_current_theme
+    from splash_generator import THEMES, build_overlay_js, get_current_theme, save_current_theme, read_pack_version
 
     selected_char = character
     if not selected_char:
@@ -921,7 +921,8 @@ function __agyTranslateNotif(text) {{
     try:
         overlay_content = read_asar_file_content(asar_data, "dist/loadingOverlay.js").decode("utf-8")
         if PATCH_MARKER not in overlay_content:
-            overlay_code = build_overlay_js(selected_char)
+            # 回退版本号取本次所用资源目录的 version.json；运行时优先显示实际安装的 Antigravity 版本
+            overlay_code = build_overlay_js(selected_char, pack_version=read_pack_version(res_dir / "version.json"))
             overlay_patch_code = f"{PATCH_MARKER}\n{overlay_code}"
             validate_js_syntax(overlay_patch_code, "dist/loadingOverlay.js")
             asar_data = replace_asar_file_content(asar_data, "dist/loadingOverlay.js", overlay_patch_code.encode("utf-8"))

@@ -473,7 +473,8 @@
         const crowTag = document.getElementById('crow-tag');
         const crowDot = document.getElementById('crow-dot');
 
-        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致 (v2.26.1)";
+        const crowVersion = "汉化包 v2.31.2";
+        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致" + (crowVersion ? " (" + crowVersion + ")" : "");
         crowTag.textContent = "柱级极境 ✅";
         crowTag.style.background = "rgba(34, 197, 94, 0.25)";
         crowTag.style.borderColor = "rgba(34, 197, 94, 0.6)";

@@ -10,6 +10,7 @@ Antigravity 《鬼灭之刃》全屏人物电影级动作启动遮罩生成器 (
 """
 
 import os
+import re
 import json
 import base64
 from pathlib import Path
@@ -20,6 +21,61 @@ from PIL import Image
 REPO_ROOT = Path(os.environ.get("AGZH_REPO_ROOT") or Path(__file__).resolve().parent.parent)
 MEDIA_DIR = REPO_ROOT / "resources" / "media"
 CONFIG_FILE = Path(os.environ.get("AGZH_SPLASH_CONFIG") or (REPO_ROOT / "resources" / "splash_config.json"))
+VERSION_FILE = REPO_ROOT / "resources" / "version.json"
+
+# 启动遮罩「鎹鸦巡检」面板展示的版本号来源（优先级从高到低）：
+#   1. 运行时 Electron 主进程 app.getVersion()，即当前实际安装的 Antigravity 版本（asar 内 package.json）；
+#   2. 生成 / 打补丁时从 resources/version.json 注入的汉化包版本号。
+# 不再在模板里写死任何 v2.xx.x 字符串。
+_VERSION_SAFE_RE = re.compile(r"[^0-9A-Za-z.+\-]")
+# 遮罩 JS 运行时替换的模板占位符（与 ${videoUrl} 同一机制）
+CROW_VERSION_PLACEHOLDER = "${crowVersion}"
+
+
+def sanitize_version(value) -> str:
+    """清洗版本号：去掉前缀 v 与一切非 [0-9A-Za-z.+-] 字符，避免注入 HTML/JS。"""
+    text = str(value or "").strip()
+    if text[:1] in ("v", "V"):
+        text = text[1:]
+    return _VERSION_SAFE_RE.sub("", text)[:32]
+
+
+def read_pack_version(version_file=None) -> str:
+    """读取 resources/version.json 中的汉化包版本号；读取失败返回空串。"""
+    path = Path(version_file) if version_file else VERSION_FILE
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    return sanitize_version(data.get("version", ""))
+
+
+def pack_version_label(pack_version=None) -> str:
+    """汉化包版本的展示文案，如「汉化包 vX.Y.Z」；无版本号时返回空串。"""
+    ver = sanitize_version(read_pack_version() if pack_version is None else pack_version)
+    return f"汉化包 v{ver}" if ver else ""
+
+
+def crow_version_js_literal(pack_version=None) -> str:
+    """静态 HTML（resources/splash/index.html 预览）中直接写入的版本文案 JS 字面量。"""
+    return json.dumps(pack_version_label(pack_version), ensure_ascii=False)
+
+
+def overlay_version_resolver_js(pack_version=None) -> str:
+    """遮罩主进程代码片段：优先取实际安装的 Antigravity 版本，回退汉化包版本。"""
+    ver = sanitize_version(read_pack_version() if pack_version is None else pack_version)
+    return f"""const AGZH_PACK_VERSION = {json.dumps(ver)};
+
+function resolveCrowVersionLabel() {{
+  const clean = (v) => String(v || "").trim().replace(/^v/i, "").replace(/[^0-9A-Za-z.+\\-]/g, "").slice(0, 32);
+  try {{
+    const appVer = clean(electron_1.app && typeof electron_1.app.getVersion === "function" ? electron_1.app.getVersion() : "");
+    if (appVer && appVer !== "0.0.0") return "Antigravity v" + appVer;
+  }} catch (_) {{}}
+  const packVer = clean(AGZH_PACK_VERSION);
+  return packVer ? "汉化包 v" + packVer : "";
+}}
+"""
 
 THEMES = {
     "zenitsu": {
@@ -97,15 +153,23 @@ def save_current_theme(theme: str):
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_FILE.write_text(json.dumps({"theme": theme}, indent=2, ensure_ascii=False), encoding='utf-8')
 
-def build_splash_html_template(theme: str = "zenitsu", video_url_placeholder: str = "") -> str:
-    """构建 HTML 模板。video_url_placeholder 为运行时动态填入的视频地址"""
+def build_splash_html_template(theme: str = "zenitsu", video_url_placeholder: str = "",
+                               crow_version_js: str = None, pack_version: str = None) -> str:
+    """构建 HTML 模板。
+
+    video_url_placeholder 为运行时动态填入的视频地址；
+    crow_version_js 为「鎹鸦巡检」面板版本文案的 JS 表达式（遮罩里传 ${crowVersion} 占位，
+    由主进程运行时替换）；为 None 时直接写入 resources/version.json 的汉化包版本。
+    """
+    if crow_version_js is None:
+        crow_version_js = crow_version_js_literal(pack_version)
     if theme == "all":
         from build_kimetsu_characters_splash import generate_html_content
         b64_t = get_base64_webp("tanjiro_water")
         b64_n = get_base64_webp("nezuko_basket")
         b64_z = get_base64_webp("zenitsu_thunder")
         b64_i = get_base64_webp("inosuke_beast")
-        return generate_html_content(b64_t, b64_n, b64_z, b64_i)
+        return generate_html_content(b64_t, b64_n, b64_z, b64_i, crow_version_js=crow_version_js)
 
     cfg = THEMES.get(theme, THEMES["zenitsu"])
     char_id = cfg["id"]
@@ -593,7 +657,8 @@ def build_splash_html_template(theme: str = "zenitsu", video_url_placeholder: st
         const crowTag = document.getElementById('crow-tag');
         const crowDot = document.getElementById('crow-dot');
 
-        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致 (v2.26.1)";
+        const crowVersion = {crow_version_js};
+        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致" + (crowVersion ? " (" + crowVersion + ")" : "");
         crowTag.textContent = "柱级极境 ✅";
         crowTag.style.background = "rgba(34, 197, 94, 0.25)";
         crowTag.style.borderColor = "rgba(34, 197, 94, 0.6)";
@@ -606,12 +671,17 @@ def build_splash_html_template(theme: str = "zenitsu", video_url_placeholder: st
 </html>"""
     return html
 
-def build_overlay_js(theme: str = "zenitsu") -> str:
-    """生成 Electron 主进程轻量级注入代码 (仅 ~15KB)，通过 loadFile 写入临时文件，杜绝 URL 长度限制与黑屏"""
-    raw_html_template = build_splash_html_template(theme, "${videoUrl}")
+def build_overlay_js(theme: str = "zenitsu", pack_version: str = None) -> str:
+    """生成 Electron 主进程轻量级注入代码 (仅 ~15KB)，通过 loadFile 写入临时文件，杜绝 URL 长度限制与黑屏
+
+    pack_version: 回退用的汉化包版本号；为 None 时读取 resources/version.json。
+    """
+    raw_html_template = build_splash_html_template(theme, "${videoUrl}", crow_version_js=CROW_VERSION_PLACEHOLDER)
     escaped_template = raw_html_template.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
-    # 恢复 ${videoUrl} 变量占位
+    # 恢复 ${videoUrl} / ${crowVersion} 变量占位
     escaped_template = escaped_template.replace('\\${videoUrl}', '${videoUrl}')
+    escaped_template = escaped_template.replace('\\' + CROW_VERSION_PLACEHOLDER, CROW_VERSION_PLACEHOLDER)
+    version_resolver_js = overlay_version_resolver_js(pack_version)
 
     cfg = THEMES.get(theme, THEMES["zenitsu"])
 
@@ -628,7 +698,8 @@ const os = require("os");
  * 采用原生 WebContentsView + loadFile 原生流式加载，彻底消除 URL 长度限制与黑屏现象。
  * 主角：{cfg['name']} | 招式：{cfg['breath']}
  */
-function getLoadingHtml(videoUrl) {{
+{version_resolver_js}
+function getLoadingHtml(videoUrl, crowVersion) {{
   return `{escaped_template}`;
 }}
 
@@ -651,7 +722,12 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
   }} catch (_) {{}}
 
   // 2. 生成 HTML 并写入本地临时缓存文件，采用 loadFile 秒开，规避任何 URL 长度溢出
-  const htmlContent = getLoadingHtml(videoUrl);
+  // 版本文案：实际安装的 Antigravity 版本优先，回退汉化包版本；以 JSON 字面量写入页面脚本
+  let crowVersion = '""';
+  try {{
+    crowVersion = JSON.stringify(resolveCrowVersionLabel());
+  }} catch (_) {{}}
+  const htmlContent = getLoadingHtml(videoUrl, crowVersion);
   const tempPath = path.join(os.tmpdir(), "antigravity_splash.html");
   try {{
     fs.writeFileSync(tempPath, htmlContent, "utf8");

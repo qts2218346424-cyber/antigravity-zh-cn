@@ -11,7 +11,19 @@ const os = require("os");
  * 采用原生 WebContentsView + loadFile 原生流式加载，彻底消除 URL 长度限制与黑屏现象。
  * 主角：我妻善逸 | 招式：雷之呼吸 · 壱之型 霹雳一闪
  */
-function getLoadingHtml(videoUrl) {
+const AGZH_PACK_VERSION = "2.31.2";
+
+function resolveCrowVersionLabel() {
+  const clean = (v) => String(v || "").trim().replace(/^v/i, "").replace(/[^0-9A-Za-z.+\-]/g, "").slice(0, 32);
+  try {
+    const appVer = clean(electron_1.app && typeof electron_1.app.getVersion === "function" ? electron_1.app.getVersion() : "");
+    if (appVer && appVer !== "0.0.0") return "Antigravity v" + appVer;
+  } catch (_) {}
+  const packVer = clean(AGZH_PACK_VERSION);
+  return packVer ? "汉化包 v" + packVer : "";
+}
+
+function getLoadingHtml(videoUrl, crowVersion) {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -487,7 +499,8 @@ function getLoadingHtml(videoUrl) {
         const crowTag = document.getElementById('crow-tag');
         const crowDot = document.getElementById('crow-dot');
 
-        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致 (v2.26.1)";
+        const crowVersion = ${crowVersion};
+        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致" + (crowVersion ? " (" + crowVersion + ")" : "");
         crowTag.textContent = "柱级极境 ✅";
         crowTag.style.background = "rgba(34, 197, 94, 0.25)";
         crowTag.style.borderColor = "rgba(34, 197, 94, 0.6)";
@@ -519,7 +532,12 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {
   } catch (_) {}
 
   // 2. 生成 HTML 并写入本地临时缓存文件，采用 loadFile 秒开，规避任何 URL 长度溢出
-  const htmlContent = getLoadingHtml(videoUrl);
+  // 版本文案：实际安装的 Antigravity 版本优先，回退汉化包版本；以 JSON 字面量写入页面脚本
+  let crowVersion = '""';
+  try {
+    crowVersion = JSON.stringify(resolveCrowVersionLabel());
+  } catch (_) {}
+  const htmlContent = getLoadingHtml(videoUrl, crowVersion);
   const tempPath = path.join(os.tmpdir(), "antigravity_splash.html");
   try {
     fs.writeFileSync(tempPath, htmlContent, "utf8");

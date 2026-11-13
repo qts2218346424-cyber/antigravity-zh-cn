@@ -29,7 +29,15 @@ def get_base64_webp(name: str) -> str:
         im.save(webp_path, 'WEBP', quality=88, method=6)
     return base64.b64encode(webp_path.read_bytes()).decode('ascii')
 
-def generate_html_content(b64_tanjiro, b64_nezuko, b64_zenitsu, b64_inosuke) -> str:
+def generate_html_content(b64_tanjiro, b64_nezuko, b64_zenitsu, b64_inosuke, crow_version_js: str = None) -> str:
+    """crow_version_js：「鎹鸦巡检」面板版本文案的 JS 表达式。
+
+    为 None 时直接写入 resources/version.json 的汉化包版本（静态预览用）；
+    生成遮罩 JS 时传入 ${crowVersion} 占位，由 Electron 主进程在运行时替换为实际安装的 Antigravity 版本。
+    """
+    if crow_version_js is None:
+        from splash_generator import crow_version_js_literal
+        crow_version_js = crow_version_js_literal()
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -955,7 +963,8 @@ def generate_html_content(b64_tanjiro, b64_nezuko, b64_zenitsu, b64_inosuke) -> 
         const crowTag = document.getElementById('crow-tag');
         const crowDot = document.getElementById('crow-dot');
 
-        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致 (v2.26.1)";
+        const crowVersion = {crow_version_js};
+        crowStatus.textContent = "柱级极境 · 本地与 GitHub 汉化版本一致" + (crowVersion ? " (" + crowVersion + ")" : "");
         crowTag.textContent = "柱级极境 ✅";
         crowTag.style.background = "rgba(34, 197, 94, 0.25)";
         crowTag.style.borderColor = "rgba(34, 197, 94, 0.6)";
@@ -992,7 +1001,12 @@ def main():
         print(f"已生成预览: {artifact_preview}")
 
     # 3. 生成可嵌入 Electron WebContentsView 的 loadingOverlay-zh.js
-    escaped_html = html.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+    #    版本文案改为 ${crowVersion} 占位，运行时优先显示实际安装的 Antigravity 版本
+    from splash_generator import CROW_VERSION_PLACEHOLDER, overlay_version_resolver_js
+    overlay_html = generate_html_content(b64_t, b64_n, b64_z, b64_i, crow_version_js=CROW_VERSION_PLACEHOLDER)
+    escaped_html = overlay_html.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+    escaped_html = escaped_html.replace('\\' + CROW_VERSION_PLACEHOLDER, CROW_VERSION_PLACEHOLDER)
+    version_resolver_js = overlay_version_resolver_js()
     overlay_js = f"""\"use strict\";
 Object.defineProperty(exports, "__esModule", {{ value: true }});
 exports.attachLoadingOverlay = attachLoadingOverlay;
@@ -1003,7 +1017,8 @@ const electron_1 = require("electron");
  * 采用原生 WebContentsView 于窗口创建第 0 毫秒硬件加速直出。
  * 融合炭治郎水流飞溅、善逸雷霆电弧、祢豆子探头摇曳、伊之助野猪喷气与鎹鸦巡检。
  */
-function getLoadingHtml() {{
+{version_resolver_js}
+function getLoadingHtml(crowVersion) {{
   return `{escaped_html}`;
 }}
 
@@ -1014,7 +1029,11 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
       contextIsolation: true,
     }},
   }});
-  const html = getLoadingHtml();
+  let crowVersion = '""';
+  try {{
+    crowVersion = JSON.stringify(resolveCrowVersionLabel());
+  }} catch (_) {{}}
+  const html = getLoadingHtml(crowVersion);
   void view.webContents.loadURL(`data:text/html;charset=utf-8,${{encodeURIComponent(html)}}`);
   win.contentView.addChildView(view);
   const updateBounds = () => {{
