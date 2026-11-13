@@ -128,12 +128,13 @@ def test_patch_ipc_and_preload_use_resolved_helper(env):
     pa.apply_patch(install, "zh-CN", REPO_ROOT, character="tanjiro", stop_processes=False)
     ipc = patched_file(asar, "dist/ipcHandlers.js")
     assert pa.PATCH_MARKER in ipc
-    assert "电脑管家" not in ipc and not re.search(r"[A-Za-z]:\\\\+(浏览器|antigravity-cn)", ipc)
+    helper = json.dumps(str((REPO_ROOT / "resources" / "media_helper.py").resolve()))
+    assert helper in ipc
+    sanitized_ipc = ipc.replace(helper, '""')
+    assert "电脑管家" not in ipc and not re.search(r"[A-Za-z]:\\\\+(浏览器|antigravity-cn)", sanitized_ipc)
     assert 'python -X utf8 "${' not in ipc, "不应再用 shell 拼接命令"
     assert "__agyExecFile(" in ipc and "__agyMediaActions.has(action)" in ipc
     assert "windowsHide: true" in ipc
-    helper = json.dumps(str((REPO_ROOT / "resources" / "media_helper.py").resolve()))
-    assert helper in ipc
     preload = patched_file(asar, "dist/preload.js")
     assert "window.__AGY_MEDIA_HELPER_CMD__ = [" in preload
     if HAS_NODE:

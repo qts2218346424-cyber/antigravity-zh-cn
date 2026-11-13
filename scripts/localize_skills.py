@@ -93,7 +93,13 @@ SKILL_TRANSLATION_MAP = {
     "cheminformatics-reactions": "推导并模拟有机化学反应、逆合成路线、多步合成路径、分子内环化及反应 SMARTS：优先检索实验前例，校验原子守恒、前手性 (pro-R/pro-S, Re/Si)、立体异构与 NMR 等价性，并渲染二维电子转移弯箭头机理图。",
     "rdkit-general": "基于 ACS 1996 出版级样式生成 2D 化学结构示意图 (PNG/SVG)、交互式 HTML 分子网格、化学可视化微件及 ChemDraw (.cdxml/.cdx) 格式文件，校验 IUPAC 与立体化学命名法并提供 RDKit 版本兼容辅助。",
     "permissioned-github": "GitHub 平台受控交互规范。当命令由于代理沙箱环境权限限制而失败时，指导安全地向用户申请必要的授权与凭据。",
-    "run-workflow": "通过 `run_workflow` 工具编写并运行动态多智能体工作流脚本：使用 Python 脚本编排多个代理（支持 `agent`、`parallel`、`pipeline` 与 `phase`），适用于多模块并发分析、多维度审查与复杂阶段聚合任务。"
+    "run-workflow": "通过 `run_workflow` 工具编写并运行动态多智能体工作流脚本：使用 Python 脚本编排多个代理（支持 `agent`、`parallel`、`pipeline` 与 `phase`），适用于多模块并发分析、多维度审查与复杂阶段聚合任务。",
+    "mcp-app-development": "构建、打包并调试面向 Antigravity 的 MCP 交互式应用（在对话、侧边面板或全屏侧边栏中渲染为丰富 UI 的 MCP 服务器工具）。适用于为 MCP 工具添加前端界面、设计应用主题、打包为插件或排查渲染与行为异常。",
+    "migrate-agent-settings": "将来自其他编码智能体（Claude Code、Codex、Cursor、Gemini CLI）的 MCP 服务器、技能、斜杠指令、子代理及规范指令文件一键迁移整合为全新的 Antigravity 插件。适用于导入或迁移现有开发配置。",
+    "swarm": "(预览版且消耗较多配额) 运行多智能体蜂群：调度多个智能体在各自独立的对话中并行执行同一任务，并通过共享看板协同协作。适用于任务可拆解为并发子项或需要第二双眼睛交叉审查的场景。",
+    "native_swarm": "(预览版且消耗较多配额) 运行多智能体蜂群：调度多个智能体在各自独立的对话中并行执行同一任务，并通过共享看板协同协作。适用于任务可拆解为并发子项或需要第二双眼睛交叉审查的场景。",
+    "swarm_monitor": "专用于简报中指派为监控员 (Monitor) 的原生蜂群工作节点。通过定时器检测整个蜂群是否出现停滞，并唤醒能够解开阻塞的关键成员。协调者与其他常规工作节点请勿加载。",
+    "swarm_narrator": "专用于简报中指派为旁白员 (Narrator) 的原生蜂群工作节点。实时监视看板动态并持续更新用户总览概览数据 (view.json)。协调者与其他常规工作节点请勿加载。"
 }
 
 def get_skill_search_roots() -> list[Path]:

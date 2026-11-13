@@ -261,9 +261,9 @@ def inject_ide(app_root: Path, payload: dict | None = None) -> dict:
     changed = new_text != original
     if changed:
         tmp = css_path.with_name(css_path.name + ".agzh.tmp")
-        tmp.write_text(new_text, encoding="utf-8")
+        tmp.write_bytes(new_text.encode("utf-8"))
         os.replace(tmp, css_path)
-    _update_product_checksum(app_root, new_text.encode("utf-8"))
+    _update_product_checksum(app_root, css_path.read_bytes())
     if changed:
         _resign_macos_app(app_root)
     sm.update_state(ide={"app_root": str(app_root), "enabled": True, "hash": digest})

@@ -203,56 +203,72 @@ def _atomic_write_text(path: Path, text: str) -> None:
 
 
 class FileLock:
-    """极简跨进程文件锁（O_CREAT | O_EXCL）。
+    """跨进程文件锁（Windows 使用 msvcrt.locking，Unix 使用 fcntl.flock）。
 
-    用于保护 state.json 的“读-改-写”以及 app.asar 的重新注入，防止图形界面、
-    命令行与开机后台守护同时操作时互相覆盖。持锁进程已退出或锁文件超过 stale 秒视为失效。
+    用于保护 state.json 的“读-改-写”以及 app.asar 的重新注入，
+    防止图形界面、命令行与开机后台守护同时操作时互相覆盖。
+    内核级锁机制，进程退出或崩溃时由操作系统自动安全释放。
     """
 
-    def __init__(self, path: Path, timeout: float = 10.0, stale: float = 120.0):
+    def __init__(self, path: Path, timeout: float = 20.0, stale: float = 30.0):
         self.path = Path(path)
         self.timeout = timeout
         self.stale = stale
         self._fd: int | None = None
-
-    def _is_stale(self) -> bool:
-        try:
-            age = time.time() - self.path.stat().st_mtime
-            pid = int((self.path.read_text(encoding="utf-8").strip() or "0").split()[0])
-        except (OSError, ValueError):
-            return True
-        if age > self.stale:
-            return True
-        return pid > 0 and pid != os.getpid() and not _pid_alive(pid)
 
     def acquire(self) -> bool:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         deadline = time.monotonic() + self.timeout
         while True:
             try:
-                self._fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(self._fd, f"{os.getpid()}\n".encode("ascii"))
-                return True
-            except FileExistsError:
-                if self._is_stale():
+                self._fd = os.open(str(self.path), os.O_RDWR | os.O_CREAT)
+                locked = False
+                try:
+                    import msvcrt
+                    msvcrt.locking(self._fd, msvcrt.LK_NBLCK, 1)
+                    locked = True
+                except (ImportError, AttributeError):
+                    pass
+                if not locked:
                     try:
-                        self.path.unlink()
+                        import fcntl
+                        fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except (ImportError, AttributeError):
+                        pass
+                return True
+            except (OSError, IOError):
+                if self._fd is not None:
+                    try:
+                        os.close(self._fd)
                     except OSError:
                         pass
-                    continue
+                    self._fd = None
                 if time.monotonic() >= deadline:
                     return False
-                time.sleep(0.05)
+                time.sleep(0.005)
 
     def release(self) -> None:
         if self._fd is not None:
+            unlocked = False
+            try:
+                import msvcrt
+                msvcrt.locking(self._fd, msvcrt.LK_UNLCK, 1)
+                unlocked = True
+            except (ImportError, AttributeError, OSError):
+                pass
+            if not unlocked:
+                try:
+                    import fcntl
+                    fcntl.flock(self._fd, fcntl.LOCK_UN)
+                except (ImportError, AttributeError, OSError):
+                    pass
             try:
                 os.close(self._fd)
             except OSError:
                 pass
             self._fd = None
             try:
-                self.path.unlink()
+                self.path.unlink(missing_ok=True)
             except OSError:
                 pass
 
@@ -308,9 +324,8 @@ def save_state(state: dict) -> None:
 
 def update_state(**changes: Any) -> dict:
     """读-改-写 state.json；跨进程加锁，避免界面与后台守护同时更新时丢失字段。"""
-    lock = FileLock(config_dir() / ".state.lock", timeout=5.0, stale=30.0)
-    locked = lock.acquire()
-    try:
+    lock = FileLock(config_dir() / ".state.lock", timeout=20.0, stale=30.0)
+    with lock:
         st = load_state()
         for k, v in changes.items():
             if isinstance(v, dict) and isinstance(st.get(k), dict):
@@ -319,9 +334,6 @@ def update_state(**changes: Any) -> dict:
                 st[k] = v
         save_state(st)
         return st
-    finally:
-        if locked:
-            lock.release()
 
 
 # ---------------------------------------------------------------------------
