@@ -22,7 +22,8 @@ import pathlib
 from ctypes import windll, wintypes, byref, Structure, c_int
 from typing import Optional, Dict, Any
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+# 打包版 / 一体化管理器通过 AGZH_REPO_ROOT 指定资源根目录
+REPO_ROOT = pathlib.Path(os.environ.get("AGZH_REPO_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
 RESOURCE_DIR = REPO_ROOT / "resources"
 HTML_ENTRY = RESOURCE_DIR / "desktop_pet_window.html"
 
@@ -336,6 +337,22 @@ def main():
             print("[桌宠启动器] Win32 透明样式扩展应用就绪。", flush=True)
 
     threading.Thread(target=_apply_styles, daemon=True).start()
+
+    # 材质包外观层：页面加载完成后注入当前材质包的桌宠配置（不改动桌宠动作代码）
+    def _apply_skin_layer():
+        try:
+            sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+            from skin_manager import build_pet_window_snippet
+            js = build_pet_window_snippet()
+            if js and _GLOBAL_WINDOW is not None:
+                _GLOBAL_WINDOW.evaluate_js(js)
+        except Exception as e:
+            print(f"[桌宠启动器] 材质包外观层注入跳过: {e}", flush=True)
+
+    try:
+        _GLOBAL_WINDOW.events.loaded += _apply_skin_layer
+    except Exception:
+        pass
 
     webview.start()
 

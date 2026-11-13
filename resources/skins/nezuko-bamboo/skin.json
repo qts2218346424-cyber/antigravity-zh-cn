@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "id": "nezuko-bamboo",
+  "name": "祢豆子 · 竹筒与麻叶",
+  "author": "antigravity-zh-cn",
+  "version": "1.0.0",
+  "description": "以祢豆子和服的麻叶纹与粉/墨红配色为灵感：侧边栏麻叶纹理、窗口淡淡的竹篓剪影，桌宠固定为祢豆子。",
+  "base": "dark",
+  "preview": "preview.png",
+  "colors": {
+    "background": "#1a0e14",
+    "foreground": "#f6e3ea",
+    "accent": "#f06292",
+    "accentForeground": "#1a0e14",
+    "sidebar": "#24111b",
+    "activityBar": "#160a10",
+    "titleBar": "#160a10",
+    "statusBar": "#8e1d47",
+    "panel": "#1e0f17",
+    "border": "#4a1f33",
+    "selection": "#f0629255",
+    "input": "#2a1520",
+    "muted": "#b98aa0"
+  },
+  "variables": {
+    "--agzh-bamboo": "#5f8f3e"
+  },
+  "background": [
+    {
+      "image": "asanoha.webp",
+      "target": "sidebar",
+      "opacity": 0.1,
+      "blur": 0,
+      "size": "160px",
+      "repeat": "repeat"
+    },
+    {
+      "image": "nezuko_basket.webp",
+      "target": "window",
+      "opacity": 0.06,
+      "blur": 6,
+      "position": "right bottom",
+      "size": "contain"
+    }
+  ],
+  "font": {
+    "family": "Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC, sans-serif",
+    "monoFamily": "Sarasa Mono SC, Cascadia Code, Consolas, monospace"
+  },
+  "icons": {
+    "filter": "hue-rotate(300deg) saturate(1.3)"
+  },
+  "css": ".monaco-workbench .part.activitybar .action-item.checked .active-item-indicator::before { border-left-color: var(--agzh-bamboo) !important; }",
+  "pet": {
+    "character": "nezuko",
+    "accent": "#f06292",
+    "scale": 1.1
+  }
+}

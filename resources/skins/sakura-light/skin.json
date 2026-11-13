@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "id": "sakura-light",
+  "name": "樱花 · 浅色",
+  "author": "antigravity-zh-cn",
+  "version": "1.0.0",
+  "description": "柔和的樱花粉浅色主题，编辑区飘落半透明樱花背景，并示范了图标替换与自定义 CSS。",
+  "base": "light",
+  "preview": "preview.png",
+  "colors": {
+    "background": "#fff8fb",
+    "foreground": "#3b2a33",
+    "accent": "#e86a92",
+    "accentForeground": "#ffffff",
+    "sidebar": "#fdeef3",
+    "activityBar": "#f9dfe8",
+    "titleBar": "#f9dfe8",
+    "statusBar": "#e86a92",
+    "panel": "#fff1f6",
+    "border": "#f3c6d6",
+    "selection": "#f8bbd088",
+    "input": "#ffffff",
+    "muted": "#9a7b88"
+  },
+  "background": [
+    {
+      "image": "sakura.webp",
+      "target": "editor",
+      "opacity": 0.18,
+      "blur": 2,
+      "position": "right bottom",
+      "size": "cover"
+    }
+  ],
+  "font": {
+    "family": "HarmonyOS Sans SC, Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC, sans-serif",
+    "size": 13
+  },
+  "icons": {
+    "color": "#c2185b",
+    "codicons": {
+      "heart": "icons/sakura.svg",
+      "star-full": "icons/sakura.svg"
+    }
+  },
+  "css": ".monaco-workbench .part.statusbar { border-top: 1px solid #f3c6d6; }\n::-webkit-scrollbar-thumb { border-radius: 8px; }",
+  "pet": {
+    "character": "nezuko",
+    "filter": "saturate(1.1) brightness(1.05)",
+    "accent": "#e86a92",
+    "scale": 1.0
+  }
+}
