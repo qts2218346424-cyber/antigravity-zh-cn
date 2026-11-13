@@ -15,10 +15,22 @@ import urllib.request
 import urllib.parse
 import base64
 
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+import tempfile
+import time
 
-user32 = ctypes.windll.user32
+if sys.stdout is not None and hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+# 非 Windows 平台没有 ctypes.windll：模块仍可导入，status 返回“未在播放”的空状态
+IS_WINDOWS = sys.platform == 'win32'
+user32 = ctypes.windll.user32 if IS_WINDOWS else None
+
+# 歌词缓存：状态每 4 秒轮询一次，同一首歌不再重复联网检索（否则每次轮询最多 4 次 3.5 秒的网络请求）
+_LRC_CACHE_FILE = os.path.join(tempfile.gettempdir(), 'agzh-media-lrc-cache.json')
+_LRC_CACHE_MAX = 40
 
 WM_APPCOMMAND = 0x0319
 APPCOMMAND_MEDIA_NEXTTRACK = 11
@@ -88,6 +100,44 @@ def fetch_lrc_online(keyword):
         pass
     return None
 
+def _load_lrc_cache():
+    try:
+        with open(_LRC_CACHE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_lrc_cache(cache):
+    try:
+        if len(cache) > _LRC_CACHE_MAX:
+            keep = sorted(cache.items(), key=lambda kv: kv[1].get('t', 0))[-_LRC_CACHE_MAX:]
+            cache = dict(keep)
+        tmp = _LRC_CACHE_FILE + '.%d.tmp' % os.getpid()
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, ensure_ascii=False)
+        os.replace(tmp, _LRC_CACHE_FILE)
+    except Exception:
+        pass
+
+
+def fetch_lrc_cached(title, artist):
+    """按“歌名 + 歌手”缓存歌词检索结果（含“未找到”），返回 LRC 文本或 None。"""
+    key = ('%s|%s' % (title or '', artist or '')).strip()
+    cache = _load_lrc_cache()
+    hit = cache.get(key)
+    if hit is not None:
+        return hit.get('lrc') or None
+    query = ('%s %s' % (title or '', artist or '')).strip()
+    lrc = fetch_lrc_online(query)
+    if not lrc and title:
+        lrc = fetch_lrc_online(title)
+    cache[key] = {'lrc': lrc or '', 't': time.time()}
+    _save_lrc_cache(cache)
+    return lrc
+
+
 def generate_melodic_lrc(title, artist):
     """当曲目为纯音乐或未检索到歌词时，生成意境优雅的伴奏歌词流"""
     artist_display = f" - {artist}" if artist else ""
@@ -113,6 +163,8 @@ def get_current_music_status():
     }
 
     music_windows = []
+    if not IS_WINDOWS:
+        return status
 
     def enum_cb(hwnd, extra):
         try:
@@ -172,10 +224,7 @@ def get_current_music_status():
             status['artist'] = 'QQ 音乐'
 
         # 尝试检索歌词
-        search_query = f"{status['title']} {status['artist']}".strip()
-        lrc = fetch_lrc_online(search_query)
-        if not lrc and status['title']:
-            lrc = fetch_lrc_online(status['title'])
+        lrc = fetch_lrc_cached(status['title'], status['artist'])
         if not lrc:
             lrc = generate_melodic_lrc(status['title'], status['artist'])
         status['lrc'] = lrc
@@ -184,6 +233,8 @@ def get_current_music_status():
 
 def send_control_action(action):
     """向 QQ 音乐及系统媒体发送按键指令"""
+    if not IS_WINDOWS:
+        return
     app_cmd, vk = cmd_map.get(action, (APPCOMMAND_MEDIA_PLAY_PAUSE, 0xB3))
 
     def enum_post_cb(hwnd, extra):
@@ -211,23 +262,36 @@ def send_control_action(action):
     except Exception:
         pass
 
-if __name__ == '__main__':
-    action = sys.argv[1] if len(sys.argv) > 1 else 'status'
+ACTIONS = ('status', 'info', 'get_status', 'play_pause', 'next', 'prev', 'search_lrc')
 
+
+def main(argv=None, out=None):
+    """命令行入口：输出一行 JSON。供 Electron 主进程 / 打包版 --media 模式调用。"""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    out = out or sys.stdout
+    action = argv[0] if argv else 'status'
     if action in ('status', 'info', 'get_status'):
-        status = get_current_music_status()
-        print(json.dumps(status, ensure_ascii=False))
-    elif action == 'search_lrc' and len(sys.argv) > 2:
-        kw = ' '.join(sys.argv[2:])
-        lrc = fetch_lrc_online(kw)
-        if not lrc:
-            lrc = generate_melodic_lrc(kw, '')
-        print(json.dumps({'title': kw, 'lrc': lrc}, ensure_ascii=False))
-    else:
+        result = get_current_music_status()
+    elif action == 'search_lrc' and len(argv) > 1:
+        kw = ' '.join(argv[1:])
+        lrc = fetch_lrc_online(kw) or generate_melodic_lrc(kw, '')
+        result = {'title': kw, 'lrc': lrc}
+    elif action in cmd_map:
         send_control_action(action)
         # 执行操作后紧接着返回最新状态
         try:
-            status = get_current_music_status()
-            print(json.dumps(status, ensure_ascii=False))
+            result = get_current_music_status()
         except Exception:
-            print(json.dumps({'status': 'ok'}))
+            result = {'status': 'ok'}
+    else:
+        result = {'error': 'unknown action', 'action': action}
+        out.write(json.dumps(result, ensure_ascii=False) + '\n')
+        out.flush()
+        return 2
+    out.write(json.dumps(result, ensure_ascii=False) + '\n')
+    out.flush()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

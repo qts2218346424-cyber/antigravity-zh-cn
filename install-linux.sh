@@ -57,7 +57,8 @@ case "$choice" in
 esac
 
 # 关闭运行中的 Antigravity
-pkill -f "antigravity" 2>/dev/null || true
+# 精确匹配进程名，避免 -f 误杀命令行中含 antigravity 字样的本脚本/终端
+pkill -x "antigravity" 2>/dev/null || true
 
 python3 scripts/patch_antigravity.py "$ACTION" --lang "$LANG_CHOICE"
 

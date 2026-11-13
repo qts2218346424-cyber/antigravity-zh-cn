@@ -19,15 +19,35 @@ import json
 import ctypes
 import threading
 import pathlib
-from ctypes import windll, wintypes, byref, Structure, c_int
+from ctypes import wintypes, byref, Structure, c_int
 from typing import Optional, Dict, Any
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+# 仅 Windows 提供 windll；其他平台下本模块仍可被导入（例如测试 / 打包分析），但不能启动桌宠
+windll = getattr(ctypes, "windll", None)
+
+# 打包版 / 一体化管理器通过 AGZH_REPO_ROOT 指定资源根目录
+REPO_ROOT = pathlib.Path(os.environ.get("AGZH_REPO_ROOT") or pathlib.Path(__file__).resolve().parent.parent)
 RESOURCE_DIR = REPO_ROOT / "resources"
 HTML_ENTRY = RESOURCE_DIR / "desktop_pet_window.html"
 
+
+def _log_dir() -> pathlib.Path:
+    """日志写到用户配置目录（打包版的资源目录是只读的临时解包目录，仓库里也没有 scratch/）。"""
+    try:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import skin_manager
+        d = skin_manager.config_dir() / "logs"
+    except Exception:
+        d = pathlib.Path(os.environ.get("TEMP") or os.environ.get("TMPDIR") or "/tmp") / "antigravity-zh-cn"
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    return d
+
+
 # 设置输出与日志保护 (兼容 pythonw.exe 无控制台模式)
-_debug_log_path = REPO_ROOT / "scratch" / "desktop_pet_debug.log"
+_debug_log_path = _log_dir() / "desktop_pet_debug.log"
 try:
     _log_f = open(_debug_log_path, "a", encoding="utf-8")
     if sys.stdout is None or not hasattr(sys.stdout, "write"):
@@ -98,7 +118,7 @@ def reset_window_position():
 def get_local_quota_data() -> Dict[str, Any]:
     """读取本地真实的 Antigravity 用户配额（Cockpit 真实源）"""
     info = {
-        "username": "qts2218346424@gmail.com",
+        "username": "",
         "availableCredits": 1000,
         "minCredits": 50,
         "useCredits": True,
@@ -115,9 +135,10 @@ def get_local_quota_data() -> Dict[str, Any]:
     try:
         sys.path.insert(0, str(RESOURCE_DIR))
         import quota_helper
-        cdata = quota_helper.get_cockpit_quota()
+        # 旧代码调用了不存在的 get_cockpit_quota()，异常被吞掉，看板永远显示默认值
+        cdata = quota_helper.get_cockpit_quota_data()
         if cdata:
-            info["username"] = cdata.get("email", "qts2218346424@gmail.com")
+            info["username"] = cdata.get("email") or info["username"]
             info["weeklyQuota"] = cdata.get("geminiWeeklyPct", 100)
             info["fiveHourQuota"] = cdata.get("gemini5hPct", 100)
             info["weeklyReset"] = cdata.get("geminiWeeklyReset", "已重置 / 额度已全满")
@@ -156,7 +177,8 @@ class DesktopPetBridge:
         try:
             sys.path.insert(0, str(RESOURCE_DIR))
             import media_helper
-            return media_helper.get_qqmusic_status()
+            # 旧代码调用了不存在的 get_qqmusic_status()，桌宠里永远拿不到 QQ 音乐状态
+            return media_helper.get_current_music_status()
         except Exception:
             return None
 
@@ -239,11 +261,11 @@ class TrayDaemon:
                     windll.user32.SetForegroundWindow(hwnd)
 
         def on_quit():
+            # 运行在托盘线程：sys.exit 只会结束本线程，真正退出依赖销毁窗口让 webview.start() 返回
             if self.tray:
                 self.tray.stop()
             if _GLOBAL_WINDOW:
                 _GLOBAL_WINDOW.destroy()
-            sys.exit(0)
 
         menu = Menu(
             Item("🌸 唤醒/显示桌宠", on_show_window, default=True),
@@ -273,6 +295,8 @@ class TrayDaemon:
 # -----------------------------------------------------------------------------
 def main():
     global _GLOBAL_WINDOW
+    if windll is None:
+        raise RuntimeError("独立桌面桌宠仅支持 Windows")
 
     # 检查是否有正在运行的窗口
     old_hwnd = get_pet_hwnd()
@@ -287,6 +311,9 @@ def main():
     import webview
 
     if not HTML_ENTRY.exists():
+        if getattr(sys, "frozen", False):
+            # 打包版的 sys.executable 是管理器本身，再用它“运行脚本”会递归拉起管理器
+            raise FileNotFoundError(f"桌宠页面缺失: {HTML_ENTRY}")
         import subprocess
         subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "build_desktop_pet_html.py")], check=True)
 
@@ -337,11 +364,27 @@ def main():
 
     threading.Thread(target=_apply_styles, daemon=True).start()
 
+    # 材质包外观层：页面加载完成后注入当前材质包的桌宠配置（不改动桌宠动作代码）
+    def _apply_skin_layer():
+        try:
+            sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+            from skin_manager import build_pet_window_snippet
+            js = build_pet_window_snippet()
+            if js and _GLOBAL_WINDOW is not None:
+                _GLOBAL_WINDOW.evaluate_js(js)
+        except Exception as e:
+            print(f"[桌宠启动器] 材质包外观层注入跳过: {e}", flush=True)
+
+    try:
+        _GLOBAL_WINDOW.events.loaded += _apply_skin_layer
+    except Exception:
+        pass
+
     webview.start()
 
 
 if __name__ == "__main__":
-    log_path = REPO_ROOT / "scratch" / "desktop_pet.log"
+    log_path = _log_dir() / "desktop_pet.log"
     try:
         main()
     except Exception as e:

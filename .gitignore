@@ -33,3 +33,27 @@ resources/untranslated_settings.json
 .agents/
 
 
+
+# PyInstaller build output
+build/
+
+# 测试 / 工具缓存
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# 维护脚本生成的临时词条文件
+resources/untranslated_ui.json
+resources/clean_untranslated_ui.json
+resources/untranslated_live.json
+bundle_main.js
+splash_preview.html
+
+# Windows 盘符路径在 Linux/macOS 上被误建成的目录（如 tests/test_patcher.py 产生的 e:/）
+/e:/
+/E:/
+/[a-zA-Z]:/
+
+# 守护进程日志
+scripts/watchdog.log

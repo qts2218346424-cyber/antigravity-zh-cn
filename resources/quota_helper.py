@@ -2,7 +2,7 @@
 """
 基于 Cockpit Tools 原理的 Antigravity 官方模型配额解析与同步引擎 (v2.0 账号自适应版)
 功能：
-1. 优先从 Antigravity 核心系统数据库中动态嗅探当前活跃登录账号 (支持 qts2218346424@gmail.com 等多账号)
+1. 优先从 Antigravity 核心系统数据库中动态嗅探当前活跃登录账号 (支持多账号)
 2. 匹配并读取 ~/.antigravity_cockpit 对应当前账号的权威配额缓存
 3. 智能兼容 quota_summary 桶聚合 与 models 独立模型集两种官方配额结构
 4. 计算人性化重置倒计时 (天/小时/分钟)
@@ -17,8 +17,11 @@ import base64
 from datetime import datetime, timezone
 from pathlib import Path
 
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if sys.stdout is not None and hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 def detect_current_active_email():
     """从 Antigravity 核心系统数据库中动态嗅探当前正在登录的账号"""
@@ -26,10 +29,13 @@ def detect_current_active_email():
         appdata = os.environ.get('APPDATA', '')
         db_path = Path(appdata) / 'Antigravity' / 'User' / 'globalStorage' / 'state.vscdb'
         if db_path.exists():
-            conn = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
-            cur = conn.cursor()
-            cur.execute("SELECT value FROM ItemTable WHERE key = 'jetskiStateSync.agentManagerInitState';")
-            row = cur.fetchone()
+            conn = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True, timeout=2)
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT value FROM ItemTable WHERE key = 'jetskiStateSync.agentManagerInitState';")
+                row = cur.fetchone()
+            finally:
+                conn.close()  # 只读连接用完即关，避免长期占用 Antigravity 的状态库
             if row and row[0]:
                 val = row[0]
                 try:
@@ -52,7 +58,8 @@ def detect_current_active_email():
     except Exception:
         pass
 
-    return "qts2218346424@gmail.com"
+    # 未检测到账号时返回空串（不再写死某个具体账号）
+    return ""
 
 def format_reset_time(iso_str):
     if not iso_str:
@@ -96,7 +103,7 @@ def get_cockpit_quota_data():
                 pass
 
     best_candidate = None
-    # 优先精确匹配当前活跃账号 (如 qts2218346424@gmail.com)
+    # 优先精确匹配当前活跃账号
     if target_email:
         for c in candidates:
             if c[1] == target_email:

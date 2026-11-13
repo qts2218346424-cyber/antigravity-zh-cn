@@ -26,6 +26,9 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
+# Windows 下从图形界面/后台调用子进程时不弹出黑色控制台窗口
+_NO_WINDOW = {"creationflags": 0x08000000} if sys.platform == "win32" else {}  # CREATE_NO_WINDOW
+
 # 补丁注入特征标记
 PATCH_MARKER = "/* __ANTIGRAVITY_ZH_CN_PATCHED__ */"
 ASAR_INTEGRITY_BLOCK_SIZE = 4 * 1024 * 1024
@@ -42,7 +45,8 @@ def validate_js_syntax(code: str, file_desc: str = "javascript") -> bool:
             temp_path = tf.name
 
         try:
-            res = subprocess.run(["node", "-c", temp_path], capture_output=True, text=True, timeout=5)
+            res = subprocess.run(["node", "-c", temp_path], capture_output=True, text=True, encoding="utf-8",
+                                 errors="replace", timeout=30, **_NO_WINDOW)
             if res.returncode != 0:
                 err_msg = (res.stderr or res.stdout).strip()
                 print(f"  [CRITICAL ERROR] JS 语法校验失败 ({file_desc}):\n{err_msg}")
@@ -58,7 +62,9 @@ def validate_js_syntax(code: str, file_desc: str = "javascript") -> bool:
         return True
     except SyntaxError:
         raise
-    except Exception:
+    except Exception as e:  # noqa: BLE001
+        # 超时等异常：降级跳过，但要说明原因，避免“静默通过”
+        print(f"  [!] JS 语法校验未执行 ({file_desc}): {e}")
         return True
 
 
@@ -73,7 +79,7 @@ def _is_running_inside_antigravity() -> bool:
             while pid and pid > 1:
                 result = subprocess.run(
                     ["ps", "-p", str(pid), "-o", "ppid=,comm="],
-                    capture_output=True, text=True, timeout=3
+                    capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3
                 )
                 if result.returncode != 0:
                     break
@@ -102,9 +108,9 @@ def _is_running_inside_antigravity() -> bool:
         )
         result = subprocess.run(
             ["powershell.exe", "-NoProfile", "-Command", ps_script],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5, **_NO_WINDOW
         )
-        return "FOUND" in result.stdout
+        return "FOUND" in (result.stdout or "")
     except Exception:
         return False
 
@@ -125,26 +131,54 @@ def stop_antigravity_processes():
                 "Get-Process -Name 'Antigravity', 'language_server' -ErrorAction SilentlyContinue | "
                 "Stop-Process -Force -ErrorAction SilentlyContinue"
             )
-            subprocess.run(["powershell.exe", "-NoProfile", "-Command", cmd], capture_output=True, text=True, timeout=5)
+            subprocess.run(["powershell.exe", "-NoProfile", "-Command", cmd], capture_output=True, timeout=15, **_NO_WINDOW)
             import time; time.sleep(1)  # 等待文件锁释放
         except Exception:
             pass
     elif sys.platform == "darwin":
         try:
             import subprocess
-            subprocess.run(["pkill", "-f", "Antigravity"], capture_output=True, timeout=5)
+            # 精确匹配进程名（-x），避免 -f 误杀命令行中含 antigravity 字样的本工具/终端进程
+            subprocess.run(["pkill", "-x", "Antigravity"], capture_output=True, timeout=5)
             import time; time.sleep(1)
         except Exception:
             pass
     else:
         try:
             import subprocess
-            subprocess.run(["pkill", "-f", "antigravity"], capture_output=True, timeout=5)
+            subprocess.run(["pkill", "-x", "antigravity"], capture_output=True, timeout=5)
             import time; time.sleep(1)
         except Exception:
             pass
 
 
+
+
+MEDIA_ACTIONS = ("status", "play_pause", "next", "prev")
+
+
+def resolve_media_helper_command(res_dir: Path) -> list[str]:
+    """在打补丁时解析多媒体助手的完整启动命令（绝不写死盘符路径）。
+
+    - 源码版：当前 Python 解释器（绝对路径）+ 仓库内 resources/media_helper.py；
+    - 打包版：解包目录是临时的，先把 media_helper.py 复制到持久的用户配置目录
+      （与 PR #3 的做法一致），并直接调用本程序的 ``--media`` 模式运行内置助手，
+      这样用户电脑上即使没有安装 Python 也能联动 QQ 音乐。
+    返回值是 argv 列表，由 Electron 主进程以 execFile 方式调用（不经过 shell）。
+    """
+    helper = (Path(res_dir) / "media_helper.py").resolve()
+    if getattr(sys, "frozen", False):
+        try:
+            import skin_manager
+            persist = skin_manager.config_dir() / "media_helper.py"
+            persist.parent.mkdir(parents=True, exist_ok=True)
+            if helper.is_file():
+                shutil.copy2(helper, persist)
+        except Exception:
+            pass
+        return [str(Path(sys.executable).resolve()), "--media"]
+    py = Path(sys.executable).resolve() if sys.executable else Path("python")
+    return [str(py), "-X", "utf8", str(helper)]
 
 
 def align4(size: int) -> int:
@@ -291,11 +325,14 @@ def get_asar_path(install_dir: Path) -> Path:
     return install_dir / "resources" / "app.asar"
 
 
-def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, character: str = None, enable_pet: bool = True):
+def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, character: str = None,
+                enable_pet: bool = True, enable_skin: bool = True, stop_processes: bool = True):
     """
     完整安装补丁流程：
     采用原位无损修改技术，精准替换 menu.js、tray.js、updater.js 和 preload.js。
     支持全屏展示指定角色动画 (tanjiro, zenitsu, inosuke, nezuko, all)。
+    enable_skin: 在主进程注入材质包加载器（读取用户配置目录中的当前皮肤，切换无需重打补丁）。
+    stop_processes: 写入前是否结束正在运行的 Antigravity（后台自动重注入时为 False）。
     """
     if repo_root is None:
         repo_root = Path(__file__).resolve().parent.parent
@@ -327,7 +364,8 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     selected_char = character
     if not selected_char:
         # 检测是否为交互式终端，若是则弹出菜单供用户确认选择
-        is_interactive = sys.stdin.isatty() and not _is_running_inside_antigravity()
+        # 打包后的图形程序 / 后台模式下 sys.stdin 为 None
+        is_interactive = bool(sys.stdin) and sys.stdin.isatty() and not _is_running_inside_antigravity()
         if is_interactive:
             print("\n" + "=" * 62)
             print("       请选择《鬼灭之刃》全屏启动动画展示角色")
@@ -393,6 +431,8 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     nezuko_pet_file = res_dir / "nezuko-pet.js"
     nezuko_pet_code = (nezuko_pet_file.read_text(encoding="utf-8") if nezuko_pet_file.exists() else "") if enable_pet else ""
 
+    media_helper_cmd = resolve_media_helper_command(res_dir)
+
     # 始终基于纯净备份读取，确保多次重复运行不受影响
     source_asar = backup_path if backup_path.exists() else asar_path
     print(f"[2/4] 正在读取并解析 ASAR 索引 (源: {source_asar.name})...")
@@ -407,6 +447,7 @@ def apply_patch(install_dir: Path, lang: str = "zh-CN", repo_root: Path = None, 
     window.__AGY_ZH_LANG__ = {json.dumps(lang)};
     window.__AGY_ZH_DICT__ = {json.dumps(lang_dict, ensure_ascii=False)};
     window.__AGY_ZH_RULES__ = {json.dumps(rules_list, ensure_ascii=False)};
+    window.__AGY_MEDIA_HELPER_CMD__ = {json.dumps(media_helper_cmd if enable_pet else None, ensure_ascii=False)};
     {runtime_js_code}
     {nezuko_pet_code}
   }} catch(e) {{
@@ -536,12 +577,12 @@ function __agyTranslateMenu(m) {{
                 const newLines = [];
                 for (let i = 0; i < lines.length; i++) {{
                   const line = lines[i];
-                  if (!replaced && /^description:\s*/.test(line)) {{
+                  if (!replaced && /^description:\\s*/.test(line)) {{
                     inDesc = true;
                     replaced = true;
                     newLines.push('description: ' + JSON.stringify(targetZh));
                   }} else if (inDesc) {{
-                    if (/^\s+/.test(line)) {{
+                    if (/^\\s+/.test(line)) {{
                       continue; // 跳过原英文的多行缩进行
                     }} else {{
                       inDesc = false;
@@ -662,9 +703,21 @@ try {
                 "const backgroundColor = '#07090e';"
             )
             js_raw = json.dumps(injection_code)
+            skin_loader_code = ""
+            skin_apply_main = ""
+            skin_apply_webview = ""
+            if enable_skin:
+                try:
+                    from skin_injector import build_agent_main_hook
+                    skin_loader_code = build_agent_main_hook()
+                    skin_apply_main = "\n        try { __agzhSkin.apply(win.webContents); } catch (_) {}"
+                    skin_apply_webview = "\n            try { __agzhSkin.apply(webContents); } catch (_) {}"
+                except Exception as e:
+                    print(f"  [!] 材质包加载器生成失败，跳过皮肤注入: {e}")
             hook_code = f"""
 /* __ANTIGRAVITY_ZH_CN_PATCHED__ */
 const __AGY_ZH_CODE__ = {js_raw};
+{skin_loader_code}
 """
             utils_content = hook_code + "\n" + utils_content
 
@@ -686,18 +739,21 @@ const __AGY_ZH_CODE__ = {js_raw};
     const __agyTriggerInject = () => {
         win.webContents.executeJavaScript(__AGY_ZH_CODE__).catch((err) => {
             console.log('[AGY-ZH] executeJavaScript error:', err);
-        });
+        });__AGZH_SKIN_APPLY_MAIN__
     };
     win.webContents.on('dom-ready', __agyTriggerInject);
     win.webContents.on('did-finish-load', __agyTriggerInject);
     win.webContents.on('did-attach-webview', (_event, webContents) => {
         webContents.executeJavaScript(__AGY_ZH_CODE__).catch(() => {});
         webContents.on('dom-ready', () => {
-            webContents.executeJavaScript(__AGY_ZH_CODE__).catch(() => {});
+            webContents.executeJavaScript(__AGY_ZH_CODE__).catch(() => {});__AGZH_SKIN_APPLY_WEBVIEW__
         });
     });
     void win.loadURL(url);
 """
+            replacement_str = (replacement_str
+                               .replace("__AGZH_SKIN_APPLY_MAIN__", skin_apply_main)
+                               .replace("__AGZH_SKIN_APPLY_WEBVIEW__", skin_apply_webview))
             if target_str in utils_content:
                 utils_content = utils_content.replace(target_str, replacement_str, 1)
                 validate_js_syntax(utils_content, "dist/utils.js")
@@ -714,12 +770,17 @@ const __AGY_ZH_CODE__ = {js_raw};
         ipc_content = read_asar_file_content(asar_data, "dist/ipcHandlers.js").decode("utf-8")
         if PATCH_MARKER not in ipc_content:
             notif_dict_json = json.dumps(lang_dict, ensure_ascii=False)
+            media_helper_js = json.dumps(media_helper_cmd, ensure_ascii=False)
+            media_actions_js = json.dumps(list(MEDIA_ACTIONS))
             ipc_header_patch = f"""
 {PATCH_MARKER}
 // 全局多媒体与 QQ 音乐客户端联动主控通道
 try {{
     const {{ ipcMain: __agyIpcMain }} = require('electron');
-    const {{ exec: __agyExec }} = require('child_process');
+    const {{ exec: __agyExecRaw, execFile: __agyExecFile }} = require('child_process');
+    // windowsHide：后台调用不弹出黑色控制台窗口
+    const __agyExec = (cmd, cb) => __agyExecRaw(cmd, {{ windowsHide: true, timeout: 15000 }}, cb || (() => {{}}));
+    const __agyMediaActions = new Set({media_actions_js});
     if (__agyIpcMain && !__agyIpcMain.__agyMediaRegistered) {{
         __agyIpcMain.__agyMediaRegistered = true;
 
@@ -727,12 +788,17 @@ try {{
             try {{
                 if (action === 'open_qq') {{
                     const __agyFs = require('fs');
-                    const __agyPaths = [
-                        'e:\\\\浏览器\\\\电脑管家\\\\tencent\\\\qqmusic\\\\QQMusic.exe',
-                        'C:\\\\Program Files\\\\Tencent\\\\QQMusic\\\\QQMusic.exe',
-                        'C:\\\\Program Files (x86)\\\\Tencent\\\\QQMusic\\\\QQMusic.exe',
-                        'D:\\\\Program Files\\\\Tencent\\\\QQMusic\\\\QQMusic.exe'
-                    ];
+                    const __agyPath = require('path');
+                    const __agyEnv = process.env || {{}};
+                    // 按系统环境变量推导常见安装位置（不写死任何个人盘符路径）
+                    const __agyBases = [__agyEnv['ProgramFiles'], __agyEnv['ProgramFiles(x86)'], __agyEnv['ProgramW6432'],
+                        __agyEnv['LOCALAPPDATA'] && __agyPath.join(__agyEnv['LOCALAPPDATA'], 'Programs'),
+                        'D:\\\\Program Files', 'D:\\\\Program Files (x86)'].filter(Boolean);
+                    const __agyPaths = [];
+                    __agyBases.forEach(b => {{
+                        __agyPaths.push(__agyPath.join(b, 'Tencent', 'QQMusic', 'QQMusic.exe'));
+                        __agyPaths.push(__agyPath.join(b, 'QQMusic', 'QQMusic.exe'));
+                    }});
                     let __target = __agyPaths.find(p => {{ try {{ return __agyFs.existsSync(p); }} catch(_) {{ return false; }} }});
                     if (__target) {{
                         __agyExec(`start "" "${{__target}}"`);
@@ -743,9 +809,10 @@ try {{
                     setTimeout(() => {{ try {{ __agyExec(__focusCmd); }} catch(_) {{}} }}, 350);
                     return;
                 }}
-                const __resHelper = 'e:\\\\antigravity-cn\\\\resources\\\\media_helper.py';
-                const __runHelper = `python -X utf8 "${{__resHelper}}" ${{action}}`;
-                __agyExec(__runHelper, (err, stdout) => {{
+                if (!__agyMediaActions.has(action)) return;  // 只接受白名单动作，杜绝命令注入
+                const __helperCmd = {media_helper_js};
+                __agyExecFile(__helperCmd[0], __helperCmd.slice(1).concat([action]),
+                              {{ windowsHide: true, timeout: 15000, encoding: 'utf8' }}, (err, stdout) => {{
                     if (!err && stdout && _evt && _evt.sender) {{
                         try {{
                             const statusData = JSON.parse(stdout);
@@ -868,7 +935,8 @@ function __agyTranslateNotif(text) {{
 
     # 4. 安全写入目标文件
     print(f"[4/4] 正在安全写入汉化文件: {asar_path.name}...")
-    stop_antigravity_processes()
+    if stop_processes:
+        stop_antigravity_processes()
     temp_dest = asar_path.with_suffix('.asar.tmp')
     try:
         temp_dest.write_bytes(asar_data)
@@ -882,9 +950,28 @@ function __agyTranslateNotif(text) {{
                 pass
 
     print("[OK] Antigravity 汉化补丁无损安装成功！所有解包索引 100% 保留！")
-    # 确保官方更新配置文件 app-update.yml 正常就绪（防静默覆盖已由 updater.js 代码级 autoDownload=false 全程保障）
+    # 记录补丁参数与目标文件指纹，供“更新后自动重新注入”检测（存放在用户配置目录，不受官方更新影响）
     try:
-        toggle_auto_updates(install_dir, disable=False)
+        from auto_reapply import record_agent_patch
+        version = None
+        try:
+            version = json.loads(read_asar_file_content(asar_data, "package.json").decode("utf-8")).get("version")
+        except Exception:
+            pass
+        record_agent_patch(install_dir, asar_path, lang=lang, character=selected_char,
+                           enable_pet=enable_pet, enable_skin=enable_skin, version=version)
+        if enable_skin:
+            import skin_manager
+            if skin_manager.read_compiled() is None:
+                skin_manager.sync_builtin_packs()
+                skin_manager.recompile_active()
+    except Exception as e:
+        print(f"  [!] 自动重注入状态记录提示: {e}")
+    # 确保官方更新配置文件 app-update.yml 正常就绪（防静默覆盖已由 updater.js 代码级 autoDownload=false 全程保障）。
+    # 但用户主动“禁止官方自动更新”后不能在重新安装 / 自动重注入时被悄悄恢复。
+    try:
+        if not _updates_disabled_by_user():
+            toggle_auto_updates(install_dir, disable=False)
     except Exception as e:
         print(f"  [!] 自动更新配置同步提示: {e}")
 
@@ -906,6 +993,12 @@ def restore_backup(install_dir: Path):
 
     print(f"正在从备份文件还原: {backup_path.name} -> {asar_path.name}...")
     shutil.copy2(backup_path, asar_path)
+    # 用户主动还原：记录下来，后台自动重注入不会再把补丁打回去
+    try:
+        from auto_reapply import mark_agent_restored
+        mark_agent_restored(install_dir)
+    except Exception:
+        pass
     target_splash_video = install_dir / "resources" / "splash_video.mp4"
     if target_splash_video.is_file():
         try:
@@ -917,8 +1010,26 @@ def restore_backup(install_dir: Path):
     return True
 
 
-def toggle_auto_updates(install_dir: Path, disable: bool):
-    """切换自动更新开关状态"""
+def _updates_disabled_by_user() -> bool:
+    try:
+        import skin_manager
+        return bool(skin_manager.load_state().get("updates_disabled"))
+    except Exception:
+        return False
+
+
+def _remember_updates_choice(disable: bool) -> None:
+    try:
+        import skin_manager
+        skin_manager.update_state(updates_disabled=bool(disable))
+    except Exception:
+        pass
+
+
+def toggle_auto_updates(install_dir: Path, disable: bool, remember: bool = False):
+    """切换自动更新开关状态。remember=True 表示这是用户的主动选择（记录下来，重新打补丁时不会被改回）。"""
+    if remember:
+        _remember_updates_choice(disable)
     update_yml = install_dir / "resources" / "app-update.yml"
     disabled_yml = install_dir / "resources" / "app-update.yml.disabled"
 
@@ -1007,6 +1118,7 @@ def main():
                         default=None, help="启动动画展示角色: tanjiro(炭治郎), zenitsu(善逸), inosuke(伊之助), nezuko(祢豆子), all(四象合集)")
     parser.add_argument("--dir", help="Antigravity 安装目录路径 (默认自动检测)")
     parser.add_argument("--no-pet", action="store_true", help="不挂载桌面宠物模块 (彻底纯净模式)")
+    parser.add_argument("--no-skin", action="store_true", help="不注入材质包加载器")
 
     args = parser.parse_args()
 
@@ -1019,13 +1131,14 @@ def main():
     repo_root = Path(__file__).resolve().parent.parent
 
     if args.action == "install":
-        apply_patch(install_dir, args.lang, repo_root, character=args.character, enable_pet=not args.no_pet)
+        apply_patch(install_dir, args.lang, repo_root, character=args.character, enable_pet=not args.no_pet,
+                    enable_skin=not args.no_skin)
     elif args.action == "restore":
         restore_backup(install_dir)
     elif args.action == "disable-updates":
-        toggle_auto_updates(install_dir, disable=True)
+        toggle_auto_updates(install_dir, disable=True, remember=True)
     elif args.action == "enable-updates":
-        toggle_auto_updates(install_dir, disable=False)
+        toggle_auto_updates(install_dir, disable=False, remember=True)
 
 
 if __name__ == "__main__":
