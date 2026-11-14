@@ -144,7 +144,7 @@ pub fn locate_app_asar(install_dir: &Path) -> Option<PathBuf> {
 pub fn stop_antigravity_processes() -> usize {
     let self_pid = Pid::from_u32(std::process::id());
     let mut sys = System::new_all();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::All);
 
     let mut killed = 0usize;
     for (pid, proc_) in sys.processes() {
@@ -157,8 +157,12 @@ pub fn stop_antigravity_processes() -> usize {
             .map(|p| p.to_string_lossy().to_ascii_lowercase())
             .unwrap_or_default();
 
-        // 绝不误杀 Antigravity Manager / antigravity-tools 自己
-        if name.contains("manager") || name.contains("tools") || exe.contains("antigravity-cn") {
+        // 绝不误杀 Antigravity Manager / Studio / antigravity-tools 自己
+        if name.contains("manager")
+            || name.contains("tools")
+            || name.contains("studio")
+            || exe.contains("antigravity-cn")
+        {
             continue;
         }
 

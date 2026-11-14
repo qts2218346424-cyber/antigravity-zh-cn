@@ -50,7 +50,7 @@ pub fn agent_status(explicit_dir: Option<&str>) -> String {
 pub fn is_antigravity_running() -> bool {
     let self_pid = Pid::from_u32(std::process::id());
     let mut sys = System::new_all();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::All);
 
     for (pid, proc_) in sys.processes() {
         if *pid == self_pid {
@@ -62,7 +62,11 @@ pub fn is_antigravity_running() -> bool {
             .map(|p| p.to_string_lossy().to_ascii_lowercase())
             .unwrap_or_default();
 
-        if name.contains("manager") || name.contains("tools") || exe.contains("antigravity-cn") {
+        if name.contains("manager")
+            || name.contains("tools")
+            || name.contains("studio")
+            || exe.contains("antigravity-cn")
+        {
             continue;
         }
         if name == "antigravity.exe"
