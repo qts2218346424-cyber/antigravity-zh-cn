@@ -1,8 +1,0 @@
-# 一体化管理器运行 / 打包依赖
-pyinstaller>=6.6
-pillow>=10.0
-pyyaml>=6.0
-# 以下仅 Windows 独立桌面桌宠需要（打包时若已安装会被自动收进 exe）
-pywebview>=5.0; sys_platform == "win32"
-pystray>=0.19; sys_platform == "win32"
-pywin32>=306; sys_platform == "win32"

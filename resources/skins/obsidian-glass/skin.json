@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "obsidian-glass",
+  "name": "黑曜石 · 液态光学",
+  "author": "Antigravity Studio",
+  "version": "2.0.0",
+  "description": "受苹果 VisionOS 与线性极简工业美学启发：深邃黑曜石基底搭配 20px 液态亚克力模糊、微距钛银折射边框与冰川蓝信号光束。",
+  "base": "dark",
+  "colors": {
+    "background": "#080a0f",
+    "foreground": "#e6edf7",
+    "accent": "#38bdf8",
+    "accentForeground": "#04131e",
+    "sidebar": "#0c1018",
+    "activityBar": "#06080c",
+    "titleBar": "#07090e",
+    "statusBar": "#0e1726",
+    "panel": "#0f141f",
+    "border": "#1f293b",
+    "selection": "#38bdf833",
+    "input": "#131a27",
+    "muted": "#7e8ca6"
+  },
+  "surfaces": {
+    "radius": "14px",
+    "glass_blur": 20,
+    "card_opacity": 0.72,
+    "border_glow": "rgba(186, 230, 253, 0.16)",
+    "noise_grain": 0.035,
+    "shadow_elevation": "0 20px 50px -12px rgba(0, 0, 0, 0.75)"
+  },
+  "font": {
+    "family": "Inter, 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
+    "monoFamily": "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+    "size": 13,
+    "ligatures": true
+  },
+  "css": ".monaco-workbench .part.sidebar, .monaco-workbench .part.panel { backdrop-filter: blur(var(--agzh-glass-blur, 20px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 20px)); }\n.monaco-workbench .monaco-list-row.selected { box-shadow: inset 2px 0 0 #38bdf8; }",
+  "pet": {
+    "character": "prince",
+    "accent": "#38bdf8",
+    "scale": 1.0
+  }
+}

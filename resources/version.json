@@ -1,8 +1,8 @@
 {
-  "version": "2.31.2",
-  "name": "antigravity-zh-cn",
-  "target_antigravity_version": "2.31.2",
+  "version": "5.0.3",
+  "name": "antigravity-studio",
+  "target_antigravity_version": "5.0.3",
   "github_repo": "qts2218346424-cyber/antigravity-zh-cn",
   "release_url": "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases",
-  "updated_at": "2026-11-13"
+  "updated_at": "2026-11-14"
 }

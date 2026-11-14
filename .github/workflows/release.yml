@@ -1,0 +1,87 @@
+name: 构建并发布 OTA 更新 (Build & Release OTA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '发布版本标签（如 v5.0.3）'
+        required: false
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-frontend-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: 安装前端依赖并校验 TypeScript 与打包
+        run: |
+          npm ci
+          npm run build
+
+  release-desktop:
+    needs: build-frontend-check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ''
+          - platform: macos-latest
+            args: '--target universal-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 安装 Rust 稳定版工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: 安装 Rust 构建缓存
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: 安装 Linux 系统依赖
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: 安装前端依赖
+        run: npm ci
+
+      - name: 构建 Tauri 安装包并生成 updater.json 签名更新包
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          ANTIGRAVITY_OAUTH_CLIENT_ID: ${{ secrets.ANTIGRAVITY_OAUTH_CLIENT_ID }}
+          ANTIGRAVITY_OAUTH_CLIENT_SECRET: ${{ secrets.ANTIGRAVITY_OAUTH_CLIENT_SECRET }}
+          ANTIGRAVITY_GCP_CLIENT_ID: ${{ secrets.ANTIGRAVITY_GCP_CLIENT_ID }}
+          ANTIGRAVITY_GCP_CLIENT_SECRET: ${{ secrets.ANTIGRAVITY_GCP_CLIENT_SECRET }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Antigravity Studio ${{ github.ref_name }}'
+          releaseBody: '## Antigravity Studio 自动更新发布\n请通过客户端「检查更新」自动完成 OTA 升级，或下载对应平台安装包。'
+          releaseDraft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          updaterJsonKeepUniversal: true
+          args: ${{ matrix.args }}

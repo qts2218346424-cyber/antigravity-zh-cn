@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "nordic-aurora",
+  "name": "北境极光 · 冰川矿",
+  "author": "Antigravity Studio",
+  "version": "2.0.0",
+  "description": "斯堪的纳维亚低饱和护眼视觉方案：冷杉深潭岩灰底色辅以幽微极光青翠高亮，久看不疲，兼顾精准语法层次。",
+  "base": "dark",
+  "colors": {
+    "background": "#0b1417",
+    "foreground": "#dbe8eb",
+    "accent": "#2dd4bf",
+    "accentForeground": "#041c19",
+    "sidebar": "#0e1a1e",
+    "activityBar": "#081013",
+    "titleBar": "#091114",
+    "statusBar": "#112b30",
+    "panel": "#111f24",
+    "border": "#1e333a",
+    "selection": "#2dd4bf30",
+    "input": "#14262c",
+    "muted": "#7b9ba3"
+  },
+  "surfaces": {
+    "radius": "12px",
+    "glass_blur": 16,
+    "card_opacity": 0.78,
+    "border_glow": "rgba(45, 212, 191, 0.16)",
+    "noise_grain": 0.025,
+    "shadow_elevation": "0 16px 40px -10px rgba(2, 10, 12, 0.72)"
+  },
+  "font": {
+    "family": "'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
+    "monoFamily": "'Fira Code', 'Cascadia Code', monospace",
+    "size": 13,
+    "ligatures": true
+  },
+  "css": ".monaco-workbench .part.sidebar { border-right: 1px solid rgba(45, 212, 191, 0.12) !important; }",
+  "pet": {
+    "character": "prince",
+    "accent": "#2dd4bf",
+    "scale": 1.0
+  }
+}

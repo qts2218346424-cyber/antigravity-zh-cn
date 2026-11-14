@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "id": "vermilion-lacquer",
+  "name": "朱漆 · 黑金莳绘",
+  "author": "Antigravity Studio",
+  "version": "2.0.0",
+  "description": "融合中国传统大漆工艺与宋刻人文美学：温润如玉的碳墨大漆背景、故宫朱砂红与赤金微光点缀，适合夜间沉思构架。",
+  "base": "dark",
+  "colors": {
+    "background": "#110c0d",
+    "foreground": "#f5ebe4",
+    "accent": "#e15b47",
+    "accentForeground": "#fff7f5",
+    "sidebar": "#160f11",
+    "activityBar": "#0d090a",
+    "titleBar": "#0e0a0b",
+    "statusBar": "#3b1715",
+    "panel": "#1a1214",
+    "border": "#362320",
+    "selection": "#e15b4738",
+    "input": "#211719",
+    "muted": "#a88f88"
+  },
+  "variables": {
+    "--agzh-gold": "#d6a45e"
+  },
+  "surfaces": {
+    "radius": "10px",
+    "glass_blur": 14,
+    "card_opacity": 0.84,
+    "border_glow": "rgba(214, 164, 94, 0.22)",
+    "noise_grain": 0.04,
+    "shadow_elevation": "0 18px 42px -10px rgba(8, 3, 4, 0.8)"
+  },
+  "font": {
+    "family": "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
+    "monoFamily": "'Sarasa Mono SC', 'JetBrains Mono', monospace",
+    "size": 13,
+    "ligatures": true
+  },
+  "css": ".monaco-workbench .part.statusbar { border-top: 1px solid rgba(214, 164, 94, 0.32) !important; }\n.monaco-workbench .part.activitybar .action-item.checked .active-item-indicator::before { border-left-color: #d6a45e !important; }",
+  "pet": {
+    "character": "nezuko",
+    "accent": "#e15b47",
+    "scale": 1.05
+  }
+}
