@@ -81,7 +81,15 @@
       "../resources/nezuko-pet.js": "agzh-resources/nezuko-pet.js",
       "../resources/loadingOverlay-zh.js": "agzh-resources/loadingOverlay-zh.js",
       "../resources/media/*": "agzh-resources/media/",
-      "../resources/skins/*": "agzh-resources/skins/"
+      "../resources/skins/midnight-dark/*": "agzh-resources/skins/midnight-dark/",
+      "../resources/skins/nezuko-bamboo/*": "agzh-resources/skins/nezuko-bamboo/",
+      "../resources/skins/nordic-aurora/*": "agzh-resources/skins/nordic-aurora/",
+      "../resources/skins/obsidian-glass/*": "agzh-resources/skins/obsidian-glass/",
+      "../resources/skins/sakura-light/preview.png": "agzh-resources/skins/sakura-light/preview.png",
+      "../resources/skins/sakura-light/sakura.webp": "agzh-resources/skins/sakura-light/sakura.webp",
+      "../resources/skins/sakura-light/skin.json": "agzh-resources/skins/sakura-light/skin.json",
+      "../resources/skins/sakura-light/icons/*": "agzh-resources/skins/sakura-light/icons/",
+      "../resources/skins/vermilion-lacquer/*": "agzh-resources/skins/vermilion-lacquer/"
     },
     "windows": {
       "nsis": {
@@ -101,7 +109,7 @@
         "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/download/preview/updater.json"
       ],
       "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJFRjVDRjdCREE1Rjg2NkYKUldSdmhsL2FlOC8xdnJuTzBtaTRhZkk1VWJ1cW5QWGU3ZWEwU20yZHRlZStxMnRWcUIzc3FwT2IK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU0MEEzMkMwRjVEMjI4MUQKUldRZEtOTDF3RElLNURDK0tsZE1GckNUaXVmR1lJSTVGL3kvZDlpY0hkVDhzdVU1MTg0TTZuM2EK"
     },
     "process": null,
     "fs": null,
