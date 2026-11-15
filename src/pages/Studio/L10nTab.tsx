@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
+  AlertTriangle,
   BookOpen,
   CheckCircle2,
   FolderSearch,
@@ -151,6 +152,31 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
 
   return (
     <div className="space-y-6">
+      {status.has_legacy_pet && (
+        <div className="rounded-xl border border-amber-400/70 bg-amber-50 dark:bg-amber-950/35 p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <div className="text-xs font-bold text-amber-800 dark:text-amber-200">
+                检测到 Antigravity 客户端内部仍注入了旧脚本的老宠物代码
+              </div>
+              <p className="text-[11.5px] text-amber-700/90 dark:text-amber-300/90">
+                这是先前旧补丁写入 <code className="font-mono">app.asar</code> 的残留（新版已迁移至「伴侣与守护」独立窗口）。点击右侧按钮将关闭并重刷客户端，彻底清除老宠物并应用最新《鬼灭之刃》启动动效。
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleApplyPatch}
+            disabled={busy !== null}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-semibold text-white shadow disabled:opacity-60"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            {busy === 'apply' ? '正在清除并重刷...' : '立即清除老宠物并升级补丁'}
+          </button>
+        </div>
+      )}
+
       {/* 安装路径配置卡片 */}
       <div className="rounded-xl border border-gray-200 dark:border-base-300 bg-white dark:bg-base-100 p-5 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">

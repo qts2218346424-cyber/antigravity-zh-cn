@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Antigravity Studio",
-  "version": "5.0.6",
+  "version": "5.0.7",
   "identifier": "com.qts.antigravity-studio",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -78,8 +78,6 @@
       "../resources/desktop-zh-CN.json": "agzh-resources/desktop-zh-CN.json",
       "../resources/runtime-zh.js": "agzh-resources/runtime-zh.js",
       "../resources/skin-runtime.js": "agzh-resources/skin-runtime.js",
-      "../resources/nezuko-pet.js": "agzh-resources/nezuko-pet.js",
-      "../resources/loadingOverlay-zh.js": "agzh-resources/loadingOverlay-zh.js",
       "../resources/media/*": "agzh-resources/media/",
       "../resources/skins/midnight-dark/*": "agzh-resources/skins/midnight-dark/",
       "../resources/skins/nezuko-bamboo/*": "agzh-resources/skins/nezuko-bamboo/",

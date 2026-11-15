@@ -572,8 +572,19 @@ fn build_preload_runtime_bundle(
     parts.push(format!("  window.__AGY_ZH_RULES__ = {};", rules_json));
     parts.push(runtime_js);
 
-    // 桌宠功能统一由 Antigravity Studio 独立高清桌面伴侣接管，不再往客户端进程内重复注入旧版 nezuko-pet.js，彻底避免出现两个宠物重叠冲突。
+    // 桌宠功能统一由 Antigravity Studio 独立高清桌面伴侣接管，不再往客户端渲染进程注入旧版内置桌宠，
+    // 并在客户端启动时主动清扫可能缓存残留的旧宠物 DOM，彻底避免出现两个宠物重叠或老宠物幽灵残留。
     let _ = enable_pet;
+    parts.push(
+        r#"  try {
+    ['nezuko-pet-root', 'agzh-pet-root', 'agzh-nezuko-pet'].forEach((id) => {
+      const n = document.getElementById(id);
+      if (n && n.parentNode) n.parentNode.removeChild(n);
+    });
+    document.querySelectorAll('.nezuko-pet-container, .agzh-pet-wrap').forEach((n) => n.remove());
+  } catch (_) {}"#
+            .to_string(),
+    );
 
     if enable_skin {
         let runtime_path = compiled_dir().join("skin-runtime.json");
@@ -761,11 +772,27 @@ fn patch_main_js(src: &str, desktop_json: &str, enable_skin: bool) -> String {
     )
 }
 
-fn patch_preload_or_utils(src: &str, bundle_js: &str) -> String {
-    if src.contains(PATCH_MARKER) {
-        return src.to_string();
+fn strip_legacy_preload_injections(src: &str) -> String {
+    let mut clean = src.to_string();
+    if let Some(pos) = clean.find(PATCH_MARKER) {
+        clean.truncate(pos);
     }
-    format!("{}\n\n{}\n", src, bundle_js)
+    // 兜底：若更早期老脚本未带当前 PATCH_MARKER，直接定位 __AGY_NEZUKO_PET_INITIALIZED__ 前置 IIFE 起始点截断剥离
+    if let Some(pet_pos) = clean.find("__AGY_NEZUKO_PET_INITIALIZED__") {
+        let head = &clean[..pet_pos];
+        let cut = head
+            .rfind("// ====")
+            .or_else(|| head.rfind(";(function"))
+            .or_else(|| head.rfind("(function()"))
+            .unwrap_or(pet_pos);
+        clean.truncate(cut);
+    }
+    clean.trim_end().to_string()
+}
+
+fn patch_preload_or_utils(src: &str, bundle_js: &str) -> String {
+    let clean_base = strip_legacy_preload_injections(src);
+    format!("{}\n\n{}\n", clean_base, bundle_js)
 }
 
 fn patch_updater_js(src: &str) -> String {
@@ -800,12 +827,19 @@ pub fn apply_l10n_patch(
     let current_bytes = std::fs::read(&asar_path)
         .map_err(|e| format!("读取 app.asar 失败: {}", e))?;
 
-    // 检查当前包是否原版未修补，决定是否刷新备份
+    // 检查当前包是否原版未修补（同时排查老脚本仅污染 dist/preload.js 却未打 main.js 标记的情况）
     let current_main_is_patched = read_asar_file_content(&current_bytes, "dist/main.js")
         .map(|b| String::from_utf8_lossy(&b).contains(PATCH_MARKER))
         .unwrap_or(false);
+    let current_preload_has_legacy = read_asar_file_content(&current_bytes, "dist/preload.js")
+        .map(|b| {
+            let s = String::from_utf8_lossy(&b);
+            s.contains(PATCH_MARKER) || s.contains("__AGY_NEZUKO_PET_INITIALIZED__")
+        })
+        .unwrap_or(false);
+    let current_is_clean = !current_main_is_patched && !current_preload_has_legacy;
 
-    let mut work_bytes = if !current_main_is_patched {
+    let mut work_bytes = if current_is_clean {
         // 当前 app.asar 是官方原包，将其安全保存为清洁备份基底
         atomic_write_bytes(&bak_path, &current_bytes)?;
         current_bytes

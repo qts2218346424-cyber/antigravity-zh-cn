@@ -120,6 +120,7 @@ export interface StudioStatus {
   enable_pet: boolean;
   enable_skin: boolean;
   pet_window_open: boolean;
+  has_legacy_pet?: boolean;
   config_dir: string;
   resource_dir: string;
   reapply_logs: string[];

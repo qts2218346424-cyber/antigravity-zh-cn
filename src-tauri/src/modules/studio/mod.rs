@@ -212,6 +212,7 @@ pub struct StudioStatus {
     pub enable_pet: bool,
     pub enable_skin: bool,
     pub pet_window_open: bool,
+    pub has_legacy_pet: bool,
     pub config_dir: String,
     pub resource_dir: String,
     pub reapply_logs: Vec<String>,

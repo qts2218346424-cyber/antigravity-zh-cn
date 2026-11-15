@@ -47,6 +47,7 @@ fn build_studio_status(app: &tauri::AppHandle) -> StudioStatus {
         enable_pet: cfg.enable_pet,
         enable_skin: cfg.enable_skin,
         pet_window_open: pet::is_pet_open(app),
+        has_legacy_pet: auto_reapply::has_legacy_pet_in_agent(install_str.as_deref()),
         config_dir: config_dir().to_string_lossy().to_string(),
         resource_dir: resources_dir().to_string_lossy().to_string(),
         reapply_logs: cfg.reapply_logs,

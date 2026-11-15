@@ -46,6 +46,28 @@ pub fn agent_status(explicit_dir: Option<&str>) -> String {
     }
 }
 
+/// 检测 Antigravity 客户端 app.asar 渲染层是否仍残留旧版脚本注入的老宠物代码
+pub fn has_legacy_pet_in_agent(explicit_dir: Option<&str>) -> bool {
+    let Some(install_dir) = detect_install_dir(explicit_dir) else {
+        return false;
+    };
+    let Some(asar_path) = locate_app_asar(&install_dir) else {
+        return false;
+    };
+    let Ok(bytes) = std::fs::read(&asar_path) else {
+        return false;
+    };
+    for target in ["dist/preload.js", "dist/utils.js"] {
+        if let Ok(content) = read_asar_file_content(&bytes, target) {
+            let text = String::from_utf8_lossy(&content);
+            if text.contains("__AGY_NEZUKO_PET_INITIALIZED__") || text.contains("nezuko-pet") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// 检测官方 Antigravity 客户端进程是否正在运行（严格排除本管理器）
 pub fn is_antigravity_running() -> bool {
     let self_pid = Pid::from_u32(std::process::id());

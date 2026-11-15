@@ -35,6 +35,7 @@ const EMPTY_STATUS: StudioStatus = {
   enable_pet: true,
   enable_skin: true,
   pet_window_open: false,
+  has_legacy_pet: false,
   config_dir: '',
   resource_dir: '',
   reapply_logs: [],
@@ -140,6 +141,15 @@ const Studio: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {status.has_legacy_pet && (
+              <button
+                onClick={() => setActiveTab('l10n')}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/60 bg-amber-500/15 px-3.5 py-2 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/25 transition-colors"
+              >
+                <Languages className="h-3.5 w-3.5" />
+                检测到客户端旧版老宠物残留 · 点此清理
+              </button>
+            )}
             {!isTauri() && (
               <span className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
                 Web 预览态（系统级注入需运行桌面端）
