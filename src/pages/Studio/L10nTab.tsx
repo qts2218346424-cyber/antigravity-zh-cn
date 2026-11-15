@@ -12,6 +12,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
+import { DemonSlayerSplashPreview } from '../../components/Studio/DemonSlayerSplashPreview';
 import { studioService } from '../../services/studioService';
 import type { L10nPatchResult, StudioStatus } from '../../types/studio';
 import { isTauri } from '../../utils/env';
@@ -256,11 +257,16 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
           </div>
         </div>
 
-        {/* 鬼灭启动动效 5 角色网格 */}
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200">
-            <Sparkles className="h-4 w-4 text-amber-500" />
-            《鬼灭之刃》电影级启动动效角色选择
+        {/* 鬼灭启动动效 5 角色网格 + 实景战斗分镜预览 */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200">
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              《鬼灭之刃》电影级启动动效角色选择
+            </div>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              点击任意角色卡片下方即刻实时试看 60fps 打斗动作分镜
+            </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {SPLASH_CHARACTERS.map((c) => {
@@ -283,6 +289,8 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
               );
             })}
           </div>
+
+          <DemonSlayerSplashPreview character={character} />
         </div>
 
         {/* 核心操作按钮矩阵 */}

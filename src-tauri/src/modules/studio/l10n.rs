@@ -312,88 +312,118 @@ fn encode_media_data_uri(file_name: &str) -> String {
     format!("data:{};base64,{}", mime, BASE64_STANDARD.encode(&bytes))
 }
 
-/// 生成《鬼灭之刃》电影级全屏动态启动遮罩 (`loadingOverlay.js`)
-/// 融合浮世绘市松纹暗底、多角色实时 Canvas 物理呼吸特效（水沫 / 爆血樱花 / 霹雳闪电 / 兽之剑气）
-/// 与居中日轮刀镡结界阵纹，兼顾 0ms 首帧秒开防黑屏与电影级微缩放光影转场。
+const KIMETSU_THEATER_ENGINE_JS: &str = include_str!("../../../../resources/kimetsu_theater_engine.js");
+
+fn build_splash_assets_json(character: &str) -> Value {
+    let mut map = serde_json::Map::new();
+    let mut insert_if = |key: &str, file: &str| {
+        let uri = encode_media_data_uri(file);
+        if !uri.is_empty() {
+            map.insert(key.to_string(), Value::String(uri));
+        }
+    };
+
+    match character {
+        "tanjiro" => insert_if("tanjiro", "tanjiro_water.webp"),
+        "zenitsu" => insert_if("zenitsu", "zenitsu_thunder.webp"),
+        "inosuke" => insert_if("inosuke", "inosuke_beast.webp"),
+        "nezuko" => {
+            insert_if("nezuko", "nezuko_basket.webp");
+            insert_if("box_impact_shockwave", "box_impact_shockwave.webp");
+            insert_if("nezuko_bone_head", "nezuko_bone_head.webp");
+            insert_if("nezuko_bone_torso", "nezuko_bone_torso.webp");
+            insert_if("nezuko_bone_arm_l", "nezuko_bone_arm_l.webp");
+            insert_if("nezuko_bone_arm_r", "nezuko_bone_arm_r.webp");
+            insert_if("nezuko_bone_leg_l", "nezuko_bone_leg_l.webp");
+            insert_if("nezuko_bone_leg_r", "nezuko_bone_leg_r.webp");
+        }
+        _ => {
+            insert_if("tanjiro", "tanjiro_water.webp");
+            insert_if("zenitsu", "zenitsu_thunder.webp");
+            insert_if("inosuke", "inosuke_beast.webp");
+            insert_if("nezuko", "nezuko_basket.webp");
+            insert_if("box_impact_shockwave", "box_impact_shockwave.webp");
+            insert_if("nezuko_bone_head", "nezuko_bone_head.webp");
+            insert_if("nezuko_bone_torso", "nezuko_bone_torso.webp");
+            insert_if("nezuko_bone_arm_l", "nezuko_bone_arm_l.webp");
+            insert_if("nezuko_bone_arm_r", "nezuko_bone_arm_r.webp");
+            insert_if("nezuko_bone_leg_l", "nezuko_bone_leg_l.webp");
+            insert_if("nezuko_bone_leg_r", "nezuko_bone_leg_r.webp");
+        }
+    }
+    Value::Object(map)
+}
+
+/// 生成《鬼灭之刃》Sakuga 60fps 全屏动漫打斗启动遮罩 (`loadingOverlay.js`)
+/// 复用 `resources/kimetsu_theater_engine.js` 战斗导演引擎，为全部 5 种模式提供
+/// 多幕高帧率连招动作、残影队列、斜切原画 Cut-in 特写、顿帧 Impact Frame 与震屏冲击。
 pub fn generate_loading_overlay(character: &str, version_str: &str) -> String {
     let spec = SPLASH_THEMES
         .iter()
         .find(|t| t.key == character)
         .unwrap_or(&SPLASH_THEMES[0]);
 
-    let art_uri = encode_media_data_uri(spec.art_file);
-    let tanjiro_uri = encode_media_data_uri("tanjiro_water.webp");
-    let zenitsu_uri = encode_media_data_uri("zenitsu_thunder.webp");
-    let inosuke_uri = encode_media_data_uri("inosuke_beast.webp");
-    let nezuko_uri = encode_media_data_uri("nezuko_basket.webp");
+    let cfg_json = serde_json::to_string(&json!({
+        "character": spec.key,
+        "title": spec.title,
+        "subtitle": spec.subtitle,
+        "breathStyle": spec.breath_style,
+        "primaryColor": spec.primary_color,
+        "accentColor": spec.accent_color,
+        "coverArt": spec.art_file,
+        "durationMs": 5600,
+        "loop": false,
+        "steps": spec.steps,
+        "version": version_str,
+        "assets": build_splash_assets_json(spec.key),
+    }))
+    .unwrap_or_else(|_| "{}".to_string())
+    .replace("</script>", "<\\/script>");
 
-    let steps_json = serde_json::to_string(&spec.steps).unwrap_or_else(|_| "[]".to_string());
-    let is_all = character == "all";
-    let hero_stage_html = if is_all {
-        format!(
-            r#"<div class="quartet-grid">
-              <div class="center-crest">
-                <div class="center-tsuba"><span class="center-kanji">滅</span></div>
-              </div>
-              <div class="char-card card-tanjiro" id="card-tanjiro">
-                <div class="char-visual" style="background-image:url('{t}')"></div>
-                <canvas class="fx-canvas" data-fx="water"></canvas>
-                <div class="char-badge"><span class="badge-name">灶门炭治郎</span><span class="badge-breath">水之呼吸 · 生生流转</span></div>
-              </div>
-              <div class="char-card card-nezuko" id="card-nezuko">
-                <div class="char-visual" style="background-image:url('{n}')"></div>
-                <canvas class="fx-canvas" data-fx="sakura"></canvas>
-                <div class="char-badge"><span class="badge-name">灶门祢豆子</span><span class="badge-breath">血鬼术 · 爆血羁绊</span></div>
-              </div>
-              <div class="char-card card-zenitsu" id="card-zenitsu">
-                <div class="char-visual" style="background-image:url('{z}')"></div>
-                <canvas class="fx-canvas" data-fx="thunder"></canvas>
-                <div class="char-badge"><span class="badge-name">我妻善逸</span><span class="badge-breath">雷之呼吸 · 霹雳一闪</span></div>
-              </div>
-              <div class="char-card card-inosuke" id="card-inosuke">
-                <div class="char-visual" style="background-image:url('{i}')"></div>
-                <canvas class="fx-canvas" data-fx="beast"></canvas>
-                <div class="char-badge"><span class="badge-name">嘴平伊之助</span><span class="badge-breath">兽之呼吸 · 狂乱裂斩</span></div>
-              </div>
-            </div>"#,
-            t = tanjiro_uri,
-            n = nezuko_uri,
-            z = zenitsu_uri,
-            i = inosuke_uri,
-        )
-    } else {
-        let fx_mode = match character {
-            "tanjiro" => "water",
-            "zenitsu" => "thunder",
-            "inosuke" => "beast",
-            _ => "sakura",
-        };
-        format!(
-            r#"<div class="solo-cinema-frame">
-              <div class="tsuba-ring"></div>
-              <div class="tsuba-ring inner"></div>
-              <div class="solo-portrait" style="background-image:url('{art}')"></div>
-              <canvas class="fx-canvas solo-fx" data-fx="{fx}"></canvas>
-              <div class="solo-kanji">滅</div>
-            </div>"#,
-            art = art_uri,
-            fx = fx_mode,
-        )
-    };
+    let safe_engine = KIMETSU_THEATER_ENGINE_JS.replace("</script>", "<\\/script>");
+    let full_html = r#"<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>__TITLE__</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100vw; height: 100vh; overflow: hidden; background: __BG_GRADIENT__;
+      -webkit-app-region: drag;
+      transition: opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter 0.72s ease;
+    }
+    #theater-root { width: 100vw; height: 100vh; position: relative; }
+    .ag-ver-badge {
+      position: fixed; right: 24px; bottom: 2px; z-index: 20;
+      font-size: 10px; color: rgba(148,163,184,0.78); letter-spacing: 0.08em; pointer-events: none;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei UI", sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="theater-root"></div>
+  <div class="ag-ver-badge">Antigravity Studio 中文沉浸工作台 · v__VERSION__</div>
+  <script>
+__ENGINE_JS__
+  </script>
+  <script>
+    (function () {
+      var cfg = __CFG_JSON__;
+      if (window.KimetsuTheater) {
+        window.KimetsuTheater.mount(document.getElementById('theater-root'), cfg);
+      }
+    })();
+  </script>
+</body>
+</html>"#
+        .replace("__TITLE__", spec.title)
+        .replace("__BG_GRADIENT__", spec.bg_gradient)
+        .replace("__VERSION__", version_str)
+        .replace("__ENGINE_JS__", &safe_engine)
+        .replace("__CFG_JSON__", &cfg_json);
 
-    let backdrop_style = if !art_uri.is_empty() {
-        format!("background-image: url('{}');", art_uri)
-    } else {
-        String::new()
-    };
-
-    let global_fx = match character {
-        "tanjiro" => "water",
-        "zenitsu" => "thunder",
-        "inosuke" => "beast",
-        "nezuko" => "sakura",
-        _ => "ember",
-    };
+    let html_literal = serde_json::to_string(&full_html).unwrap_or_else(|_| "\"\"".to_string());
 
     format!(
         r#"{marker}
@@ -405,386 +435,10 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-function getLoadingHtml(videoUrl) {{
-  const steps = {steps_json};
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <title>{title}</title>
-  <style>
-    :root {{
-      --primary: {primary};
-      --accent: {accent};
-    }}
-    * {{ box-sizing: border-box; margin: 0; padding: 0; user-select: none; }}
-    html, body {{
-      width: 100vw; height: 100vh; overflow: hidden;
-      background: #05060a;
-      color: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei UI", sans-serif;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      position: relative; -webkit-app-region: drag;
-      transition: opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter 0.72s ease;
-    }}
-    .cinema-backdrop {{
-      position: fixed; inset: -4%; z-index: 0;
-      background-size: cover; background-position: center 22%;
-      filter: blur(22px) brightness(0.26) saturate(1.25);
-      animation: kenBurns 12s ease-in-out infinite alternate;
-      pointer-events: none;
-    }}
-    @keyframes kenBurns {{
-      0% {{ transform: scale(1) translate3d(0, 0, 0); }}
-      100% {{ transform: scale(1.08) translate3d(-1.5%, -1%, 0); }}
-    }}
-    .ichimatsu-bg {{
-      position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.48;
-      background-image:
-        linear-gradient(45deg, rgba(16, 185, 129, 0.06) 25%, transparent 25%),
-        linear-gradient(-45deg, rgba(16, 185, 129, 0.06) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, rgba(16, 185, 129, 0.06) 75%),
-        linear-gradient(-45deg, transparent 75%, rgba(16, 185, 129, 0.06) 75%);
-      background-size: 44px 44px;
-      background-position: 0 0, 0 22px, 22px -22px, -22px 0;
-    }}
-    .bg-layer {{
-      position: fixed; inset: 0; z-index: 2; background: {bg_gradient}; opacity: 0.88;
-    }}
-    #bg-video {{
-      position: fixed; inset: 0; width: 100%; height: 100%;
-      object-fit: cover; opacity: 0.36; mix-blend-mode: screen; z-index: 3;
-      filter: contrast(1.12) saturate(1.2);
-    }}
-    #canvas-global-fx {{
-      position: fixed; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none;
-    }}
-    .stage {{
-      position: relative; z-index: 10;
-      width: min(780px, 90vw);
-      display: flex; flex-direction: column; align-items: center; gap: 16px;
-      animation: stageEnter 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }}
-    @keyframes stageEnter {{
-      from {{ opacity: 0; transform: translateY(18px) scale(0.96); }}
-      to {{ opacity: 1; transform: translateY(0) scale(1); }}
-    }}
-    .brand-header {{
-      display: flex; align-items: center; gap: 12px;
-    }}
-    .nichirin-core {{
-      width: 30px; height: 30px; position: relative;
-      display: flex; align-items: center; justify-content: center;
-    }}
-    .nichirin-flame {{
-      position: absolute; inset: 0; border-radius: 50%;
-      border: 2px dashed var(--primary);
-      animation: spinSlow 10s linear infinite;
-    }}
-    .nichirin-diamond {{
-      width: 15px; height: 15px; border-radius: 3px;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      transform: rotate(45deg);
-      box-shadow: 0 0 16px var(--primary);
-    }}
-    @keyframes spinSlow {{
-      from {{ transform: rotate(0deg); }}
-      to {{ transform: rotate(360deg); }}
-    }}
-    .brand-title {{
-      font-size: 18px; font-weight: 800; letter-spacing: 0.28em;
-      background: linear-gradient(90deg, #f8fafc, var(--primary), #f8fafc);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }}
-    .breath-pill {{
-      padding: 3px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
-      letter-spacing: 0.08em;
-      background: color-mix(in srgb, var(--primary) 16%, rgba(15,23,42,0.75));
-      border: 1px solid color-mix(in srgb, var(--primary) 55%, transparent);
-      color: #f8fafc;
-      box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 30%, transparent);
-    }}
+const SPLASH_HTML_TEMPLATE = {html_literal};
 
-    /* 四象神乐矩阵 */
-    .quartet-grid {{
-      position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
-      width: 100%; max-width: 640px;
-    }}
-    .center-crest {{
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 62px; height: 62px; z-index: 20; pointer-events: none;
-      display: flex; align-items: center; justify-content: center;
-    }}
-    .center-tsuba {{
-      width: 54px; height: 54px; border-radius: 50%;
-      background: radial-gradient(circle, #18181b 28%, #05070b 85%);
-      border: 2px solid #fbbf24;
-      box-shadow: 0 0 24px rgba(251, 191, 36, 0.68), inset 0 0 14px rgba(244, 114, 182, 0.55);
-      display: flex; align-items: center; justify-content: center;
-      animation: tsubaPulse 2.8s ease-in-out infinite;
-    }}
-    .center-kanji {{
-      font-size: 20px; font-weight: 900; color: #fef08a;
-      text-shadow: 0 0 10px #f59e0b;
-      font-family: "KaiTi", "STKaiti", serif;
-    }}
-    @keyframes tsubaPulse {{
-      0%, 100% {{ transform: scale(1); }}
-      50% {{ transform: scale(1.09); }}
-    }}
-    .char-card {{
-      position: relative; border-radius: 14px; overflow: hidden; height: 158px;
-      background: #090b10; border: 1px solid rgba(255,255,255,0.12);
-      box-shadow: 0 14px 36px rgba(0,0,0,0.62);
-      transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
-    }}
-    .char-card.active-focus {{
-      transform: scale(1.03); z-index: 12;
-      border-color: var(--primary);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.72), 0 0 28px color-mix(in srgb, var(--primary) 42%, transparent);
-    }}
-    .char-visual {{
-      position: absolute; inset: 0; background-size: cover; background-position: center 20%;
-      filter: brightness(0.92) contrast(1.06);
-      animation: portraitBreath 4.2s ease-in-out infinite;
-    }}
-    @keyframes portraitBreath {{
-      0%, 100% {{ transform: scale(1); }}
-      50% {{ transform: scale(1.045) translateY(-2px); }}
-    }}
-    .fx-canvas {{
-      position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;
-    }}
-    .char-badge {{
-      position: absolute; bottom: 10px; left: 10px; z-index: 8;
-      display: flex; flex-direction: column; gap: 2px;
-      padding: 4px 10px 4px 8px; border-radius: 6px;
-      background: linear-gradient(90deg, rgba(6, 7, 11, 0.88) 45%, transparent 100%);
-      border-left: 2.5px solid var(--primary);
-    }}
-    .badge-name {{ font-size: 13px; font-weight: 700; color: #f8fafc; letter-spacing: 0.04em; }}
-    .badge-breath {{ font-size: 10px; color: #cbd5e1; }}
-
-    /* 单角色电影焦点舞台 */
-    .solo-cinema-frame {{
-      position: relative; width: 320px; height: 220px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 22px; overflow: hidden;
-      background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--primary) 18%, #0c101b) 0%, #070910 100%);
-      border: 1px solid color-mix(in srgb, var(--primary) 42%, rgba(255,255,255,0.14));
-      box-shadow: 0 24px 64px rgba(0,0,0,0.72), 0 0 48px color-mix(in srgb, var(--primary) 34%, transparent);
-    }}
-    .tsuba-ring {{
-      position: absolute; width: 196px; height: 196px; border-radius: 50%;
-      border: 1.5px dashed color-mix(in srgb, var(--primary) 48%, transparent);
-      animation: spinSlow 18s linear infinite; z-index: 2; pointer-events: none;
-    }}
-    .tsuba-ring.inner {{
-      width: 158px; height: 158px; border-style: solid;
-      border-color: color-mix(in srgb, var(--accent) 32%, transparent);
-      animation-direction: reverse; animation-duration: 12s;
-    }}
-    .solo-portrait {{
-      position: relative; z-index: 4; width: 190px; height: 190px;
-      background-size: contain; background-repeat: no-repeat; background-position: center;
-      filter: drop-shadow(0 12px 24px rgba(0,0,0,0.65)) drop-shadow(0 0 18px color-mix(in srgb, var(--primary) 40%, transparent));
-      animation: floatCinema 3.4s ease-in-out infinite;
-    }}
-    @keyframes floatCinema {{
-      0%, 100% {{ transform: translateY(0) scale(1); }}
-      50% {{ transform: translateY(-7px) scale(1.03); }}
-    }}
-    .solo-kanji {{
-      position: absolute; right: 14px; top: 12px; z-index: 7;
-      width: 28px; height: 28px; border-radius: 50%;
-      background: rgba(9, 11, 16, 0.8); border: 1px solid var(--primary);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 900; color: var(--primary);
-      font-family: "KaiTi", "STKaiti", serif;
-    }}
-
-    .title-block {{ text-align: center; }}
-    h1 {{
-      font-size: 26px; font-weight: 800; letter-spacing: 0.06em;
-      text-shadow: 0 4px 22px rgba(0,0,0,0.65);
-    }}
-    .sub {{ font-size: 11.5px; color: #94a3b8; letter-spacing: 0.2em; margin-top: 4px; }}
-
-    .hud-glass {{
-      width: min(640px, 100%); padding: 14px 20px; border-radius: 16px;
-      background: rgba(10, 14, 24, 0.72);
-      border: 1px solid rgba(255,255,255,0.12);
-      box-shadow: 0 18px 42px rgba(0,0,0,0.55);
-      backdrop-filter: blur(16px);
-      display: flex; flex-direction: column; gap: 8px;
-    }}
-    .bar-wrap {{
-      width: 100%; height: 6px; border-radius: 999px;
-      background: rgba(255,255,255,0.09); overflow: hidden;
-    }}
-    .bar-fill {{
-      width: 0%; height: 100%; border-radius: 999px;
-      background: linear-gradient(90deg, var(--primary), var(--accent), #fff);
-      box-shadow: 0 0 16px var(--primary);
-      transition: width 0.2s linear;
-    }}
-    .meta-row {{
-      width: 100%; display: flex; justify-content: space-between; align-items: center;
-      font-size: 12.5px; color: #e2e8f0;
-    }}
-    .version-tag {{ font-size: 11px; color: #64748b; text-align: center; letter-spacing: 0.06em; }}
-  </style>
-</head>
-<body>
-  <div class="cinema-backdrop" style="{backdrop_style}"></div>
-  <div class="ichimatsu-bg"></div>
-  <div class="bg-layer"></div>
-  ${{videoUrl ? `<video id="bg-video" src="${{videoUrl}}" autoplay muted loop playsinline></video>` : ''}}
-  <canvas id="canvas-global-fx" data-fx="{global_fx}"></canvas>
-
-  <div id="splash-node" class="stage">
-    <div class="brand-header">
-      <div class="nichirin-core"><div class="nichirin-flame"></div><div class="nichirin-diamond"></div></div>
-      <div class="brand-title">ANTIGRAVITY</div>
-      <div class="breath-pill">{breath_style}</div>
-    </div>
-
-    {hero_stage_html}
-
-    <div class="title-block">
-      <h1>{title}</h1>
-      <div class="sub">{subtitle}</div>
-    </div>
-
-    <div class="hud-glass">
-      <div class="bar-wrap"><div id="bar-fill" class="bar-fill"></div></div>
-      <div class="meta-row">
-        <span id="breath-status">${{steps[0]}}</span>
-        <span id="breath-timer">0.0s</span>
-      </div>
-    </div>
-
-    <div class="version-tag">Antigravity Studio 中文沉浸工作台 · v{version}</div>
-  </div>
-
-  <script>
-    (function() {{
-      const steps = {steps_json};
-      const start = Date.now();
-      const DURATION = 5200;
-      const fill = document.getElementById('bar-fill');
-      const status = document.getElementById('breath-status');
-      const timer = document.getElementById('breath-timer');
-      const cards = Array.from(document.querySelectorAll('.char-card'));
-
-      function initCanvasEngine(canvas) {{
-        const mode = canvas.dataset.fx || 'sakura';
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-        function resize() {{
-          const rect = canvas.parentElement ? canvas.parentElement.getBoundingClientRect() : {{ width: window.innerWidth, height: window.innerHeight }};
-          canvas.width = Math.max(120, Math.floor(rect.width || window.innerWidth));
-          canvas.height = Math.max(120, Math.floor(rect.height || window.innerHeight));
-        }}
-        resize();
-        window.addEventListener('resize', resize);
-
-        const particles = Array.from({{ length: canvas.id === 'canvas-global-fx' ? 44 : 20 }}, () => ({{
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          vx: mode === 'water' ? (1.2 + Math.random() * 2.2) : (Math.random() - 0.5) * 1.4,
-          vy: mode === 'ember' ? (-0.9 - Math.random() * 2.0) : mode === 'water' ? (-0.4 - Math.random() * 1.4) : (0.5 + Math.random() * 1.4),
-          r: 1.4 + Math.random() * 2.8,
-          rot: Math.random() * Math.PI * 2,
-          vr: (Math.random() - 0.5) * 0.08,
-          a: 0.35 + Math.random() * 0.65
-        }}));
-
-        let bolt = [];
-        let nextBolt = 0;
-        function genBolt() {{
-          bolt = [];
-          let cx = canvas.width * (0.2 + Math.random() * 0.6);
-          let cy = 0;
-          bolt.push({{ x: cx, y: cy }});
-          while (cy < canvas.height) {{
-            cy += 12 + Math.random() * 18;
-            cx += (Math.random() - 0.5) * 34;
-            bolt.push({{ x: cx, y: cy }});
-          }}
-        }}
-
-        return () => {{
-          const W = canvas.width, H = canvas.height;
-          ctx.clearRect(0, 0, W, H);
-          if (mode === 'thunder') {{
-            const now = Date.now();
-            if (now > nextBolt) {{ genBolt(); nextBolt = now + 520 + Math.random() * 780; }}
-            if (bolt.length > 1 && now < nextBolt - 280) {{
-              ctx.save();
-              ctx.beginPath();
-              ctx.moveTo(bolt[0].x, bolt[0].y);
-              for (let i = 1; i < bolt.length; i++) ctx.lineTo(bolt[i].x, bolt[i].y);
-              ctx.strokeStyle = '#fef08a';
-              ctx.lineWidth = 2.2;
-              ctx.shadowBlur = 14;
-              ctx.shadowColor = '#f59e0b';
-              ctx.stroke();
-              ctx.restore();
-            }}
-          }}
-          for (const p of particles) {{
-            p.x += p.vx;
-            p.y += p.vy;
-            p.rot += p.vr;
-            if (p.y < -12) {{ p.y = H + 10; p.x = Math.random() * W; }}
-            if (p.y > H + 12) {{ p.y = -10; p.x = Math.random() * W; }}
-            if (p.x > W + 12) p.x = -10;
-            if (p.x < -12) p.x = W + 10;
-
-            ctx.save();
-            ctx.globalAlpha = p.a;
-            ctx.translate(p.x, p.y);
-            ctx.rotate(p.rot);
-            if (mode === 'sakura') {{
-              ctx.fillStyle = '#f472b6';
-              ctx.shadowBlur = 8; ctx.shadowColor = '#ec4899';
-              ctx.beginPath(); ctx.ellipse(0, 0, p.r * 1.4, p.r * 0.75, 0, 0, Math.PI * 2); ctx.fill();
-            }} else if (mode === 'beast') {{
-              ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 1.6;
-              ctx.shadowBlur = 8; ctx.shadowColor = '#38bdf8';
-              ctx.beginPath(); ctx.moveTo(-p.r * 2.5, 0); ctx.lineTo(p.r * 2.5, -p.r); ctx.stroke();
-            }} else {{
-              ctx.fillStyle = mode === 'water' ? '#bae6fd' : mode === 'thunder' ? '#fde047' : '#fb923c';
-              ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-              ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
-            }}
-            ctx.restore();
-          }}
-        }};
-      }}
-
-      const painters = Array.from(document.querySelectorAll('canvas')).map(initCanvasEngine).filter(Boolean);
-
-      function tick() {{
-        for (const draw of painters) draw();
-        const elapsed = Date.now() - start;
-        const p = Math.min(1, elapsed / DURATION);
-        if (fill) fill.style.width = (p * 100).toFixed(1) + '%';
-        if (timer) timer.textContent = (elapsed / 1000).toFixed(1) + 's';
-        const idx = Math.min(steps.length - 1, Math.floor(p * steps.length));
-        if (status) status.textContent = steps[idx];
-        if (cards.length > 0) {{
-          const focusIdx = Math.floor((elapsed / 1100)) % cards.length;
-          cards.forEach((c, i) => c.classList.toggle('active-focus', i === focusIdx));
-        }}
-        requestAnimationFrame(tick);
-      }}
-      requestAnimationFrame(tick);
-    }})();
-  </script>
-</body>
-</html>`;
+function getLoadingHtml(_videoUrl) {{
+  return SPLASH_HTML_TEMPLATE;
 }}
 
 function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
@@ -797,16 +451,7 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
     return;
   }}
 
-  let videoUrl = "";
-  try {{
-    const resDir = path.dirname(electron_1.app.getAppPath());
-    const videoFile = path.join(resDir, "splash_video.mp4");
-    if (fs.existsSync(videoFile)) {{
-      videoUrl = "file:///" + videoFile.replace(/\\\\/g, "/");
-    }}
-  }} catch (_) {{}}
-
-  const html = getLoadingHtml(videoUrl);
+  const html = getLoadingHtml("");
   const tmpHtml = path.join(os.tmpdir(), "antigravity_splash.html");
   try {{
     fs.writeFileSync(tmpHtml, html, "utf8");
@@ -826,8 +471,8 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
 
   let removed = false;
   const start = Date.now();
-  const MIN_MS = 3800;
-  const MAX_MS = 8500;
+  const MIN_MS = 5600;
+  const MAX_MS = 10500;
   let loaded = false;
   win.webContents.once("did-finish-load", () => {{ loaded = true; }});
 
@@ -865,17 +510,7 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
 }}
 "#,
         marker = PATCH_MARKER,
-        steps_json = steps_json,
-        title = spec.title,
-        subtitle = spec.subtitle,
-        breath_style = spec.breath_style,
-        primary = spec.primary_color,
-        accent = spec.accent_color,
-        bg_gradient = spec.bg_gradient,
-        hero_stage_html = hero_stage_html,
-        backdrop_style = backdrop_style,
-        global_fx = global_fx,
-        version = version_str
+        html_literal = html_literal,
     )
 }
 
