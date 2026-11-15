@@ -1,0 +1,632 @@
+/* ==========================================================================
+   桌面伴侣 · 动画级分肢骨骼刚体与物理特效样式表 (Animation-Grade Rig)
+   ========================================================================== */
+
+.nezuko-bone-rig {
+  position: relative;
+  width: 130px;
+  height: 215px;
+  transform-origin: 50% 100%;
+  user-select: none;
+}
+
+.bone-layer {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+  will-change: transform;
+}
+
+#bone-head {
+  top: 0;
+  left: 0;
+  width: 130px;
+  height: 121px;
+  transform-origin: 50% 90%;
+  z-index: 10;
+  transition: transform 0.12s ease-out;
+}
+
+#bone-torso {
+  top: 108px;
+  left: 34px;
+  width: 62px;
+  height: 77px;
+  transform-origin: 50% 95%;
+  z-index: 6;
+  transition: transform 0.12s ease-out;
+}
+
+#bone-arm-l {
+  top: 108px;
+  left: 0;
+  width: 50px;
+  height: 71px;
+  transform-origin: 75% 20%;
+  z-index: 8;
+  transition: transform 0.12s ease-out;
+}
+
+#bone-arm-r {
+  top: 108px;
+  left: 81px;
+  width: 49px;
+  height: 71px;
+  transform-origin: 25% 20%;
+  z-index: 8;
+  transition: transform 0.12s ease-out;
+}
+
+#bone-leg-l {
+  top: 178px;
+  left: 40px;
+  width: 28px;
+  height: 37px;
+  transform-origin: 50% 15%;
+  z-index: 4;
+  transition: transform 0.12s ease-out;
+}
+
+#bone-leg-r {
+  top: 178px;
+  left: 62px;
+  width: 28px;
+  height: 37px;
+  transform-origin: 50% 15%;
+  z-index: 4;
+  transition: transform 0.12s ease-out;
+}
+
+/* 自然眨眼眼皮覆盖 */
+.nezuko-eyelid {
+  position: absolute;
+  top: 48px;
+  left: 38px;
+  width: 54px;
+  height: 24px;
+  pointer-events: none;
+  z-index: 12;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, #ffd1c1 0%, #ffc0b0 70%, transparent 100%);
+  border-radius: 50%;
+  transform: scaleY(0);
+  transition: transform 0.08s ease-in, opacity 0.08s ease-in;
+}
+
+.is-blinking .nezuko-eyelid {
+  opacity: 1 !important;
+  transform: scaleY(1) !important;
+}
+
+/* ---------------- 有机待机呼吸 ---------------- */
+@keyframes rigOrganicBreath {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  50% {
+    transform: translateY(3px) scale(1.024, 0.976);
+  }
+}
+
+@keyframes rigHeadBob {
+  0%,
+  100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(3deg) translateY(1.5px);
+  }
+}
+
+@keyframes rigArmIdleL {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+
+@keyframes rigArmIdleR {
+  0%,
+  100% {
+    transform: rotate(5deg);
+  }
+  50% {
+    transform: rotate(-7deg);
+  }
+}
+
+.rig-idle {
+  animation: rigOrganicBreath 3.5s infinite ease-in-out;
+}
+.rig-idle #bone-head {
+  animation: rigHeadBob 3.5s infinite ease-in-out;
+}
+.rig-idle #bone-arm-l {
+  animation: rigArmIdleL 3.5s infinite ease-in-out;
+}
+.rig-idle #bone-arm-r {
+  animation: rigArmIdleR 3.5s infinite ease-in-out;
+}
+
+/* ---------------- 双足步态漫步 (Walk) ---------------- */
+@keyframes animeWalkRig {
+  0% {
+    transform: translateY(0) scale(1.03, 0.97) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-7px) scale(0.98, 1.025) rotate(0deg);
+  }
+  100% {
+    transform: translateY(0) scale(1.03, 0.97) rotate(2deg);
+  }
+}
+
+@keyframes animeLegCycleL {
+  0% {
+    transform: rotate(-28deg) translateY(-2px);
+  }
+  100% {
+    transform: rotate(26deg) translateY(2px);
+  }
+}
+
+@keyframes animeLegCycleR {
+  0% {
+    transform: rotate(26deg) translateY(2px);
+  }
+  100% {
+    transform: rotate(-28deg) translateY(-2px);
+  }
+}
+
+@keyframes animeArmCycleL {
+  0% {
+    transform: rotate(26deg);
+  }
+  100% {
+    transform: rotate(-24deg);
+  }
+}
+
+@keyframes animeArmCycleR {
+  0% {
+    transform: rotate(-24deg);
+  }
+  100% {
+    transform: rotate(26deg);
+  }
+}
+
+.rig-walk {
+  animation: animeWalkRig 0.44s infinite ease-in-out alternate !important;
+}
+.rig-walk #bone-leg-l {
+  animation: animeLegCycleL 0.44s infinite alternate ease-in-out !important;
+}
+.rig-walk #bone-leg-r {
+  animation: animeLegCycleR 0.44s infinite alternate ease-in-out !important;
+}
+.rig-walk #bone-arm-l {
+  animation: animeArmCycleL 0.44s infinite alternate ease-in-out !important;
+}
+.rig-walk #bone-arm-r {
+  animation: animeArmCycleR 0.44s infinite alternate ease-in-out !important;
+}
+
+/* ---------------- 风火轮狂奔冲刺 & 急刹车 ---------------- */
+@keyframes animeDashRig {
+  0% {
+    transform: translateY(0) rotate(-14deg) skewX(-6deg) scale(1.04, 0.96);
+  }
+  100% {
+    transform: translateY(-8px) rotate(-16deg) skewX(-8deg) scale(0.97, 1.04);
+  }
+}
+
+@keyframes legWheelL {
+  0% {
+    transform: rotate(-52deg) scale(1.04);
+  }
+  100% {
+    transform: rotate(52deg) scale(0.95);
+  }
+}
+
+@keyframes legWheelR {
+  0% {
+    transform: rotate(52deg) scale(0.95);
+  }
+  100% {
+    transform: rotate(-52deg) scale(1.04);
+  }
+}
+
+@keyframes armWheelL {
+  0% {
+    transform: rotate(48deg);
+  }
+  100% {
+    transform: rotate(-56deg);
+  }
+}
+
+@keyframes armWheelR {
+  0% {
+    transform: rotate(-56deg);
+  }
+  100% {
+    transform: rotate(48deg);
+  }
+}
+
+@keyframes animeSkidBrake {
+  0% {
+    transform: rotate(-14deg) skewX(-6deg);
+  }
+  40% {
+    transform: rotate(15deg) skewX(8deg) translateY(5px) scale(1.08, 0.9);
+  }
+  100% {
+    transform: rotate(0deg) skewX(0deg) translateY(0) scale(1, 1);
+  }
+}
+
+.rig-dash {
+  animation: animeDashRig 0.16s infinite alternate ease-in-out !important;
+}
+.rig-dash #bone-leg-l {
+  animation: legWheelL 0.16s infinite alternate !important;
+}
+.rig-dash #bone-leg-r {
+  animation: legWheelR 0.16s infinite alternate !important;
+}
+.rig-dash #bone-arm-l {
+  animation: armWheelL 0.16s infinite alternate !important;
+}
+.rig-dash #bone-arm-r {
+  animation: armWheelR 0.16s infinite alternate !important;
+}
+.rig-skid {
+  animation: animeSkidBrake 0.42s ease-out forwards !important;
+}
+
+/* ---------------- 气鼓鼓跺脚震地 (Stomp) ---------------- */
+@keyframes stompLeg {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-18px) rotate(18deg);
+  }
+}
+
+@keyframes stompHead {
+  0% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(6deg) translateY(3px);
+  }
+}
+
+@keyframes burstShake {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-3px, 2px);
+  }
+  75% {
+    transform: translate(3px, -2px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.rig-stomp {
+  animation: burstShake 0.1s infinite alternate !important;
+}
+.rig-stomp #bone-leg-r {
+  animation: stompLeg 0.17s 8 alternate !important;
+}
+.rig-stomp #bone-head {
+  animation: stompHead 0.17s 8 alternate !important;
+}
+
+/* ---------------- 温柔摸头 / 开心投喂 / 热舞 / 爆血 ---------------- */
+.rig-pat #bone-head {
+  transform: translateY(8px) scale(0.96) rotate(-7deg) !important;
+}
+.rig-pat #bone-arm-l {
+  transform: rotate(-28deg) !important;
+}
+.rig-pat #bone-arm-r {
+  transform: rotate(28deg) !important;
+}
+
+@keyframes feedHop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  35% {
+    transform: translateY(-16px) scale(0.95, 1.07);
+  }
+  65% {
+    transform: translateY(2px) scale(1.06, 0.93);
+  }
+}
+.rig-feed {
+  animation: feedHop 0.65s infinite ease-in-out !important;
+}
+.rig-feed #bone-arm-l {
+  transform: rotate(-42deg) !important;
+}
+.rig-feed #bone-arm-r {
+  transform: rotate(42deg) !important;
+}
+
+@keyframes bloodAwaken {
+  0%,
+  100% {
+    transform: translateY(-6px) scale(1.02);
+    filter: drop-shadow(0 0 14px rgba(244, 114, 182, 0.7));
+  }
+  50% {
+    transform: translateY(-14px) scale(1.06) rotate(-2deg);
+    filter: drop-shadow(0 0 28px rgba(236, 72, 153, 0.95));
+  }
+}
+.rig-blood {
+  animation: bloodAwaken 0.55s infinite ease-in-out !important;
+}
+.rig-blood #bone-arm-l {
+  transform: rotate(-55deg) translateY(-6px) !important;
+}
+.rig-blood #bone-arm-r {
+  transform: rotate(55deg) translateY(-6px) !important;
+}
+
+@keyframes danceGroove {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  25% {
+    transform: translateY(-10px) rotate(3deg);
+  }
+  50% {
+    transform: translateY(0) rotate(5deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(-3deg);
+  }
+}
+.rig-dance {
+  animation: danceGroove 0.72s infinite ease-in-out !important;
+}
+.rig-dance #bone-arm-l {
+  animation: animeArmCycleL 0.36s infinite alternate !important;
+}
+.rig-dance #bone-arm-r {
+  animation: animeArmCycleR 0.36s infinite alternate !important;
+}
+
+/* ---------------- 拖拽拎起 & 落地挤压反弹 ---------------- */
+@keyframes pickedDangle {
+  0% {
+    transform: scale(1.06) translateY(-12px) rotate(-6deg);
+  }
+  100% {
+    transform: scale(1.06) translateY(-9px) rotate(6deg);
+  }
+}
+.rig-picked-up {
+  animation: pickedDangle 0.75s infinite ease-in-out alternate !important;
+  filter: drop-shadow(0 16px 24px rgba(244, 114, 182, 0.45));
+}
+.rig-picked-up #bone-leg-l {
+  animation: legWheelL 0.25s infinite alternate !important;
+}
+.rig-picked-up #bone-leg-r {
+  animation: legWheelR 0.25s infinite alternate !important;
+}
+
+@keyframes landingSquash {
+  0% {
+    transform: scale(1.14, 0.84) translateY(7px);
+  }
+  50% {
+    transform: scale(0.94, 1.07) translateY(-4px);
+  }
+  100% {
+    transform: scale(1, 1) translateY(0);
+  }
+}
+.rig-landing-squash {
+  animation: landingSquash 0.34s cubic-bezier(0.2, 0.85, 0.25, 1) !important;
+}
+
+/* ---------------- 8帧 360° 木箱原画精灵旋转 ---------------- */
+.box-sprite-viewport {
+  width: 128px;
+  height: 176px;
+  overflow: hidden;
+  position: relative;
+  animation: animeBoxSpinToss 1.25s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+.box-sprite-strip {
+  width: 1024px;
+  height: 176px;
+  background-repeat: no-repeat;
+  background-size: 1024px 176px;
+  animation: playBox8Frames 0.4s steps(8) infinite;
+}
+
+@keyframes playBox8Frames {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-1024px);
+  }
+}
+
+@keyframes animeBoxSpinToss {
+  0% {
+    transform: translateY(0) scale(0.95);
+  }
+  30% {
+    transform: translateY(-64px) scale(1.12);
+  }
+  72% {
+    transform: translateY(4px) scale(1.14, 0.86);
+  }
+  86% {
+    transform: translateY(-10px) scale(0.98, 1.03);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+@keyframes shockwaveBurst {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.05);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+.box-impact-ring {
+  animation: shockwaveBurst 0.65s ease-out 0.82s forwards;
+  opacity: 0;
+}
+
+@keyframes peekerPop {
+  0% {
+    transform: translateY(18px) scale(0.88);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.peeker-pop {
+  animation: peekerPop 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ---------------- 扬尘粒子 & 小王子专属动作 ---------------- */
+@keyframes dustRise {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(var(--dx, -26px), -18px) scale(1.5);
+    opacity: 0;
+  }
+}
+.dust-puff {
+  position: absolute;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(226, 232, 240, 0.85), transparent 72%);
+  pointer-events: none;
+  animation: dustRise 0.52s ease-out forwards;
+}
+
+@keyframes princeWalkBounce {
+  0% {
+    transform: translateY(0) rotate(-3deg) scale(1.03, 0.97);
+  }
+  50% {
+    transform: translateY(-9px) rotate(0deg) scale(0.97, 1.03);
+  }
+  100% {
+    transform: translateY(0) rotate(3deg) scale(1.03, 0.97);
+  }
+}
+.prince-walk {
+  animation: princeWalkBounce 0.45s infinite alternate ease-in-out !important;
+}
+
+@keyframes foxCuddle {
+  0%,
+  100% {
+    transform: scale(1) rotate(-2deg);
+  }
+  50% {
+    transform: scale(1.06) translateY(-4px) rotate(2deg);
+  }
+}
+.prince-fox-cuddle {
+  animation: foxCuddle 1.7s infinite ease-in-out !important;
+}
+
+@keyframes shootingStarStreak {
+  0% {
+    transform: translate(65px, -45px) rotate(-32deg) scaleX(0.2);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-10px, 10px) rotate(-32deg) scaleX(1.3);
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: translate(-110px, 75px) rotate(-32deg) scaleX(0.1);
+    opacity: 0;
+  }
+}
+.shooting-star-streak {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 72px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #fff, #fde047);
+  box-shadow: 0 0 12px #fde047;
+  animation: shootingStarStreak 1.8s infinite ease-out;
+  pointer-events: none;
+}
+
+@keyframes volcanoSmokePuff {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-48px) translateX(12px) scale(1.65);
+    opacity: 0;
+  }
+}
+.volcano-puff {
+  position: absolute;
+  bottom: 26px;
+  left: 24px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(203, 213, 225, 0.85), rgba(148, 163, 184, 0.25) 70%, transparent);
+  animation: volcanoSmokePuff 1.5s infinite ease-out;
+  pointer-events: none;
+}

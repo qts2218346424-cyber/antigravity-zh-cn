@@ -120,10 +120,10 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
                 </span>
               </div>
               <div className="text-sm font-bold text-gray-900 dark:text-white">
-                灶门祢豆子 · 绯樱生态
+                灶门祢豆子 · 分肢骨骼动作版
               </div>
               <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                3D 鼠标视差交互、矢量樱花爆血微粒、竹箱旋转冲击波、竹篓休眠及音频律动伴舞。
+                六关节分肢骨骼刚体、8帧360°木箱旋转与探头、风火轮狂奔急刹、跺脚震地、爆血樱花、桌面自主漫步与治愈音效。
               </p>
             </button>
 
@@ -145,10 +145,10 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
                 </span>
               </div>
               <div className="text-sm font-bold text-gray-900 dark:text-white">
-                B612 小王子 · 星辰玫瑰
+                B612 小王子 · 星辰玫瑰动态版
               </div>
               <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                前景玫瑰与驯服小狐狸多层独立视差，一键切换深空星河与四十四次金色日落。
+                Verlet 物理金黄丝绸围巾、驯服小狐狸、玻璃罩玫瑰、44次金色日落、许愿流星、清扫火山与自主星尘漫步。
               </p>
             </button>
           </div>

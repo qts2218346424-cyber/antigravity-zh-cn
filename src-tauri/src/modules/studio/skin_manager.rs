@@ -87,7 +87,7 @@ impl Default for StudioConfig {
             auto_reapply: true,
             lang: "zh-cn".to_string(),
             splash_character: "nezuko".to_string(),
-            enable_pet: true,
+            enable_pet: false,
             enable_skin: true,
             pet_character: "nezuko".to_string(),
             pet_size: 132,

@@ -1011,6 +1011,7 @@ pub fn run() {
             commands::studio_reset_pet_position,
             commands::studio_set_pet_size,
             commands::studio_set_pet_always_on_top,
+            commands::studio_nudge_pet,
             commands::studio_get_media_status,
             commands::studio_send_media_command,
         ])

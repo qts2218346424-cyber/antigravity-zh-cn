@@ -293,6 +293,9 @@ export const studioService = {
   setPetAlwaysOnTop: (alwaysOnTop: boolean) =>
     callStudio<void>('studio_set_pet_always_on_top', { alwaysOnTop }),
 
+  nudgePet: (dx: number) =>
+    callStudio<number>('studio_nudge_pet', { dx }, () => 0),
+
   getMediaStatus: () =>
     callStudio<MediaStatus>(
       'studio_get_media_status',

@@ -34,7 +34,6 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
   const [ideRoot, setIdeRoot] = useState(status.ide_root || '');
   const [lang, setLang] = useState(status.lang || 'zh-cn');
   const [character, setCharacter] = useState(status.splash_character || 'nezuko');
-  const [enablePet, setEnablePet] = useState(status.enable_pet ?? true);
   const [enableSkin, setEnableSkin] = useState(status.enable_skin ?? true);
   const [busy, setBusy] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<L10nPatchResult | null>(null);
@@ -74,7 +73,7 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
         install_dir: installDir || null,
         lang,
         character,
-        enable_pet: enablePet,
+        enable_pet: false,
         enable_skin: enableSkin,
       });
       setLastResult(res);
@@ -242,15 +241,9 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
           </div>
 
           <div className="flex flex-col justify-end gap-2">
-            <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={enablePet}
-                onChange={(e) => setEnablePet(e.target.checked)}
-                className="rounded border-gray-300 text-pink-600"
-              />
-              同步在客户端窗口内注入萌宠钩子 (`nezuko-pet.js`)
-            </label>
+            <div className="text-[11.5px] text-emerald-600 dark:text-emerald-400">
+              ✓ 桌面伴侣已升级为「伴侣与守护」独立高清悬浮窗（不再内嵌双开冲突）
+            </div>
             <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200 cursor-pointer">
               <input
                 type="checkbox"

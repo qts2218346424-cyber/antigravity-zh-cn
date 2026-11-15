@@ -163,6 +163,13 @@ export interface PetAssets {
   nezuko_basket?: string | null;
   nezuko_spin_sheet?: string | null;
   shockwave?: string | null;
+  nezuko_head?: string | null;
+  nezuko_torso?: string | null;
+  nezuko_arm_l?: string | null;
+  nezuko_arm_r?: string | null;
+  nezuko_leg_l?: string | null;
+  nezuko_leg_r?: string | null;
+  nezuko_peeker?: string | null;
   little_prince?: string | null;
   prince_fox?: string | null;
   prince_rose?: string | null;

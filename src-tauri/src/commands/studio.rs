@@ -260,6 +260,11 @@ pub async fn studio_set_pet_always_on_top(
 }
 
 #[tauri::command]
+pub async fn studio_nudge_pet(app: tauri::AppHandle, dx: i32) -> Result<i32, String> {
+    pet::nudge_pet_window(&app, dx)
+}
+
+#[tauri::command]
 pub async fn studio_get_media_status() -> Result<MediaStatus, String> {
     Ok(pet::get_media_status().await)
 }

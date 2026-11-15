@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Antigravity Studio",
-  "version": "5.0.3",
+  "version": "5.0.4",
   "identifier": "com.qts.antigravity-studio",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -41,8 +41,8 @@
         "label": "pet",
         "title": "Antigravity 独立桌面桌宠",
         "url": "index.html?pet=1",
-        "width": 360,
-        "height": 440,
+        "width": 386,
+        "height": 420,
         "decorations": false,
         "resizable": false,
         "shadow": false,

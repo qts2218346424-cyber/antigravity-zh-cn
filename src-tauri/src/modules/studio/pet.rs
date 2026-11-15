@@ -42,6 +42,13 @@ pub fn get_pet_assets() -> PetAssets {
         nezuko_basket: read_media_data_uri("nezuko_basket"),
         nezuko_spin_sheet: read_media_data_uri("nezuko_box_spin_sheet"),
         shockwave: read_media_data_uri("box_impact_shockwave"),
+        nezuko_head: read_media_data_uri("nezuko_bone_head"),
+        nezuko_torso: read_media_data_uri("nezuko_bone_torso"),
+        nezuko_arm_l: read_media_data_uri("nezuko_bone_arm_l"),
+        nezuko_arm_r: read_media_data_uri("nezuko_bone_arm_r"),
+        nezuko_leg_l: read_media_data_uri("nezuko_bone_leg_l"),
+        nezuko_leg_r: read_media_data_uri("nezuko_bone_leg_r"),
+        nezuko_peeker: read_media_data_uri("nezuko_peeker_head"),
         little_prince: read_media_data_uri("little_prince_pet"),
         prince_fox: read_media_data_uri("prince_action_fox"),
         prince_rose: read_media_data_uri("prince_asset_rose"),
@@ -88,7 +95,7 @@ pub fn launch_pet_window(
             tauri::WebviewUrl::App("index.html?pet=1".into()),
         )
         .title("Antigravity 桌宠伴侣")
-        .inner_size(360.0, 460.0)
+        .inner_size(386.0, 420.0)
         .transparent(true)
         .decorations(false)
         .always_on_top(true)
@@ -148,6 +155,36 @@ pub fn set_pet_always_on_top(app: &tauri::AppHandle, always_on_top: bool) -> Res
             .map_err(|e| format!("设置桌宠置顶失败: {}", e))?;
     }
     Ok(())
+}
+
+/// 沿屏幕工作区底边平滑步进移动桌宠窗口；到达边缘时返回反向信号 (`1` 向右 / `-1` 向左 / `0` 未碰边)
+pub fn nudge_pet_window(app: &tauri::AppHandle, dx: i32) -> Result<i32, String> {
+    let Some(win) = app.get_webview_window("pet") else {
+        return Ok(0);
+    };
+    let Ok(Some(monitor)) = win.current_monitor() else {
+        return Ok(0);
+    };
+    let area = monitor.work_area();
+    let pos = win
+        .outer_position()
+        .unwrap_or(PhysicalPosition::new(area.position.x, area.position.y));
+    let win_size = win
+        .outer_size()
+        .unwrap_or(tauri::PhysicalSize::new(360, 440));
+    let margin = 12i32;
+    let min_x = area.position.x + margin;
+    let max_x = (area.position.x + area.size.width as i32 - win_size.width as i32 - margin).max(min_x);
+    let next_raw = pos.x + dx;
+    let clamped_x = next_raw.clamp(min_x, max_x);
+    let _ = win.set_position(PhysicalPosition::new(clamped_x, pos.y));
+    if next_raw <= min_x {
+        Ok(1)
+    } else if next_raw >= max_x {
+        Ok(-1)
+    } else {
+        Ok(0)
+    }
 }
 
 #[cfg(target_os = "windows")]
