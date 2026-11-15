@@ -1096,12 +1096,21 @@ fn patch_main_js(src: &str, desktop_json: &str, enable_skin: bool) -> String {
     }}
     const {{ app }} = require('electron');
     if (app && typeof app.on === 'function') {{
+      app.on('web-contents-created', (_ev, wc) => {{
+        try {{
+          if (globalThis.__agzhSkin && typeof globalThis.__agzhSkin.attachWebContents === 'function') {{
+            globalThis.__agzhSkin.attachWebContents(wc);
+          }}
+        }} catch (_) {{}}
+      }});
       app.on('browser-window-created', (_ev, win) => {{
         try {{
           if (globalThis.__agzhSkin && typeof globalThis.__agzhSkin.applyToWindow === 'function') {{
-            win.webContents.on('did-finish-load', () => {{
-              globalThis.__agzhSkin.applyToWindow(win);
-            }});
+            if (win && win.webContents && typeof win.webContents.on === 'function') {{
+              win.webContents.on('did-finish-load', () => {{
+                globalThis.__agzhSkin.applyToWindow(win);
+              }});
+            }}
           }}
         }} catch (_) {{}}
       }});

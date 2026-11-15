@@ -605,35 +605,109 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             (
                 "background",
                 &[
+                    "--agzh-bg",
                     "--vscode-editor-background",
+                    "--vscode-editorGutter-background",
                     "--vscode-editorWidget-background",
+                    "--ide-task-section-background",
                 ],
             ),
             (
                 "foreground",
                 &[
+                    "--agzh-fg",
                     "--vscode-foreground",
                     "--vscode-editor-foreground",
+                    "--vscode-input-foreground",
+                    "--vscode-editorHoverWidget-foreground",
                 ],
             ),
             (
                 "accent",
                 &[
+                    "--agzh-accent",
                     "--vscode-focusBorder",
                     "--vscode-button-background",
+                    "--vscode-progressBar-background",
+                    "--vscode-activityBarBadge-background",
                     "--vscode-textLink-foreground",
+                    "--codeium-active-selection-color",
                 ],
             ),
-            ("accentForeground", &["--vscode-button-foreground"]),
-            ("sidebar", &["--vscode-sideBar-background"]),
-            ("activityBar", &["--vscode-activityBar-background"]),
-            ("titleBar", &["--vscode-titleBar-activeBackground"]),
-            ("statusBar", &["--vscode-statusBar-background"]),
-            ("panel", &["--vscode-panel-background"]),
-            ("border", &["--vscode-panel-border", "--vscode-sideBar-border"]),
-            ("selection", &["--vscode-editor-selectionBackground"]),
-            ("input", &["--vscode-input-background"]),
-            ("muted", &["--vscode-descriptionForeground"]),
+            (
+                "accentForeground",
+                &[
+                    "--agzh-accent-fg",
+                    "--vscode-button-foreground",
+                    "--vscode-activityBarBadge-foreground",
+                ],
+            ),
+            (
+                "sidebar",
+                &[
+                    "--agzh-sidebar",
+                    "--vscode-sideBar-background",
+                    "--vscode-sideBarSectionHeader-background",
+                ],
+            ),
+            (
+                "activityBar",
+                &["--agzh-activitybar", "--vscode-activityBar-background"],
+            ),
+            (
+                "titleBar",
+                &[
+                    "--agzh-titlebar",
+                    "--vscode-titleBar-activeBackground",
+                    "--vscode-titleBar-inactiveBackground",
+                ],
+            ),
+            (
+                "statusBar",
+                &["--agzh-statusbar", "--vscode-statusBar-background"],
+            ),
+            (
+                "panel",
+                &[
+                    "--agzh-panel",
+                    "--vscode-panel-background",
+                    "--vscode-terminal-background",
+                    "--vscode-editorHoverWidget-background",
+                    "--vscode-notifications-background",
+                ],
+            ),
+            (
+                "border",
+                &[
+                    "--agzh-border",
+                    "--vscode-panel-border",
+                    "--vscode-sideBar-border",
+                    "--vscode-editorGroup-border",
+                    "--vscode-input-border",
+                    "--vscode-editorHoverWidget-border",
+                    "--vscode-commandCenter-inactiveBorder",
+                ],
+            ),
+            (
+                "selection",
+                &[
+                    "--agzh-selection",
+                    "--vscode-editor-selectionBackground",
+                    "--vscode-list-activeSelectionBackground",
+                ],
+            ),
+            (
+                "input",
+                &[
+                    "--agzh-input",
+                    "--vscode-input-background",
+                    "--vscode-dropdown-background",
+                ],
+            ),
+            (
+                "muted",
+                &["--agzh-muted", "--vscode-descriptionForeground"],
+            ),
         ];
         for &(key, vscode_vars) in map_pairs {
             if let Some(val) = colors.get(key).and_then(|v| v.as_str()) {
@@ -643,7 +717,54 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             }
         }
         if !vscode_overrides.is_empty() {
-            css_parts.push(format!(":root {{\n{}\n}}", vscode_overrides.join("\n")));
+            css_parts.push(format!(
+                ":root, html, body, .monaco-workbench {{\n{}\n}}",
+                vscode_overrides.join("\n")
+            ));
+        }
+
+        let bg_color = colors.get("background").and_then(|v| v.as_str()).map(str::trim);
+        let fg_color = colors.get("foreground").and_then(|v| v.as_str()).map(str::trim);
+        let accent_color = colors.get("accent").and_then(|v| v.as_str()).map(str::trim);
+        let sel_color = colors.get("selection").and_then(|v| v.as_str()).map(str::trim);
+        let sidebar_color = colors.get("sidebar").and_then(|v| v.as_str()).map(str::trim);
+        let panel_color = colors.get("panel").and_then(|v| v.as_str()).map(str::trim);
+
+        let mut base_rules = Vec::new();
+        if let (Some(bg), Some(fg)) = (bg_color, fg_color) {
+            base_rules.push(format!(
+                "html, body, .monaco-workbench {{\n  background-color: {} !important;\n  color: {};\n}}",
+                bg, fg
+            ));
+        } else if let Some(bg) = bg_color {
+            base_rules.push(format!(
+                "html, body, .monaco-workbench {{\n  background-color: {} !important;\n}}",
+                bg
+            ));
+        }
+        if let Some(sb) = sidebar_color {
+            base_rules.push(format!(
+                ".monaco-workbench .part.sidebar {{ background-color: {} !important; }}",
+                sb
+            ));
+        }
+        if let Some(pn) = panel_color {
+            base_rules.push(format!(
+                ".monaco-workbench .part.panel, .monaco-workbench .part.auxiliarybar {{ background-color: {} !important; }}",
+                pn
+            ));
+        }
+        if let Some(sel) = sel_color {
+            base_rules.push(format!("::selection {{ background: {}; }}", sel));
+        }
+        if let Some(acc) = accent_color {
+            base_rules.push(format!(
+                "::-webkit-scrollbar-thumb {{ background-color: color-mix(in srgb, {} 45%, transparent) !important; }}",
+                acc
+            ));
+        }
+        if !base_rules.is_empty() {
+            css_parts.push(base_rules.join("\n"));
         }
     }
 
@@ -708,6 +829,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .and_then(|v| v.as_str())
         {
             root_vars.push(format!("  --agzh-font-sans: {};", font_family));
+            root_vars.push(format!("  --vscode-font-family: {};", font_family));
             css_parts.push(format!(
                 ".monaco-workbench, body, #root {{ font-family: {}; }}",
                 font_family
@@ -725,7 +847,9 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             ));
         }
         if let Some(size) = typo.get("size").and_then(|v| v.as_u64()) {
-            root_vars.push(format!("  --agzh-font-size: {}px;", size.clamp(10, 28)));
+            let clamped = size.clamp(10, 28);
+            root_vars.push(format!("  --agzh-font-size: {}px;", clamped));
+            root_vars.push(format!("  --vscode-font-size: {}px;", clamped));
         }
         if let Some(font_file) = typo
             .get("file")
@@ -839,13 +963,19 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         } else {
             "absolute"
         };
+        let layer_z = if target == "window" || target == "app" {
+            9999
+        } else {
+            1
+        };
 
         css_parts.push(format!(
-            "{sel} {{ position: relative; }}\n{pseudo} /* bg-{idx} */ {{\n  content: '';\n  position: {pos_mode};\n  inset: 0;\n  pointer-events: none;\n  z-index: 0;\n  background-image: url('{uri}');\n  background-size: {size};\n  background-position: {pos};\n  background-repeat: {repeat};\n  opacity: {op:.3};\n  mix-blend-mode: {blend};\n  {blur_rule}\n}}",
+            "{sel} {{ position: relative; }}\n{pseudo} /* bg-{idx} */ {{\n  content: '';\n  position: {pos_mode};\n  inset: 0;\n  pointer-events: none;\n  z-index: {layer_z};\n  background-image: url('{uri}');\n  background-size: {size};\n  background-position: {pos};\n  background-repeat: {repeat};\n  opacity: {op:.3};\n  mix-blend-mode: {blend};\n  {blur_rule}\n}}",
             sel = selector,
             pseudo = pseudo,
             idx = idx,
             pos_mode = pos_mode,
+            layer_z = layer_z,
             uri = uri,
             size = size,
             pos = position,
@@ -1008,7 +1138,11 @@ pub fn save_override(scope: &str, skin_id: Option<&str>, patch: Value) -> Result
     let cfg = load_studio_config();
     if cfg.skin_enabled {
         if let Some(active) = cfg.active_skin.as_deref() {
-            let _ = compile_skin(active);
+            if let Ok(compiled) = compile_skin(active) {
+                if cfg.ide_enabled || super::skin_injector::find_ide_app_root(None).is_some() {
+                    let _ = super::skin_injector::inject_ide_compiled(&compiled, None);
+                }
+            }
         }
     }
     Ok(())
@@ -1034,7 +1168,11 @@ pub fn reset_override(scope: &str, skin_id: Option<&str>) -> Result<(), String> 
     let cfg = load_studio_config();
     if cfg.skin_enabled {
         if let Some(active) = cfg.active_skin.as_deref() {
-            let _ = compile_skin(active);
+            if let Ok(compiled) = compile_skin(active) {
+                if cfg.ide_enabled || super::skin_injector::find_ide_app_root(None).is_some() {
+                    let _ = super::skin_injector::inject_ide_compiled(&compiled, None);
+                }
+            }
         }
     }
     Ok(())
@@ -1046,6 +1184,11 @@ pub fn activate_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     cfg.active_skin = Some(skin_id.to_string());
     cfg.skin_enabled = true;
     save_studio_config(&cfg)?;
+
+    // 若本机已安装 Antigravity IDE，启用材质包时同步写入 IDE CSS 并重算 SHA-256 校验和
+    if super::skin_injector::find_ide_app_root(cfg.ide_install_dir.as_deref()).is_some() {
+        let _ = super::skin_injector::inject_ide_compiled(&compiled, cfg.ide_install_dir.as_deref());
+    }
     Ok(compiled)
 }
 
@@ -1060,6 +1203,9 @@ pub fn disable_skin() -> Result<(), String> {
     let runtime_path = compiled_dir().join("skin-runtime.json");
     if runtime_path.exists() {
         let _ = atomic_write_text(&runtime_path, "{}");
+    }
+    if cfg.ide_enabled || super::skin_injector::find_ide_app_root(cfg.ide_install_dir.as_deref()).is_some() {
+        let _ = super::skin_injector::remove_ide(cfg.ide_install_dir.as_deref());
     }
     Ok(())
 }

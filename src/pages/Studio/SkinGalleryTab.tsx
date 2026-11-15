@@ -185,7 +185,11 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
     setBusyId(skinId);
     try {
       await studioService.activateSkin(skinId);
-      showToast(`已激活光学材质「${skinId}」，工作台已实时编译同步`, 'success');
+      const ideTip =
+        status.ide_status !== 'not_found'
+          ? '，IDE 样式已自动同步（重载 IDE 窗口即可生效）'
+          : '';
+      showToast(`已激活光学材质「${skinId}」${ideTip}`, 'success');
       await onRefresh();
     } catch (err: unknown) {
       showToast(`启用失败: ${String(err)}`, 'error');
@@ -198,7 +202,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
     setBusyId('__disable__');
     try {
       await studioService.disableSkin();
-      showToast('已恢复默认外观并卸下材质包', 'info');
+      showToast('已恢复默认外观并卸下客户端与 IDE 材质包', 'info');
       await onRefresh();
     } catch (err: unknown) {
       showToast(`停用失败: ${String(err)}`, 'error');
