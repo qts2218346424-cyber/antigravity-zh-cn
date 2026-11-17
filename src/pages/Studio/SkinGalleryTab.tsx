@@ -5,12 +5,14 @@ import {
   Copy,
   Download,
   FolderOpen,
-  Layers,
+  MonitorSmartphone,
   PowerOff,
+  Send,
   SlidersHorizontal,
   Sparkles,
   Trash2,
   Upload,
+  Wand2,
 } from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
 import { studioService } from '../../services/studioService';
@@ -22,137 +24,190 @@ interface SkinGalleryTabProps {
   status: StudioStatus;
   onRefresh: () => Promise<void>;
   onSelectForCustomize: (skinId: string) => void;
+  onNavigateL10n?: () => void;
 }
 
 type FilterMode = 'all' | 'clannad' | 'dark' | 'light' | 'custom';
 
-/** 微缩真实 IDE 光学结构预览组件：直观体现配色阶梯、强调光束与面板材质 */
-const MiniWorkbenchPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
+/** 微缩真实 Google Antigravity 独立桌面应用（AGY Hub）光学预览组件 */
+const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
   const c = skin.colors;
   const bg = c.background || '#0b0e14';
   const sidebar = c.sidebar || '#101521';
-  const activity = c.activityBar || '#07090d';
-  const titleBar = c.titleBar || activity;
-  const statusBar = c.statusBar || c.accent || '#38bdf8';
+  const titleBar = c.titleBar || sidebar;
   const panel = c.panel || sidebar;
+  const inputBg = c.input || panel;
   const border = c.border || 'rgba(255,255,255,0.1)';
   const fg = c.foreground || '#e2e8f0';
   const muted = c.muted || '#64748b';
   const accent = c.accent || '#38bdf8';
-  const selection = c.selection || `${accent}33`;
+  const accentFg = c.accentForeground || '#090d18';
+  const selection = c.selection || `${accent}2e`;
 
   return (
     <div
       className="relative h-44 w-full overflow-hidden select-none p-3 flex items-center justify-center"
       style={{
-        background: `radial-gradient(circle at 20% 20%, ${accent}26, transparent 55%), radial-gradient(circle at 85% 80%, ${statusBar}30, transparent 60%), ${bg}`,
+        background: `radial-gradient(circle at 18% 20%, ${accent}28, transparent 58%), radial-gradient(circle at 86% 82%, ${accent}20, transparent 62%), ${bg}`,
       }}
     >
-      {/* 可选底层纹理图叠加 */}
+      {/* 主题专属意境插画暗纹叠加（如 CLANNAD 光玉、樱花团子、向日葵、海星） */}
       {skin.preview_data_uri && (
         <img
           src={skin.preview_data_uri}
           alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20 mix-blend-luminosity transition-transform duration-700 group-hover:scale-105"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity transition-transform duration-700 group-hover:scale-105"
         />
       )}
 
-      {/* 微缩桌面 IDE 主窗体（真实比例光学渲染） */}
+      {/* 微缩 Antigravity 桌面应用无边框主视窗 */}
       <div
         className="relative z-10 w-full h-full rounded-xl overflow-hidden flex flex-col transition-transform duration-500 group-hover:-translate-y-0.5"
         style={{
           backgroundColor: bg,
           border: `1px solid ${border}`,
-          boxShadow: `0 18px 36px -12px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.12)`,
+          boxShadow: '0 18px 36px -12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)',
         }}
       >
-        {/* 顶栏 */}
+        {/* 应用无边框顶栏 */}
         <div
           className="h-5 px-2.5 flex items-center justify-between border-b"
           style={{ backgroundColor: titleBar, borderColor: border }}
         >
-          <div className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-400/80" />
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80" />
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
-          </div>
-          <div
-            className="h-2.5 w-24 rounded-sm opacity-80"
-            style={{ backgroundColor: c.input || panel, border: `1px solid ${border}` }}
-          />
-          <div className="h-1.5 w-4 rounded-full opacity-40" style={{ backgroundColor: fg }} />
-        </div>
-
-        {/* 主体容器 */}
-        <div className="flex flex-1 min-h-0">
-          {/* 活动栏 */}
-          <div
-            className="w-5 py-2 flex flex-col items-center gap-1.5 border-r"
-            style={{ backgroundColor: activity, borderColor: border }}
-          >
-            <div
-              className="w-2.5 h-2.5 rounded-sm relative"
+          <div className="flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-md shadow-sm"
               style={{ backgroundColor: accent }}
             />
-            <div className="w-2.5 h-2.5 rounded-sm opacity-25" style={{ backgroundColor: fg }} />
-            <div className="w-2.5 h-2.5 rounded-sm opacity-25" style={{ backgroundColor: fg }} />
+            <span
+              className="h-1.5 w-11 rounded-full opacity-75"
+              style={{ backgroundColor: fg }}
+            />
           </div>
-
-          {/* 侧边文件树 */}
           <div
-            className="w-20 p-1.5 space-y-1 border-r"
+            className="h-2.5 px-1.5 rounded-full flex items-center gap-1"
+            style={{ backgroundColor: selection, border: `1px solid ${border}` }}
+          >
+            <span className="h-1 w-1 rounded-full" style={{ backgroundColor: accent }} />
+            <span className="h-1 w-8 rounded-full opacity-70" style={{ backgroundColor: fg }} />
+          </div>
+          <div className="flex items-center gap-1 opacity-45">
+            <span className="h-1 w-2 rounded-full" style={{ backgroundColor: fg }} />
+            <span className="h-1.5 w-1.5 rounded-sm border" style={{ borderColor: fg }} />
+          </div>
+        </div>
+
+        {/* 应用主体：会话导航侧边栏 + 智能体对话画布 + 伴生工件面板 */}
+        <div className="flex flex-1 min-h-0">
+          {/* 左侧会话与工作区抽屉（无 VS Code 竖排活动栏） */}
+          <div
+            className="w-[74px] p-1.5 flex flex-col justify-between border-r"
             style={{ backgroundColor: sidebar, borderColor: border }}
           >
-            <div className="h-1.5 w-10 rounded-full opacity-35" style={{ backgroundColor: muted }} />
-            <div
-              className="h-3 w-full rounded px-1 flex items-center"
-              style={{ backgroundColor: selection, borderLeft: `2px solid ${accent}` }}
-            >
-              <div className="h-1 w-10 rounded-full" style={{ backgroundColor: fg }} />
+            <div className="space-y-1">
+              {/* 新建对话胶囊按钮 */}
+              <div
+                className="h-3 w-full rounded-md px-1.5 flex items-center gap-1"
+                style={{
+                  backgroundColor: `${accent}22`,
+                  border: `1px solid ${accent}45`,
+                }}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
+                <span className="h-1 w-8 rounded-full opacity-85" style={{ backgroundColor: fg }} />
+              </div>
+              {/* 当前激活会话项 */}
+              <div
+                className="h-3 w-full rounded-md px-1.5 flex items-center gap-1"
+                style={{ backgroundColor: selection }}
+              >
+                <span className="h-1 w-10 rounded-full" style={{ backgroundColor: fg }} />
+              </div>
+              <div
+                className="h-1.5 w-11 rounded-full opacity-35 ml-1"
+                style={{ backgroundColor: fg }}
+              />
+              <div
+                className="h-1.5 w-9 rounded-full opacity-25 ml-1"
+                style={{ backgroundColor: muted }}
+              />
             </div>
-            <div className="h-1.5 w-12 rounded-full opacity-30 ml-1" style={{ backgroundColor: fg }} />
-            <div className="h-1.5 w-9 rounded-full opacity-25 ml-1" style={{ backgroundColor: fg }} />
+            <div className="flex items-center gap-1 px-0.5 opacity-55">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
+              <span className="h-1 w-7 rounded-full" style={{ backgroundColor: muted }} />
+            </div>
           </div>
 
-          {/* 编辑器与 AI 对话卡片区 */}
-          <div className="flex-1 p-2 flex flex-col justify-between min-w-0">
+          {/* 中央智能体对话流 + 深度思考卡片 + 底部悬浮指令输入舱 */}
+          <div className="flex-1 p-2 flex flex-col justify-between min-w-0 relative">
             <div className="space-y-1.5">
-              {/* 代码高亮片段 */}
-              <div className="flex items-center gap-1">
-                <span className="h-1.5 w-5 rounded-full" style={{ backgroundColor: accent }} />
-                <span className="h-1.5 w-12 rounded-full opacity-75" style={{ backgroundColor: fg }} />
-                <span className="h-1.5 w-6 rounded-full opacity-40" style={{ backgroundColor: muted }} />
+              {/* 用户消息气泡（右对齐胶囊） */}
+              <div className="flex justify-end">
+                <div
+                  className="h-3 px-2 rounded-full flex items-center"
+                  style={{
+                    backgroundColor: selection,
+                    border: `1px solid ${border}`,
+                  }}
+                >
+                  <span className="h-1 w-10 rounded-full opacity-85" style={{ backgroundColor: fg }} />
+                </div>
               </div>
-              <div className="flex items-center gap-1 pl-2.5">
-                <span className="h-1.5 w-8 rounded-full opacity-60" style={{ backgroundColor: fg }} />
-                <span className="h-1.5 w-10 rounded-full" style={{ backgroundColor: accent, opacity: 0.75 }} />
-              </div>
-              {/* 悬浮毛玻璃卡片 */}
+
+              {/* 智能体毛玻璃深度思考与回复卡片 */}
               <div
-                className="mt-1.5 rounded-md p-1.5 space-y-1"
+                className="rounded-lg p-1.5 space-y-1"
                 style={{
                   backgroundColor: panel,
                   border: `1px solid ${border}`,
-                  boxShadow: '0 6px 14px rgba(0,0,0,0.22)',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)',
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="h-1.5 w-11 rounded-full" style={{ backgroundColor: accent }} />
-                  <span className="h-1.5 w-4 rounded-full opacity-40" style={{ backgroundColor: muted }} />
+                  <div className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
+                    <span className="h-1.5 w-10 rounded-full" style={{ backgroundColor: accent }} />
+                  </div>
+                  <span className="h-1 w-4 rounded-full opacity-40" style={{ backgroundColor: muted }} />
                 </div>
-                <div className="h-1.5 w-4/5 rounded-full opacity-60" style={{ backgroundColor: fg }} />
+                <div className="h-1.5 w-11/12 rounded-full opacity-75" style={{ backgroundColor: fg }} />
+                <div className="h-1.5 w-3/5 rounded-full opacity-45" style={{ backgroundColor: muted }} />
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* 底部状态条 */}
-        <div
-          className="h-3.5 px-2 flex items-center justify-between"
-          style={{ backgroundColor: statusBar }}
-        >
-          <span className="h-1 w-8 rounded-full opacity-80 bg-white" />
-          <span className="h-1 w-5 rounded-full opacity-65 bg-white" />
+            {/* 底部圆角悬浮指令输入舱（Composer） */}
+            <div
+              className="h-5 rounded-lg px-2 flex items-center justify-between"
+              style={{
+                backgroundColor: inputBg,
+                border: `1px solid ${border}`,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.14)',
+              }}
+            >
+              <span className="h-1 w-14 rounded-full opacity-45" style={{ backgroundColor: muted }} />
+              <span
+                className="h-3 w-3 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: accent, color: accentFg }}
+              >
+                <Send className="h-1.5 w-1.5" />
+              </span>
+            </div>
+          </div>
+
+          {/* 右侧微缩工件伴生视窗（Sidecar） */}
+          <div
+            className="w-11 p-1.5 border-l hidden sm:flex flex-col gap-1"
+            style={{ backgroundColor: `${panel}cc`, borderColor: border }}
+          >
+            <span className="h-1 w-6 rounded-full opacity-60" style={{ backgroundColor: accent }} />
+            <div
+              className="flex-1 rounded p-1 space-y-1"
+              style={{ backgroundColor: bg, border: `1px solid ${border}` }}
+            >
+              <div className="h-1 w-full rounded-full opacity-40" style={{ backgroundColor: fg }} />
+              <div className="h-1 w-3/4 rounded-full opacity-25" style={{ backgroundColor: muted }} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -164,6 +219,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
   status,
   onRefresh,
   onSelectForCustomize,
+  onNavigateL10n,
 }) => {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
@@ -171,6 +227,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
   const [dupNewId, setDupNewId] = useState('');
   const [dupNewName, setDupNewName] = useState('');
   const [overwriteImport, setOverwriteImport] = useState(true);
+  const [confirmRestartMount, setConfirmRestartMount] = useState(false);
 
   const filteredSkins = useMemo(() => {
     return skins.filter((s) => {
@@ -182,18 +239,52 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
     });
   }, [skins, filterMode]);
 
-  const handleActivate = async (skinId: string) => {
-    setBusyId(skinId);
+  const hookReady = status.agent_status === 'patched' && status.enable_skin;
+
+  const handleActivate = async (skin: SkinInfo) => {
+    setBusyId(skin.id);
     try {
-      await studioService.activateSkin(skinId);
-      const ideTip =
-        status.ide_status !== 'not_found'
-          ? '，IDE 样式已自动同步（重载 IDE 窗口即可生效）'
-          : '';
-      showToast(`已激活光学材质「${skinId}」${ideTip}`, 'success');
+      await studioService.activateSkin(skin.id);
       await onRefresh();
+      const latest = await studioService.getStatus();
+      if (latest.agent_status === 'patched' && latest.enable_skin) {
+        showToast(
+          `已将「${skin.name}」应用至 Antigravity 桌面应用（实时热重载已生效）`,
+          'success',
+        );
+      } else if (latest.agent_status === 'not_found') {
+        showToast(
+          `已编译激活「${skin.name}」，请先指定本机 Antigravity 应用安装目录`,
+          'warning',
+        );
+      } else {
+        showToast(
+          `已编译激活「${skin.name}」，当前 Antigravity 正在运行，点击右上角「挂载至应用」或退出应用后自动生效`,
+          'info',
+        );
+      }
     } catch (err: unknown) {
       showToast(`启用失败: ${String(err)}`, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleMountHookToApp = async () => {
+    setBusyId('__mount__');
+    try {
+      const res = await studioService.applyL10n({
+        install_dir: status.install_dir || null,
+        lang: status.lang || 'zh-cn',
+        character: status.splash_character || 'none',
+        enable_pet: false,
+        enable_skin: true,
+      });
+      setConfirmRestartMount(false);
+      showToast(`${res.message}（后续切换任意皮肤均支持毫秒级无感热重载）`, 'success');
+      await onRefresh();
+    } catch (err: unknown) {
+      showToast(`挂载应用皮肤钩子失败: ${String(err)}`, 'error');
     } finally {
       setBusyId(null);
     }
@@ -203,7 +294,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
     setBusyId('__disable__');
     try {
       await studioService.disableSkin();
-      showToast('已恢复默认外观并卸下客户端与 IDE 材质包', 'info');
+      showToast('已恢复 Antigravity 桌面应用默认原生外观', 'info');
       await onRefresh();
     } catch (err: unknown) {
       showToast(`停用失败: ${String(err)}`, 'error');
@@ -290,32 +381,6 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
     }
   };
 
-  const handleInjectIde = async (skinId?: string) => {
-    setBusyId('__ide__');
-    try {
-      const msg = await studioService.injectIde(skinId || status.active_skin, status.ide_root);
-      showToast(msg, 'success');
-      await onRefresh();
-    } catch (err: unknown) {
-      showToast(`IDE 注入失败: ${String(err)}`, 'error');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleRemoveIde = async () => {
-    setBusyId('__ide__');
-    try {
-      const msg = await studioService.removeIde(status.ide_root);
-      showToast(msg, 'info');
-      await onRefresh();
-    } catch (err: unknown) {
-      showToast(`移除 IDE 样式失败: ${String(err)}`, 'error');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* 高定玻璃质感控制栏 */}
@@ -372,52 +437,97 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
               className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-white/10 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
             >
               <PowerOff className="h-3.5 w-3.5 text-amber-500" />
-              还原原版样式
+              还原应用默认样式
             </button>
           )}
         </div>
 
-        {/* Antigravity IDE 样式同步舱 */}
+        {/* Antigravity 桌面应用原生热重载联动舱 */}
         <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-gray-50/90 dark:bg-black/30 px-3.5 py-2 border border-gray-200/80 dark:border-white/10">
-          <Layers className="h-4 w-4 text-sky-500" />
+          <MonitorSmartphone className="h-4 w-4 text-sky-500" />
           <div className="text-xs text-gray-600 dark:text-gray-300">
-            IDE 核心联动：
+            Antigravity 应用联动：
             <span
               className={`font-semibold ml-1 ${
-                status.ide_status === 'injected'
+                hookReady
                   ? 'text-emerald-500'
-                  : status.ide_status === 'stale'
-                    ? 'text-amber-500'
-                    : 'text-gray-400'
+                  : status.agent_status === 'not_found'
+                    ? 'text-gray-400'
+                    : 'text-amber-500'
               }`}
             >
-              {status.ide_status === 'injected'
-                ? 'SHA-256 校验已同步'
-                : status.ide_status === 'stale'
-                  ? '样式过期待重新注入'
-                  : status.ide_status === 'clean'
-                    ? '未注入'
-                    : '未定位到 IDE'}
+              {hookReady
+                ? '热重载钩子已就绪（切换即刻生效）'
+                : status.agent_status === 'not_found'
+                  ? '未探测到官方应用目录'
+                  : '待挂载客户端皮肤钩子'}
             </span>
           </div>
-          <button
-            onClick={() => handleInjectIde()}
-            disabled={busyId === '__ide__' || status.ide_status === 'not_found'}
-            className="rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-40"
-          >
-            同步至 Antigravity IDE
-          </button>
-          {status.ide_enabled && (
+
+          {!hookReady && status.agent_status !== 'not_found' && (
             <button
-              onClick={handleRemoveIde}
-              disabled={busyId === '__ide__'}
-              className="rounded-lg border border-gray-300 dark:border-white/15 px-2.5 py-1 text-xs text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10"
+              type="button"
+              onClick={() => {
+                if (status.app_running) {
+                  setConfirmRestartMount(true);
+                } else {
+                  void handleMountHookToApp();
+                }
+              }}
+              disabled={busyId === '__mount__'}
+              className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
             >
-              剥离
+              <Wand2 className="h-3 w-3" />
+              {busyId === '__mount__'
+                ? '正在挂载...'
+                : status.app_running
+                  ? '挂载至 Antigravity 应用'
+                  : '一键挂载钩子'}
+            </button>
+          )}
+
+          {status.agent_status === 'not_found' && onNavigateL10n && (
+            <button
+              type="button"
+              onClick={onNavigateL10n}
+              className="rounded-lg border border-gray-300 dark:border-white/15 px-2.5 py-1 text-xs font-medium text-sky-500 hover:bg-sky-500/10"
+            >
+              指定应用目录
             </button>
           )}
         </div>
       </div>
+
+      {/* 客户端运行态挂载钩子温和确认条（保护正在进行的对话不被意外中断） */}
+      {confirmRestartMount && (
+        <div className="rounded-2xl border border-amber-400/60 dark:border-amber-500/35 bg-amber-50/85 dark:bg-amber-950/30 backdrop-blur-md p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-0.5 text-xs">
+            <div className="font-bold text-amber-900 dark:text-amber-200">
+              检测到官方 Antigravity 桌面应用正在运行
+            </div>
+            <p className="text-amber-800/90 dark:text-amber-300/85">
+              首次写入（或官方更新后恢复）热加载钩子需短暂关闭客户端以更新 <code className="font-mono">app.asar</code>；挂载完成后，今后所有皮肤切换均支持毫秒级免重启热重载。你也可以直接先关闭客户端，后台哨兵会自动静默补齐。
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleMountHookToApp}
+              disabled={busyId === '__mount__'}
+              className="rounded-xl bg-amber-600 hover:bg-amber-700 px-3.5 py-2 text-xs font-semibold text-white shadow disabled:opacity-50"
+            >
+              {busyId === '__mount__' ? '正在关闭并挂载...' : '关闭客户端并立即挂载'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmRestartMount(false)}
+              className="rounded-xl border border-amber-400/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+            >
+              稍后退出时自动挂载
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 派生确认条 */}
       {dupSource && (
@@ -472,9 +582,9 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
           const swatchColors = [
             skin.colors.background,
             skin.colors.sidebar,
-            skin.colors.panel,
+            skin.colors.panel || skin.colors.sidebar,
+            skin.colors.input || skin.colors.background,
             skin.colors.accent,
-            skin.colors.statusBar,
           ].filter(Boolean) as string[];
 
           return (
@@ -487,9 +597,9 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
               }`}
             >
               <div>
-                {/* 微缩真实工作台渲染区 */}
+                {/* 微缩真实 Antigravity 应用渲染区 */}
                 <div className="relative">
-                  <MiniWorkbenchPreview skin={skin} />
+                  <MiniAntigravityAppPreview skin={skin} />
 
                   {/* 左上标签 */}
                   <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5">
@@ -535,7 +645,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
                   </div>
 
                   <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[34px] leading-relaxed">
-                    {skin.description || '光学渐变与高对比工作台材质方案'}
+                    {skin.description || '专为 Antigravity 桌面应用打造的光学渐变与高对比材质方案'}
                   </p>
 
                   {/* Color DNA 色谱条 */}
@@ -557,7 +667,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
               <div className="flex items-center justify-between gap-2 border-t border-gray-100 dark:border-white/10 bg-gray-50/70 dark:bg-black/25 px-4 py-2.5">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleActivate(skin.id)}
+                    onClick={() => handleActivate(skin)}
                     disabled={isBusy}
                     className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                       skin.active

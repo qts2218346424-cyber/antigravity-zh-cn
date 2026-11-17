@@ -7,7 +7,7 @@ export type ClannadSplashThemeId =
   | 'clannad-starfish'
   | 'none';
 
-export type SplashDurationOption = 1800 | 2600 | 3800 | 4800 | 8000 | 12000;
+export type SplashDurationOption = 1800 | 2600 | 3800 | 4800 | 8000 | 12000 | 20000;
 
 export interface ClannadDialogueLine {
   speaker: string;
@@ -69,10 +69,10 @@ export const DEFAULT_SPLASH_PREFS: StudioSplashPrefs = {
   studioBootEnabled: true,
   themeId: 'clannad-sunflower',
   randomSceneOnBoot: false,
-  durationMs: 4800,
+  durationMs: 8000,
   musicBoxEnabled: true,
   bgmTrackId: 'follow-scene',
-  bgmVolume: 0.7,
+  bgmVolume: 0.75,
   bgmStartOffsetSec: 0,
   cinemaLetterbox: true,
 };
@@ -252,7 +252,7 @@ export const CLANNAD_SPLASH_THEMES: ClannadSplashThemeSpec[] = [
   },
 ];
 
-const VALID_DURATIONS = new Set<SplashDurationOption>([1800, 2600, 3800, 4800, 8000, 12000]);
+const VALID_DURATIONS = new Set<SplashDurationOption>([1800, 2600, 3800, 4800, 8000, 12000, 20000]);
 const VALID_BGM_IDS = new Set<ClannadBgmTrackId>([
   'follow-scene',
   'dango-family',

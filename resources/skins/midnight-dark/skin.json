@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "id": "midnight-dark",
-  "name": "午夜深空 · 暗色",
-  "author": "antigravity-zh-cn",
-  "version": "1.0.0",
-  "description": "低饱和深蓝暗色主题，窗口铺一层极淡的星空背景，适合长时间夜间编码。",
+  "name": "午夜深空 · 星海",
+  "author": "Antigravity Studio",
+  "version": "2.1.0",
+  "description": "低饱和深蓝暗色主题，Antigravity 应用画布铺设一层静谧星海纹理，适合长时间夜间沉浸对话与深度思考。",
   "base": "dark",
   "preview": "preview.png",
   "colors": {
@@ -13,30 +13,37 @@
     "accent": "#5cc8ff",
     "accentForeground": "#06121f",
     "sidebar": "#0a0f1b",
-    "activityBar": "#080c16",
     "titleBar": "#080c16",
-    "statusBar": "#0f2a44",
     "panel": "#0b1020",
     "border": "#1b2540",
     "selection": "#22406688",
     "input": "#121a2e",
     "muted": "#7f8bab"
   },
+  "surfaces": {
+    "radius": "14px",
+    "glass_blur": 16,
+    "card_opacity": 0.8,
+    "border_glow": "rgba(92, 200, 255, 0.18)",
+    "noise_grain": 0.02,
+    "shadow_elevation": "0 18px 44px -12px rgba(5, 8, 18, 0.8)"
+  },
   "background": {
     "image": "starfield.webp",
-    "target": "window",
+    "target": "conversation",
     "opacity": 0.12,
     "blur": 0,
     "position": "center",
     "size": "cover"
   },
   "font": {
-    "monoFamily": "Cascadia Code, JetBrains Mono, Consolas, monospace",
+    "monoFamily": "'Cascadia Code', 'JetBrains Mono', Consolas, monospace",
     "ligatures": true
   },
   "icons": {
     "filter": "saturate(1.15)"
   },
+  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(92, 200, 255, 0.14) !important; }",
   "pet": {
     "character": "prince",
     "accent": "#5cc8ff"

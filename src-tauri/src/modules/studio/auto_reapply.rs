@@ -7,9 +7,10 @@ use super::asar::read_asar_file_content;
 use super::l10n::{
     apply_l10n_patch, detect_install_dir, locate_app_asar, localize_all_skills,
 };
-use super::skin_injector::{ide_status, inject_ide};
+use super::skin_injector::cleanup_legacy_ide_injection;
 use super::skin_manager::{
-    append_reapply_log, load_studio_config, save_studio_config, StudioConfig,
+    append_reapply_log, compile_skin, compiled_dir, load_studio_config, save_studio_config,
+    StudioConfig,
 };
 use super::{ReapplyCheckResult, PATCH_MARKER};
 
@@ -23,7 +24,7 @@ impl Drop for RunningGuard {
     }
 }
 
-/// 查询 Antigravity 客户端（Agent）汉化注入状态：`"not_found"` / `"clean"` / `"patched"`
+/// 查询 Google Antigravity 桌面应用注入状态：`"not_found"` / `"clean"` / `"patched"`
 pub fn agent_status(explicit_dir: Option<&str>) -> String {
     let Some(install_dir) = detect_install_dir(explicit_dir) else {
         return "not_found".to_string();
@@ -68,7 +69,7 @@ pub fn has_legacy_pet_in_agent(explicit_dir: Option<&str>) -> bool {
     false
 }
 
-/// 检测官方 Antigravity 客户端进程是否正在运行（严格排除本管理器）
+/// 检测官方 Antigravity 桌面应用进程是否正在运行（严格排除本管理器与旧版 IDE）
 pub fn is_antigravity_running() -> bool {
     let self_pid = Pid::from_u32(std::process::id());
     let mut sys = System::new_all();
@@ -88,6 +89,8 @@ pub fn is_antigravity_running() -> bool {
             || name.contains("tools")
             || name.contains("studio")
             || exe.contains("antigravity-cn")
+            || exe.contains("antigravity ide")
+            || exe.contains("antigravityide")
         {
             continue;
         }
@@ -102,7 +105,7 @@ pub fn is_antigravity_running() -> bool {
     false
 }
 
-/// 检查并在需要时自动重打 Agent 汉化补丁与 IDE 材质包注入
+/// 检查并在需要时自动维护 Antigravity 桌面应用汉化补丁与光学材质编译产物
 pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
     if CHECK_RUNNING
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
@@ -110,16 +113,16 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
     {
         return ReapplyCheckResult {
             agent: agent_status(None),
-            ide: ide_status(None),
             actions: vec!["巡检正在执行中，已跳过并发重复调用".to_string()],
             error: None,
         };
     }
     let _guard = RunningGuard;
 
+    cleanup_legacy_ide_injection();
+
     let cfg: StudioConfig = load_studio_config();
     let cur_agent = agent_status(cfg.install_dir.as_deref());
-    let cur_ide = ide_status(cfg.ide_install_dir.as_deref());
 
     let mut actions = Vec::new();
     let mut errors = Vec::new();
@@ -127,14 +130,35 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
     if !cfg.auto_reapply && !force {
         return ReapplyCheckResult {
             agent: cur_agent,
-            ide: cur_ide,
             actions,
             error: None,
         };
     }
 
-    // 检查是否曾打过补丁（存在配置 install_dir 或已有 .bak）
+    // 若已开启皮肤但编译文件缺失（或用户点击强制重刷），重新编译当前皮肤至客户端热加载目录
+    if cfg.skin_enabled {
+        if let Some(active_id) = cfg.active_skin.as_deref() {
+            let css_missing = !compiled_dir().join("skin.css").is_file();
+            if force || css_missing {
+                match compile_skin(active_id) {
+                    Ok(_) => {
+                        let msg = format!("已重新编译 Antigravity 应用光学材质 '{}'", active_id);
+                        actions.push(msg.clone());
+                        append_reapply_log(&msg);
+                    }
+                    Err(e) => {
+                        let err_msg = format!("编译光学材质 '{}' 失败: {}", active_id, e);
+                        errors.push(err_msg.clone());
+                        append_reapply_log(&err_msg);
+                    }
+                }
+            }
+        }
+    }
+
+    // 检查是否曾打过补丁或已启用皮肤（存在配置 install_dir、开启了皮肤或已有 .bak）
     let had_agent_patch = cfg.install_dir.is_some()
+        || cfg.skin_enabled
         || detect_install_dir(None)
             .and_then(|d| locate_app_asar(&d))
             .map(|p| p.with_extension("asar.bak").is_file())
@@ -142,7 +166,7 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
 
     if (force && cur_agent != "not_found") || (cur_agent == "clean" && had_agent_patch) {
         if is_antigravity_running() && !force {
-            let msg = "检测到 Antigravity 客户端有更新覆盖，等待客户端退出后再自动重打补丁";
+            let msg = "检测到 Antigravity 应用待挂载补丁/钩子，等待应用退出后自动静默重注";
             actions.push(msg.to_string());
             append_reapply_log(msg);
         } else {
@@ -151,12 +175,12 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
                 &cfg.lang,
                 &cfg.splash_character,
                 cfg.enable_pet,
-                cfg.enable_skin,
+                cfg.enable_skin || cfg.skin_enabled,
             ) {
                 Ok(res) => {
                     let msg = format!(
-                        "{} Agent 中文补丁成功（共 {} 个模块）",
-                        if force { "强制重刷" } else { "自动重打" },
+                        "{} Antigravity 应用中文与皮肤钩子成功（共 {} 个模块）",
+                        if force { "强制重刷" } else { "自动重注" },
                         res.patched_files.len()
                     );
                     actions.push(msg.clone());
@@ -169,37 +193,17 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
                     }
                 }
                 Err(e) => {
-                    errors.push(format!("重打 Agent 补丁失败: {}", e));
-                    append_reapply_log(&format!("重打 Agent 补丁失败: {}", e));
+                    errors.push(format!("重注 Antigravity 应用补丁失败: {}", e));
+                    append_reapply_log(&format!("重注 Antigravity 应用补丁失败: {}", e));
                 }
             }
         }
     }
 
-    if (force || cur_ide == "clean" || cur_ide == "stale")
-        && cur_ide != "not_found"
-        && (force || cfg.ide_enabled)
-        && cfg.skin_enabled
-        && cfg.active_skin.is_some()
-    {
-        match inject_ide(cfg.active_skin.as_deref(), cfg.ide_install_dir.as_deref()) {
-            Ok(msg) => {
-                actions.push(msg.clone());
-                append_reapply_log(&msg);
-            }
-            Err(e) => {
-                errors.push(format!("自动修复 IDE 材质包失败: {}", e));
-                append_reapply_log(&format!("自动修复 IDE 材质包失败: {}", e));
-            }
-        }
-    }
-
     let final_agent = agent_status(cfg.install_dir.as_deref());
-    let final_ide = ide_status(cfg.ide_install_dir.as_deref());
 
     ReapplyCheckResult {
         agent: final_agent,
-        ide: final_ide,
         actions,
         error: if errors.is_empty() {
             None

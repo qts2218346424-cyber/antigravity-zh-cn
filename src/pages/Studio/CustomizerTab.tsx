@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Code, Cpu, Palette, RotateCcw, Save, Sliders, Sparkles, Type } from 'lucide-react';
+import {
+  Code,
+  MessageSquarePlus,
+  Palette,
+  RotateCcw,
+  Save,
+  Send,
+  Sliders,
+  Sparkles,
+  Type,
+} from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
 import { studioService } from '../../services/studioService';
 import type { SkinInfo, SkinManifest } from '../../types/studio';
@@ -18,29 +28,27 @@ const COLOR_GROUPS: Array<{
   {
     title: '核心基底',
     items: [
-      { key: 'background', label: '主画布背景' },
-      { key: 'foreground', label: '主前景色' },
-      { key: 'muted', label: '次级弱化文字' },
+      { key: 'background', label: '对话主画布背景' },
+      { key: 'foreground', label: '主前景色 / 正文' },
+      { key: 'muted', label: '次级说明文字' },
     ],
   },
   {
-    title: '空间骨架',
+    title: '应用骨架',
     items: [
-      { key: 'titleBar', label: '顶栏标题栏' },
-      { key: 'activityBar', label: '最左活动栏' },
-      { key: 'sidebar', label: '侧边资源栏' },
-      { key: 'panel', label: '悬浮面板底色' },
-      { key: 'statusBar', label: '底部状态条' },
+      { key: 'titleBar', label: '顶部无边框标题栏' },
+      { key: 'sidebar', label: '左侧会话导航栏' },
+      { key: 'panel', label: '思考与工件卡片底色' },
+      { key: 'input', label: '底部悬浮指令输入舱' },
     ],
   },
   {
     title: '信号交互',
     items: [
-      { key: 'accent', label: '品牌主强调色' },
-      { key: 'accentForeground', label: '强调色文字' },
-      { key: 'border', label: '极细分割线' },
-      { key: 'selection', label: '选中光晕区' },
-      { key: 'input', label: '输入框槽位' },
+      { key: 'accent', label: '品牌主强调色 / 按钮' },
+      { key: 'accentForeground', label: '强调按钮文字' },
+      { key: 'border', label: '卡片极细分割线' },
+      { key: 'selection', label: '会话选中光晕区' },
     ],
   },
 ];
@@ -93,12 +101,14 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
     setBorderRadius(Number.isFinite(parsedRadius) ? parsedRadius : 12);
     setNoiseGrain(m.surfaces?.noise_grain ?? 0.03);
 
-    // 从 rgba(..., alpha) 解析高光透明度，消除切主题后滑块失真问题
+    // 从 rgba(..., alpha) 解析高光透明度
     const glowRaw = m.surfaces?.border_glow || '';
     const rgbaMatch = glowRaw.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([0-9.]+)\)/i);
     if (rgbaMatch) {
       const parsedAlpha = parseFloat(rgbaMatch[1]);
-      setBorderGlowAlpha(Number.isFinite(parsedAlpha) ? Math.min(0.45, Math.max(0, parsedAlpha)) : 0.16);
+      setBorderGlowAlpha(
+        Number.isFinite(parsedAlpha) ? Math.min(0.45, Math.max(0, parsedAlpha)) : 0.16,
+      );
     } else {
       setBorderGlowAlpha(0.16);
     }
@@ -169,8 +179,8 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
       setDirty(false);
       showToast(
         scope === 'global'
-          ? '已保存全局光学覆盖层并重新编译当前主题'
-          : `已保存「${selectedSkinId}」高定微调并实时应用`,
+          ? '已保存全局光学覆盖层并热重载至 Antigravity 应用'
+          : `已保存「${selectedSkinId}」高定微调并实时推送至 Antigravity 应用`,
         'success',
       );
       await onRefresh();
@@ -192,6 +202,8 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
       }
     } catch (err: unknown) {
       showToast(`重置失败: ${String(err)}`, 'error');
+    } finally {
+      setDirty(false);
     }
   };
 
@@ -282,7 +294,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
         <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/85 dark:bg-slate-900/65 backdrop-blur-xl p-5 space-y-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-bold text-gray-900 dark:text-white">
             <Palette className="h-4 w-4 text-sky-500" />
-            色彩基因谱系 (Color DNA)
+            Antigravity 应用色彩基因谱系 (Color DNA)
           </div>
 
           <div className="space-y-4">
@@ -357,7 +369,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
             <div>
               <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                <span>浮层透光不透明度</span>
+                <span>思考卡片通透度</span>
                 <span className="font-mono text-indigo-500">{Math.round(cardOpacity * 100)}%</span>
               </div>
               <input
@@ -389,7 +401,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
             <div>
               <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                <span>面板倒角曲率</span>
+                <span>卡片与输入舱圆角</span>
                 <span className="font-mono text-emerald-500">{borderRadius}px</span>
               </div>
               <input
@@ -404,7 +416,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
             <div>
               <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                <span>壁纸曝光透明度</span>
+                <span>插画暗纹曝光度</span>
                 <span className="font-mono">{Math.round(bgOpacity * 100)}%</span>
               </div>
               <input
@@ -455,7 +467,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               />
             </div>
             <div>
-              <label className="block text-[11px] text-gray-500 mb-1">UI 字体族</label>
+              <label className="block text-[11px] text-gray-500 mb-1">对话界面字体族</label>
               <input
                 type="text"
                 value={fontFamily}
@@ -464,7 +476,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               />
             </div>
             <div>
-              <label className="block text-[11px] text-gray-500 mb-1">等宽代码字体</label>
+              <label className="block text-[11px] text-gray-500 mb-1">代码块与终端字体</label>
               <input
                 type="text"
                 value={monoFamily}
@@ -477,33 +489,32 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
               <Code className="h-3.5 w-3.5 text-emerald-500" />
-              自定义附加样式表（安全沙盒编译，自动过滤危险脚本）
+              自定义附加样式表（安全沙盒编译，自动映射至 Antigravity 应用渲染层）
             </div>
             <textarea
               rows={4}
               value={customCss}
               onChange={(e) => setCustomCss(e.target.value)}
-              placeholder="/* 可直接书写 Monaco / Workbench / Agent UI 微调规则 */"
+              placeholder="/* 可直接书写 Antigravity 应用 (--background / --card / --primary / aside) 微调规则 */"
               className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-slate-950 p-3 text-xs font-mono text-emerald-300 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
             />
           </div>
         </div>
       </div>
 
-      {/* 右侧 1:1 真实感 Antigravity 光学视窗模拟器 */}
+      {/* 右侧 1:1 真实感 Google Antigravity 桌面应用视窗模拟器 */}
       <div className="xl:col-span-5">
         <div className="sticky top-6 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/85 dark:bg-slate-900/65 backdrop-blur-xl p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-white">
             <span className="inline-flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-sky-500" />
-              光学物理视窗模拟器 (Live Viewport)
+              Antigravity 应用实时视窗预览
             </span>
             <span className="text-[11px] font-mono text-gray-400">
               blur({glassBlur}px) · {Math.round(cardOpacity * 100)}%
             </span>
           </div>
 
-          {/* 模拟壁纸底层光斑环境，用于凸显真实亚克力折射与透光效果 */}
           <div
             className="relative h-[520px] w-full overflow-hidden rounded-2xl border shadow-2xl flex flex-col select-none"
             style={{
@@ -512,7 +523,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               borderColor: border,
               fontFamily,
               fontSize: `${fontSize}px`,
-              backgroundImage: `radial-gradient(circle at 18% 22%, ${accent}38 0%, transparent 45%), radial-gradient(circle at 85% 75%, ${colors.statusBar || accent}44 0%, transparent 50%)`,
+              backgroundImage: `radial-gradient(circle at 16% 20%, ${accent}34 0%, transparent 48%), radial-gradient(circle at 86% 80%, ${accent}28 0%, transparent 52%)`,
             }}
           >
             {/* 微粒噪点遮罩 */}
@@ -528,7 +539,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               />
             )}
 
-            {/* 模拟标题栏 */}
+            {/* 模拟 Antigravity 应用无边框顶栏 */}
             <div
               className="relative z-10 flex items-center justify-between px-3.5 py-2.5 text-[11px] border-b"
               style={{
@@ -537,76 +548,96 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               }}
             >
               <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-rose-400/90" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400/90" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/90" />
-                </div>
-                <span className="font-semibold tracking-tight opacity-90">
-                  Antigravity Studio
-                </span>
+                <span
+                  className="h-2.5 w-2.5 rounded-md shadow-sm"
+                  style={{ backgroundColor: accent }}
+                />
+                <span className="font-semibold tracking-tight opacity-95">Antigravity</span>
               </div>
               <div
-                className="px-3 py-0.5 rounded-md text-[10px] opacity-80"
+                className="px-2.5 py-0.5 rounded-full text-[10px] font-medium opacity-85"
                 style={{
-                  backgroundColor: colors.input || '#131a27',
+                  backgroundColor: colors.selection || `${accent}24`,
                   border: `1px solid ${border}`,
                 }}
               >
-                ⌘K 调度全局智能体与命令…
+                当前工作区 · antigravity-cn
+              </div>
+              <div className="flex items-center gap-2 opacity-50 text-[10px]">
+                <span>—</span>
+                <span>□</span>
+                <span>×</span>
               </div>
             </div>
 
-            {/* 工作台主区 */}
+            {/* Antigravity 应用主区：左侧会话抽屉 + 中央对话与指令输入舱 */}
             <div className="relative z-10 flex flex-1 min-h-0">
-              {/* 活动栏 */}
+              {/* 左侧会话导航抽屉（无 IDE 活动栏与文件树） */}
               <div
-                className="w-11 flex flex-col items-center gap-3.5 py-3.5 border-r"
-                style={{
-                  backgroundColor: colors.activityBar || '#06080c',
-                  borderColor: border,
-                }}
-              >
-                <div
-                  className="h-6 w-6 rounded-lg flex items-center justify-center shadow"
-                  style={{ backgroundColor: accent, color: colors.accentForeground || '#04131e' }}
-                >
-                  <Cpu className="h-3.5 w-3.5" />
-                </div>
-                <div className="h-5 w-5 rounded bg-current opacity-20" />
-                <div className="h-5 w-5 rounded bg-current opacity-20" />
-              </div>
-
-              {/* 侧边栏 */}
-              <div
-                className="w-36 p-3 border-r space-y-1.5 text-[11px]"
+                className="w-36 p-3 border-r flex flex-col justify-between text-[11px]"
                 style={{
                   backgroundColor: colors.sidebar || '#0c1018',
                   borderColor: border,
                 }}
               >
-                <div className="text-[10px] font-semibold uppercase tracking-wider opacity-50 mb-2">
-                  工程目录
+                <div className="space-y-2">
+                  <div
+                    className="px-2.5 py-1.5 font-semibold flex items-center gap-1.5 shadow-sm"
+                    style={{
+                      backgroundColor: `${accent}22`,
+                      color: fg,
+                      borderRadius: `${Math.min(borderRadius, 12)}px`,
+                      border: `1px solid ${accent}48`,
+                    }}
+                  >
+                    <MessageSquarePlus className="h-3.5 w-3.5" style={{ color: accent }} />
+                    <span>新建对话</span>
+                  </div>
+
+                  <div className="pt-1 space-y-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider opacity-45 px-1">
+                      近期智能体会话
+                    </div>
+                    <div
+                      className="px-2.5 py-1.5 font-medium truncate"
+                      style={{
+                        backgroundColor: colors.selection || `${accent}2e`,
+                        borderRadius: `${Math.min(borderRadius, 10)}px`,
+                      }}
+                    >
+                      光学皮肤引擎重构
+                    </div>
+                    <div className="px-2.5 py-1 opacity-65 truncate">多智能体架构推演</div>
+                    <div className="px-2.5 py-1 opacity-50 truncate">桌面伴侣语音调优</div>
+                  </div>
                 </div>
+
                 <div
-                  className="px-2 py-1.5 font-medium truncate"
-                  style={{
-                    backgroundColor: colors.selection || `${accent}30`,
-                    borderRadius: `${Math.min(borderRadius, 10)}px`,
-                    borderLeft: `2px solid ${accent}`,
-                  }}
+                  className="px-2 py-1.5 text-[10px] opacity-75 truncate border-t"
+                  style={{ borderColor: border, color: colors.muted || '#7e8ca6' }}
                 >
-                  skin_manager.rs
+                  主题：{manifest?.id || selectedSkinId}
                 </div>
-                <div className="px-2 py-1 opacity-65">l10n.rs</div>
-                <div className="px-2 py-1 opacity-65">PetWindowView.tsx</div>
-                <div className="px-2 py-1 opacity-45">update_checker.rs</div>
               </div>
 
-              {/* 交互思考与毛玻璃悬浮卡片展示区 */}
+              {/* 中央智能体对话流与悬浮输入舱 */}
               <div className="flex-1 flex flex-col min-w-0 p-3.5 justify-between gap-3 overflow-hidden">
                 <div className="space-y-3">
-                  {/* 真实玻璃态思考过程卡 */}
+                  {/* 用户消息胶囊 */}
+                  <div className="flex justify-end">
+                    <div
+                      className="px-3 py-1.5 text-[11px] max-w-[85%]"
+                      style={{
+                        backgroundColor: colors.selection || `${accent}28`,
+                        borderRadius: `${borderRadius}px`,
+                        border: `1px solid ${border}`,
+                      }}
+                    >
+                      将这些皮肤全面适配到 Antigravity 桌面应用
+                    </div>
+                  </div>
+
+                  {/* 玻璃态深度思考折叠卡 */}
                   <div
                     className="p-3 space-y-1.5 transition-all"
                     style={{
@@ -614,48 +645,53 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                       opacity: cardOpacity,
                       borderRadius: `${borderRadius}px`,
                       border: `1px solid ${border}`,
-                      backdropFilter: `blur(${glassBlur}px) saturate(1.4)`,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,${borderGlowAlpha}), 0 14px 32px rgba(0,0,0,0.45)`,
+                      backdropFilter: `blur(${glassBlur}px) saturate(1.35)`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,${borderGlowAlpha}), 0 14px 32px rgba(0,0,0,0.32)`,
                     }}
                   >
                     <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-semibold flex items-center gap-1" style={{ color: accent }}>
-                        <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: accent }} />
-                        Thinking Process · 深度思考中
+                      <span
+                        className="font-semibold flex items-center gap-1.5"
+                        style={{ color: accent }}
+                      >
+                        <span
+                          className="h-1.5 w-1.5 rounded-full animate-pulse"
+                          style={{ backgroundColor: accent }}
+                        />
+                        深度思考过程 · 已折叠推演流
                       </span>
-                      <span style={{ color: colors.muted || '#7e8ca6' }}>Claude 3.7</span>
+                      <span style={{ color: colors.muted || '#7e8ca6' }}>实时热重载</span>
                     </div>
                     <p className="text-[11px] leading-relaxed opacity-90">
-                      已完成高定光学折射阴影变量编译，正在校准 Antigravity IDE <code className="font-mono">product.json</code> 校验和…
+                      已完成 Antigravity 应用原生宿主令牌（<code className="font-mono">--background</code> / <code className="font-mono">--card</code> / <code className="font-mono">--primary</code>）与三层幕布色彩同步。
                     </p>
                   </div>
 
-                  {/* 代码着色卡片 */}
+                  {/* 工件代码片段预览卡 */}
                   <div
                     className="p-3 text-[11px] leading-relaxed"
                     style={{
                       backgroundColor: colors.input || '#131a27',
                       fontFamily: monoFamily,
-                      borderRadius: `${Math.max(4, borderRadius - 2)}px`,
+                      borderRadius: `${Math.max(6, borderRadius - 2)}px`,
                       border: `1px solid ${border}`,
                       boxShadow: `inset 0 1px 0 rgba(255,255,255,${borderGlowAlpha * 0.6})`,
                     }}
                   >
                     <div>
-                      <span style={{ color: accent }}>pub async fn</span>{' '}
-                      <span className="font-semibold">compile_optical_skin</span>() {'{'}
+                      <span style={{ color: accent }}>setHubCurtainColor</span>(win,{' '}
+                      <span style={{ color: accent }}>&quot;{bg}&quot;</span>);
                     </div>
                     <div className="pl-3 opacity-85">
-                      blur: <span style={{ color: accent }}>{glassBlur}px</span>, opacity:{' '}
+                      glassBlur: <span style={{ color: accent }}>{glassBlur}px</span>, cardOpacity:{' '}
                       <span style={{ color: accent }}>{cardOpacity.toFixed(2)}</span>
                     </div>
-                    <div>{'}'}</div>
                   </div>
                 </div>
 
-                {/* 输入交互栏 */}
+                {/* 底部悬浮指令输入舱（Composer） */}
                 <div
-                  className="flex items-center justify-between px-3 py-2 text-[11px]"
+                  className="flex items-center justify-between px-3 py-2.5 text-[11px] shadow-lg"
                   style={{
                     backgroundColor: colors.input || '#131a27',
                     borderRadius: `${borderRadius}px`,
@@ -663,35 +699,20 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                     color: colors.muted || '#7e8ca6',
                   }}
                 >
-                  <span>向工作台下达全中文指令…</span>
+                  <span>向 Antigravity 智能体下达指令…</span>
                   <span
-                    className="px-2.5 py-0.5 text-[10px] font-semibold"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold shadow-sm"
                     style={{
                       backgroundColor: accent,
                       color: colors.accentForeground || '#04131e',
-                      borderRadius: `${Math.max(4, borderRadius - 4)}px`,
+                      borderRadius: `${Math.max(6, borderRadius - 4)}px`,
                     }}
                   >
+                    <Send className="h-2.5 w-2.5" />
                     发送
                   </span>
                 </div>
               </div>
-            </div>
-
-            {/* 底部状态指示条 */}
-            <div
-              className="relative z-10 flex items-center justify-between px-3.5 py-1.5 text-[10px] font-medium"
-              style={{
-                backgroundColor: colors.statusBar || '#0e1726',
-                color: fg,
-                borderTop: `1px solid ${border}`,
-              }}
-            >
-              <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                OTA 在线更新通道正常 · 中文核已就绪
-              </span>
-              <span className="font-mono opacity-75">{manifest?.id || selectedSkinId}</span>
             </div>
           </div>
         </div>

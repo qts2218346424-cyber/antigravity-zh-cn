@@ -23,7 +23,6 @@ interface L10nTabProps {
 
 export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
   const [installDir, setInstallDir] = useState(status.install_dir || '');
-  const [ideRoot, setIdeRoot] = useState(status.ide_root || '');
   const [lang, setLang] = useState(status.lang || 'zh-cn');
   const [enableSkin, setEnableSkin] = useState(status.enable_skin ?? true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -31,11 +30,10 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
 
   useEffect(() => {
     if (status.install_dir) setInstallDir(status.install_dir);
-    if (status.ide_root) setIdeRoot(status.ide_root);
     if (status.lang) setLang(status.lang);
   }, [status]);
 
-  const browseFolder = async (target: 'agent' | 'ide') => {
+  const browseFolder = async () => {
     if (!isTauri()) {
       showToast('请在桌面客户端中浏览选择安装目录', 'warning');
       return;
@@ -43,16 +41,11 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
     const picked = await open({
       directory: true,
       multiple: false,
-      title: target === 'agent' ? '选择 Antigravity 客户端安装目录' : '选择 Antigravity IDE 目录',
+      title: '选择 Antigravity 桌面应用安装目录',
     });
     if (!picked || Array.isArray(picked)) return;
-    if (target === 'agent') {
-      setInstallDir(picked);
-      await studioService.updatePaths(picked, undefined);
-    } else {
-      setIdeRoot(picked);
-      await studioService.updatePaths(undefined, picked);
-    }
+    setInstallDir(picked);
+    await studioService.updatePaths(picked);
     await onRefresh();
   };
 
@@ -189,49 +182,25 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">
-              Antigravity 桌面客户端根目录（含 resources/app.asar）
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={installDir}
-                onChange={(e) => setInstallDir(e.target.value)}
-                onBlur={() => studioService.updatePaths(installDir, undefined).catch(() => {})}
-                placeholder="自动探测中..."
-                className="flex-1 rounded-lg border border-gray-300 dark:border-base-300 bg-gray-50 dark:bg-base-200 px-3 py-2 text-xs font-mono"
-              />
-              <button
-                onClick={() => browseFolder('agent')}
-                className="rounded-lg border border-gray-300 dark:border-base-300 px-3 py-2 text-xs font-medium hover:bg-gray-100 dark:hover:bg-base-200"
-              >
-                浏览
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">
-              Antigravity IDE 应用根目录（含 workbench.desktop.main.css）
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={ideRoot}
-                onChange={(e) => setIdeRoot(e.target.value)}
-                onBlur={() => studioService.updatePaths(undefined, ideRoot).catch(() => {})}
-                placeholder="自动探测或手动选择..."
-                className="flex-1 rounded-lg border border-gray-300 dark:border-base-300 bg-gray-50 dark:bg-base-200 px-3 py-2 text-xs font-mono"
-              />
-              <button
-                onClick={() => browseFolder('ide')}
-                className="rounded-lg border border-gray-300 dark:border-base-300 px-3 py-2 text-xs font-medium hover:bg-gray-100 dark:hover:bg-base-200"
-              >
-                浏览
-              </button>
-            </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">
+            Antigravity 独立桌面应用根目录（含 resources/app.asar）
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={installDir}
+              onChange={(e) => setInstallDir(e.target.value)}
+              onBlur={() => studioService.updatePaths(installDir).catch(() => {})}
+              placeholder="自动探测中..."
+              className="flex-1 rounded-lg border border-gray-300 dark:border-base-300 bg-gray-50 dark:bg-base-200 px-3 py-2 text-xs font-mono"
+            />
+            <button
+              onClick={browseFolder}
+              className="rounded-lg border border-gray-300 dark:border-base-300 px-4 py-2 text-xs font-medium hover:bg-gray-100 dark:hover:bg-base-200"
+            >
+              浏览目录
+            </button>
           </div>
         </div>
       </div>

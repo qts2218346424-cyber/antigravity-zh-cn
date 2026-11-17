@@ -20,26 +20,22 @@ where
 
 fn build_studio_status(app: &tauri::AppHandle) -> StudioStatus {
     let cfg = skin_manager::load_studio_config();
+    if cfg.ide_enabled || cfg.ide_install_dir.is_some() {
+        skin_injector::cleanup_legacy_ide_injection();
+    }
     let detected_agent = l10n::detect_install_dir(cfg.install_dir.as_deref());
-    let detected_ide = skin_injector::find_ide_app_root(cfg.ide_install_dir.as_deref());
 
     let install_str = detected_agent
         .as_ref()
         .map(|p| p.to_string_lossy().to_string())
         .or_else(|| cfg.install_dir.clone());
-    let ide_str = detected_ide
-        .as_ref()
-        .map(|p| p.to_string_lossy().to_string())
-        .or_else(|| cfg.ide_install_dir.clone());
 
     StudioStatus {
         install_dir: install_str.clone(),
-        ide_root: ide_str.clone(),
         agent_status: auto_reapply::agent_status(install_str.as_deref()),
-        ide_status: skin_injector::ide_status(ide_str.as_deref()),
+        app_running: auto_reapply::is_antigravity_running(),
         active_skin: cfg.active_skin,
         skin_enabled: cfg.skin_enabled,
-        ide_enabled: cfg.ide_enabled,
         auto_reapply: cfg.auto_reapply,
         autostart_enabled: auto_reapply::is_autostart_enabled(app),
         updates_disabled: l10n::is_updates_disabled(install_str.as_deref()),
@@ -73,7 +69,6 @@ pub async fn studio_get_status(app: tauri::AppHandle) -> Result<StudioStatus, St
 pub async fn studio_update_paths(
     app: tauri::AppHandle,
     install_dir: Option<String>,
-    ide_dir: Option<String>,
 ) -> Result<StudioStatus, String> {
     let app_clone = app.clone();
     run_blocking(move || {
@@ -81,10 +76,6 @@ pub async fn studio_update_paths(
         if let Some(d) = install_dir {
             let t = d.trim().to_string();
             cfg.install_dir = if t.is_empty() { None } else { Some(t) };
-        }
-        if let Some(d) = ide_dir {
-            let t = d.trim().to_string();
-            cfg.ide_install_dir = if t.is_empty() { None } else { Some(t) };
         }
         skin_manager::save_studio_config(&cfg)?;
         Ok(build_studio_status(&app_clone))
@@ -205,19 +196,6 @@ pub async fn studio_export_skin_zip(
 }
 
 #[tauri::command]
-pub async fn studio_inject_ide(
-    skin_id: Option<String>,
-    ide_root: Option<String>,
-) -> Result<String, String> {
-    run_blocking(move || skin_injector::inject_ide(skin_id.as_deref(), ide_root.as_deref())).await
-}
-
-#[tauri::command]
-pub async fn studio_remove_ide(ide_root: Option<String>) -> Result<String, String> {
-    run_blocking(move || skin_injector::remove_ide(ide_root.as_deref())).await
-}
-
-#[tauri::command]
 pub async fn studio_reapply_check(force: bool) -> Result<ReapplyCheckResult, String> {
     run_blocking(move || Ok(auto_reapply::check_and_reapply(force))).await
 }
@@ -329,6 +307,10 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
             "runtime-zh.js",
             "skin-runtime.js",
             "clannad-splash-runtime.js",
+            "media/splash_bgm_dango.mp3",
+            "media/splash_bgm_sunflower.mp3",
+            "media/splash_bgm_sakura.mp3",
+            "media/splash_bgm_starfish.mp3",
         ];
         let mut missing = Vec::new();
         let mut cn_entries = 0usize;
@@ -465,18 +447,18 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
             },
         });
 
-        // 5. 客户端与 IDE 环境探测状态汇总
+        // 5. Antigravity 桌面应用与热重载钩子环境探测
         let t5 = Instant::now();
         let st = build_studio_status(&app);
         items.push(StudioDiagnosticItem {
             key: "client_probe".to_string(),
-            name: "Antigravity 客户端与 IDE 安装环境探测".to_string(),
+            name: "Antigravity 桌面应用与皮肤热重载环境探测".to_string(),
             passed: true,
             duration_ms: t5.elapsed().as_millis() as u64,
             detail: format!(
-                "Agent 状态: {} | IDE 状态: {} | 旧版宠物残留: {}",
+                "客户端状态: {} | 进程运行中: {} | 旧版宠物残留: {}",
                 st.agent_status,
-                st.ide_status,
+                if st.app_running { "是" } else { "否" },
                 if st.has_legacy_pet { "存在待清理残留" } else { "洁净无残留" }
             ),
         });

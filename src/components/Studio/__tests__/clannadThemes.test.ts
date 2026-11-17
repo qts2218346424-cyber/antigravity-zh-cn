@@ -6,6 +6,12 @@ import sakuraHillSkin from '../../../../resources/skins/clannad-sakura-hill/skin
 import orbsSkin from '../../../../resources/skins/clannad-illusionary-orbs/skin.json';
 import sunflowerSkin from '../../../../resources/skins/clannad-after-sunflower/skin.json';
 import starfishSkin from '../../../../resources/skins/clannad-starfish-library/skin.json';
+import obsidianSkin from '../../../../resources/skins/obsidian-glass/skin.json';
+import vermilionSkin from '../../../../resources/skins/vermilion-lacquer/skin.json';
+import nordicSkin from '../../../../resources/skins/nordic-aurora/skin.json';
+import nezukoSkin from '../../../../resources/skins/nezuko-bamboo/skin.json';
+import midnightSkin from '../../../../resources/skins/midnight-dark/skin.json';
+import sakuraLightSkin from '../../../../resources/skins/sakura-light/skin.json';
 import { BUILTIN_BGM_TRACKS } from '../clannadAudioEngine';
 import {
   CLANNAD_SPLASH_THEMES,
@@ -64,6 +70,29 @@ test('1. 4 款《CLANNAD》高定材质包 Schema、深浅分类与配色变量�
     assertOk(skin.surfaces.glass_blur >= 10, `${skin.id} 应具备毛玻璃表面参数`);
     assertOk(Array.isArray(skin.background) && skin.background.length > 0, `${skin.id} 应配置矢量暗纹背景`);
   }
+
+  const allBuiltinSkins = [
+    sakuraHillSkin,
+    orbsSkin,
+    sunflowerSkin,
+    starfishSkin,
+    obsidianSkin,
+    vermilionSkin,
+    nordicSkin,
+    nezukoSkin,
+    midnightSkin,
+    sakuraLightSkin,
+  ];
+  for (const s of allBuiltinSkins) {
+    assertOk(
+      !String(s.css || '').includes('.monaco-workbench'),
+      `${s.id} 的自定义 CSS 必须面向 Antigravity 桌面应用而非旧版 IDE`,
+    );
+    assertOk(
+      !('activityBar' in s.colors) && !('statusBar' in s.colors),
+      `${s.id} 配色字典不应残留旧版 IDE 活动栏或底部状态条字段`,
+    );
+  }
 });
 
 test('2. 4 大原版动画名场面剧照路由与双语三幕台词完整对应', () => {
@@ -97,7 +126,16 @@ test('2. 4 大原版动画名场面剧照路由与双语三幕台词完整对应
 });
 
 test('3. 背景音乐曲库编配与启动偏好读写联动准确', () => {
-  assertEqual(BUILTIN_BGM_TRACKS.length, 4, '应内置 4 首多声部治愈乐曲');
+  assertEqual(BUILTIN_BGM_TRACKS.length, 4, '应内置 4 首《CLANNAD》原版真曲');
+  for (const track of BUILTIN_BGM_TRACKS) {
+    assertOk(
+      track.audioUrl.startsWith('/audio/splash/') && track.audioUrl.endsWith('.mp3'),
+      `${track.id} 原曲路径格式不合法: ${track.audioUrl}`,
+    );
+    assertOk(track.durationSec >= 100, `${track.id} 原曲时长应大于 100 秒`);
+    assertOk(track.artist.length > 0, `${track.id} 应标明原唱或作曲家`);
+    assertOk(track.cuePresets.length >= 3, `${track.id} 应至少包含 3 个经典乐段快跳点`);
+  }
   assertEqual(
     resolveEffectiveBgmTrack({ musicBoxEnabled: true, bgmTrackId: 'follow-scene' }, 'clannad-sunflower'),
     'ushio-pocket',

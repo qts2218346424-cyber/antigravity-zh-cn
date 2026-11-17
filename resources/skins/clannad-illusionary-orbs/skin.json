@@ -3,8 +3,8 @@
   "id": "clannad-illusionary-orbs",
   "name": "CLANNAD · 幻想世界光玉",
   "author": "Antigravity Studio",
-  "version": "2.0.0",
-  "description": "「承载着小镇每一份温柔心愿与奇迹的光玉，在无人苍穹下缓缓升向星海。」深宵幻想世界苍穹蓝基底搭配暖金光玉高亮、22px 液态亚克力折射与静谧星尘。",
+  "version": "2.1.0",
+  "description": "「承载着小镇每一份温柔心愿与奇迹的光玉，在无人苍穹下缓缓升向星海。」专为 Antigravity 应用定制：深宵苍穹蓝基底搭配暖金光玉高亮、22px 液态亚克力思考卡折射与静谧星尘。",
   "base": "dark",
   "preview": "preview.svg",
   "colors": {
@@ -13,9 +13,7 @@
     "accent": "#f6c453",
     "accentForeground": "#171206",
     "sidebar": "#0d1324",
-    "activityBar": "#070a13",
     "titleBar": "#080c16",
-    "statusBar": "#172542",
     "panel": "#0c1221",
     "border": "#1f2d4a",
     "selection": "#f6c4532e",
@@ -37,7 +35,7 @@
   "background": [
     {
       "image": "hikari-orbs.svg",
-      "target": "editor",
+      "target": "conversation",
       "opacity": 0.2,
       "blur": 0,
       "position": "right bottom",
@@ -52,13 +50,9 @@
     "ligatures": true
   },
   "icons": {
-    "color": "#f6c453",
-    "codicons": {
-      "sparkle": "icons/hikari-orb.svg",
-      "star-full": "icons/hikari-orb.svg"
-    }
+    "color": "#f6c453"
   },
-  "css": ".monaco-workbench .part.sidebar, .monaco-workbench .part.panel { backdrop-filter: blur(var(--agzh-glass-blur, 22px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 22px)); }\n.monaco-workbench .monaco-list-row.selected { box-shadow: inset 2px 0 0 #f6c453, 0 0 18px rgba(246, 196, 83, 0.10); }",
+  "css": "aside, [data-sidebar='sidebar'] { backdrop-filter: blur(var(--agzh-glass-blur, 22px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 22px)); border-right: 1px solid rgba(246, 196, 83, 0.16) !important; }\nform:has(textarea) { border: 1px solid rgba(246, 196, 83, 0.22) !important; box-shadow: 0 14px 36px -10px rgba(4, 8, 20, 0.78), inset 0 1px 0 rgba(246, 196, 83, 0.18); }",
   "pet": {
     "character": "ushio",
     "accent": "#f6c453",

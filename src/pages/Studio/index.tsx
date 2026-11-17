@@ -25,12 +25,10 @@ type StudioTabKey = 'skins' | 'splash' | 'customizer' | 'l10n' | 'pet' | 'watchd
 
 const EMPTY_STATUS: StudioStatus = {
   install_dir: null,
-  ide_root: null,
   agent_status: 'not_found',
-  ide_status: 'not_found',
+  app_running: false,
   active_skin: null,
   skin_enabled: false,
-  ide_enabled: false,
   auto_reapply: true,
   autostart_enabled: false,
   updates_disabled: false,
@@ -277,6 +275,7 @@ const Studio: React.FC = () => {
             skins={skins}
             status={status}
             onRefresh={refreshAll}
+            onNavigateL10n={() => handleSelectTab('l10n')}
             onSelectForCustomize={(id) => {
               setCustomizeSkinId(id);
               handleSelectTab('customizer');

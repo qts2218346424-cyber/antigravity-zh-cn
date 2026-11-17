@@ -17,32 +17,32 @@ pub const MAX_CSS_CHARS: usize = 200_000;
 pub const MAX_ZIP_TOTAL_BYTES: u64 = 64 * 1024 * 1024;
 pub const MAX_ZIP_FILES: usize = 500;
 
-/// 标准材质包颜色变量字典（键名与 `resources/skins/*/skin.json` 完全一致）
+/// 标准材质包颜色变量字典（专为 Google Antigravity 独立桌面应用 AGY Hub 设计）
 pub const COLOR_VARIABLES: &[(&str, &str)] = &[
-    ("background", "主窗口背景"),
-    ("foreground", "主前景色 / 文字"),
-    ("accent", "强调色 / 按钮与高亮"),
-    ("accentForeground", "强调色上的文字"),
-    ("sidebar", "侧边栏背景"),
-    ("activityBar", "活动栏背景"),
-    ("titleBar", "顶部标题栏背景"),
-    ("statusBar", "底部状态栏背景"),
-    ("panel", "终端与底部面板背景"),
-    ("border", "边框与分割线"),
-    ("selection", "文本选中高亮"),
-    ("input", "输入框背景"),
-    ("muted", "弱化提示文字"),
+    ("background", "主画布背景"),
+    ("foreground", "主前景色 / 正文"),
+    ("accent", "品牌主强调色 / 发送按钮"),
+    ("accentForeground", "强调色按钮文字"),
+    ("sidebar", "左侧会话与工作区导航栏"),
+    ("titleBar", "顶部窗口标题栏"),
+    ("panel", "深度思考卡与伴生工件舱"),
+    ("border", "卡片与面板极细分割线"),
+    ("selection", "会话选中与悬停高亮"),
+    ("input", "底部指令输入舱背景"),
+    ("muted", "次级说明与占位文字"),
 ];
 
 pub const BACKGROUND_TARGETS: &[(&str, &str)] = &[
-    ("window", "body, #root, .monaco-workbench"),
-    ("app", "body, #root, .monaco-workbench"),
-    ("sidebar", ".monaco-workbench .part.sidebar, [data-testid='sidebar'], aside"),
-    ("editor", ".monaco-workbench .part.editor > .content, .monaco-editor .overflow-guard"),
-    ("chat", "[data-testid='chat-panel'], .interactive-session, main"),
-    ("panel", ".monaco-workbench .part.panel"),
-    ("modal", ".monaco-dialog-box, [role='dialog'], .modal-content"),
-    ("titlebar", ".monaco-workbench .part.titlebar, header[data-testid='titlebar']"),
+    ("window", ":root:not(:has([data-browser-hole])) html"),
+    ("app", ":root:not(:has([data-browser-hole])) body"),
+    ("conversation", ":root:not(:has([data-browser-hole])) body"),
+    ("chat", ":root:not(:has([data-browser-hole])) body"),
+    ("editor", ":root:not(:has([data-browser-hole])) body"),
+    ("sidebar", "aside, [data-sidebar='sidebar']"),
+    ("composer", "form:has(textarea)"),
+    ("panel", "aside, [role='complementary']"),
+    ("modal", "[role='dialog']"),
+    ("titlebar", "header"),
 ];
 
 pub const PET_CHARACTERS: &[&str] = &[
@@ -583,7 +583,17 @@ fn background_selector(target: &str, custom_selector: Option<&str>) -> String {
             return default_sel.to_string();
         }
     }
-    "body, #root, .monaco-workbench".to_string()
+    ":root:not(:has([data-browser-hole])) body".to_string()
+}
+
+fn append_pseudo_to_selectors(selector_list: &str, pseudo: &str) -> String {
+    selector_list
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| format!("{}::{}", s, pseudo))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn camel_to_kebab(s: &str) -> String {
@@ -603,16 +613,31 @@ fn camel_to_kebab(s: &str) -> String {
     out
 }
 
-/// 将最终合并后的皮肤清单编译成可执行 CSS 与运行时 JSON
+/// 将最终合并后的皮肤清单编译成针对 Google Antigravity 桌面应用（AGY Hub）的原生光学 CSS 与运行时 JSON
 pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     let (skin_dir, _builtin, manifest) = load_effective_manifest(skin_id)?;
     validate_manifest(&manifest, Some(&skin_dir))?;
 
+    let is_light = manifest
+        .get("base")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().eq_ignore_ascii_case("light"))
+        .unwrap_or(false);
+    let color_scheme = if is_light { "light" } else { "dark" };
+
+    let card_opacity = manifest
+        .get("surfaces")
+        .and_then(|v| v.get("card_opacity"))
+        .and_then(|v| v.as_f64())
+        .map(|v| v.clamp(0.15, 1.0));
+
     let mut css_parts: Vec<String> = Vec::new();
     css_parts.push(format!("/* [AGZH_SKIN_START:{}] */", skin_id));
 
-    // 1. 颜色 CSS 变量 + VS Code / Electron 主题色映射
+    // 1. 颜色 CSS 变量 + Google Antigravity 桌面应用（AGY Hub）全量原生设计令牌映射
     let mut root_vars = Vec::new();
+    root_vars.push(format!("  color-scheme: {};", color_scheme));
+
     if let Some(colors) = manifest.get("colors").and_then(|v| v.as_object()) {
         for (k, v) in colors {
             if let Some(val) = v.as_str() {
@@ -626,169 +651,224 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             }
         }
 
-        let mut vscode_overrides = Vec::new();
-        let map_pairs: &[(&str, &[&str])] = &[
-            (
-                "background",
-                &[
-                    "--agzh-bg",
-                    "--vscode-editor-background",
-                    "--vscode-editorGutter-background",
-                    "--vscode-editorWidget-background",
-                    "--ide-task-section-background",
-                ],
-            ),
-            (
-                "foreground",
-                &[
-                    "--agzh-fg",
-                    "--vscode-foreground",
-                    "--vscode-editor-foreground",
-                    "--vscode-input-foreground",
-                    "--vscode-editorHoverWidget-foreground",
-                ],
-            ),
-            (
-                "accent",
-                &[
-                    "--agzh-accent",
-                    "--vscode-focusBorder",
-                    "--vscode-button-background",
-                    "--vscode-progressBar-background",
-                    "--vscode-activityBarBadge-background",
-                    "--vscode-textLink-foreground",
-                    "--codeium-active-selection-color",
-                ],
-            ),
-            (
-                "accentForeground",
-                &[
-                    "--agzh-accent-fg",
-                    "--vscode-button-foreground",
-                    "--vscode-activityBarBadge-foreground",
-                ],
-            ),
-            (
-                "sidebar",
-                &[
-                    "--agzh-sidebar",
-                    "--vscode-sideBar-background",
-                    "--vscode-sideBarSectionHeader-background",
-                ],
-            ),
-            (
-                "activityBar",
-                &["--agzh-activitybar", "--vscode-activityBar-background"],
-            ),
-            (
-                "titleBar",
-                &[
-                    "--agzh-titlebar",
-                    "--vscode-titleBar-activeBackground",
-                    "--vscode-titleBar-inactiveBackground",
-                ],
-            ),
-            (
-                "statusBar",
-                &["--agzh-statusbar", "--vscode-statusBar-background"],
-            ),
-            (
-                "panel",
-                &[
-                    "--agzh-panel",
-                    "--vscode-panel-background",
-                    "--vscode-terminal-background",
-                    "--vscode-editorHoverWidget-background",
-                    "--vscode-notifications-background",
-                ],
-            ),
-            (
-                "border",
-                &[
-                    "--agzh-border",
-                    "--vscode-panel-border",
-                    "--vscode-sideBar-border",
-                    "--vscode-editorGroup-border",
-                    "--vscode-input-border",
-                    "--vscode-editorHoverWidget-border",
-                    "--vscode-commandCenter-inactiveBorder",
-                ],
-            ),
-            (
-                "selection",
-                &[
-                    "--agzh-selection",
-                    "--vscode-editor-selectionBackground",
-                    "--vscode-list-activeSelectionBackground",
-                ],
-            ),
-            (
-                "input",
-                &[
-                    "--agzh-input",
-                    "--vscode-input-background",
-                    "--vscode-dropdown-background",
-                ],
-            ),
-            (
-                "muted",
-                &["--agzh-muted", "--vscode-descriptionForeground"],
-            ),
-        ];
-        for &(key, vscode_vars) in map_pairs {
-            if let Some(val) = colors.get(key).and_then(|v| v.as_str()) {
-                for &vv in vscode_vars {
-                    vscode_overrides.push(format!("  {}: {} !important;", vv, val.trim()));
-                }
-            }
-        }
-        if !vscode_overrides.is_empty() {
-            css_parts.push(format!(
-                ":root, html, body, .monaco-workbench {{\n{}\n}}",
-                vscode_overrides.join("\n")
-            ));
-        }
-
         let bg_color = colors.get("background").and_then(|v| v.as_str()).map(str::trim);
         let fg_color = colors.get("foreground").and_then(|v| v.as_str()).map(str::trim);
         let accent_color = colors.get("accent").and_then(|v| v.as_str()).map(str::trim);
-        let sel_color = colors.get("selection").and_then(|v| v.as_str()).map(str::trim);
+        let accent_fg_color = colors
+            .get("accentForeground")
+            .and_then(|v| v.as_str())
+            .map(str::trim);
         let sidebar_color = colors.get("sidebar").and_then(|v| v.as_str()).map(str::trim);
+        let titlebar_color = colors.get("titleBar").and_then(|v| v.as_str()).map(str::trim);
         let panel_color = colors.get("panel").and_then(|v| v.as_str()).map(str::trim);
+        let border_color = colors.get("border").and_then(|v| v.as_str()).map(str::trim);
+        let sel_color = colors.get("selection").and_then(|v| v.as_str()).map(str::trim);
+        let input_color = colors.get("input").and_then(|v| v.as_str()).map(str::trim);
+        let muted_color = colors.get("muted").and_then(|v| v.as_str()).map(str::trim);
+
+        let mut hub_overrides = Vec::new();
+        hub_overrides.push(format!("  color-scheme: {} !important;", color_scheme));
+
+        if let Some(bg) = bg_color {
+            for vv in [
+                "--agzh-bg",
+                "--background",
+                "--sw-bg",
+                "--color-background-primary",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, bg));
+            }
+        }
+
+        if let Some(fg) = fg_color {
+            for vv in [
+                "--agzh-fg",
+                "--foreground",
+                "--card-foreground",
+                "--popover-foreground",
+                "--code-foreground",
+                "--accent-foreground",
+                "--sidebar-foreground",
+                "--sidebar-accent-foreground",
+                "--sw-fg",
+                "--color-text-primary",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, fg));
+            }
+        }
+
+        if let Some(acc) = accent_color {
+            for vv in [
+                "--agzh-accent",
+                "--primary",
+                "--ring",
+                "--sidebar-primary",
+                "--sidebar-ring",
+                "--sw-primary",
+                "--sw-ring",
+                "--color-ring-primary",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, acc));
+            }
+        }
+
+        if let Some(acc_fg) = accent_fg_color {
+            for vv in [
+                "--agzh-accent-fg",
+                "--primary-foreground",
+                "--sidebar-primary-foreground",
+                "--sw-primary-fg",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, acc_fg));
+            }
+        }
+
+        if let Some(sb) = sidebar_color {
+            for vv in [
+                "--agzh-sidebar",
+                "--sidebar",
+                "--sidebar-background",
+                "--secondary",
+                "--sw-secondary",
+                "--color-background-secondary",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, sb));
+            }
+        }
+
+        if let Some(tb) = titlebar_color {
+            for vv in ["--agzh-titlebar", "--header-background"] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, tb));
+            }
+        }
+
+        if let Some(pn) = panel_color {
+            let effective_card = if let Some(op) = card_opacity {
+                if op < 0.99 {
+                    format!(
+                        "color-mix(in srgb, {} {:.0}%, transparent)",
+                        pn,
+                        (op * 100.0).clamp(20.0, 100.0)
+                    )
+                } else {
+                    pn.to_string()
+                }
+            } else {
+                pn.to_string()
+            };
+            hub_overrides.push(format!("  --agzh-panel: {} !important;", pn));
+            hub_overrides.push(format!("  --agzh-card-surface: {} !important;", effective_card));
+            for vv in [
+                "--card",
+                "--popover",
+                "--sw-card",
+                "--color-background-tertiary",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, effective_card));
+            }
+        }
+
+        if let Some(bd) = border_color {
+            for vv in [
+                "--agzh-border",
+                "--border",
+                "--card-border",
+                "--sidebar-border",
+                "--sw-border",
+                "--sw-card-border",
+                "--color-border-primary",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, bd));
+            }
+        }
+
+        if let Some(sel) = sel_color {
+            for vv in ["--agzh-selection", "--accent", "--sidebar-accent", "--sw-fill"] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, sel));
+            }
+        }
+
+        if let Some(inp) = input_color {
+            for vv in ["--agzh-input", "--input", "--muted", "--sw-muted", "--sw-field"] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, inp));
+            }
+        }
+
+        if let Some(mt) = muted_color {
+            for vv in [
+                "--agzh-muted",
+                "--muted-foreground",
+                "--secondary-foreground",
+                "--placeholder",
+                "--sw-fg-muted",
+                "--sw-fg-2",
+                "--sw-fg-faint",
+                "--color-text-secondary",
+                "--color-text-tertiary",
+            ] {
+                hub_overrides.push(format!("  {}: {} !important;", vv, mt));
+            }
+        }
+
+        if !hub_overrides.is_empty() {
+            css_parts.push(format!(
+                ":root, :root[data-theme], :root[data-theme='dark'], :root[data-theme='light'], html, body, .dark, .light {{\n{}\n}}",
+                hub_overrides.join("\n")
+            ));
+        }
 
         let mut base_rules = Vec::new();
+        // 严格避让 [data-browser-hole]，确保内置浏览器 WebContentsView 透视视口不被背景色遮挡
         if let (Some(bg), Some(fg)) = (bg_color, fg_color) {
             base_rules.push(format!(
-                "html, body, .monaco-workbench {{\n  background-color: {} !important;\n  color: {};\n}}",
+                "html:not(:has([data-browser-hole])), body:not(:has([data-browser-hole])) {{\n  background-color: {} !important;\n  color: {};\n}}",
                 bg, fg
             ));
         } else if let Some(bg) = bg_color {
             base_rules.push(format!(
-                "html, body, .monaco-workbench {{\n  background-color: {} !important;\n}}",
+                "html:not(:has([data-browser-hole])), body:not(:has([data-browser-hole])) {{\n  background-color: {} !important;\n}}",
                 bg
             ));
         }
+
         if let Some(sb) = sidebar_color {
+            let bd_rule = border_color
+                .map(|b| format!(" border-color: {};", b))
+                .unwrap_or_default();
             base_rules.push(format!(
-                ".monaco-workbench .part.sidebar {{ background-color: {} !important; }}",
-                sb
+                "aside, [data-sidebar='sidebar'] {{ background-color: {} !important;{} }}",
+                sb, bd_rule
             ));
         }
-        if let Some(pn) = panel_color {
+
+        if let Some(tb) = titlebar_color {
             base_rules.push(format!(
-                ".monaco-workbench .part.panel, .monaco-workbench .part.auxiliarybar {{ background-color: {} !important; }}",
-                pn
+                "header[data-testid*='titlebar'], [data-agzh-region='titlebar'] {{ background-color: {} !important; }}",
+                tb
             ));
         }
+
+        if let Some(inp) = input_color {
+            let bd_rule = border_color
+                .map(|b| format!(" border-color: {};", b))
+                .unwrap_or_default();
+            base_rules.push(format!(
+                "form:has(textarea) {{ background-color: {};{} }}",
+                inp, bd_rule
+            ));
+        }
+
         if let Some(sel) = sel_color {
             base_rules.push(format!("::selection {{ background: {}; }}", sel));
         }
+
         if let Some(acc) = accent_color {
             base_rules.push(format!(
-                "::-webkit-scrollbar-thumb {{ background-color: color-mix(in srgb, {} 45%, transparent) !important; }}",
+                "::-webkit-scrollbar-thumb {{ background-color: color-mix(in srgb, {} 42%, transparent) !important; border-radius: 9999px; }}",
                 acc
             ));
         }
+
         if !base_rules.is_empty() {
             css_parts.push(base_rules.join("\n"));
         }
@@ -808,12 +888,14 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         }
     }
 
-    // 3. 材质质感 & 字体（支持高定毛玻璃、边框高光与环境阴影）
+    // 3. 物理表面质感 & 字体（针对 Antigravity 应用对话卡片、弹层与悬浮指令舱）
     if let Some(surfaces) = manifest.get("surfaces").and_then(|v| v.as_object()) {
         if let Some(radius) = surfaces.get("radius").and_then(|v| v.as_str()) {
             root_vars.push(format!("  --agzh-radius: {};", radius));
+            root_vars.push(format!("  --radius: {};", radius));
+            root_vars.push(format!("  --r-lg: {};", radius));
             css_parts.push(format!(
-                ".monaco-workbench .part.sidebar, .monaco-workbench .monaco-dialog-box, .modal-content {{ border-radius: {} !important; }}",
+                "[role='dialog'], [role='menu'], [role='listbox'], form:has(textarea) {{ border-radius: {} !important; }}",
                 radius
             ));
         }
@@ -821,23 +903,33 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             root_vars.push(format!("  --agzh-glass-blur: {}px;", blur));
             if blur > 0 {
                 css_parts.push(format!(
-                    ".monaco-workbench .monaco-dialog-box, .monaco-workbench .suggest-widget, .monaco-workbench .quick-input-widget {{ backdrop-filter: blur({}px) saturate(1.4) !important; -webkit-backdrop-filter: blur({}px) saturate(1.4) !important; }}",
+                    "[role='dialog'], [role='menu'], [role='listbox'], [data-radix-popper-content-wrapper] > *, form:has(textarea) {{ backdrop-filter: blur({}px) saturate(1.35) !important; -webkit-backdrop-filter: blur({}px) saturate(1.35) !important; }}",
                     blur, blur
                 ));
             }
         }
         if let Some(opacity) = surfaces.get("card_opacity").and_then(|v| v.as_f64()) {
-            root_vars.push(format!("  --agzh-card-opacity: {:.3};", opacity.clamp(0.05, 1.0)));
+            root_vars.push(format!(
+                "  --agzh-card-opacity: {:.3};",
+                opacity.clamp(0.05, 1.0)
+            ));
         }
         if let Some(glow) = surfaces.get("border_glow").and_then(|v| v.as_str()) {
             root_vars.push(format!("  --agzh-border-glow: {};", glow));
             css_parts.push(format!(
-                ".monaco-workbench .monaco-dialog-box, .monaco-workbench .quick-input-widget {{ box-shadow: inset 0 1px 0 {}, var(--agzh-shadow-elevation, 0 20px 50px rgba(0,0,0,0.6)) !important; }}",
-                glow
+                "[role='dialog'], [role='menu'], [role='listbox'] {{ box-shadow: inset 0 1px 0 {}, var(--agzh-shadow-elevation, 0 20px 50px rgba(0,0,0,0.45)) !important; }}\nform:has(textarea):focus-within {{ box-shadow: inset 0 1px 0 {}, 0 12px 32px -8px rgba(0,0,0,0.28); }}",
+                glow, glow
             ));
         }
         if let Some(grain) = surfaces.get("noise_grain").and_then(|v| v.as_f64()) {
-            root_vars.push(format!("  --agzh-noise-grain: {:.3};", grain.clamp(0.0, 0.25)));
+            let clamped_grain = grain.clamp(0.0, 0.25);
+            root_vars.push(format!("  --agzh-noise-grain: {:.3};", clamped_grain));
+            if clamped_grain > 0.002 {
+                css_parts.push(format!(
+                    ":root:not(:has([data-browser-hole])) body::before {{\n  content: '';\n  position: fixed;\n  inset: 0;\n  pointer-events: none;\n  z-index: 9980;\n  opacity: {:.3};\n  background-image: radial-gradient(rgba(255,255,255,0.55) 0.55px, transparent 0.55px);\n  background-size: 3px 3px;\n}}",
+                    clamped_grain
+                ));
+            }
         }
         if let Some(shadow) = surfaces.get("shadow_elevation").and_then(|v| v.as_str()) {
             root_vars.push(format!("  --agzh-shadow-elevation: {};", shadow));
@@ -855,9 +947,11 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .and_then(|v| v.as_str())
         {
             root_vars.push(format!("  --agzh-font-sans: {};", font_family));
-            root_vars.push(format!("  --vscode-font-family: {};", font_family));
+            root_vars.push(format!("  --font-family: {};", font_family));
+            root_vars.push(format!("  --font-sans: {};", font_family));
+            root_vars.push(format!("  --sw-font: {};", font_family));
             css_parts.push(format!(
-                ".monaco-workbench, body, #root {{ font-family: {}; }}",
+                "body, #root {{ font-family: {}; }}",
                 font_family
             ));
         }
@@ -867,15 +961,18 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .and_then(|v| v.as_str())
         {
             root_vars.push(format!("  --agzh-font-mono: {};", mono_family));
+            root_vars.push(format!("  --editor-font-family: {};", mono_family));
+            root_vars.push(format!("  --font-mono: {};", mono_family));
+            root_vars.push(format!("  --sw-mono: {};", mono_family));
             css_parts.push(format!(
-                ".monaco-editor, code, pre {{ font-family: {}; }}",
+                "code, pre, kbd, samp {{ font-family: {}; }}",
                 mono_family
             ));
         }
         if let Some(size) = typo.get("size").and_then(|v| v.as_u64()) {
             let clamped = size.clamp(10, 28);
             root_vars.push(format!("  --agzh-font-size: {}px;", clamped));
-            root_vars.push(format!("  --vscode-font-size: {}px;", clamped));
+            root_vars.push(format!("  --text-sm: {}px;", clamped));
         }
         if let Some(font_file) = typo
             .get("file")
@@ -897,6 +994,10 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
                         "  --agzh-font-sans: '{}', system-ui, sans-serif;",
                         custom_name
                     ));
+                    root_vars.push(format!(
+                        "  --font-family: '{}', system-ui, sans-serif;",
+                        custom_name
+                    ));
                 }
             }
         }
@@ -906,7 +1007,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         css_parts.push(format!(":root {{\n{}\n}}", root_vars.join("\n")));
     }
 
-    // 4. 背景层渲染（同时兼容数组 `[{...}]`、单对象 `{...}` 与 map `{ target: {...} }`）
+    // 4. 背景暗纹与插画层渲染（针对 Antigravity 应用对话主画布与会话侧边栏）
     let mut bg_items: Vec<(String, Map<String, Value>)> = Vec::new();
     if let Some(bg_val) = manifest.get("background").or_else(|| manifest.get("backgrounds")) {
         if let Some(arr) = bg_val.as_array() {
@@ -915,7 +1016,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
                     let target = obj
                         .get("target")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("window")
+                        .unwrap_or("conversation")
                         .to_string();
                     bg_items.push((target, obj.clone()));
                 }
@@ -925,7 +1026,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
                 let target = obj
                     .get("target")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("window")
+                    .unwrap_or("conversation")
                     .to_string();
                 bg_items.push((target, obj.clone()));
             } else {
@@ -939,6 +1040,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     }
 
     let mut resolved_backgrounds = Vec::new();
+    let mut used_body_after = false;
     for (idx, (target, cfg)) in bg_items.iter().enumerate() {
         if cfg.get("enabled").and_then(|v| v.as_bool()) == Some(false) {
             continue;
@@ -952,10 +1054,24 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         if uri.is_empty() {
             continue;
         }
-        let selector = background_selector(
-            target,
-            cfg.get("selector").and_then(|v| v.as_str()),
-        );
+        let custom_sel = cfg.get("selector").and_then(|v| v.as_str());
+        let is_viewport_layer = custom_sel.is_none()
+            && matches!(
+                target.as_str(),
+                "window" | "app" | "conversation" | "chat" | "editor"
+            );
+
+        let selector = if is_viewport_layer {
+            if !used_body_after {
+                used_body_after = true;
+                ":root:not(:has([data-browser-hole])) body".to_string()
+            } else {
+                ":root:not(:has([data-browser-hole])) html".to_string()
+            }
+        } else {
+            background_selector(target, custom_sel)
+        };
+
         let opacity = cfg
             .get("opacity")
             .and_then(|v| v.as_f64())
@@ -979,26 +1095,21 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .and_then(|v| v.as_str())
             .unwrap_or("normal");
 
-        let pseudo = if target == "window" || target == "app" {
-            format!("{}::after", selector)
+        let pseudo_name = if is_viewport_layer { "after" } else { "before" };
+        let pseudo_selector = append_pseudo_to_selectors(&selector, pseudo_name);
+        let pos_mode = if is_viewport_layer { "fixed" } else { "absolute" };
+        let layer_z = if is_viewport_layer { 9985 } else { 0 };
+
+        let host_pos_rule = if is_viewport_layer {
+            String::new()
         } else {
-            format!("{}::before", selector)
-        };
-        let pos_mode = if target == "window" || target == "app" {
-            "fixed"
-        } else {
-            "absolute"
-        };
-        let layer_z = if target == "window" || target == "app" {
-            9999
-        } else {
-            1
+            format!("{} {{ position: relative; }}\n", selector)
         };
 
         css_parts.push(format!(
-            "{sel} {{ position: relative; }}\n{pseudo} /* bg-{idx} */ {{\n  content: '';\n  position: {pos_mode};\n  inset: 0;\n  pointer-events: none;\n  z-index: {layer_z};\n  background-image: url('{uri}');\n  background-size: {size};\n  background-position: {pos};\n  background-repeat: {repeat};\n  opacity: {op:.3};\n  mix-blend-mode: {blend};\n  {blur_rule}\n}}",
-            sel = selector,
-            pseudo = pseudo,
+            "{host_pos}{pseudo} /* bg-{idx} */ {{\n  content: '';\n  position: {pos_mode};\n  inset: 0;\n  pointer-events: none;\n  z-index: {layer_z};\n  background-image: url('{uri}');\n  background-size: {size};\n  background-position: {pos};\n  background-repeat: {repeat};\n  opacity: {op:.3};\n  mix-blend-mode: {blend};\n  {blur_rule}\n}}",
+            host_pos = host_pos_rule,
+            pseudo = pseudo_selector,
             idx = idx,
             pos_mode = pos_mode,
             layer_z = layer_z,
@@ -1027,17 +1138,14 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         }));
     }
 
-    // 5. 图标与 Codicons 内联
+    // 5. 应用内矢量图标色调与微滤镜（兼容保留自定义图标资产映射）
     let mut resolved_icons = Map::new();
     if let Some(icons) = manifest.get("icons").and_then(|v| v.as_object()) {
         if let Some(filter) = icons.get("filter").and_then(|v| v.as_str()) {
-            css_parts.push(format!(
-                ".codicon, .monaco-workbench .part.activitybar .action-label {{ filter: {}; }}",
-                filter
-            ));
+            css_parts.push(format!("aside svg {{ filter: {}; }}", filter));
         }
         if let Some(color) = icons.get("color").and_then(|v| v.as_str()) {
-            css_parts.push(format!(".codicon {{ color: {}; }}", color));
+            root_vars.push(format!("  --agzh-icon-accent: {};", color));
         }
         if let Some(codicons) = icons.get("codicons").and_then(|v| v.as_object()) {
             for (icon_key, raw_path) in codicons {
@@ -1046,12 +1154,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
                         resolve_asset_uri_or_inline(Some(&skin_dir), rel, MAX_IMAGE_BYTES)
                     {
                         if !uri.is_empty() {
-                            resolved_icons.insert(icon_key.clone(), Value::String(uri.clone()));
-                            css_parts.push(format!(
-                                ".codicon-{k}::before {{ content: '' !important; display: inline-block; width: 1em; height: 1em; background-color: currentColor; -webkit-mask: url('{u}') center/contain no-repeat; mask: url('{u}') center/contain no-repeat; }}",
-                                k = icon_key,
-                                u = uri
-                            ));
+                            resolved_icons.insert(icon_key.clone(), Value::String(uri));
                         }
                     }
                 }
@@ -1164,13 +1267,10 @@ pub fn save_override(scope: &str, skin_id: Option<&str>, patch: Value) -> Result
     let cfg = load_studio_config();
     if cfg.skin_enabled {
         if let Some(active) = cfg.active_skin.as_deref() {
-            if let Ok(compiled) = compile_skin(active) {
-                if cfg.ide_enabled || super::skin_injector::find_ide_app_root(None).is_some() {
-                    let _ = super::skin_injector::inject_ide_compiled(&compiled, None);
-                }
-            }
+            let _ = compile_skin(active);
         }
     }
+    super::skin_injector::cleanup_legacy_ide_injection();
     Ok(())
 }
 
@@ -1194,13 +1294,10 @@ pub fn reset_override(scope: &str, skin_id: Option<&str>) -> Result<(), String> 
     let cfg = load_studio_config();
     if cfg.skin_enabled {
         if let Some(active) = cfg.active_skin.as_deref() {
-            if let Ok(compiled) = compile_skin(active) {
-                if cfg.ide_enabled || super::skin_injector::find_ide_app_root(None).is_some() {
-                    let _ = super::skin_injector::inject_ide_compiled(&compiled, None);
-                }
-            }
+            let _ = compile_skin(active);
         }
     }
+    super::skin_injector::cleanup_legacy_ide_injection();
     Ok(())
 }
 
@@ -1209,12 +1306,24 @@ pub fn activate_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     let mut cfg = load_studio_config();
     cfg.active_skin = Some(skin_id.to_string());
     cfg.skin_enabled = true;
+    cfg.enable_skin = true;
     save_studio_config(&cfg)?;
 
-    // 若本机已安装 Antigravity IDE，启用材质包时同步写入 IDE CSS 并重算 SHA-256 校验和
-    if super::skin_injector::find_ide_app_root(cfg.ide_install_dir.as_deref()).is_some() {
-        let _ = super::skin_injector::inject_ide_compiled(&compiled, cfg.ide_install_dir.as_deref());
+    // 若早期版本曾在旧版 IDE 中遗留过皮肤块，自动无损剥离还原
+    super::skin_injector::cleanup_legacy_ide_injection();
+
+    // 若官方 Antigravity 桌面应用当前空闲且尚未挂载热重载钩子，自动无损打入钩子
+    let cur_agent = super::auto_reapply::agent_status(cfg.install_dir.as_deref());
+    if cur_agent == "clean" && !super::auto_reapply::is_antigravity_running() {
+        let _ = super::l10n::apply_l10n_patch(
+            cfg.install_dir.as_deref(),
+            &cfg.lang,
+            &cfg.splash_character,
+            cfg.enable_pet,
+            true,
+        );
     }
+
     Ok(compiled)
 }
 
@@ -1230,9 +1339,7 @@ pub fn disable_skin() -> Result<(), String> {
     if runtime_path.exists() {
         let _ = atomic_write_text(&runtime_path, "{}");
     }
-    if cfg.ide_enabled || super::skin_injector::find_ide_app_root(cfg.ide_install_dir.as_deref()).is_some() {
-        let _ = super::skin_injector::remove_ide(cfg.ide_install_dir.as_deref());
-    }
+    super::skin_injector::cleanup_legacy_ide_injection();
     Ok(())
 }
 
@@ -1562,5 +1669,13 @@ mod tests {
             "pet": {"character": "prince"}
         });
         assert!(validate_manifest(&m, None).is_ok());
+    }
+
+    #[test]
+    fn test_append_pseudo_to_selectors_handles_multiple() {
+        assert_eq!(
+            append_pseudo_to_selectors("aside, [data-sidebar='sidebar']", "before"),
+            "aside::before, [data-sidebar='sidebar']::before"
+        );
     }
 }

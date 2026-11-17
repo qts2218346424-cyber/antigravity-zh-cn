@@ -63,6 +63,74 @@
     }
   }
 
+  function decodeDataUriToBytes(dataUri) {
+    if (!dataUri || typeof dataUri !== 'string') return null;
+    var idx = dataUri.indexOf(',');
+    if (idx < 0) return null;
+    try {
+      var raw = window.atob(dataUri.slice(idx + 1));
+      var arr = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+      return arr.buffer;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function startSplashSoundtrack(theme, bgmDataUrl) {
+    if (bgmDataUrl) {
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      var buf = decodeDataUriToBytes(bgmDataUrl);
+      if (AudioCtx && buf) {
+        try {
+          var ctx = new AudioCtx();
+          var unlock = function () {
+            if (ctx && ctx.state === 'suspended') ctx.resume().catch(function () {});
+          };
+          if (ctx.state === 'suspended') {
+            unlock();
+            window.addEventListener('pointerdown', unlock, { once: true });
+            window.addEventListener('keydown', unlock, { once: true });
+          }
+          var gain = ctx.createGain();
+          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.75, ctx.currentTime + 0.3);
+          gain.connect(ctx.destination);
+          var srcNode = null;
+          var stopped = false;
+
+          ctx.decodeAudioData(
+            buf.slice(0),
+            function (audioBuffer) {
+              if (stopped || ctx.state === 'closed') return;
+              srcNode = ctx.createBufferSource();
+              srcNode.buffer = audioBuffer;
+              srcNode.loop = true;
+              srcNode.connect(gain);
+              srcNode.start(0);
+            },
+            function () {}
+          );
+
+          return function () {
+            if (stopped) return;
+            stopped = true;
+            try {
+              var now = ctx.currentTime;
+              gain.gain.cancelScheduledValues(now);
+              gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+            } catch (_) {}
+            setTimeout(function () {
+              try { if (srcNode) srcNode.stop(); } catch (_) {}
+              if (ctx && ctx.state !== 'closed') ctx.close().catch(function () {});
+            }, 310);
+          };
+        } catch (_) {}
+      }
+    }
+    return startMiniMusicBox(theme);
+  }
   function drawPetal(ctx, r) {
     ctx.beginPath();
     ctx.moveTo(0, -r);
@@ -158,7 +226,7 @@
       '</div>';
     root.appendChild(ui);
 
-    var stopMusic = startMiniMusicBox(theme);
+    var stopMusic = startSplashSoundtrack(theme, opts.bgmDataUrl);
     var muted = false;
 
     var audioBtn = document.getElementById('ag-clannad-audio');
@@ -171,7 +239,7 @@
           audioBtn.textContent = '♪ 开启配乐';
         } else {
           muted = false;
-          stopMusic = startMiniMusicBox(theme);
+          stopMusic = startSplashSoundtrack(theme, opts.bgmDataUrl);
           audioBtn.textContent = '♪ 静音';
         }
       });
@@ -286,7 +354,7 @@
         }
       }
 
-      var pct = Math.min(100, Math.round((elapsed / 3200) * 100));
+      var pct = Math.min(100, Math.round((elapsed / 4200) * 100));
       var safePct = Math.max(12, pct);
       if (barEl) barEl.style.width = safePct + '%';
       if (pctEl) pctEl.textContent = safePct + '%';

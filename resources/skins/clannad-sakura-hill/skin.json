@@ -3,8 +3,8 @@
   "id": "clannad-sakura-hill",
   "name": "CLANNAD · 光坂坡道与团子",
   "author": "Antigravity Studio",
-  "version": "2.0.0",
-  "description": "「我们开始一起攀登这长长的坡道。」灵感源自《CLANNAD》春季樱花坡道与古河渚挚爱的团子大家族：晨曦奶油樱白护眼底色、柔粉樱花缎带状态栏与右下角微笑团子三兄弟暗纹。",
+  "version": "2.1.0",
+  "description": "「我们开始一起攀登这长长的坡道。」灵感源自《CLANNAD》春季樱花坡道与古河渚挚爱的团子大家族：晨曦奶油樱白护眼画布、柔粉樱花微光卡片与右下角微笑团子三兄弟暗纹。",
   "base": "light",
   "preview": "preview.svg",
   "colors": {
@@ -13,9 +13,7 @@
     "accent": "#e57399",
     "accentForeground": "#ffffff",
     "sidebar": "#f9eff3",
-    "activityBar": "#f3e2e9",
     "titleBar": "#f5e6ec",
-    "statusBar": "#d96b90",
     "panel": "#fcf3f7",
     "border": "#edd0dd",
     "selection": "#f48fb145",
@@ -38,7 +36,7 @@
   "background": [
     {
       "image": "dango-sakura.svg",
-      "target": "editor",
+      "target": "conversation",
       "opacity": 0.16,
       "blur": 0,
       "position": "right bottom",
@@ -53,13 +51,9 @@
     "ligatures": true
   },
   "icons": {
-    "color": "#d85a84",
-    "codicons": {
-      "heart": "icons/dango.svg",
-      "star-full": "icons/dango.svg"
-    }
+    "color": "#d85a84"
   },
-  "css": ".monaco-workbench .part.statusbar { border-top: 1px solid #edd0dd; background-image: linear-gradient(90deg, #d96b90 0%, #e57399 55%, #ec87a8 100%) !important; }\n.monaco-workbench .monaco-list-row.selected { box-shadow: inset 3px 0 0 #e57399; }",
+  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid #edd0dd !important; }\nform:has(textarea) { border: 1px solid rgba(229, 115, 153, 0.34) !important; box-shadow: 0 12px 30px -10px rgba(229, 115, 153, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9); }",
   "pet": {
     "character": "ushio",
     "filter": "saturate(1.06) brightness(1.03)",

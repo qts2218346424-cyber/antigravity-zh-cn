@@ -27,8 +27,8 @@
 
 | 功能板块 | 架构设计与关键特性 |
 | :--- | :--- |
-| 🎨 **高定光学材质引擎** | 内置 10 款精选主题（含《CLANNAD》四重奏皮肤）与 `surfaces` 物理表面参数编译器（圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`），支持画廊微缩 IDE 实时预览与 **Color DNA** 在线调色实验室。 |
-| ⚡ **双端同步无损注入** | 主程序 (`Antigravity` 客户端) 通过 `BaseWindow + WebContentsView` 全子视图监听器与实时 CSS 变量引擎驱动热重载；`Antigravity IDE` 同步编译至 `workbench.desktop.main.css` 与 `jetskiMain.tailwind.css`，彻底免除主进程 `FSWatcher EPERM` 崩溃与旧补丁污染。 |
+| 🎨 **高定光学材质引擎** | 内置 10 款专为 **Google Antigravity 独立桌面应用** 定制的精选主题（含《CLANNAD》四重奏皮肤）与 `surfaces` 物理表面参数编译器（圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`），支持画廊 1:1 微缩 Antigravity 应用实时预览与 **Color DNA** 在线调色实验室。 |
+| ⚡ **客户端原生热重载注入** | 对接官方 `Antigravity` 桌面应用（AGY Hub）三层 `WebContentsView` 架构（`getHubWindows` / `setHubCurtainColor`），精准同步原生宿主设计令牌（`--background` / `--card` / `--primary`）与底层幕布色，避让内置浏览器视口且彻底免除 `FSWatcher EPERM` 崩溃。 |
 | 🈶 **全量双层汉化系统** | 原生 Rust 实现 `app.asar` 无损解包与 SHA-256 Integrity 重建，支持 `zh-CN` / `zh-TW` / `zh-HK`，覆盖 Electron 主进程菜单/托盘与渲染层全部 UI；保留官方原版极速启动流程，精确避让代码区、终端与模型正文，并内置 **老版本内置宠物代码 (`__AGY_NEZUKO_PET_INITIALIZED__`) 自动侦测与剥离清理**。 |
 | 🪐 **独立灵动桌面伴侣** | 从客户端进程完全剥离，运行于独立透明置顶窗口（`index.html?pet=1`），搭载高精零白边多姿态透明原画、**22 条离线零延迟动漫原生语音包与双语经典金句系统**、2.5D 弹性动力学与 3D 视差效果、灵动岛状态玻璃坞、毫秒级 LRC 二分时间轴黑胶歌词舱、低配额预警及配额舱内一键刷新/切号；内置 **祢豆子（米豆子）、小王子、冈崎汐（团子大家族）、炭治郎、善逸、伊之助** 6 大动漫角色及 **自定义本地 PNG/WebP/GIF/SVG 立绘热导入**（共 7 角色生态）。 |
 | 🧪 **全链路自检与测试台** | 内置可视化 **全链路测试台 (`DiagnosticsTab`)** 一键巡检后端词典、光学材质编译器、伴侣骨骼缓存、客户端路径探测与本地 API 反代连通性，同时提供伴侣动作/合成音效沙盒演练；工程侧配备零外部依赖 `npm test` 自动化单元测试引擎。 |
@@ -44,26 +44,26 @@
 
 | 主题 ID | 风格定位 | 视觉与光学特征 |
 | :--- | :--- | :--- |
-| **`obsidian-glass`** | 黑曜石磨玻璃（默认） | 深邃暗曜基底配合 24px 磨玻璃高斯模糊与细腻噪点纹理，夜战编码首选 |
+| **`obsidian-glass`** | 黑曜石磨玻璃（默认） | 深邃暗曜对话画布配合 20px 磨玻璃高斯模糊与细腻噪点纹理，夜间推演首选 |
 | **`vermilion-lacquer`** | 东方朱漆美学 | 漆器朱红与鎏金对比色板、低饱和通透卡片层与柔和金属高光描边 |
 | **`nordic-aurora`** | 北境极光玻璃 | 冷冽极光蓝绿梯度光晕叠加扩散投影，打造克制通透的北欧极简观感 |
-| **`nezuko-bamboo`** | 祢豆子竹林和风 | 麻叶织纹视觉基底与绯樱竹翠撞色体系 |
+| **`nezuko-bamboo`** | 祢豆子竹林和风 | 会话侧栏麻叶织纹视觉基底与绯樱竹翠撞色体系 |
 | **`sakura-light`** | 樱雪晴空浅色 | 清透高亮日间色板、矢量樱瓣质感与柔和玻璃边线 |
-| **`midnight-dark`** | 午夜星尘深空 | 深空星海高对比阅读色域与专注代码高亮氛围 |
-| **`clannad-sakura-hill`** | CLANNAD · 光坂坡道与团子 | 春季奶油樱白浅色基底、樱花缎带状态栏与右下角微笑团子大家族暗纹 |
-| **`clannad-illusionary-orbs`** | CLANNAD · 幻想世界光玉 | 深宵苍穹蓝黑基底、奇迹暖金与冰蓝光玉微光、22px 液态亚克力折射 |
-| **`clannad-after-sunflower`** | CLANNAD · 汐与晴空花田 | 盛夏麦穗米白护眼底色、向日葵琥珀金高光与澄澈晴空蓝状态栏 |
-| **`clannad-starfish-library`** | CLANNAD · 图书室海星与提琴 | 暮色紫檀深空底色、薰衣草提琴弦光与风子纪念木雕海星纹理 |
+| **`midnight-dark`** | 午夜星尘深空 | 深空星海高对比对话阅读色域与静谧夜空氛围 |
+| **`clannad-sakura-hill`** | CLANNAD · 光坂坡道与团子 | 春季奶油樱白浅色画布、柔粉樱花微光卡片与右下角微笑团子大家族暗纹 |
+| **`clannad-illusionary-orbs`** | CLANNAD · 幻想世界光玉 | 深宵苍穹蓝黑画布、奇迹暖金与冰蓝光玉微光、22px 液态亚克力思考卡折射 |
+| **`clannad-after-sunflower`** | CLANNAD · 汐与晴空花田 | 盛夏麦穗米白护眼画布、向日葵琥珀金高光与澄澈晴空蓝微光点缀 |
+| **`clannad-starfish-library`** | CLANNAD · 图书室海星与提琴 | 暮色紫檀深空对话底色、薰衣草提琴弦光与风子纪念木雕海星纹理 |
 
-在工作台 **「汉化与美化 → 光学材质画廊 / Color DNA 实验室」** 中支持：
-- **画廊微缩实时渲染**：直观对比各主题色谱条与模拟窗口效果，一键应用至客户端与 IDE；
+在工作台 **「汉化与美化 → 光学材质画廊 / 色彩与材质实验室」** 中支持：
+- **画廊 1:1 微缩应用实时渲染**：直观对比各主题在 Antigravity 桌面应用中的会话侧栏、思考卡片与指令输入舱效果，一键热重载应用至客户端；
 - **Color DNA 物理调色**：实时调节主题背景/强调色/边框与 6 项表面光学滑块，支持导出/导入 `.zip` 自定义皮肤包。
 
 ---
 
 ## 🈶 全量无损汉化与哨兵守护
 
-- **客户端一键汉化与备份还原**：自动探测 Antigravity 客户端与 IDE 目录，首次注入前将原始未修补的 `app.asar` 安全保存为 `app.asar.bak`，随时支持无损一键还原官方原版。
+- **客户端一键汉化与备份还原**：自动探测 Antigravity 桌面应用安装目录，首次注入前将原始未修补的 `app.asar` 安全保存为 `app.asar.bak`，随时支持无损一键还原官方原版。
 - **纯净极速启动**：注入补丁严格聚焦菜单栏、托盘、报错弹窗、DOM 文本正则映射与皮肤热重载钩子，**完全保留官方原生 `dist/loadingOverlay.js` 秒开启动流程**，避免额外遮罩干扰主界面进入。
 - **生态附属一键增强**：
   - 批量翻译 `~/.gemini` 下内置及插件 `SKILL.md` 英文描述，自动跳过已有中文项；

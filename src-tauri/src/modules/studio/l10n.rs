@@ -156,11 +156,13 @@ pub fn stop_antigravity_processes() -> usize {
             .map(|p| p.to_string_lossy().to_ascii_lowercase())
             .unwrap_or_default();
 
-        // 绝不误杀 Antigravity Manager / Studio / antigravity-tools 自己
+        // 绝不误杀 Antigravity Manager / Studio / antigravity-tools 自己以及旧版 IDE
         if name.contains("manager")
             || name.contains("tools")
             || name.contains("studio")
             || exe.contains("antigravity-cn")
+            || exe.contains("antigravity ide")
+            || exe.contains("antigravityide")
         {
             continue;
         }
@@ -796,7 +798,7 @@ fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Optio
     let engine_js = std::fs::read_to_string(&runtime_path).ok()?;
     let safe_engine = engine_js.replace("</script>", "<\\/script>");
 
-    let (title, episode_tag, quote, accent, secondary_accent, media_file, dialogues) =
+    let (title, episode_tag, quote, accent, secondary_accent, media_file, bgm_file, dialogues) =
         match character {
             "clannad-sakura" => (
                 "光坂坡道 · 樱花雨中的初遇与回眸",
@@ -805,6 +807,7 @@ fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Optio
                 "#f472b6",
                 "#7dd3fc",
                 "splash_sakura.webp",
+                "splash_bgm_sakura.mp3",
                 json!([
                     {
                         "speaker": "古河渚",
@@ -825,6 +828,7 @@ fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Optio
                 "#fbbf24",
                 "#38bdf8",
                 "splash_sunflower.webp",
+                "splash_bgm_sunflower.mp3",
                 json!([
                     {
                         "speaker": "冈崎汐",
@@ -845,6 +849,7 @@ fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Optio
                 "#c084fc",
                 "#fb923c",
                 "splash_starfish.webp",
+                "splash_bgm_starfish.mp3",
                 json!([
                     {
                         "speaker": "伊吹风子",
@@ -865,6 +870,7 @@ fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Optio
                 "#f6c453",
                 "#7dd3fc",
                 "splash_orbs.webp",
+                "splash_bgm_dango.mp3",
                 json!([
                     {
                         "speaker": "幻想世界少女",
@@ -886,6 +892,12 @@ fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Optio
         .map(|bytes| format!("data:image/webp;base64,{}", STANDARD.encode(&bytes)))
         .unwrap_or_default();
 
+    let bgm_data_url = std::fs::read(rdir.join("media").join(bgm_file))
+        .ok()
+        .filter(|b| !b.is_empty())
+        .map(|bytes| format!("data:audio/mpeg;base64,{}", STANDARD.encode(&bytes)))
+        .unwrap_or_default();
+
     let cfg_json = serde_json::to_string(&json!({
         "theme": character,
         "title": title,
@@ -894,6 +906,7 @@ fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Optio
         "accent": accent,
         "secondaryAccent": secondary_accent,
         "artworkDataUrl": artwork_data_url,
+        "bgmDataUrl": bgm_data_url,
         "dialogues": dialogues,
         "version": version_str,
     }))
@@ -987,8 +1000,8 @@ function attachLoadingOverlay(win, _foregroundColor, _backgroundColor) {
   let pollTimer = null;
   let fadeTimer = null;
   const start = Date.now();
-  const MIN_MS = 1800;
-  const MAX_MS = 4800;
+  const MIN_MS = 4200;
+  const MAX_MS = 7500;
   let loaded = Boolean(
     hubContents && typeof hubContents.isLoading === "function" && !hubContents.isLoading()
   );

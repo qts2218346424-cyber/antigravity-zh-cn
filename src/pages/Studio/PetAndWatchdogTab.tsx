@@ -521,7 +521,7 @@ export const WatchdogTab: React.FC<TabProps> = ({ status, onRefresh }) => {
       } else if (res.actions.length > 0) {
         showToast(res.actions.join('；'), 'success');
       } else {
-        showToast('全链路巡检正常：汉化标识与 IDE 样式均已锁定', 'info');
+        showToast('全链路巡检正常：Antigravity 应用汉化标识与光学皮肤钩子均已锁定', 'info');
       }
       await onRefresh();
     } catch (err: unknown) {
@@ -588,7 +588,7 @@ export const WatchdogTab: React.FC<TabProps> = ({ status, onRefresh }) => {
 
         <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/85 dark:bg-slate-900/65 backdrop-blur-xl p-5 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3.5">
-            {status.ide_status === 'injected' ? (
+            {status.skin_enabled && status.agent_status === 'patched' ? (
               <div className="h-11 w-11 rounded-2xl bg-sky-500/15 flex items-center justify-center text-sky-400 border border-sky-500/25">
                 <ShieldCheck className="h-6 w-6" />
               </div>
@@ -599,21 +599,19 @@ export const WatchdogTab: React.FC<TabProps> = ({ status, onRefresh }) => {
             )}
             <div>
               <div className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold">
-                IDE 工作台样式与校验和
+                Antigravity 应用光学材质状态
               </div>
               <div className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
-                {status.ide_status === 'injected'
-                  ? 'IDE 光学材质与 SHA-256 校验正常'
-                  : status.ide_status === 'stale'
-                    ? 'IDE 样式过期待重同步'
-                    : status.ide_status === 'clean'
-                      ? '原版洁净状态（未注入）'
-                      : '未定位到 IDE 根目录'}
+                {status.skin_enabled
+                  ? status.agent_status === 'patched'
+                    ? `已激活「${status.active_skin || '默认'}」热重载通道`
+                    : `已选「${status.active_skin || '默认'}」（待客户端挂载钩子）`
+                  : '当前使用官方原生默认主题'}
               </div>
             </div>
           </div>
           <span className="rounded-lg bg-gray-100 dark:bg-white/5 px-2.5 py-1 text-[11px] font-mono text-gray-500">
-            {status.ide_status}
+            {status.skin_enabled ? status.active_skin || 'enabled' : 'native'}
           </span>
         </div>
       </div>
@@ -626,7 +624,7 @@ export const WatchdogTab: React.FC<TabProps> = ({ status, onRefresh }) => {
               Tokio 异步守卫协程（防更新自动重注哨兵）
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              随宿主进程每 120 秒巡检一次指纹；若官方更新覆写且客户端进程已退出，立即原位自动重构补丁与校验和。
+              随宿主进程每 120 秒巡检一次指纹；若官方更新覆写且 Antigravity 应用已退出，自动静默恢复中文汉化与皮肤热重载钩子。
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

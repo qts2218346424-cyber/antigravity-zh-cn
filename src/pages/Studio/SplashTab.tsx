@@ -24,6 +24,7 @@ import {
   type CustomBgmStoredMeta,
   clearCustomArtworkFile,
   clearCustomBgmFile,
+  getBuiltinBgmTrackMeta,
   loadCustomArtworkBlob,
   loadCustomArtworkMetaSync,
   loadCustomBgmMetaSync,
@@ -56,7 +57,8 @@ const DURATION_OPTIONS: Array<{ value: SplashDurationOption; label: string; desc
   { value: 2600, label: '轻快 · 2.6s', desc: '高频打开快速过场' },
   { value: 4800, label: '标准 · 4.8s', desc: '均衡体验台词与画面' },
   { value: 8000, label: '剧场 · 8.0s', desc: '完整感受三幕催泪台词' },
-  { value: 12000, label: '沉浸 · 12s', desc: '静心聆听副歌与名场面' },
+  { value: 12000, label: '沉浸 · 12s', desc: '静心聆听原曲前奏与台词' },
+  { value: 20000, label: '高潮 · 20s', desc: '完整品味原曲主副歌高潮' },
 ];
 
 function formatSecondsMmSs(sec: number): string {
@@ -69,6 +71,7 @@ function formatSecondsMmSs(sec: number): string {
 export const SplashTab: React.FC<SplashTabProps> = ({ status, onRefresh }) => {
   const volumeSliderId = useId();
   const offsetSliderId = useId();
+  const builtinOffsetSliderId = useId();
   const audioInputRef = useRef<HTMLInputElement>(null);
   const artworkInputRef = useRef<HTMLInputElement>(null);
 
@@ -183,7 +186,21 @@ export const SplashTab: React.FC<SplashTabProps> = ({ status, onRefresh }) => {
       return;
     }
 
-    const next = updatePrefs({ musicBoxEnabled: true, bgmTrackId: trackId });
+    let nextOffset = prefs.bgmStartOffsetSec ?? 0;
+    if (trackId !== 'custom-file') {
+      const targetMeta = getBuiltinBgmTrackMeta(
+        trackId === 'follow-scene' ? activeSpec.recommendedBgmId : trackId,
+      );
+      if (nextOffset >= Math.max(10, targetMeta.durationSec - 8)) {
+        nextOffset = 0;
+      }
+    }
+
+    const next = updatePrefs({
+      musicBoxEnabled: true,
+      bgmTrackId: trackId,
+      bgmStartOffsetSec: nextOffset,
+    });
     triggerPreviewBgm(next, previewThemeId);
   };
 
@@ -287,6 +304,15 @@ export const SplashTab: React.FC<SplashTabProps> = ({ status, onRefresh }) => {
   const currentBgmSelection: ClannadBgmTrackId = !prefs.musicBoxEnabled
     ? 'off'
     : prefs.bgmTrackId || 'follow-scene';
+
+  const activeBuiltinTrack =
+    currentBgmSelection !== 'off' && currentBgmSelection !== 'custom-file'
+      ? getBuiltinBgmTrackMeta(
+          currentBgmSelection === 'follow-scene'
+            ? activeSpec.recommendedBgmId
+            : currentBgmSelection,
+        )
+      : null;
 
   return (
     <div className="space-y-6">
@@ -575,10 +601,10 @@ export const SplashTab: React.FC<SplashTabProps> = ({ status, onRefresh }) => {
             </div>
             <div>
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                启动背景音乐选择（内置多声部治愈乐曲 & 本地原声导入）
+                启动背景音乐选择（已内置 4 首《CLANNAD》原版真曲 & 支持本地音频导入）
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                点击任一曲目即可立即试听并设为启动伴奏，或导入本地收藏的《CLANNAD》原声 MP3 / FLAC / WAV 文件
+                已导入《だんご大家族》《小さな手のひら》《渚·坂の下の別れ》《汐·潮鳴り》4 首原动画真曲音源，点击即刻试听并自由设定高潮切入秒数
               </p>
             </div>
           </div>
@@ -656,11 +682,11 @@ export const SplashTab: React.FC<SplashTabProps> = ({ status, onRefresh }) => {
               )}
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              自动根据当前展示的名场面切换最契合情绪的钢琴或八音盒曲目
+              自动根据当前展示的名场面匹配对应的《CLANNAD》原唱主题曲或原版 OST 配乐
             </p>
           </button>
 
-          {/* 2-5. 四首内置双声部治愈乐曲 */}
+          {/* 2-5. 四首内置《CLANNAD》原版真曲 */}
           {BUILTIN_BGM_TRACKS.map((track) => {
             const active = currentBgmSelection === track.id;
             return (
@@ -714,6 +740,77 @@ export const SplashTab: React.FC<SplashTabProps> = ({ status, onRefresh }) => {
             </p>
           </button>
         </div>
+
+        {/* 内置《CLANNAD》原曲黄金高潮段落快跳与精确切入滑块 */}
+        {activeBuiltinTrack && (
+          <div className="rounded-xl border border-amber-200/80 dark:border-amber-500/25 bg-amber-50/40 dark:bg-amber-500/5 p-3.5 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs">
+                <Music className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="font-bold text-gray-900 dark:text-gray-100">
+                  原曲段落切入点 · {activeBuiltinTrack.title}
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  （{activeBuiltinTrack.artist} · 全长 {formatSecondsMmSs(activeBuiltinTrack.durationSec)}）
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor={builtinOffsetSliderId}
+                  className="text-[11px] font-medium text-amber-800 dark:text-amber-300 whitespace-nowrap"
+                >
+                  开机起播位置：{formatSecondsMmSs(prefs.bgmStartOffsetSec ?? 0)}
+                </label>
+                <input
+                  id={builtinOffsetSliderId}
+                  type="range"
+                  min={0}
+                  max={Math.max(10, activeBuiltinTrack.durationSec - 8)}
+                  step={1}
+                  value={Math.min(
+                    prefs.bgmStartOffsetSec ?? 0,
+                    Math.max(10, activeBuiltinTrack.durationSec - 8),
+                  )}
+                  onChange={(e) => {
+                    const sec = Number(e.target.value);
+                    const next = updatePrefs({ bgmStartOffsetSec: sec });
+                    if (isPreviewPlayingMusic) {
+                      triggerPreviewBgm(next, previewThemeId);
+                    }
+                  }}
+                  className="range range-xs range-warning w-36"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 mr-1">
+                经典乐段快跳：
+              </span>
+              {activeBuiltinTrack.cuePresets.map((preset) => {
+                const isCueActive = Math.abs((prefs.bgmStartOffsetSec ?? 0) - preset.offsetSec) <= 2;
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      const next = updatePrefs({ bgmStartOffsetSec: preset.offsetSec });
+                      triggerPreviewBgm(next, previewThemeId);
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                      isCueActive
+                        ? 'bg-amber-500 text-slate-950 font-semibold shadow-xs'
+                        : 'bg-white dark:bg-base-200 border border-gray-200 dark:border-base-300 text-gray-700 dark:text-gray-200 hover:border-amber-400'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 本地自定义原声音乐 (MP3 / FLAC / WAV) 专属导入栏 */}
         <div
@@ -823,7 +920,7 @@ export const SplashTab: React.FC<SplashTabProps> = ({ status, onRefresh }) => {
             </span>
           </div>
           <p className="text-[11.5px] text-gray-500 dark:text-gray-400">
-            可将当前预览的名场面「{activeSpec.name}」（含原动画高清剧照与经典台词字幕）写入客户端 <code className="font-mono">dist/loadingOverlay.js</code>；亦可随时一键恢复官方原版极速启动。
+            可将当前预览的名场面「{activeSpec.name}」（含原动画高清剧照、《CLANNAD》原版真曲配乐片段与经典双语台词）写入客户端 <code className="font-mono">dist/loadingOverlay.js</code>；亦可随时一键恢复官方原版极速启动。
           </p>
         </div>
 

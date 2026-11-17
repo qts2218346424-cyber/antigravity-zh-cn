@@ -1001,8 +1001,6 @@ pub fn run() {
             commands::studio_delete_skin,
             commands::studio_import_skin_zip,
             commands::studio_export_skin_zip,
-            commands::studio_inject_ide,
-            commands::studio_remove_ide,
             commands::studio_reapply_check,
             commands::studio_set_auto_reapply,
             commands::studio_get_pet_assets,

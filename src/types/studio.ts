@@ -13,9 +13,7 @@ export interface SkinColors {
   accent?: string;
   accentForeground?: string;
   sidebar?: string;
-  activityBar?: string;
   titleBar?: string;
-  statusBar?: string;
   panel?: string;
   border?: string;
   selection?: string;
@@ -115,12 +113,10 @@ export interface CompiledSkin {
 
 export interface StudioStatus {
   install_dir?: string | null;
-  ide_root?: string | null;
   agent_status: 'not_found' | 'clean' | 'patched' | string;
-  ide_status: 'not_found' | 'clean' | 'injected' | 'stale' | string;
+  app_running: boolean;
   active_skin?: string | null;
   skin_enabled: boolean;
-  ide_enabled: boolean;
   auto_reapply: boolean;
   autostart_enabled: boolean;
   updates_disabled: boolean;
@@ -174,7 +170,6 @@ export interface SkillLocalizeResult {
 
 export interface ReapplyCheckResult {
   agent: string;
-  ide: string;
   actions: string[];
   error?: string | null;
 }

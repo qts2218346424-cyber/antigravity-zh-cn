@@ -198,12 +198,10 @@ pub struct SkinInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StudioStatus {
     pub install_dir: Option<String>,
-    pub ide_root: Option<String>,
     pub agent_status: String,
-    pub ide_status: String,
+    pub app_running: bool,
     pub active_skin: Option<String>,
     pub skin_enabled: bool,
-    pub ide_enabled: bool,
     pub auto_reapply: bool,
     pub autostart_enabled: bool,
     pub updates_disabled: bool,
@@ -262,7 +260,6 @@ pub struct SkillLocalizeResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReapplyCheckResult {
     pub agent: String,
-    pub ide: String,
     pub actions: Vec<String>,
     pub error: Option<String>,
 }
