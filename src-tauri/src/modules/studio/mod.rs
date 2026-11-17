@@ -306,4 +306,6 @@ pub struct PetAssets {
     pub zenitsu_thunder: Option<String>,
     pub inosuke_beast: Option<String>,
     pub custom_avatar: Option<String>,
+    #[serde(default)]
+    pub voices: std::collections::HashMap<String, String>,
 }

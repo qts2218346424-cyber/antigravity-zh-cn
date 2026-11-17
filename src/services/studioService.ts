@@ -546,10 +546,10 @@ export const studioService = {
         },
         {
           key: 'pet_assets',
-          name: '桌面伴侣骨骼刚体与 5 大内置角色材质缓存',
+          name: '桌面伴侣多姿态原画、动漫原生语音与全角色材质缓存',
           passed: true,
           duration_ms: 3,
-          detail: '[浏览器预览模拟] 6 角色配置与声学合成器就绪',
+          detail: '[浏览器预览模拟] 7 大角色生态、25 帧透明原画与 22 条动漫原生金句语音就绪',
         },
         {
           key: 'client_probe',

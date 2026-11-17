@@ -43,6 +43,8 @@ const SAMPLE_LRC = `[ti:星海漫游演练曲]
 
 const SOUND_SAMPLES: Array<{ label: string; desc: string; trigger: () => void }> = [
   { label: '温暖叮咚', desc: '摸头 / 投喂双和弦', trigger: () => petAudio.playCare() },
+  { label: '团子八音盒', desc: '冈崎汐五音前奏微旋律', trigger: () => petAudio.playDangoMelody() },
+  { label: '愿望光玉', desc: 'CLANNAD 空灵水晶琶音', trigger: () => petAudio.playLightOrb() },
   { label: '木箱旋风', desc: '带通滤波风声合成', trigger: () => petAudio.playSpinWind() },
   { label: '震地回响', desc: '低频落地物理锤击', trigger: () => petAudio.playWoodThud() },
   { label: '爆血绯晶', desc: '高频泛音晶体迸发', trigger: () => petAudio.playBloodBurst() },
@@ -54,13 +56,56 @@ const SOUND_SAMPLES: Array<{ label: string; desc: string; trigger: () => void }>
   { label: '算力预警', desc: '低配额双音温和风铃', trigger: () => petAudio.playQuotaAlert() },
 ];
 
-const REMOTE_PET_ACTIONS: Array<{ action: PetAction; label: string; message: string }> = [
+const REMOTE_PET_ACTIONS: Array<{
+  action: PetAction;
+  label: string;
+  message: string;
+  sub?: string;
+  voiceKey?: string;
+}> = [
   { action: 'pat', label: '轻抚摸头', message: '来自测试台的远程摸头互动 ✨' },
-  { action: 'box_spin', label: '8帧木箱旋风', message: '远程触发：大正木箱 360° 旋风测试！' },
-  { action: 'water_slash', label: '水之呼吸刀纹', message: '全集中·水之呼吸·生生流转 🌊' },
-  { action: 'thunder_dash', label: '霹雳一闪流光', message: '雷之呼吸·壹之型·霹雳一闪 ⚡' },
-  { action: 'beast_rush', label: '猪突猛进冲刺', message: '兽之呼吸·猪突猛进！！🐗' },
-  { action: 'stars', label: 'B612 流星雨', message: '星海流星轨迹渲染测试 ✨' },
+  {
+    action: 'dango_song',
+    label: '团子大家族原声',
+    message: '「团子，团子，团子大家族 ♪ 要一直在一起哦！」',
+    sub: 'だんご、だんご、だんご大家族！ずっと一緒だよ！',
+    voiceKey: 'ushio_dango',
+  },
+  {
+    action: 'box_spin',
+    label: '祢豆子克服阳光原声',
+    message: '「早…早上好！平安无事真是太好了呢 ✨」',
+    sub: 'お…おはよう！よかったね、本当によかったね！',
+    voiceKey: 'nezuko_ohayou',
+  },
+  {
+    action: 'water_slash',
+    label: '水之呼吸原声',
+    message: '「全集中·水之呼吸！拾之型——生生流转 🌊」',
+    sub: '全集中、水の呼吸！拾ノ型、生生流転！！',
+    voiceKey: 'tanjiro_water',
+  },
+  {
+    action: 'thunder_dash',
+    label: '霹雳一闪原声',
+    message: '「雷之呼吸·壹之型——霹雳一闪·六连 ⚡」',
+    sub: '雷の呼吸、壱ノ型——霹靂一閃、六連！！',
+    voiceKey: 'zenitsu_thunder',
+  },
+  {
+    action: 'beast_rush',
+    label: '猪突猛进原声',
+    message: '「兽之呼吸！猪突猛进！！猪突猛进 🐗」',
+    sub: '獣の呼吸！猪突猛進！！猪突猛進！！',
+    voiceKey: 'inosuke_rush',
+  },
+  {
+    action: 'stars',
+    label: 'B612 法语金句',
+    message: '「只有用心才能看得清。真正重要的东西，用眼睛是看不见的 ✨」',
+    sub: "On ne voit bien qu'avec le cœur. L'essentiel est invisible pour les yeux.",
+    voiceKey: 'prince_essential',
+  },
   { action: 'dance', label: '黑胶律动热舞', message: '声波律动热舞测试开启 ♪' },
 ];
 
@@ -145,10 +190,15 @@ export const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ status, onRefres
     }
   };
 
-  const handleRemotePetAction = async (action: PetAction, message: string) => {
+  const handleRemotePetAction = async (item: {
+    action: PetAction;
+    message: string;
+    sub?: string;
+    voiceKey?: string;
+  }) => {
     if (!isTauri()) {
       petAudio.playCare();
-      showToast(`[预览模拟] 已触发伴侣动作「${action}」：${message}`, 'info');
+      showToast(`[预览模拟] 已触发伴侣动作「${item.action}」：${item.message}`, 'info');
       return;
     }
     try {
@@ -157,8 +207,13 @@ export const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ status, onRefres
         await onRefresh();
         await new Promise((r) => setTimeout(r, 320));
       }
-      await emit('pet:remote-action', { action, message });
-      showToast(`已向桌面伴侣下发动作指令：${message}`, 'success');
+      await emit('pet:remote-action', {
+        action: item.action,
+        message: item.message,
+        sub: item.sub,
+        voiceKey: item.voiceKey,
+      });
+      showToast(`已向桌面伴侣下发原声动作指令：${item.message}`, 'success');
     } catch (err) {
       showToast(`伴侣指令发送失败: ${String(err)}`, 'error');
     }
@@ -326,7 +381,7 @@ export const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ status, onRefres
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
               <Volume2 className="h-4 w-4 text-sky-500" />
-              WebAudio 零依赖治愈合成器试听室（10 组实时波形）
+              WebAudio 零依赖治愈合成器试听室（12 组实时波形）
             </div>
             <span className="text-[11px] text-gray-400">点击任意音色立即合成播放</span>
           </div>
@@ -361,7 +416,7 @@ export const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ status, onRefres
                 <button
                   key={item.action}
                   type="button"
-                  onClick={() => handleRemotePetAction(item.action, item.message)}
+                  onClick={() => handleRemotePetAction(item)}
                   className="rounded-xl border border-gray-200 dark:border-white/15 bg-white dark:bg-white/5 hover:bg-pink-500/15 hover:border-pink-500/40 px-3 py-1.5 text-xs font-medium transition-colors"
                 >
                   {item.label}

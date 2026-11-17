@@ -3,7 +3,56 @@
  */
 class PetAudioEngine {
   private ctx: AudioContext | null = null;
+  private currentVoiceAudio: HTMLAudioElement | null = null;
+  private onVoiceStateCb: ((playing: boolean) => void) | null = null;
   public muted = false;
+
+  /** 停止当前正在播放的角色动漫原声语音 */
+  stopVoice() {
+    if (this.currentVoiceAudio) {
+      try {
+        this.currentVoiceAudio.pause();
+        this.currentVoiceAudio.currentTime = 0;
+      } catch {
+        // 忽略音频销毁异常
+      }
+      this.currentVoiceAudio = null;
+    }
+    if (this.onVoiceStateCb) {
+      this.onVoiceStateCb(false);
+      this.onVoiceStateCb = null;
+    }
+  }
+
+  /** 播放角色专属离线动漫原生语音（自动防叠音打断上一句） */
+  playVoice(dataUri?: string | null, onStateChange?: (playing: boolean) => void): boolean {
+    if (this.muted || !dataUri || typeof window === 'undefined') return false;
+    this.stopVoice();
+    try {
+      const audio = new Audio(dataUri);
+      audio.volume = 0.88;
+      this.currentVoiceAudio = audio;
+      this.onVoiceStateCb = onStateChange || null;
+      if (onStateChange) onStateChange(true);
+
+      const finish = () => {
+        if (this.currentVoiceAudio === audio) {
+          this.currentVoiceAudio = null;
+          if (this.onVoiceStateCb) {
+            this.onVoiceStateCb(false);
+            this.onVoiceStateCb = null;
+          }
+        }
+      };
+      audio.addEventListener('ended', finish, { once: true });
+      audio.addEventListener('error', finish, { once: true });
+      void audio.play().catch(finish);
+      return true;
+    } catch {
+      if (onStateChange) onStateChange(false);
+      return false;
+    }
+  }
 
   private ensureContext(): AudioContext | null {
     if (this.muted || typeof window === 'undefined') return null;

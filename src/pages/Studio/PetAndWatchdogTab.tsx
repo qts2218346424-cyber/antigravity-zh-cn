@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { emit } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
   Activity,
@@ -23,10 +24,12 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
+import { petAudio } from '../../components/pet/petAudio';
 import {
   normalizePetCharacter,
   PET_CHARACTER_ORDER,
   PET_CHARACTER_PROFILES,
+  type PetQuoteItem,
 } from '../../components/pet/petLogic';
 import { studioService } from '../../services/studioService';
 import type { MediaStatus, PetAssets, PetCharacterId, StudioStatus } from '../../types/studio';
@@ -54,6 +57,7 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
     lrc: '',
   });
   const [busy, setBusy] = useState(false);
+  const [playingVoiceKey, setPlayingVoiceKey] = useState<string | null>(null);
 
   useEffect(() => {
     setCharacter(normalizePetCharacter(status.pet_character));
@@ -69,8 +73,36 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
     };
     refreshMedia();
     const timer = window.setInterval(refreshMedia, 3000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      petAudio.stopVoice();
+    };
   }, [status.custom_pet_avatar]);
+
+  const handlePlayQuote = async (quote: PetQuoteItem) => {
+    petAudio.muted = false;
+    if (isTauri() && status.pet_window_open) {
+      await emit('pet:remote-action', {
+        action: 'pat',
+        message: quote.zh,
+        sub: quote.sub,
+        voiceKey: quote.voiceKey,
+      }).catch(() => {});
+      showToast(`已在桌面伴侣触发原声金句：${quote.zh}`, 'info');
+      return;
+    }
+
+    const uri = quote.voiceKey ? assets.voices?.[quote.voiceKey] : undefined;
+    if (uri && quote.voiceKey) {
+      const key = quote.voiceKey;
+      petAudio.playVoice(uri, (playing) => {
+        setPlayingVoiceKey(playing ? key : null);
+      });
+    } else {
+      petAudio.playCare();
+      showToast(quote.zh, 'info');
+    }
+  };
 
   const previewSrcForCharacter = (cid: PetCharacterId): string | null | undefined => {
     if (cid === 'nezuko') return assets.nezuko_chibi;
@@ -180,7 +212,7 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
             </span>
           </div>
 
-          {/* 6 大角色矩阵 */}
+          {/* 7 大角色生态矩阵 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {PET_CHARACTER_ORDER.map((cid) => {
               const item = PET_CHARACTER_PROFILES[cid];
@@ -229,6 +261,56 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
                 </button>
               );
             })}
+          </div>
+
+          {/* 当前选中角色：动漫原生语音与经典金句点播舱 */}
+          <div className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/5 via-pink-500/5 to-sky-500/5 p-4 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-900 dark:text-white">
+                <Volume2 className="h-4 w-4 text-pink-500" />
+                <span>
+                  {PET_CHARACTER_PROFILES[character].shortName} · 动漫原生语音与经典金句点播台
+                </span>
+              </div>
+              <span className="text-[10.5px] text-gray-500 dark:text-gray-400">
+                点击任意台词立即播放原生语音（伴侣开启时同步演绎）
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {PET_CHARACTER_PROFILES[character].quotes.map((q, idx) => {
+                const isVoiceActive = Boolean(q.voiceKey && playingVoiceKey === q.voiceKey);
+                return (
+                  <button
+                    key={`${character}-quote-${idx}`}
+                    type="button"
+                    onClick={() => handlePlayQuote(q)}
+                    className={`group rounded-xl border px-3 py-2 text-left transition-all ${
+                      isVoiceActive
+                        ? 'border-pink-500/60 bg-pink-500/15 ring-1 ring-pink-500/30'
+                        : 'border-gray-200/80 dark:border-white/10 bg-white/75 dark:bg-slate-950/55 hover:border-pink-400/50 hover:bg-pink-500/5'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[11.5px] font-medium text-gray-800 dark:text-slate-100 leading-snug">
+                        {q.zh}
+                      </span>
+                      <Volume2
+                        className={`h-3.5 w-3.5 shrink-0 mt-0.5 transition-transform ${
+                          isVoiceActive
+                            ? 'text-pink-500 scale-110 animate-pulse'
+                            : 'text-gray-400 group-hover:text-pink-500'
+                        }`}
+                      />
+                    </div>
+                    {q.sub && (
+                      <div className="mt-1 text-[10px] italic text-amber-600/90 dark:text-amber-300/80 truncate">
+                        {q.sub}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* 自定义形象管理条 */}

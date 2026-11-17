@@ -336,11 +336,15 @@ const PetWindowView: React.FC = () => {
   const [manualLineShift, setManualLineShift] = useState(0);
   const [switchingAccount, setSwitchingAccount] = useState(false);
   const [refreshingQuota, setRefreshingQuota] = useState(false);
+  const [voicePlaying, setVoicePlaying] = useState(false);
 
   const actionTimerRef = useRef<number | null>(null);
   const boxStepTimerRef = useRef<number | null>(null);
   const roamLoopRef = useRef<number | null>(null);
   const dragMonitorTimerRef = useRef<number | null>(null);
+  const quoteIdxRef = useRef<number>(0);
+  const assetsRef = useRef<PetAssets>({});
+  assetsRef.current = assets;
   const pointerDownRef = useRef<{ x: number; y: number; active: boolean; dragged: boolean }>({
     x: 0,
     y: 0,
@@ -404,38 +408,75 @@ const PetWindowView: React.FC = () => {
     window.setTimeout(() => setMoodIcon(''), ms);
   }, []);
 
-  const applyCharacterGreeting = useCallback((ch: PetCharacterId) => {
-    const p = PET_CHARACTER_PROFILES[ch] || PET_CHARACTER_PROFILES.nezuko;
-    const first = p.quotes[0];
-    setBubble(first.zh);
-    setSubBubble(first.sub || '');
+  const playVoiceByKey = useCallback((voiceKey?: string) => {
+    if (!voiceKey) return false;
+    const uri = assetsRef.current.voices?.[voiceKey];
+    if (!uri) return false;
+    return petAudio.playVoice(uri, setVoicePlaying);
   }, []);
 
+  const applyCharacterGreeting = useCallback(
+    (ch: PetCharacterId, speak = false) => {
+      const p = PET_CHARACTER_PROFILES[ch] || PET_CHARACTER_PROFILES.nezuko;
+      quoteIdxRef.current = 0;
+      const first = p.quotes[0];
+      setBubble(first.zh);
+      setSubBubble(first.sub || '');
+      if (speak && first.voiceKey) {
+        playVoiceByKey(first.voiceKey);
+      }
+    },
+    [playVoiceByKey],
+  );
+
+  const handleCycleAnimeQuote = useCallback(() => {
+    const quotes = profile.quotes;
+    if (!quotes || quotes.length === 0) return;
+    quoteIdxRef.current = (quoteIdxRef.current + 1) % quotes.length;
+    const item = quotes[quoteIdxRef.current];
+    setBubble(item.zh);
+    setSubBubble(item.sub || '');
+    showMood('💬', 1600);
+    spawnBatch(profile.particleKind, 7);
+    if (!playVoiceByKey(item.voiceKey)) {
+      petAudio.playCare();
+    }
+  }, [playVoiceByKey, profile, showMood, spawnBatch]);
+
   const triggerAction = useCallback(
-    (next: PetAction, msg?: string, durationMs = 2800) => {
+    (
+      next: PetAction,
+      msg?: string,
+      durationMs = 2800,
+      opts?: { sub?: string; voiceKey?: string; silentVoice?: boolean },
+    ) => {
       clearActionTimers();
       setAction(next);
 
+      let chosenVoiceKey = opts?.voiceKey;
       if (msg) {
         setBubble(msg);
-        setSubBubble('');
+        setSubBubble(opts?.sub || '');
       } else {
         const quotes = profile.quotes;
         const q = quotes[Math.floor(Math.random() * quotes.length)];
         setBubble(q.zh);
         setSubBubble(q.sub || '');
+        if (!chosenVoiceKey) chosenVoiceKey = q.voiceKey;
       }
 
+      const spoke = !opts?.silentVoice && playVoiceByKey(chosenVoiceKey);
+
       if (next === 'pat') {
-        petAudio.playCare();
+        if (!spoke) petAudio.playCare();
         showMood('💗');
         spawnBatch(profile.particleKind, 10);
       } else if (next === 'feed') {
-        petAudio.playCare();
+        if (!spoke) petAudio.playCare();
         showMood('🍬');
         spawnBatch('spark', 12);
       } else if (next === 'blood') {
-        petAudio.playBloodBurst();
+        if (!spoke) petAudio.playBloodBurst();
         showMood('🌸');
         spawnBatch('petal', 16);
       } else if (next === 'stomp') {
@@ -443,11 +484,11 @@ const PetWindowView: React.FC = () => {
         showMood('💢');
         spawnBatch('dust', 7);
       } else if (next === 'fox' || next === 'rose') {
-        petAudio.playStardust();
+        if (!spoke) petAudio.playStardust();
         showMood(next === 'fox' ? '🦊' : '🌹');
         spawnBatch('star', 11);
       } else if (next === 'stars') {
-        petAudio.playShootingStar();
+        if (!spoke) petAudio.playShootingStar();
         showMood('🌠');
         spawnBatch('star', 15);
       } else if (next === 'volcano') {
@@ -455,27 +496,27 @@ const PetWindowView: React.FC = () => {
         showMood('🌋');
         spawnBatch('dust', 6);
       } else if (next === 'dango_song') {
-        petAudio.playDangoMelody();
+        if (!spoke) petAudio.playDangoMelody();
         showMood('🍡', 2600);
         spawnBatch('dango', 13);
       } else if (next === 'sunflower') {
-        petAudio.playStardust();
+        if (!spoke) petAudio.playStardust();
         showMood('🌻', 2400);
         spawnBatch('star', 11);
       } else if (next === 'light_orb') {
-        petAudio.playLightOrb();
+        if (!spoke) petAudio.playLightOrb();
         showMood('✨', 2600);
         spawnBatch('orb', 14);
       } else if (next === 'water_slash') {
-        petAudio.playWaterBreath();
+        if (!spoke) petAudio.playWaterBreath();
         showMood('🌊');
         spawnBatch('water', 14);
       } else if (next === 'thunder_dash') {
-        petAudio.playThunderSpark();
+        if (!spoke) petAudio.playThunderSpark();
         showMood('⚡');
         spawnBatch('lightning', 12);
       } else if (next === 'beast_rush') {
-        petAudio.playBeastRoar();
+        if (!spoke) petAudio.playBeastRoar();
         showMood('🐗');
         spawnBatch('dust', 9);
       } else if (next === 'box_spin') {
@@ -485,10 +526,12 @@ const PetWindowView: React.FC = () => {
           petAudio.playWoodThud();
           spawnBatch('petal', 12);
           setAction('box_peek');
-          setBubble('半掩大正木箱门，悄悄探出小脑袋好奇张望 👀');
+          if (!spoke) {
+            setBubble('半掩大正木箱门，悄悄探出小脑袋好奇张望 👀');
+          }
           actionTimerRef.current = window.setTimeout(() => {
             setAction('idle');
-          }, 2500);
+          }, 2600);
         }, 1250);
         return;
       } else if (next === 'dash') {
@@ -514,11 +557,13 @@ const PetWindowView: React.FC = () => {
             petAudio.playFootstep();
             spawnBatch('dust', 5);
             setAction('skid');
-            setBubble(
-              character === 'nezuko'
-                ? '风火轮急刹车！稳稳停住啦 ✨'
-                : '迎着星风轻盈收步停驻 ✨',
-            );
+            if (!spoke) {
+              setBubble(
+                character === 'nezuko'
+                  ? '风火轮急刹车！稳稳停住啦 ✨'
+                  : '迎着星风轻盈收步停驻 ✨',
+              );
+            }
             actionTimerRef.current = window.setTimeout(() => setAction('idle'), 460);
           }
         }, 65);
@@ -553,7 +598,7 @@ const PetWindowView: React.FC = () => {
         }, durationMs);
       }
     },
-    [character, clearActionTimers, profile, showMood, spawnBatch],
+    [character, clearActionTimers, playVoiceByKey, profile, showMood, spawnBatch],
   );
 
   // 初始化状态同步与拟人化随机自然眨眼（含俏皮双眨眼）
@@ -604,11 +649,17 @@ const PetWindowView: React.FC = () => {
         .then((fn) => unlisteners.push(fn))
         .catch(() => {});
 
-      listen<{ action: PetAction; message?: string }>('pet:remote-action', (ev) => {
-        if (ev.payload?.action) {
-          triggerAction(ev.payload.action, ev.payload.message);
-        }
-      })
+      listen<{ action: PetAction; message?: string; sub?: string; voiceKey?: string }>(
+        'pet:remote-action',
+        (ev) => {
+          if (ev.payload?.action) {
+            triggerAction(ev.payload.action, ev.payload.message, 3200, {
+              sub: ev.payload.sub,
+              voiceKey: ev.payload.voiceKey,
+            });
+          }
+        },
+      )
         .then((fn) => unlisteners.push(fn))
         .catch(() => {});
 
@@ -678,6 +729,7 @@ const PetWindowView: React.FC = () => {
 
     return () => {
       cancelled = true;
+      petAudio.stopVoice();
       clearActionTimers();
       if (dragMonitorTimerRef.current) window.clearTimeout(dragMonitorTimerRef.current);
       window.clearInterval(quotaTimer);
@@ -767,6 +819,8 @@ const PetWindowView: React.FC = () => {
           character === 'prince'
             ? '金黄丝巾随风微扬，踏着星尘漫步…'
             : `${profile.shortName}沿桌面轻快散步中…`,
+          2800,
+          { silentVoice: true },
         );
       } else if (roll < 0.74) {
         triggerAction(
@@ -776,6 +830,8 @@ const PetWindowView: React.FC = () => {
             : character === 'prince'
               ? '迎着星海微风追逐金色日落 ✨'
               : `${profile.shortName}轻盈疾跑巡视！`,
+          2800,
+          { silentVoice: true },
         );
       } else if (roll < 0.86) {
         setFacing((f) => (f === 1 ? -1 : 1));
@@ -837,8 +893,7 @@ const PetWindowView: React.FC = () => {
     setCharacter(next);
     setAction('idle');
     setPickerOpen(false);
-    applyCharacterGreeting(next);
-    petAudio.playCare();
+    applyCharacterGreeting(next, true);
     studioService.updatePetPrefs({ character: next }).catch(() => {});
   };
 
@@ -876,8 +931,9 @@ const PetWindowView: React.FC = () => {
   const toggleMute = () => {
     const next = !muted;
     petAudio.muted = next;
+    if (next) petAudio.stopVoice();
     setMuted(next);
-    setBubble(next ? '🔇 互动音效已静音' : '🔊 治愈合成音效已开启');
+    setBubble(next ? '🔇 原声语音与互动音效已静音' : '🔊 角色动漫原声与治愈音效已开启');
     studioService.updatePetPrefs({ muted: next }).catch(() => {});
   };
 
@@ -1133,7 +1189,7 @@ const PetWindowView: React.FC = () => {
         </button>
       </div>
 
-      {/* 角色矩阵弹出抽屉（6 角色切换 + 本地透明立绘导入） */}
+      {/* 角色矩阵弹出抽屉（7 角色切换 + 本地透明立绘导入） */}
       {pickerOpen && (
         <div
           data-no-drag
@@ -1178,18 +1234,33 @@ const PetWindowView: React.FC = () => {
         </div>
       )}
 
-      {/* 玻璃微胶囊对白气泡 */}
-      <div
-        className="mb-1.5 max-w-[340px] rounded-2xl bg-slate-950/78 px-3.5 py-1.5 text-center text-[11.5px] font-medium text-slate-100 backdrop-blur-2xl border border-white/15 transition-all"
+      {/* 玻璃微胶囊对白气泡（点击可循环聆听当前角色动漫原生经典金句） */}
+      <button
+        type="button"
+        data-no-drag
+        onClick={handleCycleAnimeQuote}
+        title="点击切换并播放下一句动漫原生金句语音"
+        className="group mb-1.5 max-w-[346px] rounded-2xl bg-slate-950/80 hover:bg-slate-900/90 px-3.5 py-1.5 text-center text-[11.5px] font-medium text-slate-100 backdrop-blur-2xl border border-white/15 hover:border-white/30 transition-all cursor-pointer"
         style={{
           boxShadow: '0 10px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.16)',
         }}
       >
-        <div className="leading-snug">{bubble}</div>
+        <div className="inline-flex items-center justify-center gap-1.5 leading-snug">
+          {!muted && (
+            <Volume2
+              className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                voicePlaying
+                  ? 'text-pink-400 scale-110 animate-pulse'
+                  : 'text-sky-300/70 group-hover:text-sky-300'
+              }`}
+            />
+          )}
+          <span>{bubble}</span>
+        </div>
         {subBubble && (
-          <div className="text-[9.5px] italic text-amber-200/80 mt-0.5">{subBubble}</div>
+          <div className="text-[9.5px] italic text-amber-200/85 mt-0.5">{subBubble}</div>
         )}
-      </div>
+      </button>
 
       {/* 3D 视差生态玻璃容器舞台 */}
       <div
@@ -1381,11 +1452,18 @@ const PetWindowView: React.FC = () => {
           id="pet-character-viewport"
           onClick={() => {
             if (pointerDownRef.current.dragged) return;
-            triggerAction('pat', profile.actions[0]?.bubble);
+            const firstAct = profile.actions[0];
+            triggerAction('pat', firstAct?.bubble, 3200, {
+              sub: firstAct?.sub,
+              voiceKey: firstAct?.voiceKey,
+            });
           }}
           onDoubleClick={() => {
             if (pointerDownRef.current.dragged) return;
-            triggerAction(profile.doubleClickAction, profile.doubleClickBubble);
+            triggerAction(profile.doubleClickAction, profile.doubleClickBubble, 3200, {
+              sub: profile.doubleClickSub,
+              voiceKey: profile.doubleClickVoiceKey,
+            });
           }}
           className="pet-spring-transform relative z-10 flex items-end justify-center"
           style={{
@@ -1472,7 +1550,12 @@ const PetWindowView: React.FC = () => {
           <button
             key={`${character}-${act.action}-${act.label}`}
             type="button"
-            onClick={() => triggerAction(act.action, act.bubble)}
+            onClick={() =>
+              triggerAction(act.action, act.bubble, 3200, {
+                sub: act.sub,
+                voiceKey: act.voiceKey,
+              })
+            }
             className={`px-2 py-0.5 rounded-full transition-colors ${act.toneClass}`}
           >
             {act.label}
@@ -1484,8 +1567,16 @@ const PetWindowView: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setSunsetMode((s) => !s);
-                setBubble(!sunsetMode ? 'B612 的第四十四次金色日落' : '深蓝星海悄然笼罩天穹');
+                const enteringSunset = !sunsetMode;
+                setSunsetMode(enteringSunset);
+                if (enteringSunset) {
+                  setBubble('「在我的 B612 小星球上，我一天看过四十四次金色日落 🌠」');
+                  setSubBubble("Sur ma petite planète, j'ai vu le soleil se coucher quarante-quatre fois.");
+                  playVoiceByKey('prince_sunset');
+                } else {
+                  setBubble('深蓝星海悄然笼罩天穹 ✨');
+                  setSubBubble('');
+                }
               }}
               className="px-2 py-0.5 rounded-full hover:bg-amber-500/25 transition-colors inline-flex items-center gap-1"
             >
@@ -1518,11 +1609,30 @@ const PetWindowView: React.FC = () => {
                 action === 'sleep' ? 'idle' : 'sleep',
                 character === 'ushio'
                   ? action === 'sleep'
-                    ? '揉揉眼睛醒来啦，粉色大团子也精神满满 🍡'
-                    : '趴在软绵绵的团子大家族抱枕堆上香甜午睡…'
+                    ? '「早安呀！小汐和粉色大团子又充满元气啦 🍡」'
+                    : '「唔…眼皮快合上啦…晚安呀，愿你也能做个暖呼呼的好梦…」'
                   : action === 'sleep'
-                    ? '睡醒伸个懒腰，重新元气满满陪着你'
-                    : '缩小钻进手工编织竹篓安心甜睡…',
+                    ? '「早…早上好！平安无事真是太好了呢 ✨」'
+                    : '「为什么要老是道歉呢？你每天都这么努力了…一起歇会儿吧…」',
+                3200,
+                {
+                  sub:
+                    character === 'ushio'
+                      ? action === 'sleep'
+                        ? 'うん！おっきいだんごも一緒だよ♪'
+                        : 'おやすみなさい、あったかい夢が見られますように…'
+                      : action === 'sleep'
+                        ? 'お…おはよう！本当によかったね！'
+                        : '毎日こんなに頑張ってるのに…少し一緒に休もうね…',
+                  voiceKey:
+                    character === 'ushio'
+                      ? action === 'sleep'
+                        ? 'ushio_trip'
+                        : 'ushio_sleep'
+                      : action === 'sleep'
+                        ? 'nezuko_ohayou'
+                        : 'nezuko_apologize',
+                },
               )
             }
             className="px-2 py-0.5 rounded-full hover:bg-indigo-500/25 text-indigo-200 transition-colors"

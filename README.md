@@ -30,7 +30,7 @@
 | 🎨 **高定光学材质引擎** | 内置 10 款精选主题（含《CLANNAD》四重奏皮肤）与 `surfaces` 物理表面参数编译器（圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`），支持画廊微缩 IDE 实时预览与 **Color DNA** 在线调色实验室。 |
 | ⚡ **双端同步无损注入** | 主程序 (`Antigravity` 客户端) 通过 `BaseWindow + WebContentsView` 全子视图监听器与实时 CSS 变量引擎驱动热重载；`Antigravity IDE` 同步编译至 `workbench.desktop.main.css` 与 `jetskiMain.tailwind.css`，彻底免除主进程 `FSWatcher EPERM` 崩溃与旧补丁污染。 |
 | 🈶 **全量双层汉化系统** | 原生 Rust 实现 `app.asar` 无损解包与 SHA-256 Integrity 重建，支持 `zh-CN` / `zh-TW` / `zh-HK`，覆盖 Electron 主进程菜单/托盘与渲染层全部 UI；保留官方原版极速启动流程，精确避让代码区、终端与模型正文，并内置 **老版本内置宠物代码 (`__AGY_NEZUKO_PET_INITIALIZED__`) 自动侦测与剥离清理**。 |
-| 🪐 **独立灵动桌面伴侣** | 从客户端进程完全剥离，运行于独立透明置顶窗口（`index.html?pet=1`），搭载高精零白边多姿态透明原画、2.5D 弹性动力学与 3D 视差效果、灵动岛状态玻璃坞、毫秒级 LRC 二分时间轴黑胶歌词舱、低配额预警及配额舱内一键刷新/切号；内置 **祢豆子（米豆子）、小王子、冈崎汐（团子大家族）、炭治郎、善逸、伊之助** 6 大动漫角色，并支持 **自定义本地 PNG/WebP/GIF/SVG 立绘热导入**。 |
+| 🪐 **独立灵动桌面伴侣** | 从客户端进程完全剥离，运行于独立透明置顶窗口（`index.html?pet=1`），搭载高精零白边多姿态透明原画、**22 条离线零延迟动漫原生语音包与双语经典金句系统**、2.5D 弹性动力学与 3D 视差效果、灵动岛状态玻璃坞、毫秒级 LRC 二分时间轴黑胶歌词舱、低配额预警及配额舱内一键刷新/切号；内置 **祢豆子（米豆子）、小王子、冈崎汐（团子大家族）、炭治郎、善逸、伊之助** 6 大动漫角色及 **自定义本地 PNG/WebP/GIF/SVG 立绘热导入**（共 7 角色生态）。 |
 | 🧪 **全链路自检与测试台** | 内置可视化 **全链路测试台 (`DiagnosticsTab`)** 一键巡检后端词典、光学材质编译器、伴侣骨骼缓存、客户端路径探测与本地 API 反代连通性，同时提供伴侣动作/合成音效沙盒演练；工程侧配备零外部依赖 `npm test` 自动化单元测试引擎。 |
 | 🛡️ **Tokio 自动维护哨兵** | 后台异步守护线程定时检查官方版本更新及哈希变更，一旦官方更新覆盖了 `app.asar` 或 IDE 样式，待客户端空闲后自动静默重注汉化、Skill 描述与当前激活材质。 |
 | 🔑 **账号调度与反代网关** | 原生管理多账号 OAuth / Token 刷新、额度监控、“蹬额度”智能切换调度、Token 用量统计、请求调用监控与本地 HTTP API 代理服务。 |
@@ -77,9 +77,10 @@
 
 桌面伴侣（[`PetWindowView.tsx`](src/components/pet/PetWindowView.tsx)、[`petLogic.ts`](src/components/pet/petLogic.ts) 与 [`PetAndWatchdogTab.tsx`](src/pages/Studio/PetAndWatchdogTab.tsx)）作为完全独立的透明无边框悬浮窗运行，顶栏右侧与系统托盘均内置快捷呼出开关：
 - **7 大角色生态与自由立绘定制**：内置 **灶门祢豆子（8 态高精原画与 3D 大正木箱）**、**B612 小王子（颈后双尾 Verlet 物理丝巾与星海玫瑰）**、**冈崎汐 & 团子大家族（八音盒旋律、三色团子叠叠乐与向日葵花田光玉）**、**灶门炭治郎（水之呼吸流体刀纹）**、**我妻善逸（霹雳一闪金雷残影）**、**嘴平伊之助（猪突猛进兽之呼吸）**，并支持一键热导入本地透明 PNG / WebP / GIF / SVG 自定义形象；
+- **22 条离线动漫原生语音与经典金句点播**：离线打包《CLANNAD》冈崎汐 6 句催泪治愈名台词（「能哭的地方，只有厕所，和爸爸的怀里…」「团子大家族」等）、灶门祢豆子/米豆子 6 句克服阳光与竹筒撒娇原声、B612 小王子纯正法语童声原著独白及鬼杀队日语原声，支持悬浮窗对白气泡循环点播、动作联动触发与主界面点播台试听（自主漫步全程静默免打扰）；
 - **物理弹簧缓动与防抖解耦拖拽**：采用现代 CSS `linear()` 弹簧曲线（自动适配系统 `prefers-reduced-motion` 无障碍减弱动态设置）与 `5px` 指针位移物理阈值解耦，完美兼顾单击摸头、双击绝技、拖拽拎起与窗口底边任务栏安全锚定；
 - **灵动岛、低配额预警与一键切号**：实时监控当前账号主模型算力健康度，低于阈值自动弹出预警气泡，支持在悬浮配额舱内直接刷新额度或一键切换备用账号；
-- **声学黑胶与毫秒级 LRC 歌词舱**：搭载 10 组 WebAudio 程序化合成音色，联动本机媒体播放状态，基于二分查找实现多时间标签与 `offset` 校准的毫秒级歌词滚动同步。
+- **声学黑胶与毫秒级 LRC 歌词舱**：搭载 12 组 WebAudio 程序化合成音色，联动本机媒体播放状态，基于二分查找实现多时间标签与 `offset` 校准的毫秒级歌词滚动同步。
 
 ---
 
@@ -89,7 +90,7 @@
 
 ```bash
 # 1. 统一递增 package.json / src-tauri/tauri.conf.json / src-tauri/Cargo.toml 版本号
-node scripts/bump-version.mjs 5.2.0
+node scripts/bump-version.mjs 5.3.0
 
 # 2. 执行全量自动化单元测试与 TypeScript + Vite 生产打包校验
 npm test
@@ -97,9 +98,9 @@ npm run build
 
 # 3. 提交并推送版本标签以触发全平台构建与 OTA 制品发布
 git add -A
-git commit -m "chore: 发布 v5.2.0"
-git tag v5.2.0
-git push origin main v5.2.0
+git commit -m "chore: 发布 v5.3.0"
+git tag v5.3.0
+git push origin main v5.3.0
 ```
 
 ---
@@ -142,8 +143,8 @@ antigravity-zh-cn/
 ├── .github/workflows/
 │   └── release.yml                # 多平台 Tauri 自动构建与 OTA 发布流水线
 ├── resources/
-│   ├── skins/                     # 6 款内置高定光学材质主题包（skin.json / 变量 / 纹理）
-│   ├── media/                     # 桌面伴侣高清 WebP 分肢与立绘资产
+│   ├── skins/                     # 10 款内置高定光学材质主题包（含 CLANNAD 四重奏）
+│   ├── media/                     # 桌面伴侣高清多姿态透明原画与 voices/ 离线动漫原生语音库
 │   ├── antigravity-zh-*.json      # 简/繁体双语界面词典
 │   ├── rules-zh-CN.json           # 动态正则汉化规则库
 │   ├── desktop-zh-CN.json         # 客户端主进程菜单与托盘汉化字典

@@ -416,13 +416,14 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
         let loaded_count = checks.into_iter().filter(|b| *b).count();
         items.push(StudioDiagnosticItem {
             key: "pet_assets".to_string(),
-            name: "桌面伴侣多姿态原画与 5 大内置角色材质缓存".to_string(),
-            passed: loaded_count == total_expected,
+            name: "桌面伴侣多姿态原画、动漫原生语音与全角色材质缓存".to_string(),
+            passed: loaded_count == total_expected && assets.voices.len() >= 20,
             duration_ms: t3.elapsed().as_millis() as u64,
             detail: format!(
-                "祢豆子与小王子全套多姿态透明原画及全角色资产已就绪 ({}/{}){}",
+                "全套多姿态透明原画 ({}/{}) 与 {} 条动漫原生金句语音已就绪{}",
                 loaded_count,
                 total_expected,
+                assets.voices.len(),
                 if assets.custom_avatar.is_some() {
                     "，且已挂载用户自定义专属立绘"
                 } else {

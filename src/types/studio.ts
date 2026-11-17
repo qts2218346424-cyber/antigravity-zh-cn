@@ -215,4 +215,5 @@ export interface PetAssets {
   zenitsu_thunder?: string | null;
   inosuke_beast?: string | null;
   custom_avatar?: string | null;
+  voices?: Record<string, string>;
 }

@@ -1,4 +1,5 @@
 import {
+  BUILTIN_VOICE_KEYS,
   evaluateLowQuotaAlert,
   findActiveLyricIndex,
   normalizePetCharacter,
@@ -124,6 +125,80 @@ test('4. 窗口拖拽位移阈值与低配额预警判定准确', () => {
   );
   assertEqual(alert.hasLowQuota, true);
   assertEqual(alert.lowestPercentage, 12);
+});
+
+test('5. 全角色动漫原生语音键名与冈崎汐/米豆子经典金句矩阵 100% 对齐无悬空', () => {
+  assertEqual(BUILTIN_VOICE_KEYS.length, 22);
+  const validKeys = new Set<string>(BUILTIN_VOICE_KEYS);
+  assertEqual(validKeys.size, 22);
+
+  // 校验冈崎汐 (CLANNAD After Story) 6 句催泪与治愈经典金句及原生语音
+  const ushio = PET_CHARACTER_PROFILES.ushio;
+  assertEqual(ushio.quotes.length, 6);
+  assertOk(
+    ushio.quotes.some((q) => q.zh.includes('厕所') && q.zh.includes('爸爸的怀里') && q.voiceKey === 'ushio_toilet'),
+    '冈崎汐缺少「厕所和爸爸的怀里」经典金句',
+  );
+  assertOk(
+    ushio.quotes.some((q) => q.zh.includes('团子大家族') && q.voiceKey === 'ushio_dango'),
+    '冈崎汐缺少「团子大家族」经典金句',
+  );
+  assertOk(
+    ushio.quotes.some((q) => q.zh.includes('第一个买给我的') && q.voiceKey === 'ushio_robot'),
+    '冈崎汐缺少「花田小机器人宝物」经典金句',
+  );
+  assertOk(
+    ushio.quotes.some((q) => q.zh.includes('不用再忍耐') && q.voiceKey === 'ushio_sanae'),
+    '冈崎汐缺少「早苗奶奶与光玉」经典金句',
+  );
+  for (const q of ushio.quotes) {
+    assertOk(Boolean(q.sub && q.sub.length > 0), '冈崎汐金句缺少日语原声副标');
+    assertOk(Boolean(q.voiceKey && validKeys.has(q.voiceKey)), `冈崎汐无效语音键: ${q.voiceKey}`);
+  }
+
+  // 校验灶门祢豆子（米豆子）6 句鬼灭经典金句与萌音
+  const nezuko = PET_CHARACTER_PROFILES.nezuko;
+  assertEqual(nezuko.quotes.length, 6);
+  assertOk(
+    nezuko.quotes.some((q) => q.zh.includes('早上好') && q.voiceKey === 'nezuko_ohayou'),
+    '米豆子缺少克服阳光「早…早上好」经典金句',
+  );
+  assertOk(
+    nezuko.quotes.some((q) => q.zh.includes('幸不幸福是由自己决定') && q.voiceKey === 'nezuko_happiness'),
+    '米豆子缺少「幸不幸福由自己决定」经典金句',
+  );
+  assertOk(
+    nezuko.quotes.some((q) => q.zh.includes('血鬼术·爆血') && q.voiceKey === 'nezuko_blood'),
+    '米豆子缺少「血鬼术·爆血」经典金句',
+  );
+  for (const q of nezuko.quotes) {
+    assertOk(Boolean(q.sub && q.sub.length > 0), '米豆子金句缺少日语原声副标');
+    assertOk(Boolean(q.voiceKey && validKeys.has(q.voiceKey)), `米豆子无效语音键: ${q.voiceKey}`);
+  }
+
+  // 遍历全角色校验所有引用到的 voiceKey 均存在于 22 条内置音频池中，且全部 22 条音频均被覆盖
+  const referencedKeys = new Set<string>();
+  for (const cid of PET_CHARACTER_ORDER) {
+    const p = PET_CHARACTER_PROFILES[cid];
+    if (p.doubleClickVoiceKey) {
+      assertOk(validKeys.has(p.doubleClickVoiceKey), `${cid} doubleClickVoiceKey 非法: ${p.doubleClickVoiceKey}`);
+      referencedKeys.add(p.doubleClickVoiceKey);
+    }
+    for (const q of p.quotes) {
+      if (q.voiceKey) {
+        assertOk(validKeys.has(q.voiceKey), `${cid} quote voiceKey 非法: ${q.voiceKey}`);
+        referencedKeys.add(q.voiceKey);
+      }
+    }
+    for (const act of p.actions) {
+      if (act.voiceKey) {
+        assertOk(validKeys.has(act.voiceKey), `${cid} action voiceKey 非法: ${act.voiceKey}`);
+        referencedKeys.add(act.voiceKey);
+      }
+    }
+  }
+  // 加上 PetWindowView 休眠触发的 ushio_sleep / nezuko_apologize 已在 quotes 中注册，因此 referencedKeys 应正好等于 22
+  assertEqual(referencedKeys.size, 22, '存在未被角色语录或动作引用的孤立内置语音');
 });
 
 console.log(`\n测试汇总: ${passed} 通过, ${failed} 失败`);

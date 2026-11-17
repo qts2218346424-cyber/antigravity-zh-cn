@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Antigravity Studio",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "identifier": "com.qts.antigravity-studio",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -79,7 +79,8 @@
       "../resources/runtime-zh.js": "agzh-resources/runtime-zh.js",
       "../resources/skin-runtime.js": "agzh-resources/skin-runtime.js",
       "../resources/clannad-splash-runtime.js": "agzh-resources/clannad-splash-runtime.js",
-      "../resources/media/*": "agzh-resources/media/",
+      "../resources/media/*.webp": "agzh-resources/media/",
+      "../resources/media/voices/*": "agzh-resources/media/voices/",
       "../resources/skins/clannad-after-sunflower/preview.svg": "agzh-resources/skins/clannad-after-sunflower/preview.svg",
       "../resources/skins/clannad-after-sunflower/skin.json": "agzh-resources/skins/clannad-after-sunflower/skin.json",
       "../resources/skins/clannad-after-sunflower/sunflower-breeze.svg": "agzh-resources/skins/clannad-after-sunflower/sunflower-breeze.svg",

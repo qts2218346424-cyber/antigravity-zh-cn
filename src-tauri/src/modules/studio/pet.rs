@@ -53,6 +53,41 @@ fn read_media_data_uri(stem: &str) -> Option<String> {
     None
 }
 
+fn read_voice_data_uris() -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+    let vdir = resources_dir().join("media").join("voices");
+    let Ok(entries) = std::fs::read_dir(&vdir) else {
+        return map;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        let mime = match ext.as_str() {
+            "mp3" => "audio/mpeg",
+            "ogg" => "audio/ogg",
+            "wav" => "audio/wav",
+            _ => continue,
+        };
+        let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        if let Ok(bytes) = std::fs::read(&path) {
+            map.insert(
+                stem.to_string(),
+                format!("data:{};base64,{}", mime, BASE64_STANDARD.encode(&bytes)),
+            );
+        }
+    }
+    map
+}
+
 fn read_custom_avatar_data_uri() -> Option<String> {
     let cfg = load_studio_config();
     if let Some(ref saved_path) = cfg.custom_pet_avatar {
@@ -122,6 +157,7 @@ pub fn get_pet_assets() -> PetAssets {
             zenitsu_thunder: read_media_data_uri("zenitsu_thunder"),
             inosuke_beast: read_media_data_uri("inosuke_beast"),
             custom_avatar: None,
+            voices: read_voice_data_uris(),
         })
         .clone();
 
