@@ -851,12 +851,23 @@ pub async fn sync_account_from_db(
     let current_target = index.current_target_ide.as_deref();
     let is_agy = current_target == Some("agy");
 
-    // 1. Read the credential source used by the selected client. For agy, do
-    // not mistake an older file credential for the active keyring account.
+    // 1. Read the credential source used by the selected client, falling back across all local DBs when target is unset.
     let credential = if is_agy {
         modules::integration::read_from_system_keyring_only().map(|state| state.refresh_token)
     } else {
-        modules::migration::get_refresh_token_from_db(current_target)
+        modules::migration::get_refresh_token_from_db(current_target).or_else(|_| {
+            for db_path in modules::db::get_all_antigravity_db_paths() {
+                if db_path.exists() {
+                    if let Ok(token) = modules::migration::extract_refresh_token_from_file(&db_path)
+                    {
+                        if !token.trim().is_empty() {
+                            return Ok(token);
+                        }
+                    }
+                }
+            }
+            Err("未检测到本地客户端登录凭据".to_string())
+        })
     };
     let db_refresh_token = match credential {
         Ok(token) => token,
@@ -866,27 +877,39 @@ pub async fn sync_account_from_db(
         }
     };
 
-    // 2. 获取 Manager 当前账号
+    // 2. 获取 Manager 当前账号与全部已管账号
     let curr_account = modules::account::get_current_account()?;
+    let managed_accounts = modules::account::list_accounts().unwrap_or_default();
+    let already_managed = managed_accounts
+        .iter()
+        .find(|a| a.token.refresh_token == db_refresh_token)
+        .cloned();
 
-    // 3. 对比：如果 Refresh Token 相同，说明账号没变，无需导入
-    if let Some(acc) = curr_account {
-        if acc.token.refresh_token == db_refresh_token {
-            // 账号未变，由于已经是周期性任务，我们可以选择性刷新一下配额，或者直接返回
-            // 这里为了节省 API 流量，直接返回
+    // 3. 对比：如果当前活跃账号就是该 Refresh Token 且已有配额数据，无需重复导入
+    if let Some(ref acc) = curr_account {
+        if acc.token.refresh_token == db_refresh_token && acc.quota.is_some() {
             return Ok(None);
         }
-        modules::logger::log_info(&format!("检测到登录凭据变化 ({})，正在同步...", acc.email));
-    } else {
-        modules::logger::log_info("检测到新登录账号，正在自动同步...");
+        if acc.token.refresh_token != db_refresh_token {
+            modules::logger::log_info(&format!("检测到登录凭据变化 ({})，正在同步...", acc.email));
+        }
+    } else if already_managed.is_none() {
+        modules::logger::log_info("检测到本机新登录账号，正在自动同步...");
     }
 
-    // 4. For the CLI, reconcile only the matching managed account; importing
-    // all local sources could select an unrelated IDE account if refresh fails.
+    // 4. 若账号已在池中但并非当前账号（或尚无配额），直接复用或从本地全源导入匹配的账号
     let mut account = if is_agy {
-        modules::account::find_agy_account(modules::account::list_accounts()?, &db_refresh_token)?
+        modules::account::find_agy_account(managed_accounts, &db_refresh_token)?
+    } else if let Some(existing) = already_managed {
+        existing
     } else {
-        modules::migration::import_from_db(current_target).await?
+        let imported = modules::migration::import_all_local_accounts(current_target).await?;
+        imported
+            .iter()
+            .find(|a| a.token.refresh_token == db_refresh_token)
+            .cloned()
+            .or_else(|| imported.into_iter().next())
+            .ok_or_else(|| "未找到匹配的本地同步账号".to_string())?
     };
 
     // 更新 Manager 的当前账号并保留客户端目标，不写回客户端凭据。
@@ -895,6 +918,11 @@ pub async fn sync_account_from_db(
 
     // 自动触发刷新额度
     let _ = internal_refresh_account_quota(&app, &mut account).await;
+
+    // 重新读取包含最新配额与订阅等级的完整账号对象
+    if let Ok(fresh_acc) = modules::load_account(&account_id) {
+        account = fresh_acc;
+    }
 
     // 刷新托盘图标展示
     crate::modules::tray::update_tray_menus(&app);

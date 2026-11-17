@@ -8,14 +8,12 @@ interface NavMenuProps {
 }
 
 /**
- * 导航菜单组件 - 独立处理响应式
- * 
+ * 导航菜单组件 - 精简响应式层级（零重复 DOM）
+ *
  * 响应式策略:
- * - ≥ 768px (md): 文字胶囊
- * - 640px - 768px: 图标胶囊 (Logo 显示文字)
- * - 480px - 640px: 图标胶囊 (Logo 隐藏文字)
- * - 375px - 480px: 图标+文字下拉
- * - < 375px: 图标下拉
+ * - ≥ 1080px: 紧凑文字胶囊（适配 1120px 默认窗口宽度；≥ 1380px 自动展示前置微图标）
+ * - 480px - 1079px: 单套图标胶囊（悬停展示完整模块名）
+ * - < 480px: 折叠下拉导航菜单（≥ 375px 展示当前模块名）
  */
 export function NavMenu({ navItems }: NavMenuProps) {
     const location = useLocation();
@@ -26,105 +24,75 @@ export function NavMenu({ navItems }: NavMenuProps) {
 
     return (
         <>
-            {/* 文字胶囊 (≥ 1120px) */}
-            <nav className="max-[1119px]:hidden flex items-center gap-1 bg-gray-100 dark:bg-base-200 rounded-full p-1">
-                {visibleNavItems.map((item) => (
-                    <Link
-                        key={item.path}
-                        to={item.path}
-                        draggable="false"
-                        className={`
-                            px-4 xl:px-6
-                            py-2 
-                            rounded-full 
-                            text-sm 
-                            font-medium 
-                            transition-all 
-                            whitespace-nowrap
-                            inline-flex
-                            items-center
-                            gap-1.5
-                            ${isActive(location.pathname, item.path)
-                                ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
-                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100'
-                            }
-                        `}
-                    >
-                        <span>{item.label}</span>
-                    </Link>
-                ))}
+            {/* 紧凑图文胶囊 (≥ 1080px，完美兼容 1120px 默认主窗口) */}
+            <nav
+                aria-label="主导航"
+                className="max-[1079px]:hidden flex items-center gap-0.5 xl:gap-1 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1 shadow-xs"
+            >
+                {visibleNavItems.map((item) => {
+                    const active = isActive(location.pathname, item.path);
+                    return (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            draggable="false"
+                            aria-current={active ? 'page' : undefined}
+                            className={`
+                                px-2.5 xl:px-3.5
+                                py-1.5
+                                rounded-full
+                                text-xs xl:text-sm
+                                font-medium
+                                transition-all
+                                whitespace-nowrap
+                                inline-flex
+                                items-center
+                                gap-1.5
+                                ${active
+                                    ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
+                                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200/80 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100'
+                                }
+                            `}
+                        >
+                            <item.icon className="hidden min-[1380px]:block w-3.5 h-3.5 shrink-0" />
+                            <span>{item.label}</span>
+                        </Link>
+                    );
+                })}
             </nav>
 
-            {/* 图标胶囊 (880px - 1120px) - Logo 显示文字 */}
-            <nav className="max-[879px]:hidden min-[1120px]:hidden flex items-center gap-1 bg-gray-100 dark:bg-base-200 rounded-full p-1">
-                {visibleNavItems.map((item) => (
-                    <Link
-                        key={item.path}
-                        to={item.path}
-                        draggable="false"
-                        className={`
-                            p-2
-                            rounded-full
-                            transition-all
-                            ${isActive(location.pathname, item.path)
-                                ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
-                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100'
-                            }
-                        `}
-                        title={item.label}
-                    >
-                        <item.icon className="w-5 h-5" />
-                    </Link>
-                ))}
+            {/* 图标胶囊 (480px - 1079px，合并消除原先 3 套重复 DOM) */}
+            <nav
+                aria-label="主导航"
+                className="max-[479px]:hidden min-[1080px]:hidden flex items-center gap-1 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1"
+            >
+                {visibleNavItems.map((item) => {
+                    const active = isActive(location.pathname, item.path);
+                    return (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            draggable="false"
+                            aria-current={active ? 'page' : undefined}
+                            aria-label={item.label}
+                            className={`
+                                p-2
+                                rounded-full
+                                transition-all
+                                ${active
+                                    ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
+                                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100'
+                                }
+                            `}
+                            title={item.label}
+                        >
+                            <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Link>
+                    );
+                })}
             </nav>
 
-            {/* 图标胶囊 (640px - 880px) - Logo 隐藏文字 */}
-            <nav className="max-[639px]:hidden min-[880px]:hidden flex items-center gap-1 bg-gray-100 dark:bg-base-200 rounded-full p-1">
-                {visibleNavItems.map((item) => (
-                    <Link
-                        key={item.path}
-                        to={item.path}
-                        draggable="false"
-                        className={`
-                            p-2
-                            rounded-full
-                            transition-all
-                            ${isActive(location.pathname, item.path)
-                                ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
-                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100'
-                            }
-                        `}
-                        title={item.label}
-                    >
-                        <item.icon className="w-5 h-5" />
-                    </Link>
-                ))}
-            </nav>
-
-            {/* 图标胶囊 (480px - 640px) */}
-            <nav className="max-[479px]:hidden min-[640px]:hidden flex items-center gap-1 bg-gray-100 dark:bg-base-200 rounded-full p-1">
-                {visibleNavItems.map((item) => (
-                    <Link
-                        key={item.path}
-                        to={item.path}
-                        draggable="false"
-                        className={`
-                            p-2
-                            rounded-full
-                            transition-all
-                            ${isActive(location.pathname, item.path)
-                                ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
-                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100'
-                            }
-                        `}
-                        title={item.label}
-                    >
-                        <item.icon className="w-5 h-5" />
-                    </Link>
-                ))}
-            </nav>
-
-            {/* 图标+文字下拉 (375px - 480px) */}
+            {/* 折叠下拉菜单 (< 480px) */}
             <div className="max-[374px]:hidden min-[480px]:hidden block">
                 <NavigationDropdown
                     navItems={visibleNavItems}
@@ -135,7 +103,6 @@ export function NavMenu({ navItems }: NavMenuProps) {
                 />
             </div>
 
-            {/* 图标下拉 (< 375px) */}
             <div className="min-[375px]:hidden">
                 <NavigationDropdown
                     navItems={visibleNavItems}

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, MoreVertical, Sun, Moon, LogOut, Minimize2 } from 'lucide-react';
+import { ChevronDown, MoreVertical, Sun, Moon, LogOut, Minimize2, Cat } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type NavItem, type Language } from './constants';
 import { isTauri } from '../../utils/env';
@@ -71,9 +71,9 @@ export function LanguageDropdown({
                 </span>
             </button>
 
-            {/* 下拉菜单 (强制右对齐并限制在视口内，彻底解决向右溢出被窗口边缘遮蔽的问题) */}
+            {/* 下拉菜单 (强制右对齐并限制在视口内，防止超出窗口底边或右侧边缘) */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-base-200 rounded-xl shadow-xl border border-gray-100 dark:border-base-100 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right z-50">
+                <div className="absolute right-0 mt-2 w-40 max-h-[calc(100vh-96px)] overflow-y-auto bg-white dark:bg-base-200 rounded-xl shadow-xl border border-gray-100 dark:border-base-100 py-1 animate-in fade-in zoom-in-95 duration-200 origin-top-right z-50">
                     {languages.map((lang) => {
                         const isSelected = activeLang.code === lang.code;
                         return (
@@ -151,7 +151,7 @@ export function NavigationDropdown({
 
             {/* 下拉菜单 */}
             {isOpen && (
-                <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-48 bg-white dark:bg-[#1a1a1a] rounded-xl shadow-xl border-2 border-gray-200 dark:border-gray-700 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
+                <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-48 max-h-[calc(100vh-96px)] overflow-y-auto bg-white dark:bg-[#1a1a1a] rounded-xl shadow-xl border-2 border-gray-200 dark:border-gray-700 py-1 animate-in fade-in zoom-in-95 duration-200 origin-top z-50">
                     {navItems.map((item) => (
                         <Link
                             key={item.path}
@@ -180,6 +180,8 @@ interface MoreDropdownProps {
     theme: 'light' | 'dark';
     currentLanguage: string;
     languages: Language[];
+    petOpen?: boolean;
+    onTogglePet?: () => void;
     onThemeToggle: (event: React.MouseEvent<HTMLButtonElement>) => void;
     onLanguageChange: (langCode: string) => void;
 }
@@ -188,6 +190,8 @@ export function MoreDropdown({
     theme,
     currentLanguage,
     languages,
+    petOpen = false,
+    onTogglePet,
     onThemeToggle,
     onLanguageChange
 }: MoreDropdownProps) {
@@ -219,6 +223,7 @@ export function MoreDropdown({
     return (
         <div className="relative" ref={menuRef}>
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-10 h-10 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
                 title={t('nav.more', '更多')}
@@ -226,11 +231,30 @@ export function MoreDropdown({
                 <MoreVertical className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </button>
 
-            {/* 下拉菜单 (强制右对齐防遮蔽) */}
+            {/* 下拉菜单 (强制右对齐防遮蔽 + 高度自适应滚动) */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-base-200 rounded-xl shadow-xl border border-gray-100 dark:border-base-100 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right z-50">
+                <div className="absolute right-0 mt-2 w-48 max-h-[calc(100vh-96px)] overflow-y-auto bg-white dark:bg-base-200 rounded-xl shadow-xl border border-gray-100 dark:border-base-100 py-1 animate-in fade-in zoom-in-95 duration-200 origin-top-right z-50">
+                    {/* 灵动桌面伴侣 */}
+                    {onTogglePet && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                onTogglePet();
+                                setIsOpen(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-base-100 transition-colors text-gray-700 dark:text-gray-300"
+                        >
+                            <span className="flex items-center gap-3">
+                                <Cat className={`w-4 h-4 ${petOpen ? 'text-pink-500' : ''}`} />
+                                <span>{petOpen ? t('nav.pet_close', '关闭桌面伴侣') : t('nav.pet_open', '呼出桌面伴侣')}</span>
+                            </span>
+                            {petOpen && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                        </button>
+                    )}
+
                     {/* 迷你视图 */}
                     <button
+                        type="button"
                         onClick={() => {
                             if (isTauri()) {
                                 invoke('show_mini_view').catch(() => {});
@@ -242,7 +266,7 @@ export function MoreDropdown({
                         className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-base-100 transition-colors text-gray-700 dark:text-gray-300"
                     >
                         <Minimize2 className="w-4 h-4" />
-                        <span>{t('nav.mini_view', 'Mini View')}</span>
+                        <span>{t('nav.mini_view', '迷你悬浮窗')}</span>
                     </button>
 
                     {/* 主题切换 */}

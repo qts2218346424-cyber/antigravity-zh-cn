@@ -289,7 +289,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
                 url = await accountService.prepareOAuthUrl(clientKey);
 
                 if (!url) {
-                    throw new Error(t('accounts.add.oauth.error_no_url', 'OAuth URLを取得できませんでした'));
+                    throw new Error(t('accounts.add.oauth.error_no_url', '无法获取 OAuth URL'));
                 }
                 setOauthUrl(url); // 确保链接在 UI 中可见，方便用户手动复制
             }
@@ -299,7 +299,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
 
             if (!popup) {
                 setStatus('error');
-                setMessage(t('accounts.add.oauth.popup_blocked', 'ポップアップがブロックされました'));
+                setMessage(t('accounts.add.oauth.popup_blocked', '弹窗被拦截，请允许弹出窗口'));
                 return;
             }
 
@@ -377,7 +377,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
         if (!manualCode.trim()) return;
 
         setStatus('loading');
-        setMessage(t('accounts.add.oauth.manual_submitting', '認可コードを送信中...'));
+        setMessage(t('accounts.add.oauth.manual_submitting', '正在提交认证码...'));
 
         try {
             // 从预生成的 oauthUrl 中提取 state 参数作为兜底 CSRF 校验，防止用户只回填 bare code 时丢失 state 导致状态未比对
@@ -432,7 +432,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
     const handleImportCustomDb = async () => {
         try {
             if (!isTauri()) {
-                alert(t('common.tauri_api_not_loaded') || 'Storage import only works in desktop app.');
+                alert(t('common.tauri_api_not_loaded', '数据库导入仅支持桌面客户端'));
                 return;
             }
             const selected = await open({
@@ -447,7 +447,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
             });
 
             if (selected && typeof selected === 'string') {
-                handleAction(t('accounts.add.import.btn_custom_db') || 'Import Custom DB', () => importFromCustomDb(selected));
+                handleAction(t('accounts.add.import.btn_custom_db', '从自定义 DB 导入'), () => importFromCustomDb(selected));
             }
         } catch (err) {
             console.error('Failed to open dialog:', err);
@@ -727,7 +727,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
                                             disabled={status === 'loading' || status === 'success'}
                                         >
                                             <Database className="w-4 h-4 opacity-70" />
-                                            {t('accounts.add.import.btn_custom_db') || 'Custom DB (state.vscdb)'}
+                                            {t('accounts.add.import.btn_custom_db', '从自定义 DB 导入 (state.vscdb)')}
                                         </button>
                                     </div>
                                 </div>

@@ -71,6 +71,43 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
   const [customCss, setCustomCss] = useState('');
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  const applyManifestToForm = React.useCallback((m: SkinManifest) => {
+    setManifest(m);
+    const isLight = m.base === 'light';
+    const fallbackBg = isLight ? '#fff8fb' : '#0f172a';
+    const cMap: Record<string, string> = {};
+    for (const k of ALL_COLOR_KEYS) {
+      cMap[k] = (m.colors?.[k] as string) || fallbackBg;
+    }
+    setColors(cMap);
+    setFontFamily(m.font?.family || "Inter, 'PingFang SC', 'Microsoft YaHei UI', sans-serif");
+    setMonoFamily(m.font?.monoFamily || "'JetBrains Mono', 'Cascadia Code', monospace");
+    setFontSize(m.font?.size || 13);
+    setCustomCss(m.css || m.custom_css || '');
+
+    setGlassBlur(m.surfaces?.glass_blur ?? 18);
+    setCardOpacity(m.surfaces?.card_opacity ?? 0.78);
+    const parsedRadius = parseInt(String(m.surfaces?.radius || '12').replace(/px/g, ''), 10);
+    setBorderRadius(Number.isFinite(parsedRadius) ? parsedRadius : 12);
+    setNoiseGrain(m.surfaces?.noise_grain ?? 0.03);
+
+    // 从 rgba(..., alpha) 解析高光透明度，消除切主题后滑块失真问题
+    const glowRaw = m.surfaces?.border_glow || '';
+    const rgbaMatch = glowRaw.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([0-9.]+)\)/i);
+    if (rgbaMatch) {
+      const parsedAlpha = parseFloat(rgbaMatch[1]);
+      setBorderGlowAlpha(Number.isFinite(parsedAlpha) ? Math.min(0.45, Math.max(0, parsedAlpha)) : 0.16);
+    } else {
+      setBorderGlowAlpha(0.16);
+    }
+
+    const firstBg = Array.isArray(m.background) ? m.background[0] : m.background;
+    setBgOpacity(firstBg?.opacity ?? 0.14);
+    setBgBlur(firstBg?.blur ?? 2);
+    setDirty(false);
+  }, []);
 
   useEffect(() => {
     if (!selectedSkinId && skins.length > 0) {
@@ -81,30 +118,9 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
     studioService
       .getSkinManifest(selectedSkinId)
-      .then((m) => {
-        setManifest(m);
-        const cMap: Record<string, string> = {};
-        for (const k of ALL_COLOR_KEYS) {
-          cMap[k] = (m.colors?.[k] as string) || '#0f172a';
-        }
-        setColors(cMap);
-        setFontFamily(m.font?.family || "Inter, 'PingFang SC', 'Microsoft YaHei UI', sans-serif");
-        setMonoFamily(m.font?.monoFamily || "'JetBrains Mono', 'Cascadia Code', monospace");
-        setFontSize(m.font?.size || 13);
-        setCustomCss(m.css || m.custom_css || '');
-
-        setGlassBlur(m.surfaces?.glass_blur ?? 18);
-        setCardOpacity(m.surfaces?.card_opacity ?? 0.78);
-        const parsedRadius = parseInt(String(m.surfaces?.radius || '12').replace(/px/g, ''), 10);
-        setBorderRadius(Number.isFinite(parsedRadius) ? parsedRadius : 12);
-        setNoiseGrain(m.surfaces?.noise_grain ?? 0.03);
-
-        const firstBg = Array.isArray(m.background) ? m.background[0] : m.background;
-        setBgOpacity(firstBg?.opacity ?? 0.14);
-        setBgBlur(firstBg?.blur ?? 2);
-      })
+      .then(applyManifestToForm)
       .catch((err) => showToast(`加载材质包清单失败: ${String(err)}`, 'error'));
-  }, [selectedSkinId, skins, onSelectSkinId]);
+  }, [selectedSkinId, skins, onSelectSkinId, applyManifestToForm]);
 
   const handleSave = async () => {
     if (scope === 'skin' && !selectedSkinId) {
@@ -113,6 +129,10 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
     }
     setSaving(true);
     try {
+      const defaultShadow =
+        manifest?.base === 'light'
+          ? '0 16px 36px -12px rgba(15, 23, 42, 0.14)'
+          : '0 20px 50px -12px rgba(0, 0, 0, 0.72)';
       const patch: Record<string, unknown> = {
         colors,
         surfaces: {
@@ -121,7 +141,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
           card_opacity: Number(cardOpacity.toFixed(2)),
           border_glow: `rgba(255, 255, 255, ${borderGlowAlpha.toFixed(2)})`,
           noise_grain: Number(noiseGrain.toFixed(3)),
-          shadow_elevation: '0 20px 50px -12px rgba(0, 0, 0, 0.72)',
+          shadow_elevation: manifest?.surfaces?.shadow_elevation || defaultShadow,
         },
         font: {
           family: fontFamily.trim(),
@@ -146,6 +166,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
       }
 
       await studioService.saveOverride(scope, scope === 'skin' ? selectedSkinId : null, patch);
+      setDirty(false);
       showToast(
         scope === 'global'
           ? '已保存全局光学覆盖层并重新编译当前主题'
@@ -167,7 +188,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
       await onRefresh();
       if (selectedSkinId) {
         const refreshed = await studioService.getSkinManifest(selectedSkinId);
-        setManifest(refreshed);
+        applyManifestToForm(refreshed);
       }
     } catch (err: unknown) {
       showToast(`重置失败: ${String(err)}`, 'error');
@@ -181,7 +202,14 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
   const border = colors.border || '#1f293b';
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <div
+      className="grid grid-cols-1 xl:grid-cols-12 gap-6"
+      onChangeCapture={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'SELECT') return;
+        setDirty(true);
+      }}
+    >
       {/* 左侧参数实验室 */}
       <div className="xl:col-span-7 space-y-5">
         {/* 顶栏选择器 */}
@@ -201,6 +229,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
             <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/5 p-0.5 text-xs border border-gray-200/60 dark:border-white/10">
               <button
+                type="button"
                 onClick={() => setScope('skin')}
                 className={`rounded-lg px-3 py-1 transition-all ${
                   scope === 'skin'
@@ -211,6 +240,7 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                 仅调当前材质
               </button>
               <button
+                type="button"
                 onClick={() => setScope('global')}
                 className={`rounded-lg px-3 py-1 transition-all ${
                   scope === 'global'
@@ -224,7 +254,13 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {dirty && (
+              <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-300">
+                有未保存微调
+              </span>
+            )}
             <button
+              type="button"
               onClick={handleReset}
               className="inline-flex items-center gap-1 rounded-xl border border-gray-300 dark:border-white/15 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
             >

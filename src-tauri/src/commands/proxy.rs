@@ -864,12 +864,13 @@ pub async fn get_proxy_db_disk_size() -> Result<u64, String> {
     crate::modules::proxy_db::get_proxy_db_disk_bytes()
 }
 
-/// 测试模型连通性与预热检测
+/// 测试模型连通性与预热检测（支持可选 override_ua 单次沙盒测试，不污染全局配置）
 #[tauri::command]
 pub async fn test_model_connectivity(
     state: State<'_, ProxyServiceState>,
     model: String,
     target_account_id: Option<String>,
+    override_ua: Option<String>,
 ) -> Result<crate::proxy::handlers::warmup::WarmupResponse, String> {
     let port = {
         let instance_guard = state.instance.read().await;
@@ -904,7 +905,8 @@ pub async fn test_model_connectivity(
         "model": model,
         "access_token": token,
         "project_id": pid,
-        "account_id": chosen_account.id
+        "account_id": chosen_account.id,
+        "override_ua": override_ua
     });
 
     let client = rquest::Client::builder()

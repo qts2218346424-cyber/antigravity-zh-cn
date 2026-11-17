@@ -1014,6 +1014,10 @@ pub fn run() {
             commands::studio_nudge_pet,
             commands::studio_get_media_status,
             commands::studio_send_media_command,
+            commands::studio_import_pet_avatar,
+            commands::studio_clear_pet_avatar,
+            commands::studio_update_pet_prefs,
+            commands::studio_run_diagnostics,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

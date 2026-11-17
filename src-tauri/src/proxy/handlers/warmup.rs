@@ -31,6 +31,8 @@ pub struct WarmupRequest {
     pub project_id: Option<String>,
     /// 可选：直接提供 Account ID
     pub account_id: Option<String>,
+    /// 可选：单次沙盒联调临时覆盖出站 User-Agent（不污染全局配置）
+    pub override_ua: Option<String>,
 }
 
 /// 预热响应
@@ -379,13 +381,22 @@ pub async fn handle_warmup(
         ("streamGenerateContent", Some("alt=sse"))
     };
 
+    let mut extra_headers = std::collections::HashMap::new();
+    if let Some(ref ua) = req.override_ua {
+        let trimmed = ua.trim();
+        if !trimmed.is_empty() {
+            extra_headers.insert("x-internal-sandbox-ua".to_string(), trimmed.to_string());
+        }
+    }
+
     let mut result = state
         .upstream
-        .call_v1_internal(
+        .call_v1_internal_with_headers(
             method,
             &access_token,
             body.clone(),
             query,
+            extra_headers.clone(),
             Some(account_id.as_str()),
         )
         .await;
@@ -394,11 +405,12 @@ pub async fn handle_warmup(
     if result.is_err() && !prefer_non_stream {
         result = state
             .upstream
-            .call_v1_internal(
+            .call_v1_internal_with_headers(
                 "generateContent",
                 &access_token,
                 body,
                 None,
+                extra_headers,
                 Some(account_id.as_str()),
             )
             .await;

@@ -27,10 +27,10 @@ const DebugConsoleButton: React.FC = () => {
                     ? "bg-green-500/20 text-green-400 border border-green-500/30"
                     : "bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700/50 border border-transparent"
             )}
-            title={t('debug_console.toggle', { defaultValue: 'Toggle Debug Console' })}
+            title={t('debug_console.toggle', { defaultValue: '切换调试控制台' })}
         >
             <Terminal size={14} className={isOpen ? "text-green-400" : ""} />
-            <span className="hidden sm:inline">Console</span>
+            <span className="hidden sm:inline">{t('debug_console.button_label', { defaultValue: '控制台' })}</span>
 
             {/* Error badge */}
             {errorCount > 0 && (

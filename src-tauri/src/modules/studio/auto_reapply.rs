@@ -140,7 +140,7 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
             .map(|p| p.with_extension("asar.bak").is_file())
             .unwrap_or(false);
 
-    if cur_agent == "clean" && (force || had_agent_patch) {
+    if (force && cur_agent != "not_found") || (cur_agent == "clean" && had_agent_patch) {
         if is_antigravity_running() && !force {
             let msg = "检测到 Antigravity 客户端有更新覆盖，等待客户端退出后再自动重打补丁";
             actions.push(msg.to_string());
@@ -154,7 +154,11 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
                 cfg.enable_skin,
             ) {
                 Ok(res) => {
-                    let msg = format!("自动重打 Agent 中文补丁成功（{}）", res.character);
+                    let msg = format!(
+                        "{} Agent 中文补丁成功（共 {} 个模块）",
+                        if force { "强制重刷" } else { "自动重打" },
+                        res.patched_files.len()
+                    );
                     actions.push(msg.clone());
                     append_reapply_log(&msg);
                     let sk = localize_all_skills();
@@ -172,8 +176,9 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
         }
     }
 
-    if (cur_ide == "clean" || cur_ide == "stale")
-        && cfg.ide_enabled
+    if (force || cur_ide == "clean" || cur_ide == "stale")
+        && cur_ide != "not_found"
+        && (force || cfg.ide_enabled)
         && cfg.skin_enabled
         && cfg.active_skin.is_some()
     {

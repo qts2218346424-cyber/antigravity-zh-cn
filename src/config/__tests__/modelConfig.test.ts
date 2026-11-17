@@ -97,12 +97,13 @@ for (const [name, expected] of protectionCases) {
 type ModelInput = { name: string; display_name?: string } | null | undefined;
 
 const displayNameCases: Array<[ModelInput, string | undefined, string]> = [
-    [{ name: 'gemini-3-pro-high', display_name: 'Gemini 3.1 Pro High' }, undefined, 'Gemini 3.1 Pro High'],
-    [{ name: 'gemini-3-flash' }, undefined, 'Gemini 3 Flash'],
-    [{ name: 'gemini-3.1-flash-image', display_name: undefined }, undefined, 'Gemini 3.1 Flash Image'],
+    [{ name: 'gemini-3-pro-high', display_name: 'Gemini 3.1 Pro High' }, undefined, 'gemini-3-pro-high'],
+    [{ name: 'gemini-3-flash' }, undefined, 'gemini-3-flash'],
+    [{ name: 'gemini-3.1-flash-image', display_name: undefined }, undefined, 'gemini-3.1-flash-image'],
+    [{ name: '', display_name: 'Custom Display Label' }, undefined, 'Custom Display Label'],
     [undefined, 'Claude 系列', 'Claude 系列'],
     [null, undefined, ''],
-    [{ name: 'claude-opus-4-6-thinking', display_name: 'Claude Opus 4.6 TK' }, undefined, 'Claude Opus 4.6 TK'],
+    [{ name: 'claude-opus-4-6-thinking', display_name: 'Claude Opus 4.6 TK' }, undefined, 'claude-opus-4-6-thinking'],
 ];
 
 for (const [model, fallback, expected] of displayNameCases) {
@@ -119,8 +120,8 @@ for (const [model, fallback, expected] of displayNameCases) {
 // ── findQuotaModel ──────────────────────────────────────────────────────────
 
 const findCases: Array<[Array<{ name: string }>, ModelCategory, string | null]> = [
-    // Pro: preferred chain
-    [[{ name: 'gemini-pro-agent' }, { name: 'gemini-3.1-pro-low' }], 'gemini-pro', 'gemini-pro-agent'],
+    // Pro: preferred chain ('gemini-3.1-pro-high' -> 'gemini-3.1-pro' -> 'gemini-3.1-pro-low') takes precedence over category fallback
+    [[{ name: 'gemini-pro-agent' }, { name: 'gemini-3.1-pro-low' }], 'gemini-pro', 'gemini-3.1-pro-low'],
     [[{ name: 'gemini-2.5-pro' }], 'gemini-pro', 'gemini-2.5-pro'],
     // Flash: preferred chain
     [[{ name: 'gemini-3-flash-agent' }, { name: 'gemini-3.5-flash-low' }], 'gemini-flash', 'gemini-3-flash-agent'],
@@ -258,11 +259,11 @@ test('resolveQuotaModels + ensurePinnedImageSelector: live pin gap resolves Gemi
     assertEqual(image?.model?.display_name, 'Gemini 3.1 Flash Image');
 });
 
-test('quota display: weekly exhaustion overrides raw 5h without changing protection quota', () => {
+test('quota display: weekly exhaustion (<= 1.5%) overrides raw 5h without changing protection quota', () => {
     const reset = new Date(Date.now() + 7200000).toISOString();
     const model = { name: 'gemini-3.1-pro-high', percentage: 1, reset_time: reset };
     const groups = [{ display_name: 'Gemini Models', buckets: [
-        { bucket_id: 'gemini-weekly', window: 'weekly', remaining_fraction: 0.01, reset_time: reset },
+        { bucket_id: 'gemini-weekly', window: 'weekly', remaining_fraction: 0.02, reset_time: reset },
         { bucket_id: 'gemini-5h', window: '5h', remaining_fraction: 1, reset_time: '2030-01-01T00:00:00Z' },
     ] }];
     const display = getModelQuotaDisplay(model.name, model, groups);
@@ -270,7 +271,7 @@ test('quota display: weekly exhaustion overrides raw 5h without changing protect
     assertEqual(display.resetTime, groups[0].buckets[1].reset_time);
     assertEqual(display.isWeeklyConstrained, false);
     assertEqual(model.percentage < 2, true);
-    for (const fraction of [0, 0.0005, 0.001]) {
+    for (const fraction of [0, 0.0005, 0.001, 0.01, 0.015]) {
         groups[0].buckets[0].remaining_fraction = fraction;
         const blocked = getModelQuotaDisplay(model.name, model, groups);
         assertEqual(blocked.percentage, 0);
@@ -278,7 +279,7 @@ test('quota display: weekly exhaustion overrides raw 5h without changing protect
         assertEqual(blocked.isWeeklyConstrained, true);
         assertEqual(blocked.weeklyResetTime, reset);
     }
-    for (const fraction of [0.0011, 0.00285638, 0.01223943]) {
+    for (const fraction of [0.0151, 0.02, 0.15]) {
         groups[0].buckets[0].remaining_fraction = fraction;
         const protectedDisplay = getModelQuotaDisplay(model.name, model, groups);
         assertEqual(protectedDisplay.isWeeklyConstrained, false);

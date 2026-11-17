@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import {
+  FlaskConical,
   Heart,
   Languages,
   Palette,
@@ -13,11 +14,12 @@ import { studioService } from '../../services/studioService';
 import type { ReapplyCheckResult, SkinInfo, StudioStatus } from '../../types/studio';
 import { isTauri } from '../../utils/env';
 import { CustomizerTab } from './CustomizerTab';
+import { DiagnosticsTab } from './DiagnosticsTab';
 import { L10nTab } from './L10nTab';
 import { PetCenterTab, WatchdogTab } from './PetAndWatchdogTab';
 import { SkinGalleryTab } from './SkinGalleryTab';
 
-type StudioTabKey = 'skins' | 'customizer' | 'l10n' | 'pet' | 'watchdog';
+type StudioTabKey = 'skins' | 'customizer' | 'l10n' | 'pet' | 'watchdog' | 'diagnostics';
 
 const EMPTY_STATUS: StudioStatus = {
   install_dir: null,
@@ -31,8 +33,14 @@ const EMPTY_STATUS: StudioStatus = {
   autostart_enabled: false,
   updates_disabled: false,
   splash_character: 'nezuko',
+  pet_character: 'nezuko',
+  pet_roaming: true,
+  pet_always_on_top: true,
+  pet_scale_idx: 1,
+  pet_muted: false,
+  custom_pet_avatar: null,
   lang: 'zh-cn',
-  enable_pet: true,
+  enable_pet: false,
   enable_skin: true,
   pet_window_open: false,
   has_legacy_pet: false,
@@ -47,6 +55,7 @@ const Studio: React.FC = () => {
   const [skins, setSkins] = useState<SkinInfo[]>([]);
   const [customizeSkinId, setCustomizeSkinId] = useState<string>('obsidian-glass');
   const [loading, setLoading] = useState(true);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const refreshAll = useCallback(async () => {
     try {
@@ -70,7 +79,7 @@ const Studio: React.FC = () => {
 
   useEffect(() => {
     refreshAll();
-    let unlisten: (() => void) | undefined;
+    const unlisteners: Array<() => void> = [];
     if (isTauri()) {
       listen<ReapplyCheckResult>('studio:reapplied', (ev) => {
         if (ev.payload?.actions?.length) {
@@ -78,30 +87,68 @@ const Studio: React.FC = () => {
         }
         refreshAll();
       })
-        .then((fn) => {
-          unlisten = fn;
-        })
+        .then((fn) => unlisteners.push(fn))
+        .catch(() => {});
+
+      listen('studio:pet-state-changed', () => {
+        refreshAll();
+      })
+        .then((fn) => unlisteners.push(fn))
         .catch(() => {});
     }
     return () => {
-      if (unlisten) unlisten();
+      unlisteners.forEach((fn) => fn());
     };
   }, [refreshAll]);
 
-  const tabs: Array<{ key: StudioTabKey; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  const tabs: Array<{
+    key: StudioTabKey;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
     { key: 'skins', label: '光学材质画廊', icon: Sparkles },
-    { key: 'customizer', label: 'Color DNA 实验室', icon: Palette },
+    { key: 'customizer', label: '色彩与材质实验室', icon: Palette },
     { key: 'l10n', label: '全量汉化引擎', icon: Languages },
-    { key: 'pet', label: '灵动桌面伴侣', icon: Heart },
+    { key: 'pet', label: '全明星桌面伴侣', icon: Heart },
     { key: 'watchdog', label: '自动维护哨兵', icon: ShieldCheck },
+    { key: 'diagnostics', label: '全链路测试台', icon: FlaskConical },
   ];
+
+  const handleSelectTab = (nextKey: StudioTabKey, focusBtn = false) => {
+    setActiveTab(nextKey);
+    const btn = tabRefs.current[nextKey];
+    if (btn) {
+      if (focusBtn) btn.focus();
+      btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  };
+
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const idx = tabs.findIndex((t) => t.key === activeTab);
+    if (idx < 0) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = tabs[(idx + 1) % tabs.length];
+      handleSelectTab(next.key, true);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = tabs[(idx - 1 + tabs.length) % tabs.length];
+      handleSelectTab(prev.key, true);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      handleSelectTab(tabs[0].key, true);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      handleSelectTab(tabs[tabs.length - 1].key, true);
+    }
+  };
 
   const quickTogglePet = async () => {
     try {
       if (status.pet_window_open) {
         await studioService.closePet();
       } else {
-        await studioService.launchPet();
+        await studioService.launchPet(status.pet_character);
       }
       await refreshAll();
     } catch (err) {
@@ -124,7 +171,7 @@ const Studio: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-base-content">
-                    Antigravity Studio · 光学美化工坊
+                    Antigravity Studio · 光学美化与伴侣工坊
                   </h1>
                   {status.active_skin && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-300">
@@ -134,7 +181,7 @@ const Studio: React.FC = () => {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  融合高定光学材质引擎、Color DNA 物理表面实验室、官方客户端全量中文化、3D 视差灵动伴侣与 Tokio 自动防更新哨兵。
+                  融合高定光学材质引擎、色彩表面实验室、客户端全量中文化、6 角色灵动伴侣、防更新哨兵与全链路交互测试台。
                 </p>
               </div>
             </div>
@@ -143,7 +190,8 @@ const Studio: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2.5">
             {status.has_legacy_pet && (
               <button
-                onClick={() => setActiveTab('l10n')}
+                type="button"
+                onClick={() => handleSelectTab('l10n')}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/60 bg-amber-500/15 px-3.5 py-2 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/25 transition-colors"
               >
                 <Languages className="h-3.5 w-3.5" />
@@ -156,6 +204,7 @@ const Studio: React.FC = () => {
               </span>
             )}
             <button
+              type="button"
               onClick={quickTogglePet}
               className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium border backdrop-blur-md transition-all ${
                 status.pet_window_open
@@ -167,6 +216,7 @@ const Studio: React.FC = () => {
               {status.pet_window_open ? '伴侣视窗运行中' : '召出灵动伴侣'}
             </button>
             <button
+              type="button"
               onClick={refreshAll}
               className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
               title="刷新全部探测状态"
@@ -178,30 +228,47 @@ const Studio: React.FC = () => {
         </div>
       </div>
 
-      {/* 五大功能区导航标签 */}
-      <div className="inline-flex flex-wrap gap-1.5 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-100/70 dark:bg-[#0B0F17]/60 p-1.5 backdrop-blur-md">
+      {/* 六大功能区单行自适应无障碍导航栏（遵循 WAI-ARIA tablist 与不换行横向滚动规范） */}
+      <div
+        role="tablist"
+        aria-label="Studio 功能模块导航"
+        onKeyDown={handleTabKeyDown}
+        className="flex flex-nowrap overflow-x-auto scrollbar-none gap-1.5 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-100/70 dark:bg-[#0B0F17]/60 p-1.5 backdrop-blur-md max-w-full"
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+              ref={(el) => {
+                tabRefs.current[tab.key] = el;
+              }}
+              id={`studio-tab-${tab.key}`}
+              role="tab"
+              type="button"
+              aria-selected={active}
+              tabIndex={active ? 0 : -1}
+              onClick={() => handleSelectTab(tab.key)}
+              className={`relative flex-none inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-colors whitespace-nowrap ${
                 active
                   ? 'bg-white dark:bg-white/15 text-gray-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/15'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-white/5'
               }`}
             >
-              <Icon className={`h-3.5 w-3.5 ${active ? 'text-indigo-500 dark:text-indigo-400' : ''}`} />
-              {tab.label}
+              <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-indigo-500 dark:text-indigo-400' : ''}`} />
+              <span>{tab.label}</span>
+              {/* 非纯色几何底线指示器（兼容高对比强制色彩模式 WCAG 1.4.1） */}
+              {active && (
+                <span className="pointer-events-none absolute inset-x-3 bottom-0.5 border-b-2 border-indigo-500 dark:border-indigo-400 rounded-full" />
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* 标签内容视图 */}
-      <div>
+      {/* 标签内容面板 */}
+      <div role="tabpanel" aria-labelledby={`studio-tab-${activeTab}`}>
         {activeTab === 'skins' && (
           <SkinGalleryTab
             skins={skins}
@@ -209,7 +276,7 @@ const Studio: React.FC = () => {
             onRefresh={refreshAll}
             onSelectForCustomize={(id) => {
               setCustomizeSkinId(id);
-              setActiveTab('customizer');
+              handleSelectTab('customizer');
             }}
           />
         )}
@@ -224,6 +291,7 @@ const Studio: React.FC = () => {
         {activeTab === 'l10n' && <L10nTab status={status} onRefresh={refreshAll} />}
         {activeTab === 'pet' && <PetCenterTab status={status} onRefresh={refreshAll} />}
         {activeTab === 'watchdog' && <WatchdogTab status={status} onRefresh={refreshAll} />}
+        {activeTab === 'diagnostics' && <DiagnosticsTab status={status} onRefresh={refreshAll} />}
       </div>
     </div>
   );

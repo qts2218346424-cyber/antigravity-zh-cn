@@ -1,3 +1,11 @@
+export type PetCharacterId =
+  | 'nezuko'
+  | 'prince'
+  | 'tanjiro'
+  | 'zenitsu'
+  | 'inosuke'
+  | 'custom';
+
 export interface SkinColors {
   background?: string;
   foreground?: string;
@@ -116,6 +124,12 @@ export interface StudioStatus {
   autostart_enabled: boolean;
   updates_disabled: boolean;
   splash_character: string;
+  pet_character: string;
+  pet_roaming: boolean;
+  pet_always_on_top: boolean;
+  pet_scale_idx: number;
+  pet_muted: boolean;
+  custom_pet_avatar?: string | null;
   lang: string;
   enable_pet: boolean;
   enable_skin: boolean;
@@ -124,6 +138,20 @@ export interface StudioStatus {
   config_dir: string;
   resource_dir: string;
   reapply_logs: string[];
+}
+
+export interface StudioDiagnosticItem {
+  key: string;
+  name: string;
+  passed: boolean;
+  duration_ms: number;
+  detail: string;
+}
+
+export interface StudioDiagnosticReport {
+  all_passed: boolean;
+  total_ms: number;
+  items: StudioDiagnosticItem[];
 }
 
 export interface L10nPatchResult {
@@ -161,6 +189,11 @@ export interface MediaStatus {
 
 export interface PetAssets {
   nezuko_chibi?: string | null;
+  nezuko_blink?: string | null;
+  nezuko_happy?: string | null;
+  nezuko_run?: string | null;
+  nezuko_stomp?: string | null;
+  nezuko_blood?: string | null;
   nezuko_basket?: string | null;
   nezuko_spin_sheet?: string | null;
   shockwave?: string | null;
@@ -172,8 +205,16 @@ export interface PetAssets {
   nezuko_leg_r?: string | null;
   nezuko_peeker?: string | null;
   little_prince?: string | null;
+  prince_blink?: string | null;
+  prince_walk?: string | null;
   prince_fox?: string | null;
+  prince_rose_pose?: string | null;
+  prince_sleep?: string | null;
   prince_rose?: string | null;
   prince_stars?: string | null;
   prince_sunset?: string | null;
+  tanjiro_water?: string | null;
+  zenitsu_thunder?: string | null;
+  inosuke_beast?: string | null;
+  custom_avatar?: string | null;
 }

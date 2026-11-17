@@ -313,12 +313,7 @@ function __agzhTranslateMenuTemplate(items) {{
         marker = PATCH_MARKER,
         desktop = desktop_json
     );
-    let patched = src.replace(
-        "buildFromTemplate(",
-        "buildFromTemplate(__agzhTranslateMenuTemplate(",
-    );
-    // 确保括号闭合：最简安全拦截是在 Menu.buildFromTemplate 上做 monkey-patch
-    let _ = patched;
+    // 在 Electron Menu.buildFromTemplate 上执行幂等安全拦截
     format!(
         r#"{hook}
 ;(function() {{

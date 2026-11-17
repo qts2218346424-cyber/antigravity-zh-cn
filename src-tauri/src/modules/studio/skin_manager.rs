@@ -72,6 +72,11 @@ pub struct StudioConfig {
     pub enable_pet: bool,
     pub enable_skin: bool,
     pub pet_character: String,
+    pub pet_roaming: bool,
+    pub pet_always_on_top: bool,
+    pub pet_scale_idx: usize,
+    pub pet_muted: bool,
+    pub custom_pet_avatar: Option<String>,
     pub pet_size: u32,
     pub reapply_logs: Vec<String>,
 }
@@ -90,6 +95,11 @@ impl Default for StudioConfig {
             enable_pet: false,
             enable_skin: true,
             pet_character: "nezuko".to_string(),
+            pet_roaming: true,
+            pet_always_on_top: true,
+            pet_scale_idx: 1,
+            pet_muted: false,
+            custom_pet_avatar: None,
             pet_size: 132,
             reapply_logs: Vec::new(),
         }
@@ -147,6 +157,20 @@ pub fn save_studio_config(cfg: &StudioConfig) -> Result<(), String> {
     let text = serde_json::to_string_pretty(cfg)
         .map_err(|e| format!("序列化 Studio 配置失败: {}", e))?;
     atomic_write_text(&studio_config_path(), &text)
+}
+
+static STUDIO_CONFIG_LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+
+pub fn mutate_studio_config<F>(mutator: F) -> Result<StudioConfig, String>
+where
+    F: FnOnce(&mut StudioConfig),
+{
+    let lock = STUDIO_CONFIG_LOCK.get_or_init(|| std::sync::Mutex::new(()));
+    let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cfg = load_studio_config();
+    mutator(&mut cfg);
+    save_studio_config(&cfg)?;
+    Ok(cfg)
 }
 
 pub fn append_reapply_log(msg: &str) {

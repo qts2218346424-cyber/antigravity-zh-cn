@@ -167,7 +167,7 @@ export const KeyValueHeadersTable: React.FC<KeyValueHeadersTableProps> = ({
         return (
             <div className="h-full flex flex-col items-center justify-center p-8 text-center text-gray-400 dark:text-gray-500 select-none">
                 <span className="text-xs italic">
-                    {emptyPlaceholder || (isQueryParams ? '无 Query 请求参数' : '无 Headers 数据')}
+                    {emptyPlaceholder || (isQueryParams ? t('monitor.details.empty_params', '无 Query 请求参数') : t('monitor.details.empty_headers', '无 Headers 数据'))}
                 </span>
             </div>
         );
@@ -262,10 +262,10 @@ export const KeyValueHeadersTable: React.FC<KeyValueHeadersTableProps> = ({
                         <thead>
                             <tr className="bg-gray-100/70 dark:bg-base-200/80 text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-base-300 tracking-wider sticky top-0 z-10 backdrop-blur-xs">
                                 <th className="py-1.5 px-3 w-1/3">
-                                    {isQueryParams ? t('monitor.details.param_key', 'Param Key') : t('monitor.details.header_key', 'Header Key')}
+                                    {isQueryParams ? t('monitor.details.param_key', '参数名称 (Key)') : t('monitor.details.header_key', '请求头 (Header)')}
                                 </th>
                                 <th className="py-1.5 px-3">
-                                    {isQueryParams ? t('monitor.details.param_value', 'Param Value') : t('monitor.details.header_value', 'Header Value')}
+                                    {isQueryParams ? t('monitor.details.param_value', '参数值 (Value)') : t('monitor.details.header_value', '请求头值 (Value)')}
                                 </th>
                                 <th className="py-1.5 px-3 w-20 text-right">{t('common.actions', '操作')}</th>
                             </tr>

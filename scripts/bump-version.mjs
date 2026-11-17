@@ -35,7 +35,20 @@ const cargoUpdated = cargoRaw.replace(
 );
 fs.writeFileSync(cargoPath, cargoUpdated, 'utf8');
 
+// 4. 同步 README.md 中的发布命令版本号示例
+const readmePath = path.join(rootDir, 'README.md');
+if (fs.existsSync(readmePath)) {
+  const readmeRaw = fs.readFileSync(readmePath, 'utf8');
+  const readmeUpdated = readmeRaw
+    .replace(/bump-version\.mjs\s+\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/g, `bump-version.mjs ${cleanVersion}`)
+    .replace(/发布\s+v\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/g, `发布 v${cleanVersion}`)
+    .replace(/git tag\s+v\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/g, `git tag v${cleanVersion}`)
+    .replace(/git push origin main\s+v\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/g, `git push origin main v${cleanVersion}`);
+  fs.writeFileSync(readmePath, readmeUpdated, 'utf8');
+}
+
 console.log(`✅ 已将全工程版本号同步为 v${cleanVersion}:`);
 console.log('   - package.json');
 console.log('   - src-tauri/tauri.conf.json');
 console.log('   - src-tauri/Cargo.toml');
+console.log('   - README.md');

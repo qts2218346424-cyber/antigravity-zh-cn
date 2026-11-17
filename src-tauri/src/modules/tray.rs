@@ -342,6 +342,13 @@ pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 
     let show_i = MenuItem::with_id(app, "show", &texts.show_window, true, None::<&str>)?;
     let mini_i = MenuItem::with_id(app, "mini_view", &texts.mini_view, true, None::<&str>)?;
+    let pet_label = if config.language.starts_with("en") {
+        "Desktop Companion"
+    } else {
+        "灵动桌面伴侣"
+    };
+    let pet_open = modules::studio::pet::is_pet_open(app);
+    let pet_i = CheckMenuItem::with_id(app, "toggle_pet", pet_label, true, pet_open, None::<&str>)?;
     let lightweight_i = CheckMenuItem::with_id(
         app,
         "toggle_lightweight",
@@ -366,6 +373,7 @@ pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             &sep2,
             &show_i,
             &mini_i,
+            &pet_i,
             &lightweight_i,
             &sep3,
             &quit_i,
@@ -376,14 +384,14 @@ pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     let builder = TrayIconBuilder::with_id("main")
         .icon(icon)
-        .tooltip("Antigravity Manager")
+        .tooltip("Antigravity Studio")
         .icon_as_template(true);
 
     #[cfg(not(target_os = "macos"))]
     let builder = TrayIconBuilder::with_id("main")
         .menu(&menu)
         .icon(icon)
-        .tooltip("Antigravity Manager")
+        .tooltip("Antigravity Studio")
         .icon_as_template(false)
         .show_menu_on_left_click(false);
 
@@ -428,6 +436,14 @@ pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
                 }
                 "mini_view" => {
                     handle_tray_click(&app_handle, None);
+                }
+                "toggle_pet" => {
+                    if modules::studio::pet::is_pet_open(&app_handle) {
+                        let _ = modules::studio::pet::close_pet_window(&app_handle);
+                    } else {
+                        let _ = modules::studio::pet::launch_pet_window(&app_handle, None);
+                    }
+                    update_tray_menus(&app_handle);
                 }
                 "toggle_lightweight" => {
                     tauri::async_runtime::spawn(async move {
@@ -570,6 +586,12 @@ pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     let handle = app.clone();
     app.listen("config://updated", move |_event| {
         modules::logger::log_info("Configuration updated, refreshing tray menu");
+        update_tray_menus(&handle);
+    });
+
+    // 监听桌面伴侣开关状态变更以同步托盘勾选状态
+    let handle = app.clone();
+    app.listen("studio:pet-state-changed", move |_event| {
         update_tray_menus(&handle);
     });
 
@@ -753,6 +775,20 @@ pub fn update_tray_menus(app: &tauri::AppHandle) {
                 true,
                 None::<&str>,
             );
+            let pet_label = if config.language.starts_with("en") {
+                "Desktop Companion"
+            } else {
+                "灵动桌面伴侣"
+            };
+            let pet_open = modules::studio::pet::is_pet_open(&app_handle_for_main);
+            let pet_i = CheckMenuItem::with_id(
+                &app_handle_for_main,
+                "toggle_pet",
+                pet_label,
+                true,
+                pet_open,
+                None::<&str>,
+            );
             let lightweight_i = CheckMenuItem::with_id(
                 &app_handle_for_main,
                 "toggle_lightweight",
@@ -769,12 +805,13 @@ pub fn update_tray_menus(app: &tauri::AppHandle) {
                 None::<&str>,
             );
 
-            if let (Ok(i_u), Ok(s_n), Ok(r_c), Ok(s), Ok(m), Ok(l), Ok(q)) = (
+            if let (Ok(i_u), Ok(s_n), Ok(r_c), Ok(s), Ok(m), Ok(p_i), Ok(l), Ok(q)) = (
                 info_user,
                 switch_next,
                 refresh_curr,
                 show_i,
                 mini_i,
+                pet_i,
                 lightweight_i,
                 quit_i,
             ) {
@@ -797,6 +834,7 @@ pub fn update_tray_menus(app: &tauri::AppHandle) {
                 }
                 items.push(&s);
                 items.push(&m);
+                items.push(&p_i);
                 items.push(&l);
                 if let Some(ref s3) = sep3 {
                     items.push(s3);

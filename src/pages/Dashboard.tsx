@@ -69,10 +69,11 @@ function Dashboard() {
         fetchCurrentAccount();
         fetchActiveClients();
 
-        // 保持 5 秒轮询三大客户端（经典款 / IDE / CLI）当前生效账号状态
+        // 保持 30 秒低频轮询三大客户端（经典款 / IDE / CLI）当前生效账号状态，后台隐藏时免打扰
         const intervalId = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return;
             fetchActiveClients();
-        }, 5000);
+        }, 30000);
 
         // 窗口聚焦时即刻拉取最新客户端状态
         const handleFocus = () => {
@@ -397,7 +398,7 @@ function Dashboard() {
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-base-content">
                             {currentAccount
-                                ? t('dashboard.hello').replace('用户', currentAccount.name || currentAccount.email.split('@')[0])
+                                ? t('dashboard.hello').replace(/用户|User/, currentAccount.name || currentAccount.email.split('@')[0])
                                 : t('dashboard.hello')
                             }
                         </h1>

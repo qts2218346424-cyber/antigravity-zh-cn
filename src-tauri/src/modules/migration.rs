@@ -278,9 +278,80 @@ pub async fn import_from_custom_db_path(path_str: String) -> Result<Account, Str
     account::upsert_account(email.clone(), user_info.name, token_data)
 }
 
-/// Scan all local Antigravity sources (Keyring/Keychain, IDE & Classic Databases, Antigravity CLI) and import all unique accounts
+async fn resolve_and_upsert_local_oauth_state(oauth_state: ImportedOAuthState) -> Option<Account> {
+    use crate::modules::oauth;
+
+    let refresh_token = oauth_state.refresh_token.clone();
+    let Ok(token_resp) = oauth::refresh_access_token(&refresh_token, None).await else {
+        return None;
+    };
+
+    let (email, display_name) = match oauth::get_user_info(&token_resp.access_token, None).await {
+        Ok(info) => {
+            let name = info.get_display_name();
+            (info.email, name)
+        }
+        Err(_) => ("Unknown".to_string(), None),
+    };
+
+    let project_id = match oauth_state.project_id {
+        Some(pid) if !pid.trim().is_empty() => Some(pid),
+        _ => crate::proxy::project_resolver::fetch_project_id(&token_resp.access_token)
+            .await
+            .ok(),
+    };
+
+    let token_data = TokenData::new(
+        token_resp.access_token,
+        refresh_token,
+        token_resp.expires_in,
+        Some(email.clone()),
+        project_id,
+        None,
+        oauth_state.is_gcp_tos,
+        token_resp.id_token,
+    )
+    .with_oauth_client_key(token_resp.oauth_client_key);
+
+    account::upsert_account(email, display_name, token_data).ok()
+}
+
+fn read_local_acp_credentials() -> Vec<ImportedOAuthState> {
+    let mut states = Vec::new();
+    let Some(home) = dirs::home_dir() else {
+        return states;
+    };
+    let acp_dir = home.join(".gemini").join("antigravity-acp");
+    let candidates = [
+        acp_dir.join("antigravity-oauth-token"),
+        acp_dir.join("oauth_creds.json"),
+    ];
+    for path in candidates {
+        if let Ok(content) = fs::read_to_string(&path) {
+            if let Ok(json) = serde_json::from_str::<Value>(&content) {
+                if let Some(rt) = json
+                    .get("token")
+                    .and_then(|t| t.get("refresh_token"))
+                    .and_then(|v| v.as_str())
+                    .or_else(|| json.get("refresh_token").and_then(|v| v.as_str()))
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                {
+                    states.push(ImportedOAuthState {
+                        refresh_token: rt.to_string(),
+                        is_gcp_tos: true,
+                        project_id: None,
+                    });
+                }
+            }
+        }
+    }
+    states
+}
+
+/// Scan all local Antigravity sources (Keyring/Keychain, IDE & Classic Databases, Antigravity CLI/ACP) and import all unique accounts
 pub async fn import_all_local_accounts(target_ide: Option<&str>) -> Result<Vec<Account>, String> {
-    use crate::modules::{integration, oauth};
+    use crate::modules::integration;
 
     let mut imported_accounts = Vec::new();
     let mut seen_refresh_tokens = std::collections::HashSet::new();
@@ -289,30 +360,12 @@ pub async fn import_all_local_accounts(target_ide: Option<&str>) -> Result<Vec<A
     if target_ide != Some("ide") {
         if let Ok(oauth_state) = integration::read_from_system_keyring_only() {
             let refresh_token = oauth_state.refresh_token.clone();
-            if !refresh_token.is_empty() && seen_refresh_tokens.insert(refresh_token.clone()) {
+            if !refresh_token.is_empty() && seen_refresh_tokens.insert(refresh_token) {
                 crate::modules::logger::log_info(
                     "Discovered OAuth state in System Keyring/Keychain",
                 );
-                if let Ok(token_resp) = oauth::refresh_access_token(&refresh_token, None).await {
-                    let email = match oauth::get_user_info(&token_resp.access_token, None).await {
-                        Ok(info) => info.email,
-                        Err(_) => "Unknown".to_string(),
-                    };
-                    let token_data = TokenData::new(
-                        token_resp.access_token,
-                        refresh_token,
-                        token_resp.expires_in,
-                        Some(email.clone()),
-                        oauth_state.project_id,
-                        None,
-                        oauth_state.is_gcp_tos,
-                        token_resp.id_token,
-                    )
-                    .with_oauth_client_key(token_resp.oauth_client_key);
-
-                    if let Ok(acc) = account::upsert_account(email, None, token_data) {
-                        imported_accounts.push(acc);
-                    }
+                if let Some(acc) = resolve_and_upsert_local_oauth_state(oauth_state).await {
+                    imported_accounts.push(acc);
                 }
             }
         }
@@ -321,30 +374,25 @@ pub async fn import_all_local_accounts(target_ide: Option<&str>) -> Result<Vec<A
     // 2. Antigravity CLI (agy) 原生凭据与备份
     for oauth_state in integration::read_antigravity_cli_credentials() {
         let refresh_token = oauth_state.refresh_token.clone();
-        if !refresh_token.is_empty() && seen_refresh_tokens.insert(refresh_token.clone()) {
+        if !refresh_token.is_empty() && seen_refresh_tokens.insert(refresh_token) {
             crate::modules::logger::log_info(
                 "Discovered OAuth state in Antigravity CLI credentials",
             );
-            if let Ok(token_resp) = oauth::refresh_access_token(&refresh_token, None).await {
-                let email = match oauth::get_user_info(&token_resp.access_token, None).await {
-                    Ok(info) => info.email,
-                    Err(_) => "Unknown".to_string(),
-                };
-                let token_data = TokenData::new(
-                    token_resp.access_token,
-                    refresh_token,
-                    token_resp.expires_in,
-                    Some(email.clone()),
-                    oauth_state.project_id,
-                    None,
-                    oauth_state.is_gcp_tos,
-                    token_resp.id_token,
-                )
-                .with_oauth_client_key(token_resp.oauth_client_key);
+            if let Some(acc) = resolve_and_upsert_local_oauth_state(oauth_state).await {
+                imported_accounts.push(acc);
+            }
+        }
+    }
 
-                if let Ok(acc) = account::upsert_account(email, None, token_data) {
-                    imported_accounts.push(acc);
-                }
+    // 2.5 Antigravity ACP 插件原生凭据
+    for oauth_state in read_local_acp_credentials() {
+        let refresh_token = oauth_state.refresh_token.clone();
+        if !refresh_token.is_empty() && seen_refresh_tokens.insert(refresh_token) {
+            crate::modules::logger::log_info(
+                "Discovered OAuth state in Antigravity ACP plugin credentials",
+            );
+            if let Some(acc) = resolve_and_upsert_local_oauth_state(oauth_state).await {
+                imported_accounts.push(acc);
             }
         }
     }
@@ -360,33 +408,13 @@ pub async fn import_all_local_accounts(target_ide: Option<&str>) -> Result<Vec<A
         if db_path.exists() {
             if let Ok(oauth_state) = extract_oauth_state_from_file(&db_path) {
                 let refresh_token = oauth_state.refresh_token.clone();
-                if !refresh_token.is_empty() && seen_refresh_tokens.insert(refresh_token.clone()) {
+                if !refresh_token.is_empty() && seen_refresh_tokens.insert(refresh_token) {
                     crate::modules::logger::log_info(&format!(
                         "Discovered OAuth state in Antigravity DB path: {:?}",
                         db_path
                     ));
-                    if let Ok(token_resp) = oauth::refresh_access_token(&refresh_token, None).await
-                    {
-                        let email = match oauth::get_user_info(&token_resp.access_token, None).await
-                        {
-                            Ok(info) => info.email,
-                            Err(_) => "Unknown".to_string(),
-                        };
-                        let token_data = TokenData::new(
-                            token_resp.access_token,
-                            refresh_token,
-                            token_resp.expires_in,
-                            Some(email.clone()),
-                            oauth_state.project_id,
-                            None,
-                            oauth_state.is_gcp_tos,
-                            token_resp.id_token,
-                        )
-                        .with_oauth_client_key(token_resp.oauth_client_key);
-
-                        if let Ok(acc) = account::upsert_account(email, None, token_data) {
-                            imported_accounts.push(acc);
-                        }
+                    if let Some(acc) = resolve_and_upsert_local_oauth_state(oauth_state).await {
+                        imported_accounts.push(acc);
                     }
                 }
             }
@@ -395,7 +423,7 @@ pub async fn import_all_local_accounts(target_ide: Option<&str>) -> Result<Vec<A
 
     if imported_accounts.is_empty() {
         return Err(
-            "No login state data found across Antigravity Keyring, IDE/Classic databases, or CLI credentials"
+            "未在本机系统凭据、Antigravity 经典版/IDE 数据库或 CLI 中检测到有效登录状态，或无法连接 Google 校验凭据"
                 .to_string(),
         );
     }

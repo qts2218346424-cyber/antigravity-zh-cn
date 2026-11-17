@@ -114,6 +114,31 @@ class PetAudioEngine {
     this.playTone(1046.5, 2093, 0.24, 'sine', 0.06, 0);
     this.playTone(1567.98, 1318.51, 0.32, 'triangle', 0.05, 0.12);
   }
+
+  /** 炭治郎 · 水之呼吸清泉流波音效 */
+  playWaterBreath() {
+    this.playTone(392.0, 587.33, 0.22, 'sine', 0.075, 0);
+    this.playTone(587.33, 880.0, 0.26, 'sine', 0.065, 0.09);
+    this.playTone(1174.66, 783.99, 0.28, 'triangle', 0.045, 0.18);
+  }
+
+  /** 善逸 · 雷之呼吸霹雳一闪瞬发电流音 */
+  playThunderSpark() {
+    this.playTone(1760, 320, 0.14, 'sawtooth', 0.055, 0);
+    this.playTone(2349.32, 987.77, 0.19, 'triangle', 0.06, 0.05);
+  }
+
+  /** 伊之助 · 兽之呼吸双刀突进战鼓音 */
+  playBeastRoar() {
+    this.playTone(130.81, 65.41, 0.2, 'sawtooth', 0.07, 0);
+    this.playTone(261.63, 392.0, 0.18, 'triangle', 0.07, 0.06);
+  }
+
+  /** 低配额温和双音风铃提示 */
+  playQuotaAlert() {
+    this.playTone(783.99, 659.25, 0.18, 'sine', 0.06, 0);
+    this.playTone(659.25, 523.25, 0.24, 'sine', 0.055, 0.16);
+  }
 }
 
 export const petAudio = new PetAudioEngine();

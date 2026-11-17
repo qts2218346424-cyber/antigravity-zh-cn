@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import pkg from "./package.json";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -8,6 +9,40 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [react()],
   base: "./",
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
+  build: {
+    chunkSizeWarningLimit: 1800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("recharts") || id.includes("d3-")) {
+              return "vendor-charts";
+            }
+            if (
+              id.includes("@lobehub") ||
+              id.includes("antd") ||
+              id.includes("@ant-design") ||
+              id.includes("@emotion") ||
+              id.includes("framer-motion") ||
+              id.includes("lucide-react")
+            ) {
+              return "vendor-ui";
+            }
+            if (id.includes("@tauri-apps")) {
+              return "vendor-tauri";
+            }
+          }
+          if (id.includes("/src/locales/") && id.endsWith(".json")) {
+            return "app-locales";
+          }
+          return undefined;
+        },
+      },
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

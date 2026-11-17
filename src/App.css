@@ -41,17 +41,17 @@ html.mini-window #root {
   overflow: hidden !important;
 }
 
-/* 主窗口浅色与暗色默认背景 */
-html:not(.mini-window) {
+/* 主窗口浅色与暗色默认背景（排除透明悬浮窗与独立桌宠窗） */
+html:not(.mini-window):not(.pet-window) {
   background-color: #FAFBFC;
 }
 
-html.dark:not(.mini-window) {
-  background-color: #09090b;
+html.dark:not(.mini-window):not(.pet-window) {
+  background-color: #0f172a;
 }
 
-/* 全局样式（仅限制非 mini 窗口） */
-body:not(.mini-window) {
+/* 全局字体与主体配色（排除透明悬浮窗与独立桌宠窗） */
+body:not(.mini-window):not(.pet-window) {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -60,10 +60,12 @@ body:not(.mini-window) {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   background-color: #FAFBFC;
+  color: #0f172a;
 }
 
-.dark body:not(.mini-window) {
-  background-color: #09090b;
+.dark body:not(.mini-window):not(.pet-window) {
+  background-color: #0f172a;
+  color: #f8fafc;
 }
 
 /* LobeHub UI flex center fallback for @lobehub/icons avatar components */
@@ -75,12 +77,6 @@ body:not(.mini-window) {
 }
 .lobe-flex svg {
   display: block;
-}
-
-/* Dark mode override for body strictly */
-.dark body:not(.mini-window) {
-  background-color: #0f172a;
-  color: #f8fafc;
 }
 
 #root {

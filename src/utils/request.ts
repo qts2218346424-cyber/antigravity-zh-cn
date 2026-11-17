@@ -2,7 +2,7 @@
 const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
 
 // 命令到 API 的映射
-const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'DELETE' | 'PATCH' }> = {
+export const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'DELETE' | 'PATCH' }> = {
   // Accounts
   'list_accounts': { url: '/api/accounts', method: 'GET' },
   'get_current_account': { url: '/api/accounts/current', method: 'GET' },
@@ -22,6 +22,9 @@ const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'D
   'warm_up_account': { url: '/api/accounts/:accountId/warmup', method: 'POST' },
   'update_account_label': { url: '/api/accounts/:accountId/label', method: 'POST' },
   'update_account_priority': { url: '/api/accounts/:accountId/priority', method: 'POST' },
+  'update_account_project_id': { url: '/api/accounts/:accountId/project-id', method: 'POST' },
+  'auto_fetch_account_project_id': { url: '/api/accounts/:accountId/auto-project-id', method: 'POST' },
+  'get_active_clients_status': { url: '/api/accounts/active-clients', method: 'GET' },
   'export_accounts': { url: '/api/accounts/export', method: 'POST' },
   'bind_device_profile': { url: '/api/accounts/:accountId/bind-device', method: 'POST' },
   'get_device_profiles': { url: '/api/accounts/:accountId/device-profiles', method: 'GET' },
@@ -54,6 +57,7 @@ const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'D
   'test_model_connectivity': { url: '/api/proxy/test-model', method: 'POST' },
 
   // Logs & Monitoring
+  'get_proxy_logs_paginated': { url: '/api/logs', method: 'GET' },
   'get_proxy_logs_filtered': { url: '/api/logs', method: 'GET' },
   'get_proxy_logs_count_filtered': { url: '/api/logs/count', method: 'GET' },
   'get_proxy_db_disk_size': { url: '/api/logs/disk-size', method: 'GET' },
@@ -102,15 +106,24 @@ const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'D
   'execute_openclaw_clear': { url: '/api/proxy/openclaw/clear', method: 'POST' },
   'get_openclaw_config_content': { url: '/api/proxy/openclaw/config', method: 'POST' },
 
+  // Droid Sync
+  'get_droid_sync_status': { url: '/api/proxy/droid/status', method: 'POST' },
+  'execute_droid_sync': { url: '/api/proxy/droid/sync', method: 'POST' },
+  'execute_droid_restore': { url: '/api/proxy/droid/restore', method: 'POST' },
+  'get_droid_config_content': { url: '/api/proxy/droid/config', method: 'POST' },
+
   // Stats
+  'get_token_stats_minute': { url: '/api/stats/token/minute', method: 'GET' },
   'get_token_stats_hourly': { url: '/api/stats/token/hourly', method: 'GET' },
   'get_token_stats_daily': { url: '/api/stats/token/daily', method: 'GET' },
   'get_token_stats_weekly': { url: '/api/stats/token/weekly', method: 'GET' },
   'get_token_stats_by_account': { url: '/api/stats/token/by-account', method: 'GET' },
   'get_token_stats_summary': { url: '/api/stats/token/summary', method: 'GET' },
   'get_token_stats_by_model': { url: '/api/stats/token/by-model', method: 'GET' },
+  'get_token_stats_model_trend_minute': { url: '/api/stats/token/model-trend/minute', method: 'GET' },
   'get_token_stats_model_trend_hourly': { url: '/api/stats/token/model-trend/hourly', method: 'GET' },
   'get_token_stats_model_trend_daily': { url: '/api/stats/token/model-trend/daily', method: 'GET' },
+  'get_token_stats_account_trend_minute': { url: '/api/stats/token/account-trend/minute', method: 'GET' },
   'get_token_stats_account_trend_hourly': { url: '/api/stats/token/account-trend/hourly', method: 'GET' },
   'get_token_stats_account_trend_daily': { url: '/api/stats/token/account-trend/daily', method: 'GET' },
   'clear_token_stats': { url: '/api/stats/token/clear', method: 'POST' },
@@ -201,6 +214,45 @@ const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'D
   'get_account_proxy_binding': { url: '/api/proxy/pool/binding/:accountId', method: 'GET' },
 };
 
+export function buildMappedRequestUrl(
+  templateUrl: string,
+  method: 'GET' | 'POST' | 'DELETE' | 'PATCH',
+  args?: Record<string, unknown>
+): { url: string; bodyArgs?: Record<string, unknown> } {
+  let url = templateUrl;
+  const usedPathKeys = new Set<string>();
+  const bodyArgs = args ? { ...args } : undefined;
+
+  // 通用路径参数处理：替换 :key 为 args[key]
+  if (args) {
+    Object.keys(args).forEach((key) => {
+      const pattern = new RegExp(`:${key}(?=/|$)`, 'g');
+      if (pattern.test(url)) {
+        url = url.replace(pattern, encodeURIComponent(String(args[key])));
+        usedPathKeys.add(key);
+        if (bodyArgs) {
+          delete bodyArgs[key];
+        }
+      }
+    });
+  }
+
+  if ((method === 'GET' || method === 'DELETE') && args) {
+    const params = new URLSearchParams();
+    Object.entries(args).forEach(([key, value]) => {
+      // [FIX] 仅按已替换的路径占位符 key 集合跳过，避免按 value 误伤同名值的查询参数
+      if (usedPathKeys.has(key)) return;
+      if (value !== undefined && value !== null) {
+        params.append(key, String(value));
+      }
+    });
+    const qs = params.toString();
+    if (qs) url += `?${qs}`;
+  }
+
+  return { url, bodyArgs };
+}
+
 export async function request<T>(cmd: string, args?: any): Promise<T> {
   // 1. Tauri 环境：直接使用 invoke ...
   if (isTauri) {
@@ -220,24 +272,7 @@ export async function request<T>(cmd: string, args?: any): Promise<T> {
     throw new Error(`Command [${cmd}] not supported in Web mode.`);
   }
 
-  let url = mapping.url;
-
-  // [FIX] 创建 args 副本，用于移除已使用的路径参数
-  let bodyArgs = args ? { ...args } : undefined;
-
-  // 通用路径参数处理：替换 :key 为 args[key]
-  if (args) {
-    Object.keys(args).forEach(key => {
-      const placeholder = `:${key}`;
-      if (url.includes(placeholder)) {
-        url = url.replace(placeholder, encodeURIComponent(String(args[key])));
-        // [FIX] 从 body 参数中移除已用于路径的参数
-        if (bodyArgs) {
-          delete bodyArgs[key];
-        }
-      }
-    });
-  }
+  const { url, bodyArgs } = buildMappedRequestUrl(mapping.url, mapping.method, args);
 
   const apiKey = typeof window !== 'undefined'
     ? (sessionStorage.getItem('abv_admin_api_key') || localStorage.getItem('abv_admin_api_key'))
@@ -254,18 +289,7 @@ export async function request<T>(cmd: string, args?: any): Promise<T> {
     },
   };
 
-  if ((mapping.method === 'GET' || mapping.method === 'DELETE') && args) {
-    const params = new URLSearchParams();
-    Object.entries(args).forEach(([key, value]) => {
-      // [FIX] 跳过已用于路径替换的参数
-      if (url.includes(encodeURIComponent(String(value)))) return;
-      if (value !== undefined && value !== null) {
-        params.append(key, String(value));
-      }
-    });
-    const qs = params.toString();
-    if (qs) url += `?${qs}`;
-  } else if ((mapping.method === 'POST' || mapping.method === 'PATCH') && bodyArgs) {
+  if ((mapping.method === 'POST' || mapping.method === 'PATCH') && bodyArgs) {
     // [FIX] 如果有 request 包装，提取其内容作为 body
     const body = bodyArgs.request !== undefined ? bodyArgs.request : bodyArgs;
     options.body = JSON.stringify(body);

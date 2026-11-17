@@ -5,10 +5,15 @@
         "desc": "客户端直控模式与自定义 Token 档位已下线：具备 thinkingLevel 的模型由模型档位直接决定等级（low / medium / high），其余模型沿用官方 thinkingBudget 默认值。客户端传入的思考档位仅在无后缀（裸）模型上生效，用于选择具体档位模型。"
     },
     "hub_update": {
-        "available": "antigravity hub latest: {{version}}，如果请求正常请忽略"
+        "available": "检测到最新 Antigravity Hub 版本: {{version}}，如果请求正常请忽略"
     },
     "common": {
         "loading": "加载中...",
+        "empty": "空",
+        "retry": "重试",
+        "copy_all": "复制全部",
+        "processing": "处理中...",
+        "failed": "失败",
         "load_more": "加载更多",
         "add": "添加",
         "copy": "复制",
@@ -70,7 +75,7 @@
         "selected": "已选择",
         "claude_series": "Claude 系列",
         "maximize": "最大化",
-        "app_name": "Antigravity Tools",
+        "app_name": "Antigravity Studio",
         "copy_to_clipboard": "复制到剪贴板"
     },
     "nav": {
@@ -182,6 +187,7 @@
         "weekly_7d": "7天周配额:",
         "zero_weekly_warning": "{{count}} 个可用账号因周配额已耗尽触发熔断 (判定 0%)",
         "view_mode_weighted": "综合加权",
+        "view_mode_weighted_title": "综合加权可用 (5H滚动与周配额木桶短板)",
         "view_mode_5h": "5H 滚动",
         "view_mode_weekly": "7天周配额",
         "view_mode_title_weighted": "综合加权：结合套餐等级与双向木桶短板的全局调度可用度",
@@ -271,6 +277,9 @@
         "priority_invalid": "优先级必须是 1–100 的整数",
         "priority_updated": "优先级已更新",
         "add_account": "添加账号",
+        "sync_local": "同步本机账号",
+        "sync_local_tooltip": "扫描并同步更新本机 Antigravity 客户端当前登录账号与实时配额",
+        "sync_local_success": "已成功同步并更新本机客户端账号信息",
         "refresh_all": "刷新所有",
         "refresh_selected": "刷新 ({{count}})",
         "export_selected": "导出 ({{count}})",
@@ -380,9 +389,11 @@
             "restored": "已恢复",
             "deleted": "已删除",
             "directory_opened": "已打开设备存储目录",
-            "original_fingerprint_not_found": "未找到原始指纹"
+            "original_fingerprint_not_found": "未找到原始指纹",
+            "storage_json_not_found": "未找到本地 storage.json 文件（请先启动一次客户端）"
         },
         "warmup_all": "一键预热",
+        "warmup_all_triggered": "全量预热任务已触发",
         "warmup_selected": "预热 ({{count}})",
         "warmup_this": "预热该账号",
         "warmup_now": "立即预热",
@@ -462,7 +473,9 @@
             },
             "btn_cancel": "取消",
             "btn_confirm": "确认添加",
+            "oauth_success": "OAuth 授权成功！",
             "oauth_error": "OAuth 授权失败: {{error}}",
+            "batch_progress": "正在高速导入账号...",
             "status": {
                 "error_token": "请填写 Refresh Token"
             }
@@ -482,7 +495,13 @@
             "title": "暂无账号",
             "desc": "点击上方\"添加账号\"按钮添加第一个账号"
         },
+        "view": {
+            "compact": "紧凑视图",
+            "list": "列表视图",
+            "grid": "网格视图"
+        },
         "views": {
+            "compact": "紧凑视图",
             "list": "列表视图",
             "grid": "网格视图"
         },
@@ -505,9 +524,9 @@
             "batch_warmup_title": "批量手动预热",
             "batch_warmup_msg": "确定要为选中的 {{count}} 个账号立即触发预热吗？"
         },
-        "switch_to_agy": "Switch to Antigravity CLI (agy)",
+        "switch_to_agy": "切换到 Antigravity CLI (agy)",
         "switch_next_short": "切下个",
-        "project_id": "GCP Project ID",
+        "project_id": "GCP 项目 ID",
         "project_id_hint": "企业/GCP 账号关联的 Google Cloud 项目 ID。原生 Antigravity 在登录后会自动关联或使用缺省项目。",
         "project_id_placeholder": "如: my-project-id",
         "project_id_updated": "GCP Project ID 已更新",
@@ -518,6 +537,7 @@
     },
     "settings": {
         "save": "保存设置",
+        "web_mode_limitation": "(Web 模式不支持)",
         "tabs": {
             "general": "通用",
             "account": "账号",
@@ -540,7 +560,7 @@
             "auto_launch": "开机自动启动",
             "auto_launch_enabled": "启用",
             "auto_launch_disabled": "禁用",
-            "auto_launch_desc": "系统启动时自动运行 Antigravity Tools",
+            "auto_launch_desc": "系统启动时自动运行 Antigravity Studio",
             "quiet_autostart": "免打扰启动（留在托盘）",
             "quiet_autostart_desc": "开机自启时不弹出主窗口。同时开启轻量模式时，会直接释放前端进程。手动打开软件仍会显示主窗口；系统没有托盘时会改为显示窗口。",
             "quiet_autostart_enabled": "已开启免打扰启动",
@@ -565,6 +585,8 @@
         },
         "account": {
             "title": "账号设置",
+            "email": "账号邮箱",
+            "no_accounts": "暂无可用账号",
             "auto_refresh": "后台自动刷新",
             "auto_refresh_desc": "后台自动刷新所有账号的配额信息，这是额度保护和智能预热的基础。",
             "always_on": "始终开启",
@@ -601,13 +623,17 @@
         },
         "pinned_quota_models": {
             "title": "配额关注列表",
-            "desc": "选择要在账号列表外层显示的模型配额，未选中的模型只在详情弹窗中显示"
+            "desc": "选择要在账号列表外层显示的模型配额，未选中的模型只在详情弹窗中显示",
+            "dynamic": "动态提取模型"
         },
         "proxy": {
             "title": "代理设置"
         },
         "proxy_pool": {
             "title": "代理池",
+            "proxies": "可用代理节点",
+            "bound_to": "已绑定账号",
+            "inactive_notice": "代理池未启用",
             "strategy_priority": "按权重随机",
             "strategy_round_robin": "顺序循环",
             "strategy_random": "随机",
@@ -632,7 +658,10 @@
             "interval_tooltip": "健康检查间隔 (秒)",
             "test_completed": "健康检查已完成",
             "test_failed": "健康检查失败",
+            "confirm_delete_title": "删除代理",
             "confirm_delete": "确定要删除此代理吗？",
+            "confirm_batch_delete_title": "批量删除代理",
+            "confirm_batch_delete": "确定要删除选中的 {{count}} 个代理节点吗？",
             "empty": "暂无代理",
             "column_priority": "权重",
             "column_status": "状态",
@@ -803,7 +832,7 @@
             "support_desc": "如果您觉得本工具对您有帮助，欢迎扫码请作者喝杯咖啡！您的支持是我持续维护项目的最大动力。",
             "support_alipay": "支付宝",
             "support_wechat": "微信支付",
-            "support_buymeacoffee": "Buy Me a Coffee",
+            "support_buymeacoffee": "请喝杯咖啡",
             "upgrade_now_btn": "立即下载并自动更新",
             "update_dialog_title": "发现新版本可用",
             "update_confirm_desc": "检测到有新版本发布。是否立即下载更新？客户端将在下载完成后自动热重启以应用更新。",
@@ -853,6 +882,10 @@
             "char_count": "{{count}} 字符",
             "long_prompt_warning": "提示词较长（超过 2000 字符），可能会占用较多的上下文窗口空间。"
         },
+        "branding": {
+            "title": "Antigravity Studio",
+            "subtitle": "专业多账号调度与汉化美化工作台"
+        },
         "lightweight_mode_desc": "开启后退出或最小化到托盘将彻底释放 WebView 内存"
     },
     "tray": {
@@ -862,7 +895,7 @@
         "refresh_current": "刷新当前账号额度",
         "show_window": "显示主窗口",
         "mini_view": "迷你悬浮窗",
-        "quit": "退出应用 (Exit)",
+        "quit": "退出应用",
         "no_account": "无账号",
         "unknown_quota": "未知 (点击刷新)",
         "forbidden": "账号被封禁",
@@ -894,7 +927,11 @@
                 "user_agent_risk_desc": "自定义 User-Agent 可能会影响出站请求的协议兼容性。Google Cloud Code 上游对新一代旗舰模型（如 Gemini 4 Argon 等）实施了严格的客户端指纹门禁。若填入非 Hub 签名格式（如 antigravity/4.3.0 等旧 IDE 指纹）或版本过旧（低于官方最新基准 {{version}}），上游将直接返回 HTTP 404 (Requested entity was not found)，并可能导致网关账号池被临时保护性熔断挂起 15 分钟。若不了解上游指纹协议细节，请谨慎操作或保持默认。",
                 "user_agent_restored_success": "已成功恢复官方默认 Hub User-Agent",
                 "user_agent_sandbox_test_title": "User-Agent 与 Argon 门禁沙盒联调测试",
-                "user_agent_sandbox_test_desc": "可实时模拟不同 User-Agent 指纹并向网关发送 Argon 连通性测试请求，观察网关的定向检测与诊断输出。"
+                "user_agent_sandbox_test_desc": "可实时模拟不同 User-Agent 指纹并向网关发送 Argon 连通性测试请求，观察网关的定向检测与诊断输出。",
+                "sandbox_ua_input_label": "沙盒测试 User-Agent (仅单次探测使用，不污染全局配置):",
+                "apply_sandbox_ua_btn": "应用此 UA 到全局反代配置",
+                "sandbox_ua_already_applied": "已应用到全局反代配置",
+                "user_agent_sandbox_applied": "已将此 User-Agent 应用到全局反代配置"
             },
             "port": "监听端口",
             "port_tooltip": "本地 API 代理监听的端口。需要先停止服务再修改，修改后需重启生效。",
@@ -969,7 +1006,7 @@
                     "haiku_tooltip": "当请求的 model 包含“haiku”（如 claude-haiku-*）时默认使用的 z.ai 模型 ID。",
                     "advanced_title": "高级覆盖规则",
                     "advanced_tooltip": "可选的精确匹配覆盖规则：如果 incoming model 字符串与规则键完全一致，则替换为对应的 z.ai 模型 ID。",
-                    "from_label": "incoming model",
+                    "from_label": "源模型标识",
                     "to_label": "z.ai 模型",
                     "add_rule": "添加",
                     "empty": "尚未配置自定义替换规则。",
@@ -1589,8 +1626,8 @@
             "subtitle": "快速将当前 API 服务地址与 API 密钥同步到本地 AI Agent 工具中",
             "card_title": "{{name}} 配置",
             "jeikcode_recommended": "推荐使用",
-            "jeikcode_badge": "Best Matched",
-            "jeikcode_author": "by Jeikl",
+            "jeikcode_badge": "最佳搭档",
+            "jeikcode_author": "Jeikl 出品",
             "jeikcode_tagline": "核心维护者深度打造 · 原生网关最佳兼容",
             "jeikcode_tag_cache": "95%+ 恐怖缓存",
             "jeikcode_tag_codegraph": "代码图谱",
@@ -1616,6 +1653,7 @@
                 "copy_success": "配置内容已复制"
             },
             "toast": {
+                "config_missing": "请先生成 API Key 并启动服务",
                 "sync_success": "同步成功！{{name}} 已准备就绪。",
                 "sync_error": "同步失败：{{error}}",
                 "sync_success_with_model": "同步成功！{{name}} 已同步模型: {{model}}"
@@ -1625,6 +1663,58 @@
             "apps": {
                 "gemini": "Antigravity CLI (agy)",
                 "deepseek_harness": "DeepSeek Harness"
+            }
+        },
+        "opencode_sync": {
+            "card_title": "OpenCode",
+            "status": {
+                "detecting": "检测中...",
+                "installed": "已安装 ({{version}})",
+                "not_installed": "未安装",
+                "synced": "已同步",
+                "not_synced": "未同步",
+                "current_base_url": "当前接口地址 (BASE URL)"
+            },
+            "sync_accounts": "同步账号到 antigravity-accounts.json",
+            "btn_sync": "立即同步配置",
+            "btn_view": "查看配置",
+            "btn_restore": "还原配置",
+            "btn_restore_backup": "从备份还原",
+            "btn_clear": "清除配置",
+            "clear_confirm_title": "确认清除配置",
+            "clear_confirm_message": "确定要清除所有 OpenCode 配置（含历史旧版设置）吗？",
+            "toast": {
+                "config_missing": "请先生成 API Key 并启动服务",
+                "sync_success": "OpenCode 配置同步成功",
+                "sync_error": "OpenCode 同步失败: {{error}}",
+                "clear_success": "OpenCode 配置已清除",
+                "clear_error": "清除 OpenCode 配置失败: {{error}}"
+            },
+            "modal": {
+                "view_title": "OpenCode 配置文件预览",
+                "copy_success": "配置已复制"
+            },
+            "sync_confirm_title": "确认同步",
+            "sync_confirm_message": "将根据当前反代设置覆盖 OpenCode 配置。确定继续？",
+            "restore_confirm": "确定要将 OpenCode 还原为默认配置吗？",
+            "restore_backup_confirm": "确定要从备份还原 OpenCode 配置吗？",
+            "modal_title": "选择 OpenCode 模型",
+            "select_models": "选择要同步的模型",
+            "auth_plugin_warning": "检测到 opencode-antigravity-auth 插件。同步仅会创建 antigravity-manager provider，不会覆盖 google provider/plugin。",
+            "btn_confirm_sync": "确认同步",
+            "custom_base_url_label": "自定义 Manager BaseURL",
+            "custom_base_url_desc": "适用于 Docker Compose 网络环境",
+            "custom_base_url_reset": "重置"
+        },
+        "droid_sync": {
+            "modal_title": "添加模型到 Droid",
+            "modal_desc": "选中的模型将作为 customModels 写入 settings.json",
+            "selected": "已选",
+            "btn_confirm_sync": "添加所选模型",
+            "toast": {
+                "no_models_selected": "请至少选择一个模型",
+                "sync_success_count": "已添加 {{count}} 个模型到 Droid",
+                "sync_error": "同步失败: {{error}}"
             }
         },
         "hermes_sync": {
@@ -1925,7 +2015,19 @@
             "param_key": "参数名称 (Key)",
             "param_value": "参数值 (Value)",
             "header_key": "请求头 (Header)",
-            "header_value": "请求头值 (Value)"
+            "header_value": "请求头值 (Value)",
+            "empty_params": "无 Query 请求参数",
+            "empty_headers": "无 Headers 数据",
+            "filter_params": "搜索参数名称或值...",
+            "filter_headers": "搜索 Header 键或值...",
+            "view_table_title": "表格视图 (Key-Value)",
+            "view_table": "表格",
+            "view_raw_title": "原始 JSON / 纯文本",
+            "view_raw": "原始",
+            "sensitive": "敏感",
+            "mask_sensitive": "遮罩隐藏明文",
+            "unmask_sensitive": "查看完整明文",
+            "copy_value": "复制此项值"
         },
         "timing": {
             "title": "耗时分类诊断",
@@ -1965,6 +2067,34 @@
         "dialog": {
             "clear_title": "清除监控日志",
             "clear_msg": "确定要清除所有监控记录吗？此操作无法撤销。"
+        },
+        "network": {
+            "title": "网络监控",
+            "open": "打开网络监控",
+            "requests_count": "{{count}} 条请求",
+            "start_recording": "开始记录",
+            "stop_recording": "停止记录",
+            "clear_requests": "清空请求",
+            "empty": "暂无记录的请求",
+            "waiting": "等待响应...",
+            "badge_error": "错误",
+            "table": {
+                "status": "状态",
+                "command": "命令",
+                "time": "时间",
+                "duration": "耗时"
+            },
+            "sections": {
+                "general": "概览",
+                "request_args": "请求参数",
+                "error_details": "错误详情",
+                "response": "响应内容"
+            },
+            "fields": {
+                "status": "状态",
+                "start_time": "开始时间",
+                "duration": "耗时"
+            }
         },
         "settings": {
             "toggle_button": "日志存储与维护设置",
@@ -2354,7 +2484,7 @@
         "title": "APIKEY.FUN 中转站",
         "eyebrow": "中转站",
         "double11Badge": "双 11 特惠中",
-        "description": "Antigravity Tools 官方合作中转站，为用户提供稳定、开放、高性价比的大模型 API 接入服务。支持 Claude、OpenAI、Gemini 等主流模型，适合在 Codex、Gemini CLI、Claude Code 及其他开发工具中统一配置使用。通过 Antigravity Tools 专属链接注册，可享受最高充值永久 95 折优惠。",
+        "description": "Antigravity Studio 官方合作中转站，为用户提供稳定、开放、高性价比的大模型 API 接入服务。支持 Claude、OpenAI、Gemini 等主流模型，适合在 Codex、Gemini CLI、Claude Code 及其他开发工具中统一配置使用。通过 Antigravity Studio 专属链接注册，可享受最高充值永久 95 折优惠。",
         "viewNow": "立即查看",
         "usage": {
             "remainingAmount": "剩余额度",
@@ -2429,5 +2559,18 @@
         "banner_active_count": "{{count}} 个待消耗",
         "banner_subtext": "正在全力优先消耗临期配额，其他正常账号正常待命作为会话连续性与并发弹性保底。当目标账号配额全部降至 0% 或到达重置时间后，系统将自动恢复默认调度。",
         "exit_button": "手动退出并恢复"
+    },
+    "debug_console": {
+        "title": "调试控制台",
+        "button_label": "控制台",
+        "toggle": "切换调试控制台",
+        "filter_placeholder": "过滤日志...",
+        "pause_scroll": "暂停滚动",
+        "resume_scroll": "恢复滚动",
+        "clear": "清空日志",
+        "no_logs": "暂无日志记录",
+        "no_logs_hint": "实时日志将在此处显示",
+        "scroll_to_bottom": "滚到底部",
+        "live": "实时"
     }
 }

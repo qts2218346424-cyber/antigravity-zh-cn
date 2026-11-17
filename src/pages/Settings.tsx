@@ -1,5 +1,5 @@
 import { useState, useEffect, startTransition } from 'react';
-import { Save, Github, ExternalLink, RefreshCw, Heart, Coffee, LayoutDashboard, Users, Network, Activity, BarChart3, Settings as SettingsIcon, Lock, CheckCircle2, Globe, Copy, Check, ShieldAlert } from 'lucide-react';
+import { Save, Github, ExternalLink, RefreshCw, Heart, Coffee, LayoutDashboard, Users, Network, Activity, BarChart3, Settings as SettingsIcon, Lock, CheckCircle2, Globe, Copy, Check, ShieldAlert, Sparkles, KeyRound } from 'lucide-react';
 import { request as invoke } from '../utils/request';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useConfigStore } from '../stores/useConfigStore';
@@ -46,7 +46,7 @@ function Settings() {
     const { config, loadConfig, saveConfig, updateLanguage, updateTheme } = useConfigStore();
     const { enable, disable, isEnabled } = useDebugConsole();
     const [activeTab, setActiveTab] = useState<'general' | 'account' | 'proxy' | 'advanced' | 'debug' | 'about'>('general');
-    const [appVersion, setAppVersion] = useState<string>('5.0.3');
+    const [appVersion, setAppVersion] = useState<string>(() => (globalThis as any).__APP_VERSION__ || '5.1.0');
     const [formData, setFormData] = useState<AppConfig>({
         language: 'zh',
         theme: 'system',
@@ -359,7 +359,7 @@ function Settings() {
             const selected = await open({
                 directory: false,
                 multiple: false,
-                title: t('settings.advanced.antigravity_ide_path_select', 'Select Antigravity IDE Executable'),
+                title: t('settings.advanced.antigravity_ide_path_select', '选择 Antigravity IDE 可执行文件'),
             });
             if (selected && typeof selected === 'string') {
                 setFormData({ ...formData, antigravity_ide_executable: selected });
@@ -409,7 +409,7 @@ function Settings() {
             const selected = await open({
                 directory: false,
                 multiple: false,
-                title: t('settings.advanced.antigravity_cli_path_select', 'Select Antigravity CLI (agy) Executable'),
+                title: t('settings.advanced.antigravity_cli_path_select', '选择 Antigravity CLI (agy) 可执行文件'),
             });
             if (selected && typeof selected === 'string') {
                 setFormData({ ...formData, antigravity_cli_executable: selected });
@@ -423,7 +423,7 @@ function Settings() {
         try {
             const path = await invoke<string>('get_antigravity_cli_path', { bypassConfig: true });
             setFormData({ ...formData, antigravity_cli_executable: path });
-            showToast(t('settings.advanced.antigravity_cli_path_detected', 'Detected CLI path updated'), 'success');
+            showToast(t('settings.advanced.antigravity_cli_path_detected', '已更新探测到的 CLI 路径'), 'success');
         } catch (error) {
             showToast(`${t('common.error')}: ${error}`, 'error');
         }
@@ -898,8 +898,9 @@ function Settings() {
                                             { path: '/api-proxy', label: t('nav.proxy'), icon: Network },
                                             { path: '/monitor', label: t('nav.call_records'), icon: Activity },
                                             { path: '/token-stats', label: t('nav.token_stats'), icon: BarChart3 },
-                                            { path: '/user-token', label: t('nav.user_token', 'User Tokens'), icon: Users },
+                                            { path: '/user-token', label: t('nav.user_token', '用户 Token'), icon: KeyRound },
                                             { path: '/security', label: t('nav.security'), icon: Lock },
+                                            { path: '/studio', label: t('nav.studio', '汉化与美化'), icon: Sparkles },
                                             { path: '/settings', label: t('nav.settings'), icon: SettingsIcon },
                                         ].map((item) => {
                                             const hiddenItems = formData.hidden_menu_items || [];
@@ -1032,6 +1033,55 @@ function Settings() {
                                         />
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* 本机当前活动账号自动同步 */}
+                            <div className="group bg-white dark:bg-base-100 rounded-xl p-5 border border-gray-100 dark:border-base-200 hover:border-emerald-200 transition-all duration-300 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                                            <Users size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-gray-900 dark:text-gray-100">{t('settings.account.auto_sync', '自动同步本机当前账号')}</div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.account.auto_sync_desc', '自动感知并同步本机 Antigravity 客户端切换或新登录的账号信息')}</p>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={formData.auto_sync}
+                                            onChange={async (e) => {
+                                                const enabled = e.target.checked;
+                                                const newConfig = { ...formData, auto_sync: enabled };
+                                                setFormData(newConfig);
+                                                try {
+                                                    await saveConfig(newConfig);
+                                                } catch (error) {
+                                                    showToast(`${t('common.error')}: ${error}`, 'error');
+                                                }
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 dark:bg-base-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+                                    </label>
+                                </div>
+
+                                {formData.auto_sync && (
+                                    <div className="mt-5 pt-5 border-t border-gray-50 dark:border-base-300 flex items-center gap-4 animate-in slide-in-from-top-1 duration-200">
+                                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('settings.account.sync_interval', '同步间隔（分钟）')}</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                className="w-24 px-3 py-2 bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-bold text-emerald-600 dark:text-emerald-400"
+                                                min="1"
+                                                max="1440"
+                                                value={formData.sync_interval || 2}
+                                                onChange={(e) => setFormData({ ...formData, sync_interval: isNaN(parseInt(e.target.value)) ? 1 : Math.min(Math.max(parseInt(e.target.value), 1), 1440) })}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
 
@@ -1226,7 +1276,7 @@ function Settings() {
                                 {/* Antigravity CLI (agy) 程序路径 */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-900 dark:text-base-content mb-1">
-                                        {t('settings.advanced.antigravity_cli_path', 'Antigravity CLI (agy) Path')}
+                                        {t('settings.advanced.antigravity_cli_path', 'Antigravity CLI (agy) 路径')}
                                     </label>
                                     <div className="flex gap-2">
                                         <input
@@ -1299,7 +1349,7 @@ function Settings() {
                                 {/* Antigravity IDE 程序路径 */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-900 dark:text-base-content mb-1">
-                                        {t('settings.advanced.antigravity_ide_path', 'Antigravity IDE Path')}
+                                        {t('settings.advanced.antigravity_ide_path', 'Antigravity IDE 路径')}
                                     </label>
                                     <div className="flex gap-2">
                                         <input
@@ -1331,7 +1381,7 @@ function Settings() {
                                         )}
                                     </div>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                                        {t('settings.advanced.antigravity_ide_path_desc', 'Specify the executable path for Antigravity IDE (code editor). Once set, account switching will strictly protect processes at this path from being terminated.')}
+                                        {t('settings.advanced.antigravity_ide_path_desc', '指定 Antigravity IDE (代码编辑器) 的可执行文件路径。设置后，切换账号时将严格保护此路径的进程不被关闭。')}
                                     </p>
                                 </div>
 
@@ -1650,15 +1700,18 @@ function Settings() {
                                     // to prevent race conditions where old memory state rolls back new manual changes
                                     if (silent) {
                                         console.log('Proxy status sync (silent)');
-                                        return;
+                                        return Promise.resolve();
                                     }
 
-                                    // Hot reload: save immediately for manual changes
-                                    saveConfig({ ...updatedFormData, auto_refresh: true })
+                                    // Hot reload: save immediately for manual changes while preserving user's auto_refresh
+                                    return saveConfig(updatedFormData)
                                         .then(() => {
                                             console.log('Proxy config saved');
                                         })
-                                        .catch(err => console.error('Save failed:', err));
+                                        .catch(err => {
+                                            console.error('Save failed:', err);
+                                            throw err;
+                                        });
                                 }}
                             />
 
@@ -1767,7 +1820,7 @@ function Settings() {
                                                     },
                                                 };
                                                 setFormData(updated);
-                                                saveConfig({ ...updated, auto_refresh: true })
+                                                saveConfig(updated)
                                                     .catch(err => console.error('Save failed:', err));
                                             }}
                                         />
@@ -2075,10 +2128,10 @@ function Settings() {
                                     className="shrink-0 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200 dark:border-base-300 rounded hover:bg-gray-100 dark:hover:bg-base-300 transition-colors"
                                     onClick={() => {
                                         navigator.clipboard.writeText('brew upgrade --cask antigravity-tools');
-                                        showToast(t('common.copied', 'Copied'), 'success');
+                                        showToast(t('common.copied', '已复制到剪贴板'), 'success');
                                     }}
                                 >
-                                    {t('common.copy', 'Copy')}
+                                    {t('common.copy', '复制')}
                                 </button>
                             </div>
                         </div>
@@ -2090,10 +2143,10 @@ function Settings() {
                                     className="shrink-0 px-2 py-1 text-xs text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 border border-amber-200 dark:border-amber-700 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
                                     onClick={() => {
                                         navigator.clipboard.writeText('sudo xattr -rd com.apple.quarantine "/Applications/Antigravity Tools.app"');
-                                        showToast(t('common.copied', 'Copied'), 'success');
+                                        showToast(t('common.copied', '已复制到剪贴板'), 'success');
                                     }}
                                 >
-                                    {t('common.copy', 'Copy')}
+                                    {t('common.copy', '复制')}
                                 </button>
                             </div>
                         </div>
@@ -2206,7 +2259,7 @@ function Settings() {
                                 onClick={() => setIsSupportModalOpen(false)}
                                 className="w-full md:w-auto px-12 py-3 bg-gray-100 dark:bg-base-300 text-gray-700 dark:text-gray-200 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-base-200 transition-all"
                             >
-                                {t('common.close') || 'Close'}
+                                {t('common.close', '关闭')}
                             </button>
                         </div>
                     </div>

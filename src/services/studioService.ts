@@ -9,6 +9,7 @@ import type {
   SkillLocalizeResult,
   SkinInfo,
   SkinManifest,
+  StudioDiagnosticReport,
   StudioStatus,
 } from '../types/studio';
 
@@ -145,7 +146,7 @@ const PREVIEW_SKINS: SkinInfo[] = [
   },
 ];
 
-const PREVIEW_STATUS: StudioStatus = {
+let previewStatusState: StudioStatus = {
   install_dir: 'C:\\Users\\Demo\\AppData\\Local\\Programs\\Antigravity',
   ide_root: 'C:\\Users\\Demo\\AppData\\Local\\Programs\\Antigravity\\resources\\app',
   agent_status: 'clean',
@@ -157,31 +158,50 @@ const PREVIEW_STATUS: StudioStatus = {
   autostart_enabled: false,
   updates_disabled: false,
   splash_character: 'nezuko',
+  pet_character: 'nezuko',
+  pet_roaming: true,
+  pet_always_on_top: true,
+  pet_scale_idx: 1,
+  pet_muted: false,
+  custom_pet_avatar: null,
   lang: 'zh-cn',
-  enable_pet: true,
+  enable_pet: false,
   enable_skin: true,
   pet_window_open: false,
+  has_legacy_pet: false,
   config_dir: '%APPDATA%\\antigravity-zh-cn',
   resource_dir: 'resources',
-  reapply_logs: ['[浏览器预览模式] 完整文件修补与桌宠控制请在 Tauri 桌面客户端中运行'],
+  reapply_logs: ['[浏览器预览模式] 完整文件修补与独立窗口控制在 Tauri 桌面客户端中运行'],
 };
 
-async function callStudio<T>(cmd: string, args: Record<string, unknown> = {}, fallback?: () => T): Promise<T> {
+async function callStudio<T>(
+  cmd: string,
+  args: Record<string, unknown> = {},
+  fallback?: () => T,
+): Promise<T> {
   if (!isTauri()) {
     if (fallback) return fallback();
-    throw new Error(`当前处于纯浏览器预览模式，无法调用系统命令 ${cmd}`);
+    throw new Error(`当前处于纯浏览器预览模式，无法调用桌面原生接口 ${cmd}`);
   }
   return invoke<T>(cmd, args);
 }
 
 export const studioService = {
-  getStatus: () => callStudio<StudioStatus>('studio_get_status', {}, () => PREVIEW_STATUS),
+  getStatus: () =>
+    callStudio<StudioStatus>('studio_get_status', {}, () => ({ ...previewStatusState })),
 
   updatePaths: (installDir?: string | null, ideDir?: string | null) =>
     callStudio<StudioStatus>(
       'studio_update_paths',
       { installDir: installDir ?? null, ideDir: ideDir ?? null },
-      () => ({ ...PREVIEW_STATUS, install_dir: installDir ?? null, ide_root: ideDir ?? null }),
+      () => {
+        previewStatusState = {
+          ...previewStatusState,
+          install_dir: installDir !== undefined ? installDir : previewStatusState.install_dir,
+          ide_root: ideDir !== undefined ? ideDir : previewStatusState.ide_root,
+        };
+        return { ...previewStatusState };
+      },
     ),
 
   applyL10n: (params: {
@@ -229,6 +249,17 @@ export const studioService = {
           description: hit.description,
           base: hit.base,
           colors: hit.colors,
+          surfaces: {
+            radius: '12px',
+            glass_blur: 18,
+            card_opacity: 0.78,
+            border_glow: 'rgba(255, 255, 255, 0.16)',
+            noise_grain: 0.03,
+            shadow_elevation:
+              hit.base === 'light'
+                ? '0 16px 36px -12px rgba(232, 106, 146, 0.22)'
+                : '0 20px 50px -12px rgba(0, 0, 0, 0.72)',
+          },
         };
       },
     ),
@@ -272,29 +303,146 @@ export const studioService = {
     callStudio<ReapplyCheckResult>('studio_reapply_check', { force }),
 
   setAutoReapply: (enabled: boolean) =>
-    callStudio<boolean>('studio_set_auto_reapply', { enabled }),
+    callStudio<boolean>('studio_set_auto_reapply', { enabled }, () => {
+      previewStatusState = { ...previewStatusState, auto_reapply: enabled };
+      return enabled;
+    }),
 
   toggleAutostart: (enable: boolean) =>
     callStudio<void>('toggle_auto_launch', { enable }),
 
   getPetAssets: () =>
-    callStudio<PetAssets>('studio_get_pet_assets', {}, () => ({})),
+    callStudio<PetAssets>('studio_get_pet_assets', {}, () => ({
+      custom_avatar: previewStatusState.custom_pet_avatar ?? null,
+    })),
 
   launchPet: (character?: string) =>
-    callStudio<boolean>('studio_launch_pet', { character: character ?? null }),
+    callStudio<boolean>(
+      'studio_launch_pet',
+      { character: character ?? null },
+      () => {
+        previewStatusState = {
+          ...previewStatusState,
+          pet_window_open: true,
+          enable_pet: true,
+          pet_character: character || previewStatusState.pet_character,
+        };
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('studio:pet-state-changed', {
+              detail: { open: true, character: previewStatusState.pet_character },
+            }),
+          );
+        }
+        return true;
+      },
+    ),
 
-  closePet: () => callStudio<boolean>('studio_close_pet'),
+  closePet: () =>
+    callStudio<boolean>('studio_close_pet', {}, () => {
+      previewStatusState = {
+        ...previewStatusState,
+        pet_window_open: false,
+        enable_pet: false,
+      };
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('studio:pet-state-changed', {
+            detail: { open: false, character: previewStatusState.pet_character },
+          }),
+        );
+      }
+      return false;
+    }),
 
-  resetPetPosition: () => callStudio<void>('studio_reset_pet_position'),
+  resetPetPosition: () => callStudio<void>('studio_reset_pet_position', {}, () => undefined),
 
   setPetSize: (width: number, height: number) =>
-    callStudio<void>('studio_set_pet_size', { width, height }),
+    callStudio<void>('studio_set_pet_size', { width, height }, () => undefined),
 
   setPetAlwaysOnTop: (alwaysOnTop: boolean) =>
-    callStudio<void>('studio_set_pet_always_on_top', { alwaysOnTop }),
+    callStudio<void>('studio_set_pet_always_on_top', { alwaysOnTop }, () => {
+      previewStatusState = { ...previewStatusState, pet_always_on_top: alwaysOnTop };
+    }),
 
   nudgePet: (dx: number) =>
     callStudio<number>('studio_nudge_pet', { dx }, () => 0),
+
+  importPetAvatar: (filePath: string) =>
+    callStudio<string>('studio_import_pet_avatar', { filePath }),
+
+  clearPetAvatar: () =>
+    callStudio<void>('studio_clear_pet_avatar', {}, () => {
+      previewStatusState = {
+        ...previewStatusState,
+        custom_pet_avatar: null,
+        pet_character: 'nezuko',
+      };
+    }),
+
+  updatePetPrefs: (prefs: {
+    character?: string;
+    roaming?: boolean;
+    alwaysOnTop?: boolean;
+    scaleIdx?: number;
+    muted?: boolean;
+  }) =>
+    callStudio<void>(
+      'studio_update_pet_prefs',
+      {
+        character: prefs.character ?? null,
+        roaming: prefs.roaming ?? null,
+        alwaysOnTop: prefs.alwaysOnTop ?? null,
+        scaleIdx: prefs.scaleIdx ?? null,
+        muted: prefs.muted ?? null,
+      },
+      () => {
+        previewStatusState = {
+          ...previewStatusState,
+          pet_character: prefs.character ?? previewStatusState.pet_character,
+          pet_roaming: prefs.roaming ?? previewStatusState.pet_roaming,
+          pet_always_on_top: prefs.alwaysOnTop ?? previewStatusState.pet_always_on_top,
+          pet_scale_idx: prefs.scaleIdx ?? previewStatusState.pet_scale_idx,
+          pet_muted: prefs.muted ?? previewStatusState.pet_muted,
+        };
+      },
+    ),
+
+  runDiagnostics: () =>
+    callStudio<StudioDiagnosticReport>('studio_run_diagnostics', {}, () => ({
+      all_passed: true,
+      total_ms: 14,
+      items: [
+        {
+          key: 'l10n_resources',
+          name: '多语种汉化词典与运行时脚本核验',
+          passed: true,
+          duration_ms: 4,
+          detail: '[浏览器预览模拟] 7 项汉化词典与运行时脚本配置完整',
+        },
+        {
+          key: 'skin_compiler',
+          name: '高定光学材质包 Schema 与安全沙盒校验',
+          passed: true,
+          duration_ms: 5,
+          detail: `[浏览器预览模拟] 全部 ${PREVIEW_SKINS.length} 款内置材质包通过校验`,
+        },
+        {
+          key: 'pet_assets',
+          name: '桌面伴侣骨骼刚体与 5 大内置角色材质缓存',
+          passed: true,
+          duration_ms: 3,
+          detail: '[浏览器预览模拟] 6 角色配置与声学合成器就绪',
+        },
+        {
+          key: 'client_probe',
+          name: 'Antigravity 客户端与 IDE 安装环境探测',
+          passed: true,
+          duration_ms: 2,
+          detail: '桌面端启动后将实时读取真实本机环境状态',
+        },
+      ],
+    })),
 
   getMediaStatus: () =>
     callStudio<MediaStatus>(
@@ -311,5 +459,5 @@ export const studioService = {
     ),
 
   sendMediaCommand: (cmd: 'play_pause' | 'next' | 'prev' | 'vol_up' | 'vol_down') =>
-    callStudio<void>('studio_send_media_command', { cmd }),
+    callStudio<void>('studio_send_media_command', { cmd }, () => undefined),
 };

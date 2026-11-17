@@ -213,11 +213,11 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
             const appDisplayName = app === 'Gemini' ? 'Antigravity CLI (agy)' : app === 'DeepSeekHarness' ? 'DeepSeek Harness' : app;
             const successMsg = currentSelectedModel
                 ? t('proxy.cli_sync.toast.sync_success_with_model', { name: appDisplayName, model: currentSelectedModel, defaultValue: `${appDisplayName} 已成功同步模型: ${currentSelectedModel}` })
-                : t(app === 'OpenCode' ? 'proxy.opencode_sync.toast.sync_success' : 'proxy.cli_sync.toast.sync_success', { name: appDisplayName, defaultValue: `${appDisplayName} synced successfully` });
+                : t(app === 'OpenCode' ? 'proxy.opencode_sync.toast.sync_success' : 'proxy.cli_sync.toast.sync_success', { name: appDisplayName, defaultValue: `${appDisplayName} 配置同步成功` });
             showToast(successMsg, 'success');
             await checkStatus(app);
         } catch (error: any) {
-            showToast(t(app === 'OpenCode' ? 'proxy.opencode_sync.toast.sync_error' : 'proxy.cli_sync.toast.sync_error', { name: app, error: error.toString(), defaultValue: `Sync failed: ${error.toString()}` }), 'error');
+            showToast(t(app === 'OpenCode' ? 'proxy.opencode_sync.toast.sync_error' : 'proxy.cli_sync.toast.sync_error', { name: app, error: error.toString(), defaultValue: `同步失败: ${error.toString()}` }), 'error');
         } finally {
             setSyncing(prev => ({ ...prev, [app]: false }));
         }
@@ -259,14 +259,14 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
         try {
             if (app === 'Hermes') {
                 await invoke('execute_hermes_clear');
-                showToast(t('proxy.hermes_sync.toast.clear_success', { defaultValue: 'Hermes configuration cleared successfully' }), 'success');
+                showToast(t('proxy.hermes_sync.toast.clear_success', { defaultValue: 'Hermes 配置已成功清除' }), 'success');
             } else if (app === 'OpenClaw') {
                 await invoke('execute_openclaw_clear');
-                showToast(t('proxy.openclaw_sync.toast.clear_success', { defaultValue: 'OpenClaw configuration cleared successfully' }), 'success');
+                showToast(t('proxy.openclaw_sync.toast.clear_success', { defaultValue: 'OpenClaw 配置已成功清除' }), 'success');
             } else {
                 const formattedUrl = getFormattedProxyUrl(app);
                 await invoke('execute_opencode_clear', { proxyUrl: formattedUrl, clearLegacy: true });
-                showToast(t('proxy.opencode_sync.toast.clear_success', { defaultValue: 'OpenCode cleared successfully' }), 'success');
+                showToast(t('proxy.opencode_sync.toast.clear_success', { defaultValue: 'OpenCode 配置已清除' }), 'success');
             }
             await checkStatus(app);
         } catch (error: any) {
@@ -275,7 +275,7 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                 : app === 'OpenClaw'
                 ? 'proxy.openclaw_sync.toast.clear_error'
                 : 'proxy.opencode_sync.toast.clear_error';
-            showToast(t(toastKey, { error: error.toString(), defaultValue: `Clear failed: ${error.toString()}` }), 'error');
+            showToast(t(toastKey, { error: error.toString(), defaultValue: `清除失败: ${error.toString()}` }), 'error');
         } finally {
             setSyncing(prev => ({ ...prev, [app]: false }));
         }
@@ -426,10 +426,10 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                                 <JeikCodeIcon size={16} />
                                 <div className="flex items-baseline gap-1 min-w-0">
                                     <span className="text-[11px] font-black text-emerald-900 dark:text-emerald-200 tracking-tight whitespace-nowrap">
-                                        {t('proxy.cli_sync.jeikcode_badge', { defaultValue: 'Best Matched' })}
+                                        {t('proxy.cli_sync.jeikcode_badge', { defaultValue: '最佳搭档' })}
                                     </span>
                                     <span className="text-[9px] text-emerald-700/80 dark:text-emerald-400/80 font-semibold whitespace-nowrap">
-                                        · {t('proxy.cli_sync.jeikcode_author', { defaultValue: 'by Jeikl' })}
+                                        · {t('proxy.cli_sync.jeikcode_author', { defaultValue: 'Jeikl 出品' })}
                                     </span>
                                 </div>
                             </div>
@@ -475,7 +475,7 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                     {(app === 'Claude' || app === 'Codex' || app === 'Gemini' || app === 'JeikCode' || app === 'GrokBuild' || app === 'DeepSeekHarness') && (
                         <div className="space-y-1">
                             <div className="text-[9px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider px-1">
-                                {t('proxy.cli_sync.model_select', { defaultValue: 'Select Model' })}
+                                {t('proxy.cli_sync.model_select', { defaultValue: '选择同步模型' })}
                             </div>
                             <GroupedSelect
                                 value={selectedModels[app]}
@@ -498,7 +498,7 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                                 className="checkbox checkbox-xs checkbox-primary"
                             />
                             <label htmlFor="opencode-sync-accounts" className="text-[10px] text-gray-600 dark:text-gray-400 cursor-pointer select-none">
-                                {t('proxy.opencode_sync.sync_accounts', { defaultValue: 'Sync accounts to antigravity-accounts.json' })}
+                                {t('proxy.opencode_sync.sync_accounts', { defaultValue: '同步账号到 antigravity-accounts.json' })}
                             </label>
                         </div>
                     )}
@@ -509,7 +509,7 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                             <button
                                 onClick={() => handleViewConfig(app)}
                                 className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                title={t(app === 'OpenCode' ? 'proxy.opencode_sync.btn_view' : app === 'Hermes' ? 'proxy.hermes_sync.btn_view' : app === 'OpenClaw' ? 'proxy.openclaw_sync.btn_view' : 'proxy.cli_sync.btn_view', { defaultValue: 'View Config' })}
+                                title={t(app === 'OpenCode' ? 'proxy.opencode_sync.btn_view' : app === 'Hermes' ? 'proxy.hermes_sync.btn_view' : app === 'OpenClaw' ? 'proxy.openclaw_sync.btn_view' : 'proxy.cli_sync.btn_view', { defaultValue: '查看配置' })}
                             >
                                 <Eye size={14} />
                             </button>
@@ -517,7 +517,7 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                         <button
                             onClick={() => handleRestore(app)}
                             className="p-1 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
-                            title={t(app === 'OpenCode' ? 'proxy.opencode_sync.btn_restore' : app === 'Hermes' ? 'proxy.hermes_sync.btn_restore' : app === 'OpenClaw' ? 'proxy.openclaw_sync.btn_restore' : 'proxy.cli_sync.btn_restore', { defaultValue: 'Restore' })}
+                            title={t(app === 'OpenCode' ? 'proxy.opencode_sync.btn_restore' : app === 'Hermes' ? 'proxy.hermes_sync.btn_restore' : app === 'OpenClaw' ? 'proxy.openclaw_sync.btn_restore' : 'proxy.cli_sync.btn_restore', { defaultValue: '恢复默认' })}
                         >
                             <RotateCcw size={14} />
                         </button>
@@ -526,7 +526,7 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                             <button
                                 onClick={() => handleClear(app)}
                                 className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                title={t(app === 'Hermes' ? 'proxy.hermes_sync.btn_clear' : app === 'OpenClaw' ? 'proxy.openclaw_sync.btn_clear' : 'proxy.opencode_sync.btn_clear', { defaultValue: 'Clear' })}
+                                title={t(app === 'Hermes' ? 'proxy.hermes_sync.btn_clear' : app === 'OpenClaw' ? 'proxy.openclaw_sync.btn_clear' : 'proxy.opencode_sync.btn_clear', { defaultValue: '清除配置' })}
                             >
                                 <Trash2 size={14} />
                             </button>
@@ -695,15 +695,15 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
             <ModalDialog
                 isOpen={!!clearConfirmApp}
                 title={clearConfirmApp === 'Hermes'
-                    ? t('proxy.hermes_sync.clear_confirm_title', { defaultValue: 'Clear Hermes Configuration' })
+                    ? t('proxy.hermes_sync.clear_confirm_title', { defaultValue: '清除 Hermes 配置' })
                     : clearConfirmApp === 'OpenClaw'
-                    ? t('proxy.openclaw_sync.clear_confirm_title', { defaultValue: 'Clear OpenClaw Configuration' })
-                    : t('proxy.opencode_sync.clear_confirm_title', { defaultValue: 'Clear OpenCode Configuration' })}
+                    ? t('proxy.openclaw_sync.clear_confirm_title', { defaultValue: '清除 OpenClaw 配置' })
+                    : t('proxy.opencode_sync.clear_confirm_title', { defaultValue: '确认清除配置' })}
                 message={clearConfirmApp === 'Hermes'
-                    ? t('proxy.hermes_sync.clear_confirm_message', { defaultValue: 'This will remove the Antigravity Manager provider from Hermes. Are you sure?' })
+                    ? t('proxy.hermes_sync.clear_confirm_message', { defaultValue: '此操作将从 Hermes 中移除 Antigravity Manager 提供商。确定要继续吗？' })
                     : clearConfirmApp === 'OpenClaw'
-                    ? t('proxy.openclaw_sync.clear_confirm_message', { defaultValue: 'This will remove the Antigravity Manager provider from OpenClaw. Are you sure?' })
-                    : t('proxy.opencode_sync.clear_confirm_message', { defaultValue: 'This will clear all OpenCode configurations including legacy settings. Are you sure?' })}
+                    ? t('proxy.openclaw_sync.clear_confirm_message', { defaultValue: '此操作将从 OpenClaw 中移除 Antigravity Manager 提供商及模型白名单。确定要继续吗？' })
+                    : t('proxy.opencode_sync.clear_confirm_message', { defaultValue: '确定要清除所有 OpenCode 配置（含历史旧版设置）吗？' })}
                 onConfirm={executeClear}
                 onCancel={() => setClearConfirmApp(null)}
                 isDestructive={true}

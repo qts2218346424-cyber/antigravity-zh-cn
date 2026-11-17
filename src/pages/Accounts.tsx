@@ -1,6 +1,7 @@
 
 
 import {
+  Database,
   Download,
   LayoutGrid,
   List,
@@ -47,6 +48,7 @@ function Accounts() {
     fetchActiveClients,
     addAccount,
     batchImportAccounts,
+    importFromDb,
     deleteAccount,
     deleteAccounts,
     switchAccount,
@@ -140,7 +142,7 @@ function Accounts() {
   const handleUpdateLabel = async (accountId: string, label: string) => {
     try {
       await updateAccountLabel(accountId, label);
-      showToast(t('accounts.label_updated', 'Label updated'), 'success');
+      showToast(t('accounts.label_updated', '标签已更新'), 'success');
     } catch (error) {
       showToast(`${t('common.error')}: ${error}`, 'error');
     }
@@ -380,6 +382,21 @@ function Accounts() {
     }
   };
 
+  const [isSyncingLocal, setIsSyncingLocal] = useState(false);
+
+  const handleSyncLocalAccount = async () => {
+    if (isSyncingLocal) return;
+    setIsSyncingLocal(true);
+    try {
+      await importFromDb();
+      showToast(t("accounts.sync_local_success", "已成功同步并更新本机客户端账号信息"), "success");
+    } catch (error) {
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      setIsSyncingLocal(false);
+    }
+  };
+
   const handleRefresh = async (accountId: string) => {
     setRefreshingIds((prev) => {
       const next = new Set(prev);
@@ -387,8 +404,6 @@ function Accounts() {
       return next;
     });
     try {
-      await refreshQuota(accountId);
-      await refreshQuota(accountId);
       await refreshQuota(accountId);
       showToast(t("common.success"), "success");
     } catch (error) {
@@ -691,10 +706,10 @@ function Accounts() {
       return;
     }
 
-    // [FIX #3726] 如果是通过本地文件路径导入，自动创建 <filepath>-backup 备份，确保失败随时可重新导入
+    // [FIX #3726] 如果是通过本地文件路径导入，自动创建 .backup.json 备份，满足后端 .json 扩展名校验
     if (sourcePath && isTauri()) {
       try {
-        const backupPath = `${sourcePath}-backup`;
+        const backupPath = `${sourcePath.replace(/\.json$/i, '')}.backup.json`;
         await invoke("save_text_file", { path: backupPath, content });
         console.log(`[Import] Created backup at ${backupPath}`);
       } catch (err) {
@@ -726,7 +741,7 @@ function Accounts() {
         );
       } else {
         showToast(
-          t("accounts.import_fail", { error: result.errors[0] || "All accounts failed to import" }),
+          t("accounts.import_fail", { error: result.errors[0] || t("accounts.add.token.batch_fail", "导入失败") }),
           "error",
         );
       }
@@ -1049,6 +1064,24 @@ function Accounts() {
                 </span>
               </button>
             </>
+          )}
+
+          {isTauri() && (
+            <button
+              className={`px-2.5 py-2 bg-emerald-500 text-white text-xs font-medium rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1.5 shadow-sm ${isSyncingLocal ? "opacity-70 cursor-not-allowed" : ""}`}
+              onClick={handleSyncLocalAccount}
+              disabled={isSyncingLocal}
+              title={t("accounts.sync_local_tooltip", "扫描并同步更新本机 Antigravity 客户端当前登录账号")}
+            >
+              <Database
+                className={`w-3.5 h-3.5 ${isSyncingLocal ? "animate-pulse" : ""}`}
+              />
+              <span className="hidden xl:inline">
+                {isSyncingLocal
+                  ? t("common.loading")
+                  : t("accounts.sync_local", "同步本机账号")}
+              </span>
+            </button>
           )}
 
           <button

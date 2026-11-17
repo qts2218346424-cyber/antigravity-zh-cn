@@ -208,6 +208,12 @@ pub struct StudioStatus {
     pub autostart_enabled: bool,
     pub updates_disabled: bool,
     pub splash_character: String,
+    pub pet_character: String,
+    pub pet_roaming: bool,
+    pub pet_always_on_top: bool,
+    pub pet_scale_idx: usize,
+    pub pet_muted: bool,
+    pub custom_pet_avatar: Option<String>,
     pub lang: String,
     pub enable_pet: bool,
     pub enable_skin: bool,
@@ -216,6 +222,22 @@ pub struct StudioStatus {
     pub config_dir: String,
     pub resource_dir: String,
     pub reapply_logs: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StudioDiagnosticItem {
+    pub key: String,
+    pub name: String,
+    pub passed: bool,
+    pub duration_ms: u64,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StudioDiagnosticReport {
+    pub all_passed: bool,
+    pub total_ms: u64,
+    pub items: Vec<StudioDiagnosticItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -259,6 +281,11 @@ pub struct MediaStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PetAssets {
     pub nezuko_chibi: Option<String>,
+    pub nezuko_blink: Option<String>,
+    pub nezuko_happy: Option<String>,
+    pub nezuko_run: Option<String>,
+    pub nezuko_stomp: Option<String>,
+    pub nezuko_blood: Option<String>,
     pub nezuko_basket: Option<String>,
     pub nezuko_spin_sheet: Option<String>,
     pub shockwave: Option<String>,
@@ -270,8 +297,16 @@ pub struct PetAssets {
     pub nezuko_leg_r: Option<String>,
     pub nezuko_peeker: Option<String>,
     pub little_prince: Option<String>,
+    pub prince_blink: Option<String>,
+    pub prince_walk: Option<String>,
     pub prince_fox: Option<String>,
+    pub prince_rose_pose: Option<String>,
+    pub prince_sleep: Option<String>,
     pub prince_rose: Option<String>,
     pub prince_stars: Option<String>,
     pub prince_sunset: Option<String>,
+    pub tanjiro_water: Option<String>,
+    pub zenitsu_thunder: Option<String>,
+    pub inosuke_beast: Option<String>,
+    pub custom_avatar: Option<String>,
 }

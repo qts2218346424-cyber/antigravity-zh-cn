@@ -65,21 +65,26 @@ function Layout() {
 
     return (
         <div className="h-screen flex flex-col bg-[#FAFBFC] dark:bg-base-300">
-            {/* 全局窗口拖拽区域 - 使用 JS 手动触发拖拽，解决 HTML 属性失效问题 */}
-            <div
-                className="fixed top-0 left-0 right-0 h-9"
-                style={{
-                    zIndex: 9999,
-                    backgroundColor: 'rgba(0,0,0,0.001)',
-                    cursor: 'default',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none'
-                }}
-                data-tauri-drag-region
-                onMouseDown={() => {
-                    getCurrentWindow().startDragging();
-                }}
-            />
+            {/* 仅在 Tauri 桌面端挂载标题栏拖拽区：留出右上角原生窗口控制按钮，层级低于全局弹窗 (z-30 < z-50) */}
+            {isTauri() && (
+                <div
+                    className="fixed top-0 left-0 right-36 h-9 z-30 select-none"
+                    style={{
+                        backgroundColor: 'rgba(0,0,0,0.001)',
+                        cursor: 'default',
+                        WebkitUserSelect: 'none'
+                    }}
+                    data-tauri-drag-region
+                    onMouseDown={(e) => {
+                        if (e.button === 0 && e.detail === 1) {
+                            getCurrentWindow().startDragging().catch(() => {});
+                        }
+                    }}
+                    onDoubleClick={() => {
+                        getCurrentWindow().toggleMaximize().catch(() => {});
+                    }}
+                />
+            )}
             <BackgroundTaskRunner />
             <ToastContainer />
             <PedalNoticeModal />

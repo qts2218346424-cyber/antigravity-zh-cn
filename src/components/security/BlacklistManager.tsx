@@ -6,9 +6,17 @@ import { Trash2, AlertCircle, Plus, Search, X } from 'lucide-react';
 interface IpBlacklistEntry {
     ip_pattern: string;
     reason?: string;
-    added_at: number;
+    created_at?: number;
+    added_at?: number;
     expires_at?: number;
     added_by?: string;
+}
+
+function formatUnixTimestamp(ts?: number | null): string {
+    if (typeof ts !== 'number' || !Number.isFinite(ts) || ts <= 0) return '-';
+    const ms = ts > 1e12 ? ts : ts * 1000;
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString();
 }
 
 interface Props {
@@ -71,11 +79,11 @@ export const BlacklistManager: React.FC<Props> = ({ refreshKey }) => {
             console.error('Failed to add to blacklist', e);
             const errorMsg = String(e);
             if (errorMsg.includes('UNIQUE constraint')) {
-                alert(t('security.blacklist.error_duplicate') || 'This IP is already in the blacklist');
+                alert(t('security.blacklist.error_duplicate', '该 IP 已存在于黑名单中'));
             } else if (errorMsg.includes('Invalid IP pattern')) {
-                alert(t('security.blacklist.error_invalid_ip') || 'Invalid IP format. Please use IP address or CIDR notation (e.g., 192.168.1.0/24)');
+                alert(t('security.blacklist.error_invalid_ip', '无效的 IP 格式。请使用 IP 地址或 CIDR 表示法（例如 192.168.1.0/24）'));
             } else {
-                alert(t('security.blacklist.error_add_failed') || 'Failed to add IP: ' + e);
+                alert(`${t('security.blacklist.error_add_failed', '添加失败')}: ${e}`);
             }
         }
     };
@@ -142,9 +150,9 @@ export const BlacklistManager: React.FC<Props> = ({ refreshKey }) => {
                             )}
 
                             <div className="text-xs text-gray-400 flex flex-col gap-1 mt-3 pt-3 border-t border-gray-50 dark:border-base-200">
-                                <span>{t('security.blacklist.added_at')}: {new Date(entry.added_at * 1000).toLocaleString()}</span>
-                                {entry.expires_at && (
-                                    <span className="text-orange-500">{t('security.blacklist.expires_at')}: {new Date(entry.expires_at * 1000).toLocaleString()}</span>
+                                <span>{t('security.blacklist.added_at')}: {formatUnixTimestamp(entry.created_at ?? entry.added_at)}</span>
+                                {entry.expires_at != null && entry.expires_at > 0 && (
+                                    <span className="text-orange-500">{t('security.blacklist.expires_at')}: {formatUnixTimestamp(entry.expires_at)}</span>
                                 )}
                             </div>
                         </div>

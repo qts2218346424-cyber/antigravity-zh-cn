@@ -117,26 +117,20 @@ impl ProxyPoolManager {
         if let Some(proxy_cfg) = proxy_opt {
             builder = builder.proxy(proxy_cfg.proxy);
             // Already logged more detail in get_proxy_for_account or pool selection
-        } else {
-            // Fallback 到应用配置的单上游代理
-            if let Ok(app_cfg) = crate::modules::config::load_app_config() {
-                let up = app_cfg.proxy.upstream_proxy;
-                if up.enabled && !up.url.is_empty() {
-                    if let Ok(p) = rquest::Proxy::all(&up.url) {
-                        tracing::info!(
-                            "[Proxy] Route: {:?} -> Upstream: {} (AppConfig)",
-                            account_id.unwrap_or("Generic"),
-                            up.url
-                        );
-                        builder = builder.proxy(p);
-                    }
-                } else {
-                    tracing::info!(
-                        "[Proxy] Route: {:?} -> Direct",
-                        account_id.unwrap_or("Generic")
-                    );
-                }
+        } else if let Some(effective_url) = crate::utils::http::resolve_effective_proxy_url() {
+            if let Ok(p) = rquest::Proxy::all(&effective_url) {
+                tracing::info!(
+                    "[Proxy] Route: {:?} -> Outbound Proxy: {} (AppConfig/System)",
+                    account_id.unwrap_or("Generic"),
+                    effective_url
+                );
+                builder = builder.proxy(p);
             }
+        } else {
+            tracing::info!(
+                "[Proxy] Route: {:?} -> Direct",
+                account_id.unwrap_or("Generic")
+            );
         }
 
         builder.build().unwrap_or_else(|_| Client::new())
@@ -181,26 +175,20 @@ impl ProxyPoolManager {
 
         if let Some(proxy_cfg) = proxy_opt {
             builder = builder.proxy(proxy_cfg.proxy);
-        } else {
-            // Fallback 到应用配置的单上游代理
-            if let Ok(app_cfg) = crate::modules::config::load_app_config() {
-                let up = app_cfg.proxy.upstream_proxy;
-                if up.enabled && !up.url.is_empty() {
-                    if let Ok(p) = rquest::Proxy::all(&up.url) {
-                        tracing::info!(
-                            "[Proxy] Route: {:?} (Standard Client) -> Upstream: {} (AppConfig)",
-                            account_id.unwrap_or("Generic"),
-                            up.url
-                        );
-                        builder = builder.proxy(p);
-                    }
-                } else {
-                    tracing::info!(
-                        "[Proxy] Route: {:?} (Standard Client) -> Direct",
-                        account_id.unwrap_or("Generic")
-                    );
-                }
+        } else if let Some(effective_url) = crate::utils::http::resolve_effective_proxy_url() {
+            if let Ok(p) = rquest::Proxy::all(&effective_url) {
+                tracing::info!(
+                    "[Proxy] Route: {:?} (Standard Client) -> Outbound Proxy: {} (AppConfig/System)",
+                    account_id.unwrap_or("Generic"),
+                    effective_url
+                );
+                builder = builder.proxy(p);
             }
+        } else {
+            tracing::info!(
+                "[Proxy] Route: {:?} (Standard Client) -> Direct",
+                account_id.unwrap_or("Generic")
+            );
         }
 
         builder.build().unwrap_or_else(|_| Client::new())

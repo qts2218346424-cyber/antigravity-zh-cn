@@ -4,6 +4,7 @@ import { Edit2, Trash2, Power, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ProxyEntry } from '../../../types/config';
 import ProxyEditModal from './ProxyEditModal';
+import ModalDialog from '../../common/ModalDialog';
 import { Account } from '../../../types/account';
 
 interface ProxyListProps {
@@ -20,6 +21,7 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
     const { t } = useTranslation();
     const [editingProxy, setEditingProxy] = useState<ProxyEntry | undefined>(undefined);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
     const handleEdit = (proxy: ProxyEntry) => {
         setEditingProxy(proxy);
@@ -27,9 +29,13 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
     };
 
     const handleDelete = (id: string) => {
-        if (confirm(t('settings.proxy_pool.confirm_delete', 'Are you sure you want to delete this proxy?'))) {
-            onUpdate(proxies.filter(p => p.id !== id));
-        }
+        setDeleteTargetId(id);
+    };
+
+    const executeDelete = () => {
+        if (!deleteTargetId) return;
+        onUpdate(proxies.filter(p => p.id !== deleteTargetId));
+        setDeleteTargetId(null);
     };
 
     const handleSaveProxy = (entry: ProxyEntry) => {
@@ -92,27 +98,29 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
                             />
                         </th>
                         <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest min-w-[60px]">
-                            {t('settings.proxy_pool.column_priority', 'PRI')}
+                            {t('settings.proxy_pool.column_priority', '权重')}
                         </th>
                         <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                            {t('settings.proxy_pool.column_status', 'Status')}
+                            {t('settings.proxy_pool.column_status', '状态')}
                         </th>
                         <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/3">
-                            {t('settings.proxy_pool.column_details', 'Proxy Details')}
+                            {t('settings.proxy_pool.column_details', '代理详情')}
                         </th>
                         <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                            {t('settings.proxy_pool.column_bindings', 'Bindings')}
+                            {t('settings.proxy_pool.column_bindings', '绑定')}
                         </th>
                         <th scope="col" className="px-4 py-3 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest pr-6">
-                            {t('common.actions', 'Actions')}
+                            {t('common.actions', '操作')}
                         </th>
                     </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-50 dark:divide-gray-800">
                     {sortedProxies.length === 0 ? (
-                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-                            <span className="opacity-50">{t('settings.proxy_pool.empty', 'No proxies available.')}</span>
-                        </td>
+                        <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <span className="opacity-50">{t('settings.proxy_pool.empty', '暂无代理')}</span>
+                            </td>
+                        </tr>
                     ) : (
                         sortedProxies.map((proxy) => {
                             const boundAccounts = getBoundAccounts(proxy.id);
@@ -170,14 +178,14 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
                                                             : 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50 shadow-sm'
                                                 }`}>
                                                 {!proxy.enabled
-                                                    ? t('settings.proxy_pool.status.inactive', 'Inactive')
+                                                    ? t('settings.proxy_pool.status.inactive', '未启用')
                                                     : proxy.latency !== undefined && proxy.latency !== null
                                                         ? `${proxy.latency}ms`
                                                         : isTesting
-                                                            ? t('settings.proxy_pool.status.checking', 'Checking')
+                                                            ? t('settings.proxy_pool.status.checking', '正在检测')
                                                             : proxy.is_healthy
-                                                                ? t('settings.proxy_pool.status.healthy', 'Healthy')
-                                                                : t('settings.proxy_pool.status.timeout', 'Timeout')
+                                                                ? t('settings.proxy_pool.status.healthy', '正常')
+                                                                : t('settings.proxy_pool.status.timeout', '已超时')
                                                 }
                                             </div>
                                         </div>
@@ -202,7 +210,7 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         {boundAccounts.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1 max-w-[140px]" title={`Bound to:\n${boundAccounts.map(a => a.email).join('\n')}`}>
+                                            <div className="flex flex-wrap gap-1 max-w-[140px]" title={`${t('settings.proxy_pool.bound_to', '已绑定账号')}:\n${boundAccounts.map(a => a.email).join('\n')}`}>
                                                 {boundAccounts.slice(0, 2).map(acc => (
                                                     <div key={acc.id} className="px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 flex items-center gap-1">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400"></div>
@@ -218,7 +226,7 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
                                                 )}
                                             </div>
                                         ) : (
-                                            <span className="text-xs text-gray-300 dark:text-gray-700 italic pl-1">{t('common.none', 'None')}</span>
+                                            <span className="text-xs text-gray-300 dark:text-gray-700 italic pl-1">{t('common.none', '无')}</span>
                                         )}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-right pr-6">
@@ -229,21 +237,21 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
                                                     ? 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                                     : 'text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'
                                                     }`}
-                                                title={proxy.enabled ? t('common.disable', 'Disable') : t('common.enable', 'Enable')}
+                                                title={proxy.enabled ? t('common.disable', '禁用') : t('common.enable', '启用')}
                                             >
                                                 <Power size={14} />
                                             </button>
                                             <button
                                                 onClick={() => handleEdit(proxy)}
                                                 className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                                title={t('common.edit', 'Edit')}
+                                                title={t('common.edit', '编辑')}
                                             >
                                                 <Edit2 size={14} />
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(proxy.id)}
                                                 className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                                                title={t('common.delete', 'Delete')}
+                                                title={t('common.delete', '删除')}
                                             >
                                                 <Trash2 size={14} />
                                             </button>
@@ -265,6 +273,18 @@ export default function ProxyList({ proxies, onUpdate, accountBindings, accounts
                     isEditing={true}
                 />
             )}
+
+            <ModalDialog
+                isOpen={!!deleteTargetId}
+                title={t('settings.proxy_pool.confirm_delete_title', '删除代理')}
+                message={t('settings.proxy_pool.confirm_delete', '确定要删除此代理吗？')}
+                type="confirm"
+                confirmText={t('common.delete', '删除')}
+                cancelText={t('common.cancel', '取消')}
+                isDestructive={true}
+                onConfirm={executeDelete}
+                onCancel={() => setDeleteTargetId(null)}
+            />
         </div>
     );
 }

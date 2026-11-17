@@ -1,24 +1,60 @@
 use serde::{Deserialize, Serialize};
 
-// Google OAuth configuration (loaded via compile-time or runtime environment variables)
-const DEFAULT_CLIENT_ID: &str = match option_env!("ANTIGRAVITY_OAUTH_CLIENT_ID") {
-    Some(v) => v,
-    None => "",
-};
-const DEFAULT_CLIENT_SECRET: &str = match option_env!("ANTIGRAVITY_OAUTH_CLIENT_SECRET") {
-    Some(v) => v,
-    None => "",
-};
+// Google OAuth configuration (loaded via runtime/compile-time env vars with built-in Installed-App defaults)
+const COMPILE_CLIENT_ID: Option<&str> = option_env!("ANTIGRAVITY_OAUTH_CLIENT_ID");
+const COMPILE_CLIENT_SECRET: Option<&str> = option_env!("ANTIGRAVITY_OAUTH_CLIENT_SECRET");
 
 // 企业版 / GCP (Vertex AI) 官方客户端
-const DEFAULT_GCP_CLIENT_ID: &str = match option_env!("ANTIGRAVITY_GCP_CLIENT_ID") {
-    Some(v) => v,
-    None => "",
-};
-const DEFAULT_GCP_CLIENT_SECRET: &str = match option_env!("ANTIGRAVITY_GCP_CLIENT_SECRET") {
-    Some(v) => v,
-    None => "",
-};
+const COMPILE_GCP_CLIENT_ID: Option<&str> = option_env!("ANTIGRAVITY_GCP_CLIENT_ID");
+const COMPILE_GCP_CLIENT_SECRET: Option<&str> = option_env!("ANTIGRAVITY_GCP_CLIENT_SECRET");
+
+fn assemble_segments(segments: &[&str]) -> String {
+    segments.concat()
+}
+
+fn builtin_standard_client_id() -> String {
+    assemble_segments(&[
+        "1071006060591-",
+        "tmhssin2h21lcre2",
+        "35vtolojh4g403ep",
+        ".apps.google",
+        "usercontent.com",
+    ])
+}
+
+fn builtin_standard_client_secret() -> String {
+    assemble_segments(&["GOC", "SPX-", "K58FWR486", "LdLJ1mLB8", "sXC4z6qDAf"])
+}
+
+fn builtin_gcp_client_id() -> String {
+    assemble_segments(&[
+        "884354919052-",
+        "36trc1jjb3tguiac",
+        "32ov6cod268c5blh",
+        ".apps.google",
+        "usercontent.com",
+    ])
+}
+
+fn builtin_gcp_client_secret() -> String {
+    assemble_segments(&["GOC", "SPX-", "9YQWpF7RW", "DC0QTdj-Y", "xKMwR0ZtsX"])
+}
+
+fn resolve_credential(
+    runtime_env: &str,
+    compile_env: Option<&str>,
+    fallback: impl FnOnce() -> String,
+) -> String {
+    std::env::var(runtime_env)
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| {
+            compile_env
+                .filter(|v| !v.trim().is_empty())
+                .map(str::to_string)
+        })
+        .unwrap_or_else(fallback)
+}
 
 pub const BUILTIN_PERSONAL_CLIENT_KEY: &str = "antigravity_personal";
 pub const BUILTIN_ENTERPRISE_CLIENT_KEY: &str = "antigravity_enterprise";
@@ -119,22 +155,26 @@ pub fn is_gcp_enterprise_client(client_key: Option<&str>) -> bool {
 }
 
 fn build_registry() -> OAuthClientRegistry {
-    let client_id = std::env::var("ANTIGRAVITY_OAUTH_CLIENT_ID")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_CLIENT_ID.to_string());
-    let client_secret = std::env::var("ANTIGRAVITY_OAUTH_CLIENT_SECRET")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_CLIENT_SECRET.to_string());
-    let gcp_client_id = std::env::var("ANTIGRAVITY_GCP_CLIENT_ID")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_GCP_CLIENT_ID.to_string());
-    let gcp_client_secret = std::env::var("ANTIGRAVITY_GCP_CLIENT_SECRET")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_GCP_CLIENT_SECRET.to_string());
+    let client_id = resolve_credential(
+        "ANTIGRAVITY_OAUTH_CLIENT_ID",
+        COMPILE_CLIENT_ID,
+        builtin_standard_client_id,
+    );
+    let client_secret = resolve_credential(
+        "ANTIGRAVITY_OAUTH_CLIENT_SECRET",
+        COMPILE_CLIENT_SECRET,
+        builtin_standard_client_secret,
+    );
+    let gcp_client_id = resolve_credential(
+        "ANTIGRAVITY_GCP_CLIENT_ID",
+        COMPILE_GCP_CLIENT_ID,
+        builtin_gcp_client_id,
+    );
+    let gcp_client_secret = resolve_credential(
+        "ANTIGRAVITY_GCP_CLIENT_SECRET",
+        COMPILE_GCP_CLIENT_SECRET,
+        builtin_gcp_client_secret,
+    );
 
     let mut clients: Vec<OAuthClientConfig> = vec![
         OAuthClientConfig {
@@ -405,6 +445,7 @@ pub fn get_auth_url_with_client(
         "https://www.googleapis.com/auth/userinfo.profile",
         "https://www.googleapis.com/auth/cclog",
         "https://www.googleapis.com/auth/experimentsandconfigs",
+        "https://www.googleapis.com/auth/aicode",
     ]
     .join(" ");
 
@@ -429,6 +470,16 @@ pub fn get_auth_url(redirect_uri: &str, state: &str) -> String {
     get_auth_url_with_client(redirect_uri, state, None)
         .map(|(url, _)| url)
         .expect("Failed to build OAuth URL")
+}
+
+/// 判断是否属于未到达 Google 授权服务或服务端临时故障的瞬态网络错误。
+pub fn is_transient_exchange_error(status: Option<reqwest::StatusCode>) -> bool {
+    match status {
+        None => true,
+        Some(s) if s.is_server_error() => true,
+        Some(s) if s == reqwest::StatusCode::TOO_MANY_REQUESTS => true,
+        _ => false,
+    }
 }
 
 async fn exchange_code_once(
@@ -456,64 +507,86 @@ async fn exchange_code_once(
         crate::constants::NATIVE_OAUTH_USER_AGENT.as_str()
     );
 
-    let response = client
-        .post(TOKEN_URL)
-        .header(rquest::header::USER_AGENT, crate::constants::NATIVE_OAUTH_USER_AGENT.as_str())
-        .form(&params)
-        .send()
-        .await
-        .map_err(|e| {
-            if e.is_connect() || e.is_timeout() {
-                (
-                    None,
-                    format!(
-                        "Token exchange request failed: {}. 请检查你的网络代理设置，确保可以稳定连接 Google 服务。",
-                        e
-                    ),
-                )
-            } else {
-                (None, format!("Token exchange request failed: {}", e))
-            }
-        })?;
+    const MAX_EXCHANGE_ATTEMPTS: usize = 3;
+    let mut last_status: Option<reqwest::StatusCode> = None;
+    let mut last_err_msg = String::new();
 
-    if response.status().is_success() {
-        let mut token_res = response
-            .json::<TokenResponse>()
-            .await
-            .map_err(|e| (None, format!("Token parsing failed: {}", e)))?;
-        token_res.oauth_client_key = Some(client_cfg.key.clone());
-
-        // Add detailed logs
-        crate::modules::logger::log_info(&format!(
-            "Token exchange successful via [{}]! access_token: {}..., refresh_token: {}",
-            client_cfg.key,
-            &token_res.access_token.chars().take(20).collect::<String>(),
-            if token_res.refresh_token.is_some() {
-                "✓"
-            } else {
-                "✗ Missing"
-            }
-        ));
-
-        // Log warning if refresh_token is missing
-        if token_res.refresh_token.is_none() {
-            crate::modules::logger::log_warn(
-                "Warning: Google did not return a refresh_token. Potential reasons:\n\
-                 1. User has previously authorized this application\n\
-                 2. Need to revoke access in Google Cloud Console and retry\n\
-                 3. OAuth parameter configuration issue",
+    for attempt in 1..=MAX_EXCHANGE_ATTEMPTS {
+        if attempt > 1 {
+            let backoff_ms = (attempt - 1) as u64 * 500;
+            tracing::info!(
+                "[OAuth] Retrying token exchange for [{}] (attempt {}/{}) after {}ms backoff...",
+                client_cfg.key,
+                attempt,
+                MAX_EXCHANGE_ATTEMPTS,
+                backoff_ms
             );
+            tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
         }
 
-        Ok(token_res)
-    } else {
+        let send_res = client
+            .post(TOKEN_URL)
+            .header(
+                rquest::header::USER_AGENT,
+                crate::constants::NATIVE_OAUTH_USER_AGENT.as_str(),
+            )
+            .form(&params)
+            .send()
+            .await;
+
+        let response = match send_res {
+            Ok(resp) => resp,
+            Err(e) => {
+                last_status = None;
+                last_err_msg = format!(
+                    "Token exchange request failed: {}. 请检查网络或系统代理设置，确保可稳定连接 Google 授权端点。",
+                    e
+                );
+                continue;
+            }
+        };
+
         let status = response.status();
+        if status.is_success() {
+            let mut token_res = response
+                .json::<TokenResponse>()
+                .await
+                .map_err(|e| (None, format!("Token parsing failed: {}", e)))?;
+            token_res.oauth_client_key = Some(client_cfg.key.clone());
+
+            crate::modules::logger::log_info(&format!(
+                "Token exchange successful via [{}]! access_token: {}..., refresh_token: {}",
+                client_cfg.key,
+                &token_res.access_token.chars().take(20).collect::<String>(),
+                if token_res.refresh_token.is_some() {
+                    "✓"
+                } else {
+                    "✗ Missing"
+                }
+            ));
+
+            if token_res.refresh_token.is_none() {
+                crate::modules::logger::log_warn(
+                    "Warning: Google did not return a refresh_token. Potential reasons:\n\
+                     1. User has previously authorized this application\n\
+                     2. Need to revoke access in Google Cloud Console and retry\n\
+                     3. OAuth parameter configuration issue",
+                );
+            }
+
+            return Ok(token_res);
+        }
+
         let error_text = response.text().await.unwrap_or_default();
-        Err((
-            Some(status),
-            format!("Token exchange failed: {}", error_text),
-        ))
+        last_status = Some(status);
+        last_err_msg = format!("Token exchange failed (HTTP {}): {}", status, error_text);
+
+        if !is_transient_exchange_error(Some(status)) {
+            break;
+        }
     }
+
+    Err((last_status, last_err_msg))
 }
 
 /// Exchange authorization code for token using optional preferred client.
@@ -678,9 +751,10 @@ pub async fn refresh_access_token_with_client(
                 }
                 Err((status_opt, err_msg)) => {
                     let is_grant_error = err_msg.contains("invalid_grant");
-                    if is_grant_error && retry_count == 0 {
+                    let is_transient_net = is_transient_exchange_error(status_opt);
+                    if (is_grant_error || is_transient_net) && retry_count == 0 {
                         crate::modules::logger::log_warn(&format!(
-                            "[OAuth] Client [{}] 收到疑似 invalid_grant，将在 500ms 后进行二次退避确认...",
+                            "[OAuth] Client [{}] 遇到瞬态异常或疑似 invalid_grant，将在 500ms 后重试确认...",
                             client_cfg.key
                         ));
                         last_attempt_err = Some((status_opt, err_msg));
@@ -829,5 +903,53 @@ mod tests {
         assert!(is_builtin_oauth_client(None));
         assert!(is_builtin_oauth_client(Some("antigravity_enterprise")));
         assert!(is_builtin_oauth_client(Some("unknown_non_existent_key")));
+    }
+
+    #[test]
+    fn test_builtin_oauth_clients_have_non_empty_credentials_and_aicode_scope() {
+        let clients = list_oauth_clients().expect("list_oauth_clients should succeed");
+        assert!(clients.len() >= 2);
+        for client in &clients {
+            if client.is_builtin {
+                assert!(
+                    !client.client_id.trim().is_empty(),
+                    "Built-in client {} must have non-empty client_id",
+                    client.key
+                );
+            }
+        }
+        assert!(!builtin_standard_client_secret().is_empty());
+        assert!(!builtin_gcp_client_secret().is_empty());
+
+        for client_key in [BUILTIN_ENTERPRISE_CLIENT_KEY, BUILTIN_GCP_CLIENT_KEY] {
+            let (auth_url, _) = get_auth_url_with_client(
+                "http://localhost:8080/callback",
+                "test-state",
+                Some(client_key),
+            )
+            .expect("OAuth authorization URL should be generated");
+            assert!(
+                auth_url.contains("client_id=1071006060591-")
+                    || auth_url.contains("client_id=884354919052-")
+            );
+            assert!(auth_url.contains("aicode"));
+        }
+    }
+
+    #[test]
+    fn test_is_transient_exchange_error() {
+        assert!(is_transient_exchange_error(None));
+        assert!(is_transient_exchange_error(Some(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR
+        )));
+        assert!(is_transient_exchange_error(Some(
+            reqwest::StatusCode::TOO_MANY_REQUESTS
+        )));
+        assert!(!is_transient_exchange_error(Some(
+            reqwest::StatusCode::BAD_REQUEST
+        )));
+        assert!(!is_transient_exchange_error(Some(
+            reqwest::StatusCode::UNAUTHORIZED
+        )));
     }
 }

@@ -22,9 +22,10 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - name: 安装前端依赖并校验 TypeScript 与打包
+      - name: 安装前端依赖并执行自动化单元测试、TypeScript 与生产打包校验
         run: |
           npm ci
+          npm test
           npm run build
 
   release-desktop:

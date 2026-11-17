@@ -208,6 +208,8 @@ export default function ApiProxy() {
 
     // User-Agent & Argon Sandbox Tester states
     const [uaSandboxModel, setUaSandboxModel] = useState('gemini-4-argon');
+    const [sandboxUaInput, setSandboxUaInput] = useState<string>(DEFAULT_RECOMMENDED_HUB_UA);
+    const sandboxUaEditedRef = useRef(false);
     const [uaSandboxTesting, setUaSandboxTesting] = useState(false);
     const [uaSandboxResult, setUaSandboxResult] = useState<{
         testedUa: string;
@@ -285,6 +287,12 @@ export default function ApiProxy() {
             clearInterval(cfInterval);
         };
     }, []);
+
+    useEffect(() => {
+        if (!sandboxUaEditedRef.current) {
+            setSandboxUaInput(appConfig?.proxy?.user_agent_override || latestHubUa);
+        }
+    }, [appConfig?.proxy?.user_agent_override, latestHubUa]);
 
     // 动态获取应用启动时探测到的官方 Hub 版本信息
     const loadHubFingerprintInfo = async () => {
@@ -634,33 +642,42 @@ export default function ApiProxy() {
         }
     };
 
+    const handleApplySandboxUaToGlobal = async (uaToApply?: string) => {
+        if (!appConfig) return;
+        const targetUa = (uaToApply ?? uaSandboxResult?.testedUa ?? sandboxUaInput).trim();
+        if (!targetUa) return;
+        const newConfig: AppConfig = {
+            ...appConfig,
+            proxy: {
+                ...appConfig.proxy,
+                user_agent_override: targetUa,
+                saved_user_agent: targetUa,
+            },
+        };
+        await saveConfig(newConfig);
+        showToast(
+            t('proxy.config.request.user_agent_sandbox_applied', {
+                defaultValue: '已将此 User-Agent 应用到全局反代配置',
+            }),
+            'success'
+        );
+    };
+
     const handleRunUaSandboxTest = async (overrideUa?: string, modelToTest?: string) => {
         const targetModel = modelToTest || uaSandboxModel;
-        const effectiveUa = overrideUa !== undefined ? overrideUa : (appConfig?.proxy.user_agent_override || latestHubUa);
+        if (modelToTest && modelToTest !== uaSandboxModel) {
+            setUaSandboxModel(modelToTest);
+        }
+        if (overrideUa !== undefined) {
+            sandboxUaEditedRef.current = true;
+            setSandboxUaInput(overrideUa);
+        }
+        const effectiveUa =
+            (overrideUa !== undefined ? overrideUa : sandboxUaInput).trim() ||
+            appConfig?.proxy.user_agent_override ||
+            latestHubUa;
         setUaSandboxTesting(true);
         setUaSandboxResult(null);
-
-        // 1. 如果传入了特定 UA，先热更新到配置并同步至服务端
-        if (appConfig && overrideUa !== undefined) {
-            updateProxyConfig({
-                user_agent_override: overrideUa,
-                saved_user_agent: overrideUa
-            });
-            try {
-                await invoke('save_config', {
-                    config: {
-                        ...appConfig,
-                        proxy: {
-                            ...appConfig.proxy,
-                            user_agent_override: overrideUa,
-                            saved_user_agent: overrideUa
-                        }
-                    }
-                });
-            } catch (e) {
-                console.error('Failed to sync UA config before test:', e);
-            }
-        }
 
         try {
             const res = await invoke<{
@@ -677,6 +694,7 @@ export default function ApiProxy() {
             }>('test_model_connectivity', {
                 model: targetModel,
                 targetAccountId: testTargetAccountId || null,
+                overrideUa: effectiveUa,
                 override_ua: effectiveUa
             });
 
@@ -2591,6 +2609,23 @@ print(response.choices[0].message.content)`;
                                                 </button>
                                             </div>
 
+                                            {/* 沙盒独立 User-Agent 输入栏（无副作用，不自动修改全局配置） */}
+                                            <div className="space-y-1">
+                                                <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                                                    {t('proxy.config.request.sandbox_ua_input_label', { defaultValue: '沙盒测试 User-Agent (仅单次探测使用，不污染全局配置):' })}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={sandboxUaInput}
+                                                    onChange={(e) => {
+                                                        sandboxUaEditedRef.current = true;
+                                                        setSandboxUaInput(e.target.value);
+                                                    }}
+                                                    placeholder={latestHubUa}
+                                                    className="w-full px-2.5 py-1.5 border border-blue-200 dark:border-blue-900/50 rounded-lg bg-white dark:bg-base-100 text-xs font-mono text-gray-900 dark:text-base-content focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                                />
+                                            </div>
+
                                             {/* 测试操作栏 */}
                                             <div className="flex items-center gap-2 pt-1">
                                                 <select
@@ -2601,8 +2636,9 @@ print(response.choices[0].message.content)`;
                                                     <option value="gemini-4-argon">gemini-4-argon (旗舰高阶推理)</option>
                                                     <option value="gemini-4-argon-low">gemini-4-argon-low (轻量推理)</option>
                                                     <option value="simulate_no_response">[模拟故障] 无请求回报 (上游网络超时与阶段中断)</option>
-                                                    <option value="claude-opus-5-5">claude-opus-5-5</option>
+                                                    <option value="claude-opus-4-6-thinking">claude-opus-4-6-thinking</option>
                                                     <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+                                                    <option value="gemini-3.1-pro-high">gemini-3.1-pro-high</option>
                                                     <option value="gemini-2.5-pro">gemini-2.5-pro</option>
                                                 </select>
 
@@ -2629,7 +2665,7 @@ print(response.choices[0].message.content)`;
                                             {/* 测试结果看板 */}
                                             {uaSandboxResult && (
                                                 <div className="p-3 bg-white dark:bg-base-100 rounded-lg border border-gray-200 dark:border-base-300 space-y-2 text-xs animate-in fade-in duration-200">
-                                                    <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 dark:border-base-200">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-gray-100 dark:border-base-200">
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-semibold text-gray-700 dark:text-gray-300">测试结果:</span>
                                                             <span
@@ -2649,9 +2685,29 @@ print(response.choices[0].message.content)`;
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className="text-[10px] font-mono text-gray-400">
-                                                            模型: {uaSandboxResult.model}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-mono text-gray-400">
+                                                                模型: {uaSandboxResult.model}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleApplySandboxUaToGlobal(uaSandboxResult.testedUa)}
+                                                                disabled={appConfig.proxy.user_agent_override === uaSandboxResult.testedUa}
+                                                                className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-base-300 text-white disabled:text-gray-500 transition-all flex items-center gap-1 shadow-2xs"
+                                                            >
+                                                                {appConfig.proxy.user_agent_override === uaSandboxResult.testedUa ? (
+                                                                    <>
+                                                                        <Check size={11} />
+                                                                        {t('proxy.config.request.sandbox_ua_already_applied', { defaultValue: '已应用到全局反代配置' })}
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Save size={11} />
+                                                                        {t('proxy.config.request.apply_sandbox_ua_btn', { defaultValue: '应用此 UA 到全局反代配置' })}
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </div>
 
                                                     <div className="text-[11px] text-gray-600 dark:text-gray-400 font-mono break-all">

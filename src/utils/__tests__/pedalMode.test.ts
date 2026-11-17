@@ -279,4 +279,7 @@ async function runTests() {
     }
 }
 
-runTests();
+runTests().catch((err) => {
+    console.error(err);
+    (globalThis as any).process?.exit?.(1);
+});

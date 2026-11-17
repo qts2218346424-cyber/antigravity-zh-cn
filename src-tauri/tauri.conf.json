@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Antigravity Studio",
-  "version": "5.0.9",
+  "version": "5.1.0",
   "identifier": "com.qts.antigravity-studio",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -15,9 +15,9 @@
     "windows": [
       {
         "label": "main",
-        "title": "Antigravity Tools",
-        "width": 1024,
-        "height": 700,
+        "title": "Antigravity Studio",
+        "width": 1120,
+        "height": 720,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "transparent": false,

@@ -1,10 +1,11 @@
 use serde_json::Value;
 use std::path::PathBuf;
+use std::time::Instant;
 
 use crate::modules::studio::{
     auto_reapply, config_dir, l10n, pet, resources_dir, skin_injector, skin_manager,
     L10nPatchResult, MediaStatus, PetAssets, ReapplyCheckResult, SkillLocalizeResult, SkinInfo,
-    StudioStatus,
+    StudioDiagnosticItem, StudioDiagnosticReport, StudioStatus,
 };
 
 async fn run_blocking<F, T>(f: F) -> Result<T, String>
@@ -43,6 +44,12 @@ fn build_studio_status(app: &tauri::AppHandle) -> StudioStatus {
         autostart_enabled: auto_reapply::is_autostart_enabled(app),
         updates_disabled: l10n::is_updates_disabled(install_str.as_deref()),
         splash_character: cfg.splash_character,
+        pet_character: cfg.pet_character,
+        pet_roaming: cfg.pet_roaming,
+        pet_always_on_top: cfg.pet_always_on_top,
+        pet_scale_idx: cfg.pet_scale_idx,
+        pet_muted: cfg.pet_muted,
+        custom_pet_avatar: cfg.custom_pet_avatar,
         lang: cfg.lang,
         enable_pet: cfg.enable_pet,
         enable_skin: cfg.enable_skin,
@@ -273,4 +280,180 @@ pub async fn studio_get_media_status() -> Result<MediaStatus, String> {
 #[tauri::command]
 pub async fn studio_send_media_command(cmd: String) -> Result<(), String> {
     run_blocking(move || pet::send_media_command(&cmd)).await
+}
+
+#[tauri::command]
+pub async fn studio_import_pet_avatar(
+    app: tauri::AppHandle,
+    file_path: String,
+) -> Result<String, String> {
+    run_blocking(move || pet::import_custom_pet_avatar(&app, &PathBuf::from(file_path))).await
+}
+
+#[tauri::command]
+pub async fn studio_clear_pet_avatar(app: tauri::AppHandle) -> Result<(), String> {
+    run_blocking(move || pet::clear_custom_pet_avatar(&app)).await
+}
+
+#[tauri::command]
+pub async fn studio_update_pet_prefs(
+    app: tauri::AppHandle,
+    character: Option<String>,
+    roaming: Option<bool>,
+    always_on_top: Option<bool>,
+    scale_idx: Option<usize>,
+    muted: Option<bool>,
+) -> Result<(), String> {
+    run_blocking(move || {
+        pet::update_pet_prefs(&app, character, roaming, always_on_top, scale_idx, muted)
+    })
+    .await
+}
+
+/// 执行 Studio 全链路离线与本地环境诊断自检（词典、材质编译器、桌宠资产、客户端探针）
+#[tauri::command]
+pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagnosticReport, String> {
+    run_blocking(move || {
+        let total_start = Instant::now();
+        let mut items = Vec::new();
+        let rdir = resources_dir();
+
+        // 1. 汉化词典与运行时完整性校验
+        let t1 = Instant::now();
+        let dict_files = [
+            "antigravity-zh-CN.json",
+            "antigravity-zh-TW.json",
+            "antigravity-zh-HK.json",
+            "rules-zh-CN.json",
+            "desktop-zh-CN.json",
+            "runtime-zh.js",
+            "skin-runtime.js",
+        ];
+        let mut missing = Vec::new();
+        let mut cn_entries = 0usize;
+        for f in &dict_files {
+            let p = rdir.join(f);
+            if !p.is_file() {
+                missing.push((*f).to_string());
+            } else if *f == "antigravity-zh-CN.json" {
+                if let Ok(raw) = std::fs::read_to_string(&p) {
+                    if let Ok(val) = serde_json::from_str::<Value>(&raw) {
+                        cn_entries = val.as_object().map(|o| o.len()).unwrap_or(0);
+                    }
+                }
+            }
+        }
+        items.push(StudioDiagnosticItem {
+            key: "l10n_resources".to_string(),
+            name: "多语种汉化词典与运行时脚本核验".to_string(),
+            passed: missing.is_empty() && cn_entries > 100,
+            duration_ms: t1.elapsed().as_millis() as u64,
+            detail: if missing.is_empty() {
+                format!("7 项核心资源完好，简体主词典已载入 {} 条精准词条", cn_entries)
+            } else {
+                format!("缺失资源文件: {}", missing.join(", "))
+            },
+        });
+
+        // 2. 内置与自定义光学材质包全量沙盒编译测试
+        let t2 = Instant::now();
+        let skins = skin_manager::list_skins();
+        let mut skin_errors = Vec::new();
+        for sk in &skins {
+            if let Err(e) = skin_manager::load_effective_manifest(&sk.id).and_then(|(dir, _, m)| {
+                skin_manager::validate_manifest(&m, Some(&dir))
+            }) {
+                skin_errors.push(format!("{}: {}", sk.id, e));
+            }
+        }
+        items.push(StudioDiagnosticItem {
+            key: "skin_compiler".to_string(),
+            name: "高定光学材质包 Schema 与安全沙盒校验".to_string(),
+            passed: !skins.is_empty() && skin_errors.is_empty(),
+            duration_ms: t2.elapsed().as_millis() as u64,
+            detail: if skin_errors.is_empty() {
+                format!("全部 {} 款材质包通过结构与 CSS 防注入安全审查", skins.len())
+            } else {
+                skin_errors.join("；")
+            },
+        });
+
+        // 3. 桌面伴侣分肢骨骼与多角色媒体资产校验
+        let t3 = Instant::now();
+        let assets = pet::get_pet_assets();
+        let loaded_count = [
+            assets.nezuko_head.is_some(),
+            assets.nezuko_torso.is_some(),
+            assets.nezuko_arm_l.is_some(),
+            assets.nezuko_arm_r.is_some(),
+            assets.nezuko_spin_sheet.is_some(),
+            assets.little_prince.is_some(),
+            assets.tanjiro_water.is_some(),
+            assets.zenitsu_thunder.is_some(),
+            assets.inosuke_beast.is_some(),
+        ]
+        .into_iter()
+        .filter(|b| *b)
+        .count();
+        items.push(StudioDiagnosticItem {
+            key: "pet_assets".to_string(),
+            name: "桌面伴侣骨骼刚体与 5 大内置角色材质缓存".to_string(),
+            passed: loaded_count == 9,
+            duration_ms: t3.elapsed().as_millis() as u64,
+            detail: format!(
+                "核心骨骼与全角色高清 WebP 资产已就绪 ({}/9){}",
+                loaded_count,
+                if assets.custom_avatar.is_some() {
+                    "，且已挂载用户自定义专属立绘"
+                } else {
+                    ""
+                }
+            ),
+        });
+
+        // 4. 本地配置目录原子写入自检
+        let t4 = Instant::now();
+        let probe_file = config_dir().join(".diag_write_probe");
+        let write_ok = crate::modules::studio::atomic_write_text(&probe_file, "ok")
+            .and_then(|_| {
+                let _ = std::fs::remove_file(&probe_file);
+                Ok(())
+            })
+            .is_ok();
+        items.push(StudioDiagnosticItem {
+            key: "atomic_fs".to_string(),
+            name: "配置目录权限与 Windows 原子替换写入探针".to_string(),
+            passed: write_ok,
+            duration_ms: t4.elapsed().as_millis() as u64,
+            detail: if write_ok {
+                format!("配置目录读写与原子覆盖正常 ({})", config_dir().display())
+            } else {
+                format!("配置目录写入受阻: {}", config_dir().display())
+            },
+        });
+
+        // 5. 客户端与 IDE 环境探测状态汇总
+        let t5 = Instant::now();
+        let st = build_studio_status(&app);
+        items.push(StudioDiagnosticItem {
+            key: "client_probe".to_string(),
+            name: "Antigravity 客户端与 IDE 安装环境探测".to_string(),
+            passed: true,
+            duration_ms: t5.elapsed().as_millis() as u64,
+            detail: format!(
+                "Agent 状态: {} | IDE 状态: {} | 旧版宠物残留: {}",
+                st.agent_status,
+                st.ide_status,
+                if st.has_legacy_pet { "存在待清理残留" } else { "洁净无残留" }
+            ),
+        });
+
+        let all_passed = items.iter().all(|i| i.passed);
+        Ok(StudioDiagnosticReport {
+            all_passed,
+            total_ms: total_start.elapsed().as_millis() as u64,
+            items,
+        })
+    })
+    .await
 }

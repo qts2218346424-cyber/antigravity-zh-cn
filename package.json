@@ -1,5 +1,5 @@
 {
-  "version": "5.0.9",
+  "version": "5.1.0",
   "name": "antigravity-studio",
   "description": "Antigravity Studio - 多账号管理、API反代、中文汉化、光学材质包与桌面伴侣一体化客户端",
   "type": "module",
@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
     "preview": "vite preview",
     "bump": "node scripts/bump-version.mjs",
     "tauri": "tauri",
@@ -59,8 +61,6 @@
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.8.3",
-    "vite": "^7.3.6",
-    "vitepress": "^1.6.4",
-    "vue": "^3.5.27"
+    "vite": "^7.3.6"
   }
 }

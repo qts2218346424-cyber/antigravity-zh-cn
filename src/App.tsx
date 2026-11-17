@@ -1,22 +1,14 @@
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
-import Accounts from './pages/Accounts';
-import Settings from './pages/Settings';
-import ApiProxy from './pages/ApiProxy';
-import Monitor from './pages/Monitor';
-import TokenStats from './pages/TokenStats';
-import Security from './pages/Security';
-import Studio from './pages/Studio';
 import ThemeManager from './components/common/ThemeManager';
 import ZoomManager from './components/common/ZoomManager';
 import PetWindowView from './components/pet/PetWindowView';
-import UserToken from './pages/UserToken';
 import { UpdateNotification } from './components/UpdateNotification';
 import SuggestionDeleteThinkingModal from './components/common/SuggestionDeleteThinkingModal';
 import DebugConsole from './components/debug/DebugConsole';
-import { useEffect, useState } from 'react';
 import { useConfigStore, normalizeLanguageCode } from './stores/useConfigStore';
 import { useAccountStore } from './stores/useAccountStore';
 import { useViewStore } from './stores/useViewStore';
@@ -28,6 +20,23 @@ import { AdminAuthGuard } from './components/common/AdminAuthGuard';
 import { showToast } from './components/common/ToastContainer';
 import MiniView from './components/layout/MiniView';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+
+const Accounts = lazy(() => import('./pages/Accounts'));
+const ApiProxy = lazy(() => import('./pages/ApiProxy'));
+const Monitor = lazy(() => import('./pages/Monitor'));
+const TokenStats = lazy(() => import('./pages/TokenStats'));
+const UserToken = lazy(() => import('./pages/UserToken'));
+const Security = lazy(() => import('./pages/Security'));
+const Studio = lazy(() => import('./pages/Studio'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+function RouteLoadingFallback() {
+  return (
+    <div className="flex-1 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500">
+      正在载入模块…
+    </div>
+  );
+}
 
 // 官方 Hub 更新提示每进程只飘一次（避免 React StrictMode 双挂载重复弹）
 let hubUpdateNoticeShown = false;
@@ -48,35 +57,35 @@ const router = createBrowserRouter([
       },
       {
         path: 'accounts',
-        element: <Accounts />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><Accounts /></Suspense>,
       },
       {
         path: 'api-proxy',
-        element: <ApiProxy />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><ApiProxy /></Suspense>,
       },
       {
         path: 'monitor',
-        element: <Monitor />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><Monitor /></Suspense>,
       },
       {
         path: 'token-stats',
-        element: <TokenStats />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><TokenStats /></Suspense>,
       },
       {
         path: 'user-token',
-        element: <UserToken />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><UserToken /></Suspense>,
       },
       {
         path: 'security',
-        element: <Security />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><Security /></Suspense>,
       },
       {
         path: 'studio',
-        element: <Studio />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><Studio /></Suspense>,
       },
       {
         path: 'settings',
-        element: <Settings />,
+        element: <Suspense fallback={<RouteLoadingFallback />}><Settings /></Suspense>,
       },
       {
         path: '*',
@@ -269,8 +278,14 @@ function App() {
   // Update notification state
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
-  // Check for updates on startup
+  // Check for updates on startup (仅主窗口检查自动更新，避免 Mini/Pet 悬浮窗重复弹窗)
   useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.search.includes('mini') || window.location.search.includes('pet'))
+    ) {
+      return;
+    }
     const checkUpdates = async () => {
       try {
         console.log('[App] Checking if we should check for updates...');

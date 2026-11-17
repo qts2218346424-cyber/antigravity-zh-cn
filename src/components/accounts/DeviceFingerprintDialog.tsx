@@ -32,7 +32,7 @@ export default function DeviceFingerprintDialog({ account, onClose }: DeviceFing
         } catch (e: any) {
             const errorMsg = typeof e === 'string' ? e : e.message || '';
             const translated = errorMsg === 'storage_json_not_found'
-                ? t('accounts.device_fingerprint_dialog.storage_json_not_found')
+                ? t('accounts.device_fingerprint_dialog.storage_json_not_found', '未找到本地 storage.json 文件（请先启动一次客户端）')
                 : (typeof e === 'string' ? e : t('accounts.device_fingerprint_dialog.failed_to_load_device_info'));
             setActionMessage(translated);
         } finally {

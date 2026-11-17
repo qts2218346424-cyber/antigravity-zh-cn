@@ -871,6 +871,7 @@ impl AxumServer {
                 "/proxy/health-check/trigger",
                 post(admin_trigger_proxy_health_check),
             )
+            .route("/proxy/test-model", post(admin_test_model_connectivity))
             .route("/proxy/start", post(admin_start_proxy_service))
             .route("/proxy/stop", post(admin_stop_proxy_service))
             .route("/proxy/mapping", post(admin_update_model_mapping))
@@ -985,6 +986,10 @@ impl AxumServer {
             .route(
                 "/accounts/:accountId/priority",
                 post(admin_update_account_priority),
+            )
+            .route(
+                "/accounts/:accountId/label",
+                post(admin_update_account_label),
             )
             .route(
                 "/system/data-dir",
@@ -2167,6 +2172,83 @@ async fn admin_trigger_proxy_health_check(
     })))
 }
 
+#[derive(Deserialize)]
+struct AdminTestModelRequest {
+    model: String,
+    #[serde(default, alias = "targetAccountId")]
+    target_account_id: Option<String>,
+    #[serde(default, alias = "overrideUa")]
+    override_ua: Option<String>,
+}
+
+async fn admin_test_model_connectivity(
+    State(state): State<AppState>,
+    Json(req): Json<AdminTestModelRequest>,
+) -> Response {
+    let accounts = crate::modules::account::list_accounts().unwrap_or_default();
+    let chosen = if let Some(ref acc_id) = req.target_account_id {
+        if !acc_id.is_empty() {
+            accounts.into_iter().find(|a| &a.id == acc_id)
+        } else {
+            accounts.into_iter().find(|a| !a.disabled && !a.proxy_disabled)
+        }
+    } else {
+        accounts.into_iter().find(|a| !a.disabled && !a.proxy_disabled)
+    };
+
+    let Some(acc) = chosen else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "未找到可用于测试的活跃账号".to_string(),
+            }),
+        )
+            .into_response();
+    };
+
+    let (token, pid) = match crate::modules::quota::get_valid_token_for_warmup(&acc).await {
+        Ok(pair) => pair,
+        Err(e) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse { error: e }),
+            )
+                .into_response();
+        }
+    };
+
+    let warmup_req = crate::proxy::handlers::warmup::WarmupRequest {
+        email: acc.email,
+        model: req.model,
+        access_token: Some(token),
+        project_id: Some(pid),
+        account_id: Some(acc.id),
+        override_ua: req.override_ua,
+    };
+    crate::proxy::handlers::warmup::handle_warmup(State(state), Json(warmup_req)).await
+}
+
+#[derive(Deserialize)]
+struct AccountLabelRequest {
+    #[serde(default)]
+    label: String,
+}
+
+async fn admin_update_account_label(
+    Path(account_id): Path<String>,
+    Json(payload): Json<AccountLabelRequest>,
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    crate::commands::update_account_label(account_id, payload.label)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse { error: e }),
+            )
+        })?;
+    Ok(StatusCode::OK)
+}
+
 async fn admin_get_proxy_status(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
@@ -2696,7 +2778,9 @@ async fn admin_update_user_token(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct TokenStatsQuery {
+    #[serde(alias = "time_range")]
     time_range: Option<String>,
 }
 
@@ -4245,7 +4329,8 @@ async fn admin_get_ip_access_logs(
             )
         })?;
 
-    let total = logs.len(); // Simple total
+    let total = security_db::get_ip_access_logs_count(q.search.as_deref(), q.blocked_only)
+        .unwrap_or(logs.len() as u64) as usize;
 
     Ok(Json(IpAccessLogResponse { logs, total }))
 }

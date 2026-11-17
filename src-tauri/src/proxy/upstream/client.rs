@@ -802,12 +802,26 @@ impl UpstreamClient {
     ) -> Result<Client, rquest::Error> {
         let mut builder = Self::base_client_builder();
 
+        let mut proxy_applied = false;
         if let Some(config) = proxy_config {
             if config.enabled && !config.url.is_empty() {
                 let url = crate::proxy::config::normalize_proxy_url(&config.url);
                 if let Ok(proxy) = rquest::Proxy::all(&url) {
                     builder = builder.proxy(proxy);
+                    proxy_applied = true;
                     tracing::info!("UpstreamClient enabled proxy: {}", url);
+                }
+            }
+        }
+
+        if !proxy_applied {
+            let self_port = crate::modules::config::load_app_config()
+                .ok()
+                .map(|c| c.proxy.port);
+            if let Some(sys_proxy_url) = crate::utils::http::detect_system_proxy_url(self_port) {
+                if let Ok(proxy) = rquest::Proxy::all(&sys_proxy_url) {
+                    builder = builder.proxy(proxy);
+                    tracing::info!("UpstreamClient enabled system proxy fallback: {}", sys_proxy_url);
                 }
             }
         }
@@ -1426,6 +1440,12 @@ impl UpstreamClient {
         // 严格过滤客户端特征伪头，确保出站请求头 100% 对齐官方 Antigravity Hub
         for (k, v) in extra_headers {
             let k_lower = k.to_ascii_lowercase();
+            if k_lower == "x-internal-sandbox-ua" {
+                if let Ok(hv) = header::HeaderValue::from_str(v.trim()) {
+                    headers.insert(header::USER_AGENT, hv);
+                }
+                continue;
+            }
             if k_lower == "user-agent"
                 || k_lower == "x-session-id"
                 || k_lower == "x-client-name"

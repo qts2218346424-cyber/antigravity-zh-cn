@@ -169,7 +169,7 @@ const DebugConsole: React.FC<DebugConsoleProps> = ({ embedded = false }) => {
                 <div className="flex items-center gap-3">
                     <span className="flex items-center gap-2 font-medium text-xs tracking-wide text-zinc-500 dark:text-zinc-400">
                         <Terminal size={14} className="opacity-70" />
-                        CONSOLE
+                        {t('debug_console.title', { defaultValue: '调试控制台' })}
                     </span>
                     <div className="h-4 w-px bg-zinc-200 dark:bg-white/10 mx-1" />
 
@@ -198,7 +198,7 @@ const DebugConsole: React.FC<DebugConsoleProps> = ({ embedded = false }) => {
                             type="text"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            placeholder="Filter logs..."
+                            placeholder={t('debug_console.filter_placeholder', { defaultValue: '过滤日志...' })}
                             className={cn(
                                 "border border-transparent rounded-md pl-8 pr-3 py-1 text-xs w-40 focus:w-64 transition-all focus:outline-none placeholder:text-zinc-400",
                                 "bg-zinc-100 dark:bg-black/20",
@@ -219,18 +219,17 @@ const DebugConsole: React.FC<DebugConsoleProps> = ({ embedded = false }) => {
                                 ? "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/10 hover:bg-green-200 dark:hover:bg-green-500/20"
                                 : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                         )}
-                        title={autoScroll ? t('debug_console.pause_scroll', { defaultValue: 'Pause scroll' }) : t('debug_console.resume_scroll', { defaultValue: 'Resume scroll' })}
+                        title={autoScroll ? t('debug_console.pause_scroll', { defaultValue: '暂停滚动' }) : t('debug_console.resume_scroll', { defaultValue: '恢复滚动' })}
                     >
                         {autoScroll ? <Pause size={14} /> : <Play size={14} />}
                     </button>
 
                     <button
                         onClick={() => {
-                            console.log('Clear button clicked');
                             clearLogs();
                         }}
                         className="p-1.5 rounded-md text-zinc-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-zinc-100 dark:hover:bg-white/5 transition-all"
-                        title={t('debug_console.clear', { defaultValue: 'Clear' })}
+                        title={t('debug_console.clear', { defaultValue: '清空日志' })}
                     >
                         <Trash2 size={14} />
                     </button>
@@ -239,6 +238,7 @@ const DebugConsole: React.FC<DebugConsoleProps> = ({ embedded = false }) => {
                         <button
                             onClick={close}
                             className="p-1.5 rounded-md text-zinc-400 dark:text-zinc-500 hover:text-zinc-800 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all ml-1"
+                            title={t('common.close', { defaultValue: '关闭' })}
                         >
                             <X size={14} />
                         </button>
@@ -267,8 +267,8 @@ const DebugConsole: React.FC<DebugConsoleProps> = ({ embedded = false }) => {
                 {filteredLogs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full select-none text-zinc-400 dark:text-zinc-600">
                         <Terminal size={48} className="mb-4 opacity-20" />
-                        <p className="text-sm font-medium opacity-50">{t('debug_console.no_logs', { defaultValue: 'No logs to display' })}</p>
-                        <p className="text-xs mt-1 opacity-30">{t('debug_console.no_logs_hint', { defaultValue: 'Logs will appear here in real-time' })}</p>
+                        <p className="text-sm font-medium opacity-50">{t('debug_console.no_logs', { defaultValue: '暂无日志记录' })}</p>
+                        <p className="text-xs mt-1 opacity-30">{t('debug_console.no_logs_hint', { defaultValue: '实时日志将在此处显示' })}</p>
                     </div>
                 ) : (
                     <div className="py-1">
@@ -315,12 +315,12 @@ const DebugConsole: React.FC<DebugConsoleProps> = ({ embedded = false }) => {
                             className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/20 hover:bg-black/30 font-medium transition-colors"
                         >
                             <ArrowDownToLine size={10} />
-                            {t('debug_console.scroll_to_bottom', { defaultValue: 'Scroll' })}
+                            {t('debug_console.scroll_to_bottom', { defaultValue: '滚到底部' })}
                         </button>
                     )}
                     <span className="opacity-80 flex items-center gap-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                        Live
+                        {t('debug_console.live', { defaultValue: '实时' })}
                     </span>
                 </div>
             </div>

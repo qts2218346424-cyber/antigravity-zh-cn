@@ -115,7 +115,7 @@ pub async fn patch_agy_binary(file_path: String) -> Result<String, String> {
     //          mov $0x18, %ebx   -> bb 18 00 00 00
     let pe_pattern = [0x41, 0x80, 0x3c, 0x24, 0x00, 0x0f, 0x85];
     let mut i = 0;
-    while i < n - 25 {
+    while i < n.saturating_sub(25) {
         if data[i..i + 7] == pe_pattern {
             // Validate the rest of the pattern
             // leaq opcode starts after jne (which is 6 bytes: 0f 85 XX XX XX XX)
@@ -138,7 +138,7 @@ pub async fn patch_agy_binary(file_path: String) -> Result<String, String> {
 
     // 2. Scan for ARM64 eligibility gate pattern if not PE x86_64
     if patch_offset.is_none() {
-        for j in (0..n - 20).step_by(4) {
+        for j in (0..n.saturating_sub(20)).step_by(4) {
             let inst1 = u32::from_le_bytes(data[j..j + 4].try_into().unwrap());
             let inst2 = u32::from_le_bytes(data[j + 4..j + 8].try_into().unwrap());
             let inst4 = u32::from_le_bytes(data[j + 12..j + 16].try_into().unwrap());
@@ -186,7 +186,7 @@ pub async fn patch_agy_binary(file_path: String) -> Result<String, String> {
     if patch_offset.is_none() {
         // Check if already patched for x86_64 PE
         let mut check_idx = 0;
-        while check_idx < n - 25 {
+        while check_idx < n.saturating_sub(25) {
             if data[check_idx..check_idx + 7] == pe_pattern {
                 let leaq_idx = check_idx + 5 + 6;
                 if data[leaq_idx..leaq_idx + 3] == [0x48, 0x8d, 0x05] {
@@ -202,7 +202,7 @@ pub async fn patch_agy_binary(file_path: String) -> Result<String, String> {
         }
 
         // Check if already patched for ARM64
-        for j in (0..n - 20).step_by(4) {
+        for j in (0..n.saturating_sub(20)).step_by(4) {
             let inst1 = u32::from_le_bytes(data[j..j + 4].try_into().unwrap());
             let inst2 = u32::from_le_bytes(data[j + 4..j + 8].try_into().unwrap());
             let inst4 = u32::from_le_bytes(data[j + 12..j + 16].try_into().unwrap());

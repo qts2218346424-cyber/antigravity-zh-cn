@@ -71,7 +71,7 @@ const PinnedQuotaModels = ({ config, onChange }: PinnedQuotaModelsProps) => {
         .map(m => ({
             id: m.name.toLowerCase(),
             label: m.name.toLowerCase(),
-            desc: m.display_name || t('settings.pinned_quota_models.dynamic', 'Dynamic Extracted Model')
+            desc: m.display_name || t('settings.pinned_quota_models.dynamic', '动态提取模型')
         }));
 
     const modelOptions = [...baseModels, ...dynamicModels];

@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { request as invoke } from '../../utils/request';
-import { Search, AlertTriangle } from 'lucide-react';
+import { Search, AlertTriangle, RefreshCw } from 'lucide-react';
+
+function formatUnixTimestamp(ts?: number | null): string {
+    if (typeof ts !== 'number' || !Number.isFinite(ts) || ts <= 0) return '-';
+    const ms = ts > 1e12 ? ts : ts * 1000;
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString();
+}
 
 interface IpAccessLog {
     id: string;
@@ -32,6 +39,7 @@ export const IpAccessLogs: React.FC<Props> = ({ refreshKey }) => {
     const [logs, setLogs] = useState<IpAccessLog[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
     const [search, setSearch] = useState('');
@@ -39,6 +47,7 @@ export const IpAccessLogs: React.FC<Props> = ({ refreshKey }) => {
 
     const loadLogs = async () => {
         setLoading(true);
+        setLoadError(null);
         try {
             const res = await invoke<IpAccessLogResponse>('get_ip_access_logs', {
                 page,
@@ -46,10 +55,11 @@ export const IpAccessLogs: React.FC<Props> = ({ refreshKey }) => {
                 search: search || undefined,
                 blockedOnly: blockedOnly,
             });
-            setLogs(res.logs);
-            setTotal(res.total);
+            setLogs(res?.logs || []);
+            setTotal(res?.total || 0);
         } catch (e) {
             console.error('Failed to load logs', e);
+            setLoadError(e instanceof Error ? e.message : String(e));
         } finally {
             setLoading(false);
         }
@@ -107,6 +117,25 @@ export const IpAccessLogs: React.FC<Props> = ({ refreshKey }) => {
                 </div>
             </div>
 
+            {loadError && (
+                <div className="mx-5 mt-3 px-3.5 py-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 flex items-center justify-between gap-3 text-xs text-rose-700 dark:text-rose-300">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <AlertTriangle size={14} className="shrink-0 text-rose-500" />
+                        <span className="truncate">
+                            {t('common.load_failed', '加载失败')}: {loadError}
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={loadLogs}
+                        className="btn btn-xs btn-ghost text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 gap-1 shrink-0"
+                    >
+                        <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                        {t('common.retry', '重试')}
+                    </button>
+                </div>
+            )}
+
             {/* Table */}
             <div className="flex-1 overflow-auto">
                 <table className="table table-xs w-full">
@@ -114,7 +143,7 @@ export const IpAccessLogs: React.FC<Props> = ({ refreshKey }) => {
                         <tr>
                             <th className="w-20">{t('security.logs.status')}</th>
                             <th className="w-32">{t('security.logs.ip_address')}</th>
-                            <th className="w-24">{t('security.logs.username', 'User')}</th>
+                            <th className="w-24">{t('security.logs.username', '用户')}</th>
                             <th className="w-20">{t('security.logs.method')}</th>
                             <th className="">{t('security.logs.path')}</th>
                             <th className="w-24 text-right">{t('security.logs.duration')}</th>
@@ -141,11 +170,11 @@ export const IpAccessLogs: React.FC<Props> = ({ refreshKey }) => {
                                 <td className="font-bold text-xs">{log.method || '-'}</td>
                                 <td className="max-w-xs truncate text-gray-600 dark:text-gray-400" title={log.path}>{log.path || '-'}</td>
                                 <td className="text-right font-mono">{log.duration ? `${log.duration}ms` : '-'}</td>
-                                <td className="text-right text-xs text-gray-500">{new Date(log.timestamp * 1000).toLocaleString()}</td>
+                                <td className="text-right text-xs text-gray-500">{formatUnixTimestamp(log.timestamp)}</td>
                                 <td className="text-xs text-red-500 truncate" title={log.block_reason}>{log.block_reason}</td>
                             </tr>
                         ))}
-                        {!loading && logs.length === 0 && (
+                        {!loading && !loadError && logs.length === 0 && (
                             <tr>
                                 <td colSpan={8} className="text-center py-10 text-gray-400">
                                     {t('security.logs.no_logs')}

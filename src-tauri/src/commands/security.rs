@@ -44,20 +44,39 @@ pub struct IpStatsResponse {
 
 // ==================== IP 访问日志命令 ====================
 
-/// 获取 IP 访问日志列表
+/// 获取 IP 访问日志列表（兼容前端扁平参数与嵌套 query 参数）
 #[tauri::command]
-pub async fn get_ip_access_logs(query: IpAccessLogQuery) -> Result<IpAccessLogResponse, String> {
-    let offset = (query.page.max(1) - 1) * query.page_size;
+pub async fn get_ip_access_logs(
+    query: Option<IpAccessLogQuery>,
+    page: Option<usize>,
+    page_size: Option<usize>,
+    search: Option<String>,
+    blocked_only: Option<bool>,
+) -> Result<IpAccessLogResponse, String> {
+    let eff_page = query.as_ref().map(|q| q.page).or(page).unwrap_or(1);
+    let eff_size = query
+        .as_ref()
+        .map(|q| q.page_size)
+        .or(page_size)
+        .unwrap_or(50)
+        .clamp(1, 500);
+    let eff_blocked = query
+        .as_ref()
+        .map(|q| q.blocked_only)
+        .or(blocked_only)
+        .unwrap_or(false);
+    let eff_search = query.and_then(|q| q.search).or(search);
+    let offset = (eff_page.max(1) - 1) * eff_size;
 
     let logs = security_db::get_ip_access_logs(
-        query.page_size,
+        eff_size,
         offset,
-        query.search.as_deref(),
-        query.blocked_only,
+        eff_search.as_deref(),
+        eff_blocked,
     )?;
 
-    // 简单计算总数 (如果需要精确分页,可以添加 count 函数)
-    let total = logs.len();
+    let total = security_db::get_ip_access_logs_count(eff_search.as_deref(), eff_blocked)
+        .unwrap_or(logs.len() as u64) as usize;
 
     Ok(IpAccessLogResponse { logs, total })
 }
@@ -127,12 +146,7 @@ pub async fn remove_ip_from_blacklist(ip_pattern: String) -> Result<(), String> 
 /// 清空黑名单
 #[tauri::command]
 pub async fn clear_ip_blacklist() -> Result<(), String> {
-    // 获取所有黑名单条目并逐个删除
-    let entries = security_db::get_blacklist()?;
-    for entry in entries {
-        security_db::remove_from_blacklist(&entry.ip_pattern)?;
-    }
-    Ok(())
+    security_db::clear_blacklist()
 }
 
 /// 检查 IP 是否在黑名单中
@@ -181,12 +195,7 @@ pub async fn remove_ip_from_whitelist(ip_pattern: String) -> Result<(), String> 
 /// 清空白名单
 #[tauri::command]
 pub async fn clear_ip_whitelist() -> Result<(), String> {
-    // 获取所有白名单条目并逐个删除
-    let entries = security_db::get_whitelist()?;
-    for entry in entries {
-        security_db::remove_from_whitelist(&entry.ip_pattern)?;
-    }
-    Ok(())
+    security_db::clear_whitelist()
 }
 
 /// 检查 IP 是否在白名单中

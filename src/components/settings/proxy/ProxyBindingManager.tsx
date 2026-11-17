@@ -37,7 +37,7 @@ export default function ProxyBindingManager({ isOpen, onClose, proxies }: ProxyB
             setBindings(currentBindings || {});
         } catch (error) {
             console.error('Failed to load bindings:', error);
-            showToast(t('settings.proxy_pool.binding.load_failed', 'Failed to load bindings'), 'error');
+            showToast(t('settings.proxy_pool.binding.load_failed', '加载绑定失败'), 'error');
         } finally {
             setIsLoading(false);
         }
@@ -52,16 +52,16 @@ export default function ProxyBindingManager({ isOpen, onClose, proxies }: ProxyB
                 const newBindings = { ...bindings };
                 delete newBindings[accountId];
                 setBindings(newBindings);
-                showToast(t('settings.proxy_pool.binding.unbind_success', 'Unbound successfully'), 'success');
+                showToast(t('settings.proxy_pool.binding.unbind_success', '解绑成功'), 'success');
             } else {
                 // Bind
                 await request('bind_account_proxy', { accountId, proxyId });
                 setBindings({ ...bindings, [accountId]: proxyId });
-                showToast(t('settings.proxy_pool.binding.bind_success', 'Bound successfully'), 'success');
+                showToast(t('settings.proxy_pool.binding.bind_success', '绑定成功'), 'success');
             }
         } catch (error) {
             console.error('Failed to update binding:', error);
-            showToast(t('settings.proxy_pool.binding.update_failed', 'Failed to update binding'), 'error');
+            showToast(t('settings.proxy_pool.binding.update_failed', '更新绑定失败'), 'error');
         } finally {
             setIsSaving(null);
         }
@@ -77,14 +77,14 @@ export default function ProxyBindingManager({ isOpen, onClose, proxies }: ProxyB
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <Link2 className="w-5 h-5" />
-                        {t('settings.proxy_pool.binding.title', 'Account Proxy Bindings')}
+                        {t('settings.proxy_pool.binding.title', '账号代理绑定')}
                     </h3>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={refreshData}
                             disabled={isLoading}
                             className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            title={t('common.refresh', 'Refresh')}
+                            title={t('common.refresh', '刷新')}
                         >
                             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
                         </button>
@@ -106,8 +106,8 @@ export default function ProxyBindingManager({ isOpen, onClose, proxies }: ProxyB
                     ) : (
                         <div className="space-y-3">
                             <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                <div className="col-span-5">{t('settings.account.email', 'Email')}</div>
-                                <div className="col-span-7">{t('settings.proxy_pool.binding.assigned_proxy', 'Assigned Proxy')}</div>
+                                <div className="col-span-5">{t('settings.account.email', '账号邮箱')}</div>
+                                <div className="col-span-7">{t('settings.proxy_pool.binding.assigned_proxy', '已分配代理')}</div>
                             </div>
 
                             {accounts.map(account => {
@@ -128,8 +128,8 @@ export default function ProxyBindingManager({ isOpen, onClose, proxies }: ProxyB
                                                         : 'border-gray-300 dark:border-gray-600'
                                                     }`}
                                             >
-                                                <option value="">{t('settings.proxy_pool.binding.default_strategy', 'Default (Follow Strategy)')}</option>
-                                                <optgroup label={t('settings.proxy_pool.proxies', 'Proxies')}>
+                                                <option value="">{t('settings.proxy_pool.binding.default_strategy', '默认 (跟随策略)')}</option>
+                                                <optgroup label={t('settings.proxy_pool.proxies', '可用代理节点')}>
                                                     {availableProxies.map(proxy => (
                                                         <option key={proxy.id} value={proxy.id}>
                                                             {proxy.name || proxy.url}
@@ -151,7 +151,7 @@ export default function ProxyBindingManager({ isOpen, onClose, proxies }: ProxyB
 
                             {accounts.length === 0 && (
                                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                    {t('settings.account.no_accounts', 'No accounts found')}
+                                    {t('settings.account.no_accounts', '暂无可用账号')}
                                 </div>
                             )}
                         </div>
@@ -164,7 +164,7 @@ export default function ProxyBindingManager({ isOpen, onClose, proxies }: ProxyB
                         onClick={onClose}
                         className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                     >
-                        {t('common.close', 'Close')}
+                        {t('common.close', '关闭')}
                     </button>
                 </div>
             </div>

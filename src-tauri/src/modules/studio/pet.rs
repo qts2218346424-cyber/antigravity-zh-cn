@@ -1,10 +1,11 @@
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, LogicalSize, Manager, PhysicalPosition, Size};
 
-use super::skin_manager::{load_studio_config, save_studio_config};
-use super::{resources_dir, MediaStatus, PetAssets};
+use super::skin_manager::{load_studio_config, mutate_studio_config, MAX_IMAGE_BYTES};
+use super::{atomic_write_bytes, config_dir, resources_dir, MediaStatus, PetAssets};
 
 #[derive(Default)]
 struct LyricCache {
@@ -13,9 +14,26 @@ struct LyricCache {
 }
 
 static LYRIC_CACHE: OnceLock<Mutex<LyricCache>> = OnceLock::new();
+static BUILTIN_PET_ASSETS_CACHE: OnceLock<PetAssets> = OnceLock::new();
 
 fn lyric_cache() -> &'static Mutex<LyricCache> {
     LYRIC_CACHE.get_or_init(|| Mutex::new(LyricCache::default()))
+}
+
+fn custom_pet_dir() -> PathBuf {
+    config_dir().join("custom-pet")
+}
+
+fn mime_for_image_ext(ext: &str) -> Option<&'static str> {
+    match ext.to_ascii_lowercase().as_str() {
+        "png" => Some("image/png"),
+        "webp" => Some("image/webp"),
+        "gif" => Some("image/gif"),
+        "svg" => Some("image/svg+xml"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "avif" => Some("image/avif"),
+        _ => None,
+    }
 }
 
 fn read_media_data_uri(stem: &str) -> Option<String> {
@@ -35,26 +53,217 @@ fn read_media_data_uri(stem: &str) -> Option<String> {
     None
 }
 
-/// 打包加载桌宠全部 WebP/PNG 动态材质，封装为 Data URI 返回给透明桌宠窗口
-pub fn get_pet_assets() -> PetAssets {
-    PetAssets {
-        nezuko_chibi: read_media_data_uri("nezuko_chibi_pet"),
-        nezuko_basket: read_media_data_uri("nezuko_basket"),
-        nezuko_spin_sheet: read_media_data_uri("nezuko_box_spin_sheet"),
-        shockwave: read_media_data_uri("box_impact_shockwave"),
-        nezuko_head: read_media_data_uri("nezuko_bone_head"),
-        nezuko_torso: read_media_data_uri("nezuko_bone_torso"),
-        nezuko_arm_l: read_media_data_uri("nezuko_bone_arm_l"),
-        nezuko_arm_r: read_media_data_uri("nezuko_bone_arm_r"),
-        nezuko_leg_l: read_media_data_uri("nezuko_bone_leg_l"),
-        nezuko_leg_r: read_media_data_uri("nezuko_bone_leg_r"),
-        nezuko_peeker: read_media_data_uri("nezuko_peeker_head"),
-        little_prince: read_media_data_uri("little_prince_pet"),
-        prince_fox: read_media_data_uri("prince_action_fox"),
-        prince_rose: read_media_data_uri("prince_asset_rose"),
-        prince_stars: read_media_data_uri("prince_asset_stars"),
-        prince_sunset: read_media_data_uri("prince_asset_sunset"),
+fn read_custom_avatar_data_uri() -> Option<String> {
+    let cfg = load_studio_config();
+    if let Some(ref saved_path) = cfg.custom_pet_avatar {
+        let p = PathBuf::from(saved_path);
+        if p.is_file() {
+            let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("");
+            if let Some(mime) = mime_for_image_ext(ext) {
+                if let Ok(bytes) = std::fs::read(&p) {
+                    if bytes.len() <= MAX_IMAGE_BYTES {
+                        return Some(format!(
+                            "data:{};base64,{}",
+                            mime,
+                            BASE64_STANDARD.encode(&bytes)
+                        ));
+                    }
+                }
+            }
+        }
     }
+    let dir = custom_pet_dir();
+    for ext in ["webp", "png", "gif", "svg", "jpg", "jpeg"] {
+        let p = dir.join(format!("avatar.{}", ext));
+        if p.is_file() {
+            if let Some(mime) = mime_for_image_ext(ext) {
+                if let Ok(bytes) = std::fs::read(&p) {
+                    if bytes.len() <= MAX_IMAGE_BYTES {
+                        return Some(format!(
+                            "data:{};base64,{}",
+                            mime,
+                            BASE64_STANDARD.encode(&bytes)
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 打包加载桌宠全部 WebP/PNG/SVG 动态材质（内置资产进程级缓存 + 用户自定义立绘热加载）
+pub fn get_pet_assets() -> PetAssets {
+    let base = BUILTIN_PET_ASSETS_CACHE
+        .get_or_init(|| PetAssets {
+            nezuko_chibi: read_media_data_uri("nezuko_chibi_pet"),
+            nezuko_blink: read_media_data_uri("nezuko_chibi_blink"),
+            nezuko_happy: read_media_data_uri("nezuko_action_happy"),
+            nezuko_run: read_media_data_uri("nezuko_action_run"),
+            nezuko_stomp: read_media_data_uri("nezuko_action_stomp"),
+            nezuko_blood: read_media_data_uri("nezuko_action_blood"),
+            nezuko_basket: read_media_data_uri("nezuko_basket"),
+            nezuko_spin_sheet: read_media_data_uri("nezuko_box_spin_sheet"),
+            shockwave: read_media_data_uri("box_impact_shockwave"),
+            nezuko_head: read_media_data_uri("nezuko_bone_head"),
+            nezuko_torso: read_media_data_uri("nezuko_bone_torso"),
+            nezuko_arm_l: read_media_data_uri("nezuko_bone_arm_l"),
+            nezuko_arm_r: read_media_data_uri("nezuko_bone_arm_r"),
+            nezuko_leg_l: read_media_data_uri("nezuko_bone_leg_l"),
+            nezuko_leg_r: read_media_data_uri("nezuko_bone_leg_r"),
+            nezuko_peeker: read_media_data_uri("nezuko_peeker_head"),
+            little_prince: read_media_data_uri("little_prince_pet"),
+            prince_blink: read_media_data_uri("little_prince_blink"),
+            prince_walk: read_media_data_uri("prince_action_walk"),
+            prince_fox: read_media_data_uri("prince_action_fox"),
+            prince_rose_pose: read_media_data_uri("prince_action_rose"),
+            prince_sleep: read_media_data_uri("prince_action_sleep"),
+            prince_rose: read_media_data_uri("prince_asset_rose"),
+            prince_stars: read_media_data_uri("prince_asset_stars"),
+            prince_sunset: read_media_data_uri("prince_asset_sunset"),
+            tanjiro_water: read_media_data_uri("tanjiro_water"),
+            zenitsu_thunder: read_media_data_uri("zenitsu_thunder"),
+            inosuke_beast: read_media_data_uri("inosuke_beast"),
+            custom_avatar: None,
+        })
+        .clone();
+
+    PetAssets {
+        custom_avatar: read_custom_avatar_data_uri(),
+        ..base
+    }
+}
+
+/// 导入用户自定义桌宠形象资产（支持 PNG / WebP / GIF / SVG / JPG）并即时同步至伴侣视窗
+pub fn import_custom_pet_avatar(app: &tauri::AppHandle, src_path: &Path) -> Result<String, String> {
+    if !src_path.is_file() {
+        return Err(format!("未找到所选形象文件: {}", src_path.display()));
+    }
+    let ext = src_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let mime = mime_for_image_ext(&ext)
+        .ok_or_else(|| "仅支持导入 PNG、WebP、GIF、SVG 或 JPG 格式的立绘资产".to_string())?;
+
+    let meta = std::fs::metadata(src_path)
+        .map_err(|e| format!("读取文件信息失败: {}", e))?;
+    if meta.len() == 0 {
+        return Err("所选图片文件为空".to_string());
+    }
+    if meta.len() as usize > MAX_IMAGE_BYTES {
+        return Err("自定义立绘文件不能超过 8MB".to_string());
+    }
+
+    let bytes = std::fs::read(src_path)
+        .map_err(|e| format!("读取自定义立绘失败: {}", e))?;
+    let dir = custom_pet_dir();
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("创建自定义伴侣目录失败: {}", e))?;
+
+    // 清理旧扩展名头像残留
+    for old_ext in ["webp", "png", "gif", "svg", "jpg", "jpeg"] {
+        if old_ext != ext {
+            let old_file = dir.join(format!("avatar.{}", old_ext));
+            if old_file.exists() {
+                let _ = std::fs::remove_file(old_file);
+            }
+        }
+    }
+
+    let dst = dir.join(format!("avatar.{}", ext));
+    atomic_write_bytes(&dst, &bytes)?;
+    let dst_str = dst.to_string_lossy().to_string();
+
+    mutate_studio_config(|cfg| {
+        cfg.custom_pet_avatar = Some(dst_str.clone());
+        cfg.pet_character = "custom".to_string();
+    })?;
+
+    let data_uri = format!("data:{};base64,{}", mime, BASE64_STANDARD.encode(&bytes));
+    let _ = app.emit("pet:assets-updated", ());
+    let _ = app.emit("pet:character-changed", "custom");
+    let _ = app.emit(
+        "studio:pet-state-changed",
+        json!({ "open": is_pet_open(app), "character": "custom" }),
+    );
+    Ok(data_uri)
+}
+
+/// 清除用户自定义立绘并回退至灶门祢豆子
+pub fn clear_custom_pet_avatar(app: &tauri::AppHandle) -> Result<(), String> {
+    let dir = custom_pet_dir();
+    if dir.is_dir() {
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+    mutate_studio_config(|cfg| {
+        cfg.custom_pet_avatar = None;
+        if cfg.pet_character == "custom" {
+            cfg.pet_character = "nezuko".to_string();
+        }
+    })?;
+    let next_ch = load_studio_config().pet_character;
+    let _ = app.emit("pet:assets-updated", ());
+    let _ = app.emit("pet:character-changed", next_ch.clone());
+    let _ = app.emit(
+        "studio:pet-state-changed",
+        json!({ "open": is_pet_open(app), "character": next_ch }),
+    );
+    Ok(())
+}
+
+/// 持久化更新桌宠交互偏好并在主窗口与伴侣窗口间实时同步
+pub fn update_pet_prefs(
+    app: &tauri::AppHandle,
+    character: Option<String>,
+    roaming: Option<bool>,
+    always_on_top: Option<bool>,
+    scale_idx: Option<usize>,
+    muted: Option<bool>,
+) -> Result<(), String> {
+    let updated = mutate_studio_config(|cfg| {
+        if let Some(ref ch) = character {
+            let t = ch.trim();
+            if !t.is_empty() {
+                cfg.pet_character = t.to_string();
+            }
+        }
+        if let Some(r) = roaming {
+            cfg.pet_roaming = r;
+        }
+        if let Some(top) = always_on_top {
+            cfg.pet_always_on_top = top;
+        }
+        if let Some(s) = scale_idx {
+            cfg.pet_scale_idx = s.min(2);
+        }
+        if let Some(m) = muted {
+            cfg.pet_muted = m;
+        }
+    })?;
+
+    if let Some(top) = always_on_top {
+        let _ = set_pet_always_on_top(app, top);
+    }
+    if let Some(ch) = character {
+        let t = ch.trim();
+        if !t.is_empty() {
+            let _ = app.emit("pet:character-changed", t);
+        }
+    }
+    let _ = app.emit(
+        "studio:pet-state-changed",
+        json!({
+            "open": is_pet_open(app),
+            "character": updated.pet_character,
+            "roaming": updated.pet_roaming,
+            "always_on_top": updated.pet_always_on_top,
+            "scale_idx": updated.pet_scale_idx,
+            "muted": updated.pet_muted,
+        }),
+    );
+    Ok(())
 }
 
 pub fn is_pet_open(app: &tauri::AppHandle) -> bool {
@@ -68,7 +277,7 @@ fn position_bottom_right(win: &tauri::WebviewWindow) {
         let area = monitor.work_area();
         let win_size = win
             .outer_size()
-            .unwrap_or(tauri::PhysicalSize::new(360, 440));
+            .unwrap_or(tauri::PhysicalSize::new(386, 420));
         let margin = 20i32;
         let x = area.position.x + area.size.width as i32 - win_size.width as i32 - margin;
         let y = area.position.y + area.size.height as i32 - win_size.height as i32 - margin;
@@ -80,11 +289,12 @@ pub fn launch_pet_window(
     app: &tauri::AppHandle,
     character: Option<&str>,
 ) -> Result<bool, String> {
-    if let Some(ch) = character.map(str::trim).filter(|s| !s.is_empty()) {
-        let mut cfg = load_studio_config();
-        cfg.pet_character = ch.to_string();
-        let _ = save_studio_config(&cfg);
-    }
+    let cfg = mutate_studio_config(|c| {
+        if let Some(ch) = character.map(str::trim).filter(|s| !s.is_empty()) {
+            c.pet_character = ch.to_string();
+        }
+        c.enable_pet = true;
+    })?;
 
     let win = if let Some(w) = app.get_webview_window("pet") {
         w
@@ -94,11 +304,11 @@ pub fn launch_pet_window(
             "pet",
             tauri::WebviewUrl::App("index.html?pet=1".into()),
         )
-        .title("Antigravity 桌宠伴侣")
+        .title("Antigravity 独立桌面伴侣")
         .inner_size(386.0, 420.0)
         .transparent(true)
         .decorations(false)
-        .always_on_top(true)
+        .always_on_top(cfg.pet_always_on_top)
         .skip_taskbar(true)
         .resizable(false)
         .shadow(false)
@@ -111,14 +321,21 @@ pub fn launch_pet_window(
     if !win.is_visible().unwrap_or(false) {
         position_bottom_right(&win);
     }
-    let _ = win.set_always_on_top(true);
+    let _ = win.set_always_on_top(cfg.pet_always_on_top);
     win.show()
         .map_err(|e| format!("显示独立桌宠窗口失败: {}", e))?;
     let _ = win.set_focus();
 
-    if let Some(ch) = character.map(str::trim).filter(|s| !s.is_empty()) {
-        let _ = app.emit_to("pet", "pet:character-changed", ch);
-    }
+    let active_ch = cfg.pet_character.clone();
+    let _ = app.emit("pet:character-changed", active_ch.as_str());
+    let _ = app.emit(
+        "studio:pet-state-changed",
+        json!({
+            "open": true,
+            "character": active_ch,
+            "always_on_top": cfg.pet_always_on_top,
+        }),
+    );
 
     Ok(true)
 }
@@ -128,6 +345,18 @@ pub fn close_pet_window(app: &tauri::AppHandle) -> Result<bool, String> {
         win.hide()
             .map_err(|e| format!("隐藏独立桌宠窗口失败: {}", e))?;
     }
+    let cfg = mutate_studio_config(|c| {
+        c.enable_pet = false;
+    })
+    .unwrap_or_default();
+    let _ = app.emit(
+        "studio:pet-state-changed",
+        json!({
+            "open": false,
+            "character": cfg.pet_character,
+            "always_on_top": cfg.pet_always_on_top,
+        }),
+    );
     Ok(false)
 }
 
@@ -139,21 +368,61 @@ pub fn reset_pet_position(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 调整桌宠窗口逻辑尺寸，同时锚定窗口底边位置并夹取在屏幕工作区内（彻底消除展开遥测面板穿出任务栏的 Bug）
 pub fn set_pet_size(app: &tauri::AppHandle, width: u32, height: u32) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("pet") {
         let w = width.clamp(220, 720) as f64;
         let h = height.clamp(220, 780) as f64;
+
+        let old_pos = win.outer_position().ok();
+        let old_size = win.outer_size().ok();
+        let monitor = win.current_monitor().ok().flatten();
+        let scale = monitor
+            .as_ref()
+            .map(|m| m.scale_factor())
+            .or_else(|| win.scale_factor().ok())
+            .unwrap_or(1.0);
+
         win.set_size(Size::Logical(LogicalSize::new(w, h)))
             .map_err(|e| format!("调整桌宠窗口大小失败: {}", e))?;
+
+        if let (Some(pos), Some(old_sz)) = (old_pos, old_size) {
+            let new_phys_w = (w * scale).round() as i32;
+            let new_phys_h = (h * scale).round() as i32;
+            let bottom_anchor = pos.y + old_sz.height as i32;
+            let mut next_x = pos.x;
+            let mut next_y = bottom_anchor - new_phys_h;
+
+            if let Some(mon) = monitor {
+                let area = mon.work_area();
+                let min_x = area.position.x + 8;
+                let max_x = (area.position.x + area.size.width as i32 - new_phys_w - 8).max(min_x);
+                let min_y = area.position.y + 8;
+                let max_y = (area.position.y + area.size.height as i32 - new_phys_h - 8).max(min_y);
+                next_x = next_x.clamp(min_x, max_x);
+                next_y = next_y.clamp(min_y, max_y);
+            }
+            let _ = win.set_position(PhysicalPosition::new(next_x, next_y));
+        }
     }
     Ok(())
 }
 
 pub fn set_pet_always_on_top(app: &tauri::AppHandle, always_on_top: bool) -> Result<(), String> {
+    let _ = mutate_studio_config(|c| {
+        c.pet_always_on_top = always_on_top;
+    });
     if let Some(win) = app.get_webview_window("pet") {
         win.set_always_on_top(always_on_top)
             .map_err(|e| format!("设置桌宠置顶失败: {}", e))?;
     }
+    let _ = app.emit(
+        "studio:pet-state-changed",
+        json!({
+            "open": is_pet_open(app),
+            "always_on_top": always_on_top,
+        }),
+    );
     Ok(())
 }
 

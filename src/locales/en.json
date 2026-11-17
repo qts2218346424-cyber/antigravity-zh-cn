@@ -10,6 +10,9 @@
     "common": {
         "loading": "Loading...",
         "empty": "Empty",
+        "copy_all": "Copy All",
+        "processing": "Processing...",
+        "failed": "Failed",
         "load_more": "Load More",
         "add": "Add",
         "copy": "Copy",
@@ -72,7 +75,7 @@
         "selected": "Selected",
         "claude_series": "Claude Series",
         "maximize": "Maximize",
-        "app_name": "Antigravity Tools",
+        "app_name": "Antigravity Studio",
         "copy_to_clipboard": "Copy to clipboard"
     },
     "nav": {
@@ -184,6 +187,7 @@
         "weekly_7d": "7d Weekly:",
         "zero_weekly_warning": "{{count}} active account(s) circuit-broken due to zero weekly quota (rated 0%)",
         "view_mode_weighted": "Weighted",
+        "view_mode_weighted_title": "Weighted Effective (5H Rolling & Weekly Bucket Minimum)",
         "view_mode_5h": "5H Rolling",
         "view_mode_weekly": "7-Day Weekly",
         "view_mode_title_weighted": "Weighted Effective: Overall health considering tier weights & bidirectional bucket constraints",
@@ -273,6 +277,9 @@
         "priority_invalid": "Priority must be an integer between 1 and 100",
         "priority_updated": "Priority updated",
         "add_account": "Add Account",
+        "sync_local": "Sync Local",
+        "sync_local_tooltip": "Scan and sync active account from local Antigravity client",
+        "sync_local_success": "Successfully synced and updated local client account",
         "refresh_all": "Refresh All",
         "refresh_selected": "Refresh ({{count}})",
         "export_selected": "Export ({{count}})",
@@ -382,9 +389,11 @@
             "restored": "Restored",
             "deleted": "Deleted",
             "directory_opened": "Storage directory opened",
-            "original_fingerprint_not_found": "Original fingerprint not found"
+            "original_fingerprint_not_found": "Original fingerprint not found",
+            "storage_json_not_found": "Local storage.json not found (please launch the client at least once)"
         },
         "warmup_all": "One-click Warmup",
+        "warmup_all_triggered": "Warmup triggered for all eligible accounts",
         "warmup_selected": "Warmup ({{count}})",
         "warmup_this": "Warmup this account",
         "warmup_now": "Warmup Now",
@@ -464,7 +473,9 @@
             },
             "btn_cancel": "Cancel",
             "btn_confirm": "Confirm",
+            "oauth_success": "OAuth authorization successful!",
             "oauth_error": "OAuth failed: {{error}}",
+            "batch_progress": "Importing accounts...",
             "status": {
                 "error_token": "Please enter Refresh Token"
             }
@@ -484,7 +495,13 @@
             "title": "No Accounts",
             "desc": "Click the \"Add Account\" button above to add your first account"
         },
+        "view": {
+            "compact": "Compact View",
+            "list": "List View",
+            "grid": "Grid View"
+        },
         "views": {
+            "compact": "Compact View",
             "list": "List View",
             "grid": "Grid View"
         },
@@ -520,6 +537,7 @@
     },
     "settings": {
         "save": "Save Settings",
+        "web_mode_limitation": "(Not supported in Web mode)",
         "tabs": {
             "general": "General",
             "account": "Account",
@@ -542,7 +560,7 @@
             "auto_launch": "Launch at Startup",
             "auto_launch_enabled": "Enabled",
             "auto_launch_disabled": "Disabled",
-            "auto_launch_desc": "Automatically launch Antigravity Tools when system starts",
+            "auto_launch_desc": "Automatically launch Antigravity Studio when system starts",
             "quiet_autostart": "Quiet Startup (Stay in Tray)",
             "quiet_autostart_desc": "When the app is launched at login, keep the main window hidden. If Lightweight Mode is also on, the webview is released immediately. Opening the app yourself still shows the window. If the system tray is unavailable, the window is shown instead.",
             "quiet_autostart_enabled": "Quiet startup enabled",
@@ -567,6 +585,8 @@
         },
         "account": {
             "title": "Account Settings",
+            "email": "Email",
+            "no_accounts": "No accounts found",
             "auto_refresh": "Background Auto Refresh",
             "auto_refresh_desc": "Automatically refresh all account quotas in the background. This is required for quota protection and smart warmup.",
             "always_on": "Always On",
@@ -603,13 +623,17 @@
         },
         "pinned_quota_models": {
             "title": "Pinned Quota Models",
-            "desc": "Choose which model quotas to display in the account list. Unselected models are only shown in the detail popup."
+            "desc": "Choose which model quotas to display in the account list. Unselected models are only shown in the detail popup.",
+            "dynamic": "Dynamic Extracted Model"
         },
         "proxy": {
             "title": "Proxy Settings"
         },
         "proxy_pool": {
             "title": "Proxy Pool",
+            "proxies": "Proxies",
+            "bound_to": "Bound to",
+            "inactive_notice": "Proxy Pool Inactive",
             "strategy_priority": "Priority",
             "strategy_round_robin": "Round Robin",
             "strategy_random": "Random",
@@ -634,7 +658,10 @@
             "interval_tooltip": "Health check interval (seconds)",
             "test_completed": "Health check completed",
             "test_failed": "Health check failed",
+            "confirm_delete_title": "Delete Proxy",
             "confirm_delete": "Are you sure you want to delete this proxy?",
+            "confirm_batch_delete_title": "Batch Delete Proxies",
+            "confirm_batch_delete": "Are you sure you want to delete the {{count}} selected proxies?",
             "empty": "No proxies available",
             "column_priority": "Priority",
             "column_status": "Status",
@@ -856,8 +883,8 @@
             "long_prompt_warning": "Prompt is quite long (over 2000 chars) and may consume significant context space."
         },
         "branding": {
-            "title": "Antigravity Tools",
-            "subtitle": "Professional Account Management"
+            "title": "Antigravity Studio",
+            "subtitle": "Professional Account & Gateway Studio"
         },
         "lightweight_mode_desc": "Fully releases WebView memory when exiting or minimizing to tray"
     },
@@ -903,7 +930,11 @@
                 "user_agent_risk_desc": "Custom User-Agent strings may break upstream protocol compatibility. Google Cloud Code upstream strictly enforces client fingerprint version gating on flagship reasoning models like Gemini 4 Argon. If a non-Hub signature format (such as legacy IDE antigravity/4.3.0) or an outdated version (below official latest baseline {{version}}) is configured, upstream will immediately reject requests with HTTP 404 (Requested entity was not found) and trigger a 15-minute protective circuit break for the entire account pool. If unfamiliar with upstream fingerprint requirements, please proceed with caution or keep default settings.",
                 "user_agent_restored_success": "Restored official default Hub User-Agent",
                 "user_agent_sandbox_test_title": "User-Agent & Argon Gate Sandbox Test",
-                "user_agent_sandbox_test_desc": "Simulate different User-Agent fingerprints and send Argon connectivity test requests to verify gateway detection and diagnostics."
+                "user_agent_sandbox_test_desc": "Simulate different User-Agent fingerprints and send Argon connectivity test requests to verify gateway detection and diagnostics.",
+                "sandbox_ua_input_label": "Sandbox Test User-Agent (probe only, does not overwrite global config):",
+                "apply_sandbox_ua_btn": "Apply UA to Global Proxy Config",
+                "sandbox_ua_already_applied": "Applied to Global Config",
+                "user_agent_sandbox_applied": "Applied User-Agent to global proxy configuration"
             },
             "port": "Listen Port",
             "port_tooltip": "TCP port the local API Proxy listens on. Stop the service to change it, then restart to apply.",
@@ -1625,6 +1656,7 @@
                 "copy_success": "Config content copied"
             },
             "toast": {
+                "config_missing": "Please generate API Key and start service first",
                 "sync_success": "Sync successful! {{name}} is ready.",
                 "sync_error": "Sync failed: {{error}}",
                 "sync_success_with_model": "Successfully synced {{name}} with model: {{model}}"
@@ -1634,6 +1666,58 @@
             "apps": {
                 "gemini": "Antigravity CLI (agy)",
                 "deepseek_harness": "DeepSeek Harness"
+            }
+        },
+        "opencode_sync": {
+            "card_title": "OpenCode",
+            "status": {
+                "detecting": "Detecting...",
+                "installed": "Installed ({{version}})",
+                "not_installed": "Not Installed",
+                "synced": "Synced",
+                "not_synced": "Not Synced",
+                "current_base_url": "Current Base URL"
+            },
+            "sync_accounts": "Sync accounts to antigravity-accounts.json",
+            "btn_sync": "Sync Config",
+            "btn_view": "View Config",
+            "btn_restore": "Restore",
+            "btn_restore_backup": "Restore Backup",
+            "btn_clear": "Clear Config",
+            "clear_confirm_title": "Confirm Clear Config",
+            "clear_confirm_message": "This will clear all OpenCode configurations including legacy settings. Are you sure?",
+            "toast": {
+                "config_missing": "Please generate API Key and start service first",
+                "sync_success": "OpenCode config synced successfully",
+                "sync_error": "OpenCode sync failed: {{error}}",
+                "clear_success": "OpenCode config cleared successfully",
+                "clear_error": "Failed to clear OpenCode config: {{error}}"
+            },
+            "modal": {
+                "view_title": "OpenCode Config Viewer",
+                "copy_success": "Config copied"
+            },
+            "sync_confirm_title": "Confirm Sync",
+            "sync_confirm_message": "OpenCode config will be overwritten based on current proxy settings. Continue?",
+            "restore_confirm": "Are you sure you want to restore OpenCode to default settings?",
+            "restore_backup_confirm": "Are you sure you want to restore OpenCode config from backup?",
+            "modal_title": "Select OpenCode Models",
+            "select_models": "Select models to sync",
+            "auth_plugin_warning": "Detected opencode-antigravity-auth plugin. Sync only creates provider antigravity-manager and will not overwrite the google provider/plugin.",
+            "btn_confirm_sync": "Confirm Sync",
+            "custom_base_url_label": "Custom Manager BaseURL",
+            "custom_base_url_desc": "For Docker Compose networking",
+            "custom_base_url_reset": "Reset"
+        },
+        "droid_sync": {
+            "modal_title": "Add models to Droid",
+            "modal_desc": "Selected models will be added as customModels to settings.json",
+            "selected": "selected",
+            "btn_confirm_sync": "Add selected models",
+            "toast": {
+                "no_models_selected": "Please select at least one model",
+                "sync_success_count": "Added {{count}} model(s) to Droid",
+                "sync_error": "Sync failed: {{error}}"
             }
         },
         "hermes_sync": {
@@ -1931,7 +2015,19 @@
             "param_key": "Param Key",
             "param_value": "Param Value",
             "header_key": "Header Key",
-            "header_value": "Header Value"
+            "header_value": "Header Value",
+            "empty_params": "No query parameters",
+            "empty_headers": "No headers data",
+            "filter_params": "Filter parameter key or value...",
+            "filter_headers": "Filter header key or value...",
+            "view_table_title": "Table View (Key-Value)",
+            "view_table": "Table",
+            "view_raw_title": "Raw JSON / Plain Text",
+            "view_raw": "Raw",
+            "sensitive": "Sensitive",
+            "mask_sensitive": "Mask sensitive value",
+            "unmask_sensitive": "Reveal full value",
+            "copy_value": "Copy value"
         },
         "timing": {
             "title": "Stage Timing Diagnostics",
@@ -2388,7 +2484,7 @@
         "title": "APIKEY.FUN Hub",
         "eyebrow": "Hub",
         "double11Badge": "Double 11 Promo",
-        "description": "The official Antigravity Tools API Hub, providing stable, open, and cost-effective large model API services. Supports mainstream models like Claude, OpenAI, and Gemini. Ideal for unified configuration in Codex, Gemini CLI, Claude Code, and other development tools.",
+        "description": "The official Antigravity Studio API Hub, providing stable, open, and cost-effective large model API services. Supports mainstream models like Claude, OpenAI, and Gemini. Ideal for unified configuration in Codex, Gemini CLI, Claude Code, and other development tools.",
         "viewNow": "View Now",
         "usage": {
             "remainingAmount": "Remaining",
@@ -2463,5 +2559,18 @@
         "banner_active_count": "{{count}} accounts to exhaust",
         "banner_subtext": "Prioritizing imminent accounts with top scheduling priority while keeping others standby for session affinity and concurrency resilience. Default scheduling restores once quotas hit 0% or reset.",
         "exit_button": "Manual Exit & Restore"
+    },
+    "debug_console": {
+        "title": "CONSOLE",
+        "button_label": "Console",
+        "toggle": "Toggle Debug Console",
+        "filter_placeholder": "Filter logs...",
+        "pause_scroll": "Pause scroll",
+        "resume_scroll": "Resume scroll",
+        "clear": "Clear",
+        "no_logs": "No logs to display",
+        "no_logs_hint": "Logs will appear here in real-time",
+        "scroll_to_bottom": "Scroll to bottom",
+        "live": "Live"
     }
 }
