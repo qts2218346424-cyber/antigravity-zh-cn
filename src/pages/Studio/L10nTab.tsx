@@ -9,11 +9,9 @@ import {
   RotateCcw,
   ShieldCheck,
   ShieldOff,
-  Sparkles,
   Wand2,
 } from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
-import { DemonSlayerSplashPreview } from '../../components/Studio/DemonSlayerSplashPreview';
 import { studioService } from '../../services/studioService';
 import type { L10nPatchResult, StudioStatus } from '../../types/studio';
 import { isTauri } from '../../utils/env';
@@ -23,19 +21,10 @@ interface L10nTabProps {
   onRefresh: () => Promise<void>;
 }
 
-const SPLASH_CHARACTERS = [
-  { id: 'nezuko', name: '灶门祢豆子', breath: '血鬼术 · 爆血', color: 'from-pink-500 to-rose-600' },
-  { id: 'tanjiro', name: '灶门炭治郎', breath: '水之呼吸 · 生生流转', color: 'from-sky-500 to-blue-600' },
-  { id: 'zenitsu', name: '我妻善逸', breath: '雷之呼吸 · 霹雳一闪', color: 'from-amber-400 to-orange-500' },
-  { id: 'inosuke', name: '嘴平伊之助', breath: '兽之呼吸 · 空间识觉', color: 'from-indigo-400 to-blue-600' },
-  { id: 'all', name: '鬼灭全明星', breath: '四象呼吸联合集结', color: 'from-purple-500 to-pink-500' },
-];
-
 export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
   const [installDir, setInstallDir] = useState(status.install_dir || '');
   const [ideRoot, setIdeRoot] = useState(status.ide_root || '');
   const [lang, setLang] = useState(status.lang || 'zh-cn');
-  const [character, setCharacter] = useState(status.splash_character || 'nezuko');
   const [enableSkin, setEnableSkin] = useState(status.enable_skin ?? true);
   const [busy, setBusy] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<L10nPatchResult | null>(null);
@@ -44,7 +33,6 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
     if (status.install_dir) setInstallDir(status.install_dir);
     if (status.ide_root) setIdeRoot(status.ide_root);
     if (status.lang) setLang(status.lang);
-    if (status.splash_character) setCharacter(status.splash_character);
   }, [status]);
 
   const browseFolder = async (target: 'agent' | 'ide') => {
@@ -74,7 +62,7 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
       const res = await studioService.applyL10n({
         install_dir: installDir || null,
         lang,
-        character,
+        character: 'none',
         enable_pet: false,
         enable_skin: enableSkin,
       });
@@ -161,7 +149,7 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
                 检测到 Antigravity 客户端内部仍注入了旧脚本的老宠物代码
               </div>
               <p className="text-[11.5px] text-amber-700/90 dark:text-amber-300/90">
-                这是先前旧补丁写入 <code className="font-mono">app.asar</code> 的残留（新版已迁移至「伴侣与守护」独立窗口）。点击右侧按钮将关闭并重刷客户端，彻底清除老宠物并应用最新《鬼灭之刃》启动动效。
+                这是先前旧补丁写入 <code className="font-mono">app.asar</code> 的残留（新版已迁移至「伴侣与守护」独立窗口）。点击右侧按钮将关闭并重刷客户端，彻底清除老宠物残留。
               </p>
             </div>
           </div>
@@ -248,9 +236,9 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
         </div>
       </div>
 
-      {/* 语言 & 《鬼灭之刃》启动动画定制 */}
+      {/* 语言与核心注入选项 */}
       <div className="rounded-xl border border-gray-200 dark:border-base-300 bg-white dark:bg-base-100 p-5 space-y-5 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">
               <Languages className="h-4 w-4 text-sky-500" />
@@ -269,7 +257,7 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
 
           <div className="flex flex-col justify-end gap-2">
             <div className="text-[11.5px] text-emerald-600 dark:text-emerald-400">
-              ✓ 桌面伴侣已升级为「伴侣与守护」独立高清悬浮窗（不再内嵌双开冲突）
+              ✓ 已保留官方原版极速启动流程；桌面伴侣由「伴侣与守护」独立悬浮窗接管
             </div>
             <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200 cursor-pointer">
               <input
@@ -281,42 +269,6 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
               注入主进程皮肤热重载钩子 (`__agzhSkin`)
             </label>
           </div>
-        </div>
-
-        {/* 鬼灭启动动效 5 角色网格 + 实景战斗分镜预览 */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              《鬼灭之刃》电影级启动动效角色选择
-            </div>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">
-              点击任意角色卡片下方即刻实时试看 60fps 打斗动作分镜
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {SPLASH_CHARACTERS.map((c) => {
-              const selected = character === c.id;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setCharacter(c.id)}
-                  className={`relative rounded-xl border p-3 text-left transition-all ${
-                    selected
-                      ? 'border-blue-500 ring-2 ring-blue-500/25 bg-blue-50/40 dark:bg-blue-950/20'
-                      : 'border-gray-200 dark:border-base-300 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <div className={`h-1.5 w-10 rounded-full bg-gradient-to-r ${c.color} mb-2`} />
-                  <div className="text-xs font-bold text-gray-900 dark:text-gray-100">{c.name}</div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">{c.breath}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          <DemonSlayerSplashPreview character={character} />
         </div>
 
         {/* 核心操作按钮矩阵 */}

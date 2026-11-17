@@ -290,7 +290,6 @@ const PetWindowView: React.FC = () => {
       .getStatus()
       .then((st) => {
         if (
-          st.splash_character === 'prince' ||
           st.active_skin === 'midnight-dark' ||
           st.active_skin === 'obsidian-glass' ||
           st.active_skin === 'nordic-aurora'
