@@ -114,35 +114,10 @@ export async function cancelOAuthLogin(): Promise<void> {
     return await invoke('cancel_oauth_login');
 }
 
-export interface OAuthClientInfo {
-    key: string;
-    label: string;
-    client_id: string;
-    is_active: boolean;
-    is_builtin: boolean;
-    is_gcp_tos?: boolean;
-}
-
 export async function prepareOAuthUrl(oauthClientKey?: string): Promise<string> {
     const res = await invoke<any>('prepare_oauth_url', oauthClientKey ? { oauthClientKey } : undefined);
     const url = typeof res === 'string' ? res : res?.url;
     return url || '';
-}
-
-export async function listOAuthClients(): Promise<OAuthClientInfo[]> {
-    const res = await invoke<{ clients: OAuthClientInfo[] }>('list_oauth_clients');
-    if (res && Array.isArray(res.clients)) return res.clients;
-    return (res as unknown as OAuthClientInfo[]) || [];
-}
-
-export async function getActiveOAuthClient(): Promise<string> {
-    const res = await invoke<{ client_key: string } | string>('get_active_oauth_client');
-    if (typeof res === 'string') return res;
-    return res?.client_key || '';
-}
-
-export async function setActiveOAuthClient(clientKey: string): Promise<void> {
-    return await invoke('set_active_oauth_client', { clientKey });
 }
 
 // 导入
@@ -191,16 +166,8 @@ export async function getDeviceProfiles(accountId: string): Promise<DeviceProfil
     return await invoke('get_device_profiles', { accountId });
 }
 
-export async function bindDeviceProfile(accountId: string, mode: 'capture' | 'generate'): Promise<DeviceProfile> {
-    return await invoke('bind_device_profile', { accountId, mode });
-}
-
 export async function restoreOriginalDevice(): Promise<string> {
     return await invoke('restore_original_device');
-}
-
-export async function listDeviceVersions(accountId: string): Promise<DeviceProfilesResponse> {
-    return await invoke('list_device_versions', { accountId });
 }
 
 export async function restoreDeviceVersion(accountId: string, versionId: string): Promise<DeviceProfile> {

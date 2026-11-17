@@ -1,8 +1,4 @@
-import {
-  type ClannadBgmTrackId,
-  startSplashBgm,
-  stopActiveSplashBgm,
-} from './clannadAudioEngine';
+import type { ClannadBgmTrackId } from './clannadAudioEngine';
 
 export type ClannadSplashThemeId =
   | 'clannad-sunflower'
@@ -402,23 +398,4 @@ export function saveStudioSplashPrefs(next: StudioSplashPrefs): StudioSplashPref
     // 忽略存储受限环境异常
   }
   return sanitized;
-}
-
-/**
- * 兼容旧接口并升级为播放指定名场面对应的完整多声部治愈乐曲
- */
-export function playClannadMusicBox(
-  themeId: ClannadSplashThemeId,
-  volume = 0.7,
-): () => void {
-  if (themeId === 'none') {
-    stopActiveSplashBgm();
-    return () => {};
-  }
-  const spec = getSplashThemeSpec(themeId);
-  return startSplashBgm({
-    trackId: spec.recommendedBgmId,
-    volume,
-    loop: true,
-  });
 }

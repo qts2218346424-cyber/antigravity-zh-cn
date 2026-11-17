@@ -1,5 +1,5 @@
 {
-  "version": "5.4.0",
+  "version": "5.5.0",
   "name": "antigravity-studio",
   "description": "Antigravity Studio - 多账号管理、API反代、中文汉化、光学材质包与桌面伴侣一体化客户端",
   "type": "module",
@@ -36,7 +36,6 @@
     "antd-style": "^3.7.1",
     "clsx": "^2.1.1",
     "daisyui": "^5.5.13",
-    "date-fns": "^4.1.0",
     "framer-motion": "^11.13.1",
     "i18next": "^25.7.2",
     "i18next-browser-languagedetector": "^8.2.0",
