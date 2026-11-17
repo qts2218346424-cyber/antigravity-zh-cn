@@ -378,31 +378,40 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
             },
         });
 
-        // 3. 桌面伴侣分肢骨骼与多角色媒体资产校验
+        // 3. 桌面伴侣高精多姿态立绘与多角色媒体资产校验
         let t3 = Instant::now();
         let assets = pet::get_pet_assets();
-        let loaded_count = [
-            assets.nezuko_head.is_some(),
-            assets.nezuko_torso.is_some(),
-            assets.nezuko_arm_l.is_some(),
-            assets.nezuko_arm_r.is_some(),
+        let checks = [
+            assets.nezuko_chibi.is_some(),
+            assets.nezuko_blink.is_some(),
+            assets.nezuko_happy.is_some(),
+            assets.nezuko_run.is_some(),
+            assets.nezuko_stomp.is_some(),
+            assets.nezuko_blood.is_some(),
+            assets.nezuko_peeker.is_some(),
+            assets.nezuko_basket.is_some(),
             assets.nezuko_spin_sheet.is_some(),
             assets.little_prince.is_some(),
+            assets.prince_blink.is_some(),
+            assets.prince_walk.is_some(),
+            assets.prince_fox.is_some(),
+            assets.prince_rose_pose.is_some(),
+            assets.prince_sleep.is_some(),
             assets.tanjiro_water.is_some(),
             assets.zenitsu_thunder.is_some(),
             assets.inosuke_beast.is_some(),
-        ]
-        .into_iter()
-        .filter(|b| *b)
-        .count();
+        ];
+        let total_expected = checks.len();
+        let loaded_count = checks.into_iter().filter(|b| *b).count();
         items.push(StudioDiagnosticItem {
             key: "pet_assets".to_string(),
-            name: "桌面伴侣骨骼刚体与 5 大内置角色材质缓存".to_string(),
-            passed: loaded_count == 9,
+            name: "桌面伴侣多姿态原画与 5 大内置角色材质缓存".to_string(),
+            passed: loaded_count == total_expected,
             duration_ms: t3.elapsed().as_millis() as u64,
             detail: format!(
-                "核心骨骼与全角色高清 WebP 资产已就绪 ({}/9){}",
+                "祢豆子与小王子全套多姿态透明原画及全角色资产已就绪 ({}/{}){}",
                 loaded_count,
+                total_expected,
                 if assets.custom_avatar.is_some() {
                     "，且已挂载用户自定义专属立绘"
                 } else {
