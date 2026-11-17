@@ -330,33 +330,20 @@ fn build_splash_assets_json(character: &str) -> Value {
         "nezuko" => {
             insert_if("nezuko", "nezuko_basket.webp");
             insert_if("box_impact_shockwave", "box_impact_shockwave.webp");
-            insert_if("nezuko_bone_head", "nezuko_bone_head.webp");
-            insert_if("nezuko_bone_torso", "nezuko_bone_torso.webp");
-            insert_if("nezuko_bone_arm_l", "nezuko_bone_arm_l.webp");
-            insert_if("nezuko_bone_arm_r", "nezuko_bone_arm_r.webp");
-            insert_if("nezuko_bone_leg_l", "nezuko_bone_leg_l.webp");
-            insert_if("nezuko_bone_leg_r", "nezuko_bone_leg_r.webp");
         }
         _ => {
             insert_if("tanjiro", "tanjiro_water.webp");
             insert_if("zenitsu", "zenitsu_thunder.webp");
             insert_if("inosuke", "inosuke_beast.webp");
             insert_if("nezuko", "nezuko_basket.webp");
-            insert_if("box_impact_shockwave", "box_impact_shockwave.webp");
-            insert_if("nezuko_bone_head", "nezuko_bone_head.webp");
-            insert_if("nezuko_bone_torso", "nezuko_bone_torso.webp");
-            insert_if("nezuko_bone_arm_l", "nezuko_bone_arm_l.webp");
-            insert_if("nezuko_bone_arm_r", "nezuko_bone_arm_r.webp");
-            insert_if("nezuko_bone_leg_l", "nezuko_bone_leg_l.webp");
-            insert_if("nezuko_bone_leg_r", "nezuko_bone_leg_r.webp");
         }
     }
     Value::Object(map)
 }
 
-/// 生成《鬼灭之刃》Sakuga 60fps 全屏动漫打斗启动遮罩 (`loadingOverlay.js`)
-/// 复用 `resources/kimetsu_theater_engine.js` 战斗导演引擎，为全部 5 种模式提供
-/// 多幕高帧率连招动作、残影队列、斜切原画 Cut-in 特写、顿帧 Impact Frame 与震屏冲击。
+/// 生成《鬼灭之刃》60fps 高清原画剧场版启动遮罩 (`loadingOverlay.js`)
+/// 复用 `resources/kimetsu_theater_engine.js` 剧场导演引擎，结合官方原画运镜、
+/// 零卡顿离屏发光呼吸特效与可靠生命周期销毁机制（支持一键跳过与防卡死兜底）。
 pub fn generate_loading_overlay(character: &str, version_str: &str) -> String {
     let spec = SPLASH_THEMES
         .iter()
@@ -371,8 +358,9 @@ pub fn generate_loading_overlay(character: &str, version_str: &str) -> String {
         "primaryColor": spec.primary_color,
         "accentColor": spec.accent_color,
         "coverArt": spec.art_file,
-        "durationMs": 5600,
+        "durationMs": 4000,
         "loop": false,
+        "allowSkip": true,
         "steps": spec.steps,
         "version": version_str,
         "assets": build_splash_assets_json(spec.key),
@@ -391,11 +379,11 @@ pub fn generate_loading_overlay(character: &str, version_str: &str) -> String {
     html, body {
       width: 100vw; height: 100vh; overflow: hidden; background: __BG_GRADIENT__;
       -webkit-app-region: drag;
-      transition: opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1), transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter 0.72s ease;
+      transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
     }
     #theater-root { width: 100vw; height: 100vh; position: relative; }
     .ag-ver-badge {
-      position: fixed; right: 24px; bottom: 2px; z-index: 20;
+      position: fixed; right: 22px; bottom: 2px; z-index: 20;
       font-size: 10px; color: rgba(148,163,184,0.78); letter-spacing: 0.08em; pointer-events: none;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei UI", sans-serif;
     }
@@ -410,6 +398,9 @@ __ENGINE_JS__
   <script>
     (function () {
       var cfg = __CFG_JSON__;
+      cfg.onSkip = function () {
+        document.title = "__AG_SPLASH_SKIP__";
+      };
       if (window.KimetsuTheater) {
         window.KimetsuTheater.mount(document.getElementById('theater-root'), cfg);
       }
@@ -435,13 +426,16 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
+let utilsMod = null;
+try {{ utilsMod = require("./utils"); }} catch (_) {{}}
+
 const SPLASH_HTML_TEMPLATE = {html_literal};
 
 function getLoadingHtml(_videoUrl) {{
   return SPLASH_HTML_TEMPLATE;
 }}
 
-function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
+function attachLoadingOverlay(win, _foregroundColor, _backgroundColor) {{
   let view = null;
   try {{
     view = new electron_1.WebContentsView({{
@@ -452,9 +446,14 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
   }}
 
   const html = getLoadingHtml("");
-  const tmpHtml = path.join(os.tmpdir(), "antigravity_splash.html");
+  const tmpHtml = path.join(
+    os.tmpdir(),
+    `antigravity_splash_${{process.pid}}_${{Date.now()}}.html`
+  );
+  let usingTmpFile = false;
   try {{
     fs.writeFileSync(tmpHtml, html, "utf8");
+    usingTmpFile = true;
     void view.webContents.loadFile(tmpHtml);
   }} catch (_) {{
     void view.webContents.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
@@ -462,51 +461,124 @@ function attachLoadingOverlay(win, foregroundColor, backgroundColor) {{
 
   win.contentView.addChildView(view);
   const updateBounds = () => {{
-    if (win.isDestroyed()) return;
+    if (win.isDestroyed?.() || view.webContents?.isDestroyed?.()) return;
     const [width, height] = win.getContentSize();
     view.setBounds({{ x: 0, y: 0, width, height }});
   }};
   updateBounds();
   win.on("resize", updateBounds);
 
-  let removed = false;
-  const start = Date.now();
-  const MIN_MS = 5600;
-  const MAX_MS = 10500;
-  let loaded = false;
-  win.webContents.once("did-finish-load", () => {{ loaded = true; }});
+  // 关键修复：Antigravity 主页面挂载在 getHubWebContents(win)，不能只监听 win.webContents
+  const hubContents =
+    (utilsMod && typeof utilsMod.getHubWebContents === "function"
+      ? utilsMod.getHubWebContents(win)
+      : null) ??
+    win.webContents ??
+    win.contentView?.children?.find?.((c) => c && c !== view && c.webContents)?.webContents;
 
-  const dismiss = async () => {{
+  let removed = false;
+  let fading = false;
+  let minTimer = null;
+  let maxTimer = null;
+  let pollTimer = null;
+  let fadeTimer = null;
+  const start = Date.now();
+  const MIN_MS = 2200;
+  const MAX_MS = 6500;
+  let loaded = Boolean(
+    hubContents && typeof hubContents.isLoading === "function" && !hubContents.isLoading()
+  );
+
+  const cleanupNow = () => {{
     if (removed) return;
-    const elapsed = Date.now() - start;
-    if (elapsed < MIN_MS) {{
-      setTimeout(dismiss, MIN_MS - elapsed);
-      return;
-    }}
-    let ready = false;
-    if (loaded && !win.isDestroyed()) {{
-      try {{
-        ready = await win.webContents.executeJavaScript("Boolean(document.body && document.body.children.length > 0)");
-      }} catch (_) {{ ready = true; }}
-    }}
-    if (!ready && elapsed < MAX_MS) {{
-      setTimeout(dismiss, 250);
-      return;
-    }}
     removed = true;
+    if (minTimer) clearTimeout(minTimer);
+    if (maxTimer) clearTimeout(maxTimer);
+    if (pollTimer) clearTimeout(pollTimer);
+    if (fadeTimer) clearTimeout(fadeTimer);
     try {{
-      await view.webContents.executeJavaScript("document.body.style.opacity='0';document.body.style.transform='scale(1.03)';document.body.style.filter='blur(8px)';");
+      hubContents?.off?.("did-finish-load", onHubLoaded);
     }} catch (_) {{}}
-    setTimeout(() => {{
-      try {{
-        if (!win.isDestroyed()) win.contentView.removeChildView(view);
-      }} catch (_) {{}}
-      win.off("resize", updateBounds);
-    }}, 740);
+    try {{
+      if (!win.isDestroyed?.()) {{
+        win.off?.("resize", updateBounds);
+        win.contentView.removeChildView(view);
+      }}
+    }} catch (_) {{}}
+    try {{
+      if (!view.webContents?.isDestroyed?.()) {{
+        view.webContents.close?.();
+      }}
+    }} catch (_) {{}}
+    if (usingTmpFile) {{
+      try {{ fs.unlinkSync(tmpHtml); }} catch (_) {{}}
+    }}
   }};
 
-  setTimeout(dismiss, MIN_MS);
-  setTimeout(() => {{ if (!removed) dismiss(); }}, MAX_MS);
+  const dismiss = async (forceImmediate) => {{
+    if (removed || fading) return;
+    const elapsed = Date.now() - start;
+    if (!forceImmediate && elapsed < MIN_MS) {{
+      if (minTimer) clearTimeout(minTimer);
+      minTimer = setTimeout(() => void dismiss(false), MIN_MS - elapsed);
+      return;
+    }}
+    let ready = loaded;
+    if (!ready && hubContents && typeof hubContents.isLoading === "function" && !hubContents.isLoading()) {{
+      ready = true;
+      loaded = true;
+    }}
+    if (!forceImmediate && !ready && elapsed < MAX_MS) {{
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(() => void dismiss(false), 200);
+      return;
+    }}
+    fading = true;
+    // 必须无条件先调度 cleanupNow 兜底定时器，避免 executeJavaScript 挂起造成永久阻塞
+    if (fadeTimer) clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(cleanupNow, 460);
+    try {{
+      if (!view.webContents?.isDestroyed?.()) {{
+        void view.webContents
+          .executeJavaScript(
+            "if(document.body){{document.body.style.opacity='0';document.body.style.transform='scale(1.02)';}}"
+          )
+          .catch(() => {{}});
+      }}
+    }} catch (_) {{}}
+  }};
+
+  const onHubLoaded = () => {{
+    loaded = true;
+    if (Date.now() - start >= MIN_MS) {{
+      void dismiss(false);
+    }}
+  }};
+
+  if (!loaded && hubContents && typeof hubContents.once === "function") {{
+    hubContents.once("did-finish-load", onHubLoaded);
+  }}
+
+  try {{
+    view.webContents.on("page-title-updated", (_ev, title) => {{
+      if (title === "__AG_SPLASH_SKIP__") {{
+        void dismiss(true);
+      }}
+    }});
+    view.webContents.on("before-input-event", (_ev, input) => {{
+      if (
+        input &&
+        input.type === "keyDown" &&
+        (input.key === "Escape" || input.key === " " || input.key === "Enter")
+      ) {{
+        void dismiss(true);
+      }}
+    }});
+  }} catch (_) {{}}
+
+  win.once?.("closed", cleanupNow);
+  minTimer = setTimeout(() => void dismiss(false), MIN_MS);
+  maxTimer = setTimeout(() => void dismiss(true), MAX_MS);
 }}
 "#,
         marker = PATCH_MARKER,
@@ -1164,6 +1236,10 @@ mod tests {
             let js = generate_loading_overlay(ch, "2.0.0");
             assert!(js.contains("attachLoadingOverlay"));
             assert!(js.contains(PATCH_MARKER));
+            assert!(js.contains("getHubWebContents"));
+            assert!(js.contains("page-title-updated"));
+            assert!(js.contains("view.webContents?.close"));
+            assert!(!js.contains("nezuko_bone_head"));
         }
     }
 

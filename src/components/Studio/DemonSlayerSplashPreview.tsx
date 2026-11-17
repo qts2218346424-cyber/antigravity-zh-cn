@@ -6,12 +6,6 @@ import zenitsuImg from '../../../resources/media/zenitsu_thunder.webp';
 import inosukeImg from '../../../resources/media/inosuke_beast.webp';
 import nezukoImg from '../../../resources/media/nezuko_basket.webp';
 import boxShockwaveImg from '../../../resources/media/box_impact_shockwave.webp';
-import nezukoBoneHead from '../../../resources/media/nezuko_bone_head.webp';
-import nezukoBoneTorso from '../../../resources/media/nezuko_bone_torso.webp';
-import nezukoBoneArmL from '../../../resources/media/nezuko_bone_arm_l.webp';
-import nezukoBoneArmR from '../../../resources/media/nezuko_bone_arm_r.webp';
-import nezukoBoneLegL from '../../../resources/media/nezuko_bone_leg_l.webp';
-import nezukoBoneLegR from '../../../resources/media/nezuko_bone_leg_r.webp';
 
 interface DemonSlayerSplashPreviewProps {
   character: string;
@@ -19,24 +13,24 @@ interface DemonSlayerSplashPreviewProps {
 
 const CHARACTER_SCRIPT_NOTES: Record<string, { badge: string; beats: string[] }> = {
   nezuko: {
-    badge: '真实分肢骨骼飞踢 × 爆血火莲',
-    beats: ['竹箱震裂冲破', '三连红爪空翻踢', '睁眼血鬼术爆血', '樱炎归护定格'],
+    badge: '高清原画剧场运镜 × 血鬼术彼岸爆血',
+    beats: ['竹笼解封脉冲', '爆血斜切特写', '绯红火莲绽放', '樱炎守护定格'],
   },
   tanjiro: {
-    badge: '浮世绘水龙三连 × 日晕之龙炎斩',
-    beats: ['静水呼吸白雾', '拾之型水龙螺旋', '火之神神乐圆舞', '赫刀收刃定格'],
+    badge: '水之呼吸生生流转 × 火之神神乐日晕轮',
+    beats: ['静水日轮蓄势', '水龙螺旋流光', '火神神乐特写', '余烬归鞘定格'],
   },
   zenitsu: {
-    badge: '子弹时间居合 × 霹雳一闪六连瞬杀',
-    beats: ['暴雨悬停低蹲', 'Z字六连金色雷闪', '火雷神斜贯劈空', '咔哒收刀归鞘'],
+    badge: '暴雨凝神居合 × 霹雳一闪霓虹金雷',
+    beats: ['雨夜凝神蓄电', 'Z字金雷瞬闪', '火雷神斜切特写', '电弧收刃归鞘'],
   },
   inosuke: {
-    badge: '空间识觉声呐 × 双锯齿刃狂牙乱舞',
-    beats: ['声呐脉冲锁定', '弹跳双刀连斩', 'X型狂牙撕裂破屏', '扛刀咆哮定格'],
+    badge: '空间识觉声呐 × 狂牙交叉破屏双斩',
+    beats: ['声呐脉冲锁敌', '蓝白交叉破屏斩', '狂牙斜切特写', '苍蓝气浪定格'],
   },
   all: {
-    badge: '无限城四象联手 × 漫画斜切分镜合击',
-    beats: ['炭治郎水龙前锋', '善逸三连雷闪切入', '伊之助+祢豆子协战', '四色螺旋爆炸 × 四分镜集结'],
+    badge: '无限城四象集结 × 高清漫画斜切分镜',
+    beats: ['炭治郎水火起势', '善逸金雷切入', '伊之助+祢豆子协战', '四象呼吸共鸣集结'],
   },
 };
 
@@ -54,12 +48,6 @@ export const DemonSlayerSplashPreview: React.FC<DemonSlayerSplashPreviewProps> =
       inosuke: inosukeImg,
       nezuko: nezukoImg,
       box_impact_shockwave: boxShockwaveImg,
-      nezuko_bone_head: nezukoBoneHead,
-      nezuko_bone_torso: nezukoBoneTorso,
-      nezuko_bone_arm_l: nezukoBoneArmL,
-      nezuko_bone_arm_r: nezukoBoneArmR,
-      nezuko_bone_leg_l: nezukoBoneLegL,
-      nezuko_bone_leg_r: nezukoBoneLegR,
     }),
     [],
   );
@@ -71,7 +59,7 @@ export const DemonSlayerSplashPreview: React.FC<DemonSlayerSplashPreviewProps> =
     instanceRef.current?.destroy();
     instanceRef.current = window.KimetsuTheater.mount(el, {
       character,
-      durationMs: 5600,
+      durationMs: 4200,
       loop: true,
       assets,
     });
@@ -89,7 +77,7 @@ export const DemonSlayerSplashPreview: React.FC<DemonSlayerSplashPreviewProps> =
     modalInstanceRef.current?.destroy();
     modalInstanceRef.current = window.KimetsuTheater.mount(el, {
       character,
-      durationMs: 5600,
+      durationMs: 4200,
       loop: true,
       assets,
     });
