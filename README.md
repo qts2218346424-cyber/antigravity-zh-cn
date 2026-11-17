@@ -30,6 +30,7 @@
 | 🎨 **高定光学材质引擎** | 内置 10 款专为 **Google Antigravity 独立桌面应用** 定制的精选主题（含《CLANNAD》四重奏皮肤）与 `surfaces` 物理表面参数编译器（圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`），支持画廊 1:1 微缩 Antigravity 应用实时预览与 **Color DNA** 在线调色实验室。 |
 | ⚡ **客户端原生热重载注入** | 对接官方 `Antigravity` 桌面应用（AGY Hub）三层 `WebContentsView` 架构（`getHubWindows` / `setHubCurtainColor`），精准同步原生宿主设计令牌（`--background` / `--card` / `--primary`）与底层幕布色，避让内置浏览器视口且彻底免除 `FSWatcher EPERM` 崩溃。 |
 | 🈶 **全量双层汉化系统** | 原生 Rust 实现 `app.asar` 无损解包与 SHA-256 Integrity 重建，支持 `zh-CN` / `zh-TW` / `zh-HK`，覆盖 Electron 主进程菜单/托盘与渲染层全部 UI；保留官方原版极速启动流程，精确避让代码区、终端与模型正文，并内置 **老版本内置宠物代码 (`__AGY_NEZUKO_PET_INITIALIZED__`) 自动侦测与剥离清理**。 |
+| 🎬 **《CLANNAD》原版名场面与真曲开机剧场** | 内置京都动画四大催泪名场面剧照与双语台词，同步内嵌 **《だんご大家族》《小さな手のひら》《渚·坂の下の別れ》《汐·潮鳴り》4 首原动画真曲音源**，支持黄金副歌乐段一键快跳、自定义本地音乐/截图导入及可选同步注入官方客户端启动遮罩。 |
 | 🪐 **独立灵动桌面伴侣** | 从客户端进程完全剥离，运行于独立透明置顶窗口（`index.html?pet=1`），搭载高精零白边多姿态透明原画、**22 条离线零延迟动漫原生语音包与双语经典金句系统**、2.5D 弹性动力学与 3D 视差效果、灵动岛状态玻璃坞、毫秒级 LRC 二分时间轴黑胶歌词舱、低配额预警及配额舱内一键刷新/切号；内置 **祢豆子（米豆子）、小王子、冈崎汐（团子大家族）、炭治郎、善逸、伊之助** 6 大动漫角色及 **自定义本地 PNG/WebP/GIF/SVG 立绘热导入**（共 7 角色生态）。 |
 | 🧪 **全链路自检与测试台** | 内置可视化 **全链路测试台 (`DiagnosticsTab`)** 一键巡检后端词典、光学材质编译器、伴侣骨骼缓存、客户端路径探测与本地 API 反代连通性，同时提供伴侣动作/合成音效沙盒演练；工程侧配备零外部依赖 `npm test` 自动化单元测试引擎。 |
 | 🛡️ **Tokio 自动维护哨兵** | 后台异步守护线程定时检查官方版本更新及哈希变更，一旦官方更新覆盖了 `app.asar` 或 IDE 样式，待客户端空闲后自动静默重注汉化、Skill 描述与当前激活材质。 |
@@ -90,7 +91,7 @@
 
 ```bash
 # 1. 统一递增 package.json / src-tauri/tauri.conf.json / src-tauri/Cargo.toml 版本号
-node scripts/bump-version.mjs 5.5.0
+node scripts/bump-version.mjs 5.6.0
 
 # 2. 执行全量自动化单元测试与 TypeScript + Vite 生产打包校验
 npm test
@@ -98,9 +99,9 @@ npm run build
 
 # 3. 提交并推送版本标签以触发全平台构建与 OTA 制品发布
 git add -A
-git commit -m "chore: 发布 v5.5.0"
-git tag v5.5.0
-git push origin main v5.5.0
+git commit -m "chore: 发布 v5.6.0"
+git tag v5.6.0
+git push origin main v5.6.0
 ```
 
 ---
