@@ -81,23 +81,39 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
 
   const handlePlayQuote = async (quote: PetQuoteItem) => {
     petAudio.muted = false;
+    const isDangoSong = quote.voiceKey === 'ushio_dango';
     if (isTauri() && status.pet_window_open) {
       await emit('pet:remote-action', {
-        action: 'pat',
+        action: isDangoSong ? 'dango_song' : 'pat',
         message: quote.zh,
         sub: quote.sub,
         voiceKey: quote.voiceKey,
       }).catch(() => {});
-      showToast(`已在桌面伴侣触发原声金句：${quote.zh}`, 'info');
+      showToast(
+        isDangoSong
+          ? '已在桌面伴侣触发《CLANNAD》原动画 ED《团子大家族》原曲'
+          : `已在桌面伴侣触发原声金句：${quote.zh}`,
+        'info',
+      );
+      return;
+    }
+
+    if (quote.voiceKey && playingVoiceKey === quote.voiceKey) {
+      petAudio.stopVoice();
+      setPlayingVoiceKey(null);
       return;
     }
 
     const uri = quote.voiceKey ? assets.voices?.[quote.voiceKey] : undefined;
     if (uri && quote.voiceKey) {
       const key = quote.voiceKey;
-      petAudio.playVoice(uri, (playing) => {
-        setPlayingVoiceKey(playing ? key : null);
-      });
+      petAudio.playVoice(
+        uri,
+        (playing) => {
+          setPlayingVoiceKey(playing ? key : null);
+        },
+        key,
+      );
     } else {
       petAudio.playCare();
       showToast(quote.zh, 'info');
@@ -108,9 +124,9 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
     if (cid === 'nezuko') return assets.nezuko_chibi;
     if (cid === 'prince') return assets.little_prince;
     if (cid === 'ushio') return assets.ushio_chibi;
-    if (cid === 'tanjiro') return assets.tanjiro_water;
-    if (cid === 'zenitsu') return assets.zenitsu_thunder;
-    if (cid === 'inosuke') return assets.inosuke_beast;
+    if (cid === 'tanjiro') return assets.tanjiro_chibi || assets.tanjiro_water;
+    if (cid === 'zenitsu') return assets.zenitsu_chibi || assets.zenitsu_thunder;
+    if (cid === 'inosuke') return assets.inosuke_chibi || assets.inosuke_beast;
     if (cid === 'custom') return assets.custom_avatar;
     return null;
   };

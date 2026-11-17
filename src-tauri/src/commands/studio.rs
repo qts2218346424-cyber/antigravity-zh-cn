@@ -408,9 +408,21 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
             assets.ushio_walk.is_some(),
             assets.ushio_sunflower.is_some(),
             assets.ushio_sleep.is_some(),
+            assets.tanjiro_chibi.is_some(),
+            assets.tanjiro_blink.is_some(),
             assets.tanjiro_water.is_some(),
+            assets.tanjiro_run.is_some(),
+            assets.tanjiro_happy.is_some(),
+            assets.zenitsu_chibi.is_some(),
+            assets.zenitsu_blink.is_some(),
             assets.zenitsu_thunder.is_some(),
+            assets.zenitsu_happy.is_some(),
+            assets.zenitsu_sleep.is_some(),
+            assets.inosuke_chibi.is_some(),
+            assets.inosuke_blink.is_some(),
             assets.inosuke_beast.is_some(),
+            assets.inosuke_happy.is_some(),
+            assets.inosuke_sleep.is_some(),
         ];
         let total_expected = checks.len();
         let loaded_count = checks.into_iter().filter(|b| *b).count();

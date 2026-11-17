@@ -1,55 +1,163 @@
 /**
- * WebAudio 桌面伴侣实时治愈音效合成器（零外部音频文件依赖）
+ * WebAudio + 原生音频解码双模桌面伴侣声学引擎
+ * 优先使用 WebAudio AudioContext.decodeAudioData 解码播放内置原曲与角色原生语音，
+ * 彻底绕过 Windows WebView2 对 HTMLAudioElement data: URI 的自动播放拦截与静默失败问题。
  */
 class PetAudioEngine {
   private ctx: AudioContext | null = null;
-  private currentVoiceAudio: HTMLAudioElement | null = null;
+  private decodedCache = new Map<string, AudioBuffer>();
+  private currentSource: AudioBufferSourceNode | null = null;
+  private currentFallbackAudio: HTMLAudioElement | null = null;
   private onVoiceStateCb: ((playing: boolean) => void) | null = null;
+  private activePlayId = 0;
+  public activeVoiceTag: string | null = null;
   public muted = false;
 
-  /** 停止当前正在播放的角色动漫原声语音 */
+  /** 预热并解锁 WebAudio 上下文 */
+  warmup() {
+    this.ensureContext();
+  }
+
+  /** 停止当前正在播放的角色动漫原声或《团子大家族》原曲 */
   stopVoice() {
-    if (this.currentVoiceAudio) {
+    this.activePlayId += 1;
+    this.activeVoiceTag = null;
+    if (this.currentSource) {
       try {
-        this.currentVoiceAudio.pause();
-        this.currentVoiceAudio.currentTime = 0;
+        this.currentSource.onended = null;
+        this.currentSource.stop();
+        this.currentSource.disconnect();
       } catch {
-        // 忽略音频销毁异常
+        // 忽略重复停止异常
       }
-      this.currentVoiceAudio = null;
+      this.currentSource = null;
+    }
+    if (this.currentFallbackAudio) {
+      try {
+        this.currentFallbackAudio.pause();
+        this.currentFallbackAudio.currentTime = 0;
+      } catch {
+        // 忽略销毁异常
+      }
+      this.currentFallbackAudio = null;
     }
     if (this.onVoiceStateCb) {
-      this.onVoiceStateCb(false);
+      const cb = this.onVoiceStateCb;
       this.onVoiceStateCb = null;
+      cb(false);
     }
   }
 
-  /** 播放角色专属离线动漫原生语音（自动防叠音打断上一句） */
-  playVoice(dataUri?: string | null, onStateChange?: (playing: boolean) => void): boolean {
+  private dataUriToArrayBuffer(dataUri: string): ArrayBuffer | null {
+    const commaIdx = dataUri.indexOf(',');
+    if (commaIdx < 0) return null;
+    try {
+      const base64 = dataUri.slice(commaIdx + 1);
+      const binary = window.atob(base64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 播放角色专属离线动漫原生语音或《团子大家族》原动画真曲
+   * 通过 WebAudio 硬件混音通道解码输出，100% 杜绝 WebView2 <audio> 静默无声
+   */
+  playVoice(
+    dataUri?: string | null,
+    onStateChange?: (playing: boolean) => void,
+    voiceTag?: string,
+  ): boolean {
     if (this.muted || !dataUri || typeof window === 'undefined') return false;
     this.stopVoice();
+
+    const playId = ++this.activePlayId;
+    this.activeVoiceTag = voiceTag || 'voice';
+    this.onVoiceStateCb = onStateChange || null;
+    if (onStateChange) onStateChange(true);
+
+    const finishIfCurrent = () => {
+      if (this.activePlayId !== playId) return;
+      this.currentSource = null;
+      this.currentFallbackAudio = null;
+      this.activeVoiceTag = null;
+      if (this.onVoiceStateCb) {
+        const cb = this.onVoiceStateCb;
+        this.onVoiceStateCb = null;
+        cb(false);
+      }
+    };
+
+    const ctx = this.ensureContext();
+    const cacheKey = `${voiceTag || ''}:${dataUri.length}:${dataUri.slice(-32)}`;
+
+    const playBuffer = (audioBuffer: AudioBuffer) => {
+      if (this.activePlayId !== playId || this.muted || !ctx) return;
+      try {
+        if (ctx.state === 'suspended') {
+          void ctx.resume();
+        }
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        const gainNode = ctx.createGain();
+        // 对白给予饱满增益，原版歌曲保持柔和舒适音量
+        gainNode.gain.value = voiceTag === 'ushio_dango' ? 0.92 : 1.08;
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        source.onended = finishIfCurrent;
+        this.currentSource = source;
+        source.start(0);
+      } catch {
+        this.playViaHtmlAudioFallback(dataUri, playId, finishIfCurrent);
+      }
+    };
+
+    if (ctx) {
+      const cached = this.decodedCache.get(cacheKey);
+      if (cached) {
+        playBuffer(cached);
+        return true;
+      }
+      const rawBuffer = this.dataUriToArrayBuffer(dataUri);
+      if (rawBuffer) {
+        ctx
+          .decodeAudioData(rawBuffer.slice(0))
+          .then((decoded) => {
+            this.decodedCache.set(cacheKey, decoded);
+            playBuffer(decoded);
+          })
+          .catch(() => {
+            this.playViaHtmlAudioFallback(dataUri, playId, finishIfCurrent);
+          });
+        return true;
+      }
+    }
+
+    return this.playViaHtmlAudioFallback(dataUri, playId, finishIfCurrent);
+  }
+
+  private playViaHtmlAudioFallback(
+    dataUri: string,
+    playId: number,
+    onDone: () => void,
+  ): boolean {
+    if (this.activePlayId !== playId || this.muted) return false;
     try {
       const audio = new Audio(dataUri);
-      audio.volume = 0.88;
-      this.currentVoiceAudio = audio;
-      this.onVoiceStateCb = onStateChange || null;
-      if (onStateChange) onStateChange(true);
-
-      const finish = () => {
-        if (this.currentVoiceAudio === audio) {
-          this.currentVoiceAudio = null;
-          if (this.onVoiceStateCb) {
-            this.onVoiceStateCb(false);
-            this.onVoiceStateCb = null;
-          }
-        }
-      };
-      audio.addEventListener('ended', finish, { once: true });
-      audio.addEventListener('error', finish, { once: true });
-      void audio.play().catch(finish);
+      audio.volume = 0.95;
+      this.currentFallbackAudio = audio;
+      audio.addEventListener('ended', onDone, { once: true });
+      audio.addEventListener('error', onDone, { once: true });
+      void audio.play().catch(onDone);
       return true;
     } catch {
-      if (onStateChange) onStateChange(false);
+      onDone();
       return false;
     }
   }
@@ -189,7 +297,7 @@ class PetAudioEngine {
     this.playTone(659.25, 523.25, 0.24, 'sine', 0.055, 0.16);
   }
 
-  /** 冈崎汐 ·《团子大家族》八音盒晶莹五音前奏微旋律 (6-5-6-3-4) */
+  /** Web 纯静态预览无后端音频包时的八音盒微旋律回退 */
   playDangoMelody() {
     const notes = [
       { f: 880.0, d: 0.16, t: 0.0 },

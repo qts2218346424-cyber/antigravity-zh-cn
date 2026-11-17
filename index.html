@@ -11,8 +11,13 @@
       try {
         const isMini = window.location.search.includes('mini') || 
                        (typeof window !== 'undefined' && window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label === 'mini');
+        const isPet = window.location.search.includes('pet=1') ||
+                      (typeof window !== 'undefined' && window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label === 'pet');
         if (isMini) {
           document.documentElement.classList.add('mini-window');
+          document.documentElement.style.backgroundColor = 'transparent';
+        } else if (isPet) {
+          document.documentElement.classList.add('pet-window');
           document.documentElement.style.backgroundColor = 'transparent';
         } else {
           document.documentElement.style.backgroundColor = '#1a1f2e';
@@ -33,7 +38,7 @@
         }
         // Restore UI zoom immediately during boot (keep in sync with src/utils/zoom.ts)
         // The mini overlay is a fixed-size floating panel and keeps its native scale.
-        if (!isMini) {
+        if (!isMini && !isPet) {
           const ZOOM_PRESETS = [85, 90, 100, 110, 120, 130, 140, 150];
           const rawZoom = parseInt(localStorage.getItem('app-ui-zoom') || '', 10);
           if (!isNaN(rawZoom)) {
@@ -59,13 +64,16 @@
   </script>
   <style>
     /* Critical CSS: Force splash color initially for main window */
-    html:not(.mini-window) {
+    html:not(.mini-window):not(.pet-window) {
       background-color: #1a1f2e !important;
     }
 
     html.mini-window,
     html.mini-window body,
-    body.mini-window {
+    body.mini-window,
+    html.pet-window,
+    html.pet-window body,
+    body.pet-window {
       background-color: transparent !important;
       background: transparent !important;
     }

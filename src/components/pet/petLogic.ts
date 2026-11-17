@@ -207,7 +207,7 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
     secondaryAccent: '#fbbf24',
     particleKind: 'star',
     description:
-      '内置纯正法语童声原著独白、水彩厚涂多姿态与颈后双尾 Verlet 物理丝巾：自然眨眼、拥抱小狐狸、双手捧护玻璃罩玫瑰、44次日落与弯月安眠。',
+      '回归初代经典明艳绘本原画并内置纯正法语童声原著独白：璀璨金卷发与晶莹蓝瞳自然眨眼、手捧玻璃罩玫瑰、温暖拥抱小狐狸、踏星漫步、44次日落与弯月星眠。',
     quotes: [
       {
         zh: '「只有用心才能看得清。真正重要的东西，用眼睛是看不见的。」',
@@ -299,7 +299,7 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
       },
       {
         zh: '「团子，团子，团子，团子，团子大家族 ♪ 要一直在一起哦！」',
-        sub: 'だんご、だんご、だんご大家族！ずっと一緒だよ！',
+        sub: '♪ だんご だんご だんご大家族 — CLANNAD 原动画 ED 原曲（茶太）',
         voiceKey: 'ushio_dango',
       },
       {
@@ -324,8 +324,8 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
       },
     ],
     doubleClickAction: 'dango_song',
-    doubleClickBubble: '「团子，团子，团子大家族 ♪ 要一直在一起哦！」',
-    doubleClickSub: 'だんご、だんご、だんご大家族！ずっと一緒だよ！',
+    doubleClickBubble: '🎵 正在播放《CLANNAD》原动画 ED《团子大家族》原曲 ♪',
+    doubleClickSub: '♪ だんご だんご だんご大家族 — 茶太（原动画真曲）',
     doubleClickVoiceKey: 'ushio_dango',
     actions: [
       {
@@ -334,15 +334,15 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         bubble: '「能哭的地方，只有厕所，和爸爸的怀里…」',
         sub: '泣いていいのは、おトイレか、パパの胸の中だけだって…',
         voiceKey: 'ushio_toilet',
-        toneClass: 'hover:bg-pink-500/25 text-pink-200',
+        toneClass: 'hover:bg-pink-500/35 text-pink-100',
       },
       {
         action: 'dango_song',
         label: '团子歌',
-        bubble: '「团子、团子、团子大家族 ~ 要一直一直在一起哦 ♪」',
-        sub: 'だんご、だんご、だんご大家族！ずっと一緒だよ！',
+        bubble: '🎵 正在播放《CLANNAD》原动画 ED《团子大家族》原曲 ♪',
+        sub: '♪ だんご だんご だんご大家族 — 茶太（再次点击可停止）',
         voiceKey: 'ushio_dango',
-        toneClass: 'hover:bg-amber-500/25 text-amber-200',
+        toneClass: 'hover:bg-amber-500/35 text-amber-100',
       },
       {
         action: 'sunflower',
@@ -380,14 +380,14 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
   },
   tanjiro: {
     id: 'tanjiro',
-    name: '灶门炭治郎 · 水之呼吸版',
+    name: '灶门炭治郎 · 3D 手办原声版',
     shortName: '炭治郎',
-    badge: '鬼杀队 · 碧海原声',
+    badge: '3D 潮玩 · 碧海原声',
     accent: '#14b8a6',
     secondaryAccent: '#38bdf8',
     particleKind: 'water',
     description:
-      '内置少年热血日语原声、水之呼吸·生生流转流体刀纹环、清泉水滴粒子与温柔鼓励交互。',
+      '全新 3D 潮玩手办建模多姿态（待机眨眼、3D 水之呼吸漩涡挥刀、巡山疾跑、捧梅子饭团欢笑）与热血日语原声。',
     quotes: [
       {
         zh: '「加油！！心是人的原动力，心是可以无限变强的！」',
@@ -399,7 +399,11 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         sub: '全集中、水の呼吸！拾ノ型、生生流転！！',
         voiceKey: 'tanjiro_water',
       },
-      { zh: '闻到了「隙之线」的气息，问题根源就在眼前！' },
+      {
+        zh: '「闻到了隙之线的气息，今天也元气满满一起加油吧 ☀️」',
+        sub: '頑張れ！！心はどこまでも強くなれる！',
+        voiceKey: 'tanjiro_encourage',
+      },
     ],
     doubleClickAction: 'water_slash',
     doubleClickBubble: '「全集中·水之呼吸！拾之型——生生流转 🌊」',
@@ -412,7 +416,7 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         bubble: '「加油！！心是人的原动力，心是可以无限变强的 ☀️」',
         sub: '頑張れ！！人は心が原動力だ！',
         voiceKey: 'tanjiro_encourage',
-        toneClass: 'hover:bg-emerald-500/25 text-emerald-200',
+        toneClass: 'hover:bg-emerald-500/35 text-emerald-100',
       },
       {
         action: 'water_slash',
@@ -420,23 +424,23 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         bubble: '「全集中·水之呼吸！拾之型——生生流转 🌊」',
         sub: '全集中、水の呼吸！拾ノ型、生生流転！！',
         voiceKey: 'tanjiro_water',
-        toneClass: 'hover:bg-cyan-500/25 text-cyan-200',
+        toneClass: 'hover:bg-cyan-500/35 text-cyan-100',
       },
-      { action: 'dash', label: '疾行', bubble: '巡山步法极速驰援！', toneClass: 'hover:bg-sky-500/25 text-sky-200' },
-      { action: 'feed', label: '饭团', bubble: '大口吃下梅子饭团，元气满满 🍙', toneClass: 'hover:bg-amber-500/25 text-amber-200' },
-      { action: 'walk', label: '巡逻', bubble: '背着木箱沿桌面稳健巡航…', toneClass: 'hover:bg-teal-500/25 text-teal-200' },
+      { action: 'dash', label: '疾跑', bubble: '背着木箱 3D 巡山步极速驰援！', toneClass: 'hover:bg-sky-500/35 text-sky-100' },
+      { action: 'feed', label: '饭团', bubble: '捧着海苔梅子饭团幸福大笑 🍙', sub: 'うまいっ！！元気百倍だ！', voiceKey: 'tanjiro_encourage', toneClass: 'hover:bg-amber-500/35 text-amber-100' },
+      { action: 'walk', label: '巡逻', bubble: '背着木箱沿桌面稳健巡航…', toneClass: 'hover:bg-teal-500/35 text-teal-100' },
     ],
   },
   zenitsu: {
     id: 'zenitsu',
-    name: '我妻善逸 · 霹雳一闪版',
+    name: '我妻善逸 · 3D 手办原声版',
     shortName: '善逸',
-    badge: '鬼杀队 · 金雷原声',
+    badge: '3D 潮玩 · 金雷原声',
     accent: '#facc15',
     secondaryAccent: '#fb923c',
     particleKind: 'lightning',
     description:
-      '内置反差萌日语原声、雷之呼吸·壹之型·霹雳一闪·六连金色电弧残影与顺风耳遥测。',
+      '全新 3D 潮玩手办建模多姿态（头顶小麻雀啾太郎待机眨眼、3D 霹雳一闪金雷拔刀、捧腮甜笑、抱膝酣睡）与日语原声。',
     quotes: [
       {
         zh: '「雷之呼吸·壹之型——霹雳一闪·六连 ⚡」',
@@ -448,7 +452,11 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         sub: 'うわぁぁん！優しい〜！俺、絶対に君のこと守るからね！',
         voiceKey: 'zenitsu_care',
       },
-      { zh: '只要专注把一件事登峰造极，就一定能发光！' },
+      {
+        zh: '「只要专注把一件事登峰造极，就一定能化作金雷发光 ⚡」',
+        sub: '雷の呼吸、壱ノ型——霹靂一閃！！',
+        voiceKey: 'zenitsu_thunder',
+      },
     ],
     doubleClickAction: 'thunder_dash',
     doubleClickBubble: '「雷之呼吸·壹之型——霹雳一闪·六连 ⚡」',
@@ -461,7 +469,7 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         bubble: '「呜哇啊啊~ 终于有人温柔夸我啦，我绝对会保护你的 💛」',
         sub: 'うわぁぁん！優しい〜！絶対に君のこと守るからね！',
         voiceKey: 'zenitsu_care',
-        toneClass: 'hover:bg-yellow-500/25 text-yellow-200',
+        toneClass: 'hover:bg-yellow-500/35 text-yellow-100',
       },
       {
         action: 'thunder_dash',
@@ -469,23 +477,23 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         bubble: '「雷之呼吸·壹之型——霹雳一闪·六连 ⚡」',
         sub: '雷の呼吸、壱ノ型——霹靂一閃、六連！！',
         voiceKey: 'zenitsu_thunder',
-        toneClass: 'hover:bg-amber-500/25 text-amber-200',
+        toneClass: 'hover:bg-amber-500/35 text-amber-100',
       },
-      { action: 'stomp', label: '惊呼', bubble: '噫！！发现可疑报错气息！', toneClass: 'hover:bg-orange-500/25 text-orange-200' },
-      { action: 'feed', label: '甜点', bubble: '幸福地品尝蜂蜜蛋糕 🍰', toneClass: 'hover:bg-pink-500/25 text-pink-200' },
-      { action: 'sleep', label: '觉醒眠', bubble: '进入半睡半醒最强雷神待机态…', toneClass: 'hover:bg-indigo-500/25 text-indigo-200' },
+      { action: 'stomp', label: '惊呼', bubble: '噫！！啾太郎发现可疑报错气息！', toneClass: 'hover:bg-orange-500/35 text-orange-100' },
+      { action: 'feed', label: '甜点', bubble: '和啾太郎一起幸福品尝蜂蜜甜点 🍰', voiceKey: 'zenitsu_care', toneClass: 'hover:bg-pink-500/35 text-pink-100' },
+      { action: 'sleep', label: '觉醒眠', bubble: '和啾太郎依偎进入半睡半醒雷神待机态…', toneClass: 'hover:bg-indigo-500/35 text-indigo-100' },
     ],
   },
   inosuke: {
     id: 'inosuke',
-    name: '嘴平伊之助 · 猪突猛进版',
+    name: '嘴平伊之助 · 3D 手办原声版',
     shortName: '伊之助',
-    badge: '鬼杀队 · 兽王原声',
+    badge: '3D 潮玩 · 兽王原声',
     accent: '#60a5fa',
     secondaryAccent: '#34d399',
     particleKind: 'spark',
     description:
-      '内置山大王狂野日语原声、兽之呼吸·猪突猛进冲撞破障与飘飘然得意泡泡特效。',
+      '全新 3D 毛绒潮玩手办多姿态（野猪头套双刀待机眨眼、3D 兽之呼吸双刀斩、举炸虾天妇罗飘飘然、抱刀酣睡）与狂野日语原声。',
     quotes: [
       {
         zh: '「兽之呼吸！猪突猛进！！猪突猛进 🐗」',
@@ -497,7 +505,11 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         sub: 'ふはははっ！もっと俺様を褒め称えろ！ほわほわ〜！',
         voiceKey: 'inosuke_praise',
       },
-      { zh: '来比试谁先跑通全部构建吧！哇哈哈哈！' },
+      {
+        zh: '「来比试谁先跑通全部构建吧！哇哈哈哈 🐗」',
+        sub: '獣の呼吸！猪突猛進！！',
+        voiceKey: 'inosuke_rush',
+      },
     ],
     doubleClickAction: 'beast_rush',
     doubleClickBubble: '「兽之呼吸！猪突猛进！！猪突猛进 🐗」',
@@ -510,7 +522,7 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         bubble: '「哇哈哈哈！再多夸夸本大爷（飘飘然~）✨」',
         sub: 'ふはははっ！もっと俺様を褒め称えろ！ほわほわ〜！',
         voiceKey: 'inosuke_praise',
-        toneClass: 'hover:bg-sky-500/25 text-sky-200',
+        toneClass: 'hover:bg-sky-500/35 text-sky-100',
       },
       {
         action: 'beast_rush',
@@ -518,11 +530,11 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
         bubble: '「兽之呼吸！猪突猛进！！猪突猛进 🐗」',
         sub: '獣の呼吸！猪突猛進！！猪突猛進！！',
         voiceKey: 'inosuke_rush',
-        toneClass: 'hover:bg-indigo-500/25 text-indigo-200',
+        toneClass: 'hover:bg-indigo-500/35 text-indigo-100',
       },
-      { action: 'stomp', label: '叫阵', bubble: '放马过来吧！任何复杂架构都不在话下！', toneClass: 'hover:bg-orange-500/25 text-orange-200' },
-      { action: 'feed', label: '天妇罗', bubble: '大嚼特嚼酥脆炸虾天妇罗 🍤', toneClass: 'hover:bg-amber-500/25 text-amber-200' },
-      { action: 'dance', label: '庆功舞', bubble: '胜利狂欢热舞开启 ♪', toneClass: 'hover:bg-emerald-500/25 text-emerald-200' },
+      { action: 'feed', label: '天妇罗', bubble: '高举黄金酥脆炸虾天妇罗得意欢呼 🍤', sub: 'ほわほわ〜！天ぷら最高だぜ！', voiceKey: 'inosuke_praise', toneClass: 'hover:bg-amber-500/35 text-amber-100' },
+      { action: 'dance', label: '庆功舞', bubble: '山大王胜利狂欢热舞开启 ♪', toneClass: 'hover:bg-emerald-500/35 text-emerald-100' },
+      { action: 'sleep', label: '酣睡', bubble: '怀抱双把锯齿日轮刀盘腿呼呼大睡…', toneClass: 'hover:bg-purple-500/35 text-purple-100' },
     ],
   },
   custom: {

@@ -57,158 +57,6 @@ interface Particle {
   kind: ParticleKind;
 }
 
-/**
- * B612 小王子绘本级双尾 Verlet 物理金黄丝绸围巾 (2.0)
- * 置于小王子角色图层正后方 (z-[1]) 并跟随镜像容器自动翻转，杜绝糊脸与双围巾重影。
- */
-const PrinceScarfCanvas: React.FC<{ windBoost: number; pointerWind: number }> = ({
-  windBoost,
-  pointerWind,
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const boostRef = useRef(windBoost);
-  const pointerRef = useRef(pointerWind);
-  boostRef.current = windBoost;
-  pointerRef.current = pointerWind;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const createTail = (count: number, seg: number, anchorX: number, anchorY: number) =>
-      Array.from({ length: count }, (_, i) => ({
-        x: anchorX - i * seg,
-        y: anchorY + i * 2.2,
-        ox: anchorX - i * seg,
-        oy: anchorY + i * 2.2,
-      }));
-
-    // 主长飘带与副短飘带，精确锚定在小王子颈部针织围巾环左后侧
-    const ANCHOR_X = 96;
-    const ANCHOR_Y = 98;
-    const longTail = createTail(8, 9.5, ANCHOR_X, ANCHOR_Y);
-    const shortTail = createTail(6, 8.2, ANCHOR_X - 2, ANCHOR_Y + 7);
-
-    let raf = 0;
-    let t = 0;
-
-    const stepChain = (
-      nodes: Array<{ x: number; y: number; ox: number; oy: number }>,
-      seg: number,
-      ax: number,
-      ay: number,
-      phaseOffset: number,
-      gravity: number,
-    ) => {
-      const boost = boostRef.current;
-      const speed = 1.1 + boost * 2.1;
-      nodes[0].x = ax;
-      nodes[0].y = ay;
-
-      for (let i = 1; i < nodes.length; i++) {
-        const n = nodes[i];
-        const vx = (n.x - n.ox) * 0.86;
-        const vy = (n.y - n.oy) * 0.86;
-        n.ox = n.x;
-        n.oy = n.y;
-        const wave =
-          Math.sin(t * speed - i * 0.68 + phaseOffset) * (1.15 + boost * 1.65) +
-          pointerRef.current * 0.45;
-        // 角色面朝右侧 (+X)，围巾自然向身后左侧 (-X) 迎风飘扬
-        n.x += vx - (1.25 + boost * 1.55);
-        n.y += vy + gravity + wave * 0.42;
-      }
-
-      for (let iter = 0; iter < 4; iter++) {
-        nodes[0].x = ax;
-        nodes[0].y = ay;
-        for (let i = 0; i < nodes.length - 1; i++) {
-          const a = nodes[i];
-          const b = nodes[i + 1];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist = Math.hypot(dx, dy) || 0.001;
-          const diff = (dist - seg) / dist;
-          if (i === 0) {
-            b.x -= dx * diff;
-            b.y -= dy * diff;
-          } else {
-            a.x += dx * diff * 0.5;
-            a.y += dy * diff * 0.5;
-            b.x -= dx * diff * 0.5;
-            b.y -= dy * diff * 0.5;
-          }
-        }
-      }
-    };
-
-    const strokeRibbon = (
-      nodes: Array<{ x: number; y: number }>,
-      baseWidth: number,
-      alphaScale: number,
-    ) => {
-      const last = nodes[nodes.length - 1];
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(nodes[0].x, nodes[0].y);
-      for (let i = 1; i < nodes.length - 1; i++) {
-        const xc = (nodes[i].x + nodes[i + 1].x) * 0.5;
-        const yc = (nodes[i].y + nodes[i + 1].y) * 0.5;
-        ctx.quadraticCurveTo(nodes[i].x, nodes[i].y, xc, yc);
-      }
-      ctx.lineTo(last.x, last.y);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // 外层绘本深暖棕墨线描边，与小王子水彩线稿浑然一体
-      ctx.lineWidth = baseWidth + 3.2;
-      ctx.strokeStyle = `rgba(92, 54, 32, ${0.88 * alphaScale})`;
-      ctx.stroke();
-
-      // 内层麦金至琥珀丝绸渐变
-      const grad = ctx.createLinearGradient(nodes[0].x, nodes[0].y, last.x, last.y);
-      grad.addColorStop(0, `rgba(251, 191, 36, ${0.98 * alphaScale})`);
-      grad.addColorStop(0.55, `rgba(252, 211, 77, ${0.96 * alphaScale})`);
-      grad.addColorStop(1, `rgba(245, 158, 11, ${0.92 * alphaScale})`);
-      ctx.lineWidth = baseWidth;
-      ctx.strokeStyle = grad;
-      ctx.stroke();
-
-      // 高光丝线点缀
-      ctx.lineWidth = Math.max(1.5, baseWidth * 0.28);
-      ctx.strokeStyle = `rgba(254, 249, 195, ${0.55 * alphaScale})`;
-      ctx.stroke();
-      ctx.restore();
-    };
-
-    const render = () => {
-      t += 0.062;
-      stepChain(longTail, 9.5, ANCHOR_X, ANCHOR_Y, 0, 0.14);
-      stepChain(shortTail, 8.2, ANCHOR_X - 2, ANCHOR_Y + 7, 1.15, 0.24);
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      strokeRibbon(shortTail, 7.2, 0.92);
-      strokeRibbon(longTail, 9.2, 1.0);
-
-      raf = requestAnimationFrame(render);
-    };
-
-    raf = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={190}
-      height={180}
-      className="pointer-events-none absolute top-1 -left-8 z-[1]"
-    />
-  );
-};
-
 /** 矢量物理微粒节点：飘落樱花瓣、上升星光、清泉水滴、雷光与地面扬尘 */
 const ParticleSvg: React.FC<{ p: Particle; accentColor: string }> = ({ p, accentColor }) => {
   if (p.kind === 'dust') {
@@ -412,7 +260,7 @@ const PetWindowView: React.FC = () => {
     if (!voiceKey) return false;
     const uri = assetsRef.current.voices?.[voiceKey];
     if (!uri) return false;
-    return petAudio.playVoice(uri, setVoicePlaying);
+    return petAudio.playVoice(uri, setVoicePlaying, voiceKey);
   }, []);
 
   const applyCharacterGreeting = useCallback(
@@ -450,6 +298,20 @@ const PetWindowView: React.FC = () => {
       durationMs = 2800,
       opts?: { sub?: string; voiceKey?: string; silentVoice?: boolean },
     ) => {
+      // 再次点击正在播放的原动画《团子大家族》按钮时，支持优雅暂停停止
+      if (
+        next === 'dango_song' &&
+        actionRef.current === 'dango_song' &&
+        petAudio.activeVoiceTag === 'ushio_dango'
+      ) {
+        clearActionTimers();
+        petAudio.stopVoice();
+        setAction('idle');
+        setBubble('🎵 已暂停《团子大家族》原曲演唱，想听随时再点我哦 ♪');
+        setSubBubble('');
+        return;
+      }
+
       clearActionTimers();
       setAction(next);
 
@@ -466,6 +328,8 @@ const PetWindowView: React.FC = () => {
       }
 
       const spoke = !opts?.silentVoice && playVoiceByKey(chosenVoiceKey);
+      const effectiveDuration =
+        next === 'dango_song' && spoke ? 57200 : durationMs;
 
       if (next === 'pat') {
         if (!spoke) petAudio.playCare();
@@ -595,23 +459,24 @@ const PetWindowView: React.FC = () => {
       if (next !== 'sleep' && next !== 'dance' && next !== 'picked_up') {
         actionTimerRef.current = window.setTimeout(() => {
           setAction('idle');
-        }, durationMs);
+        }, effectiveDuration);
       }
     },
     [character, clearActionTimers, playVoiceByKey, profile, showMood, spawnBatch],
   );
 
-  // 初始化状态同步与拟人化随机自然眨眼（含俏皮双眨眼）
+  // 初始化状态同步与拟人化随机自然眨眼（等待资产与语音库加载完毕后立即播放角色原声问候）
   useEffect(() => {
     document.documentElement.classList.add('pet-window');
     document.body.classList.add('pet-window');
     const root = document.getElementById('root');
     if (root) root.classList.add('pet-root');
+    petAudio.warmup();
 
-    studioService.getPetAssets().then(setAssets).catch(console.error);
-    studioService
-      .getStatus()
-      .then((st) => {
+    Promise.all([studioService.getPetAssets(), studioService.getStatus()])
+      .then(([loadedAssets, st]) => {
+        assetsRef.current = loadedAssets;
+        setAssets(loadedAssets);
         const ch = normalizePetCharacter(st.pet_character);
         setCharacter(ch);
         setRoaming(st.pet_roaming ?? true);
@@ -622,9 +487,9 @@ const PetWindowView: React.FC = () => {
         const isMuted = Boolean(st.pet_muted);
         petAudio.muted = isMuted;
         setMuted(isMuted);
-        applyCharacterGreeting(ch);
+        applyCharacterGreeting(ch, !isMuted);
       })
-      .catch(() => {});
+      .catch(console.error);
 
     fetchAccounts().catch(() => {});
     fetchCurrentAccount().catch(() => {});
@@ -638,13 +503,19 @@ const PetWindowView: React.FC = () => {
         const ch = normalizePetCharacter(ev.payload);
         setCharacter(ch);
         setAction('idle');
-        applyCharacterGreeting(ch);
+        applyCharacterGreeting(ch, true);
       })
         .then((fn) => unlisteners.push(fn))
         .catch(() => {});
 
       listen('pet:assets-updated', () => {
-        studioService.getPetAssets().then(setAssets).catch(() => {});
+        studioService
+          .getPetAssets()
+          .then((loaded) => {
+            assetsRef.current = loaded;
+            setAssets(loaded);
+          })
+          .catch(() => {});
       })
         .then((fn) => unlisteners.push(fn))
         .catch(() => {});
@@ -1056,15 +927,41 @@ const PetWindowView: React.FC = () => {
       return assets.ushio_chibi || null;
     }
 
-    if (character === 'tanjiro') return assets.tanjiro_water || null;
-    if (character === 'zenitsu') return assets.zenitsu_thunder || null;
-    if (character === 'inosuke') return assets.inosuke_beast || null;
+    if (character === 'tanjiro') {
+      if ((action === 'pat' || action === 'feed' || action === 'dance') && assets.tanjiro_happy) {
+        return assets.tanjiro_happy;
+      }
+      if ((action === 'walk' || action === 'dash' || action === 'skid') && assets.tanjiro_run) {
+        return assets.tanjiro_run;
+      }
+      if (action === 'water_slash' && assets.tanjiro_water) return assets.tanjiro_water;
+      if (action === 'idle' && blinking && assets.tanjiro_blink) return assets.tanjiro_blink;
+      return assets.tanjiro_chibi || assets.tanjiro_water || null;
+    }
+
+    if (character === 'zenitsu') {
+      if (action === 'sleep' && assets.zenitsu_sleep) return assets.zenitsu_sleep;
+      if ((action === 'pat' || action === 'feed' || action === 'dance') && assets.zenitsu_happy) {
+        return assets.zenitsu_happy;
+      }
+      if (action === 'thunder_dash' && assets.zenitsu_thunder) return assets.zenitsu_thunder;
+      if (action === 'idle' && blinking && assets.zenitsu_blink) return assets.zenitsu_blink;
+      return assets.zenitsu_chibi || assets.zenitsu_thunder || null;
+    }
+
+    if (character === 'inosuke') {
+      if (action === 'sleep' && assets.inosuke_sleep) return assets.inosuke_sleep;
+      if ((action === 'pat' || action === 'feed' || action === 'dance') && assets.inosuke_happy) {
+        return assets.inosuke_happy;
+      }
+      if (action === 'beast_rush' && assets.inosuke_beast) return assets.inosuke_beast;
+      if (action === 'idle' && blinking && assets.inosuke_blink) return assets.inosuke_blink;
+      return assets.inosuke_chibi || assets.inosuke_beast || null;
+    }
+
     if (character === 'custom') return assets.custom_avatar || null;
     return assets.nezuko_chibi || null;
   }, [character, action, blinking, assets]);
-
-  const showPrinceScarf =
-    character === 'prince' && action !== 'fox' && action !== 'sleep';
 
   return (
     <div
@@ -1081,18 +978,18 @@ const PetWindowView: React.FC = () => {
       }}
       className="relative flex h-screen w-screen flex-col items-center justify-end select-none p-2.5 bg-transparent overflow-hidden"
     >
-      {/* 顶部 Apple 灵动岛黑曜石玻璃控制坞 */}
+      {/* 顶部高对比实心黑曜石灵动岛控制坞（防桌面透底发虚） */}
       <div
         data-no-drag
-        className="relative z-30 mb-1.5 flex items-center gap-0.5 rounded-full bg-slate-950/82 px-2 py-1 text-white backdrop-blur-2xl border border-white/15"
+        className="relative z-30 mb-1.5 flex items-center gap-0.5 rounded-full bg-[#0b1120]/[0.97] px-2.5 py-1 text-white border border-slate-500/70"
         style={{
-          boxShadow: '0 14px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.2)',
+          boxShadow: '0 14px 32px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.22)',
         }}
       >
         <button
           type="button"
           onClick={() => setPickerOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11.5px] font-bold rounded-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-600/80 transition-colors"
           title="切换陪伴角色或导入自定义立绘"
         >
           <span
@@ -1189,43 +1086,65 @@ const PetWindowView: React.FC = () => {
         </button>
       </div>
 
-      {/* 角色矩阵弹出抽屉（7 角色切换 + 本地透明立绘导入） */}
+      {/* 角色矩阵弹出抽屉（实心深曜石高对比装甲 + 3D 角色头像预览） */}
       {pickerOpen && (
         <div
           data-no-drag
-          className="z-30 mb-2 w-full max-w-[346px] rounded-2xl bg-slate-950/90 p-2.5 text-xs text-slate-200 border border-white/15 backdrop-blur-2xl space-y-2"
-          style={{ boxShadow: '0 18px 38px rgba(0,0,0,0.65)' }}
+          className="z-30 mb-2 w-full max-w-[354px] rounded-2xl bg-[#0b1120]/[0.98] p-2.5 text-xs text-white border border-slate-500/75 space-y-2"
+          style={{ boxShadow: '0 20px 44px rgba(0,0,0,0.88), inset 0 1px 0 rgba(255,255,255,0.18)' }}
         >
           <div className="grid grid-cols-3 gap-1.5">
             {PET_CHARACTER_ORDER.map((cid) => {
               const item = PET_CHARACTER_PROFILES[cid];
               const isSelected = cid === character;
+              const thumbSrc =
+                cid === 'nezuko'
+                  ? assets.nezuko_chibi
+                  : cid === 'prince'
+                    ? assets.little_prince
+                    : cid === 'ushio'
+                      ? assets.ushio_chibi
+                      : cid === 'tanjiro'
+                        ? assets.tanjiro_chibi || assets.tanjiro_water
+                        : cid === 'zenitsu'
+                          ? assets.zenitsu_chibi || assets.zenitsu_thunder
+                          : cid === 'inosuke'
+                            ? assets.inosuke_chibi || assets.inosuke_beast
+                            : assets.custom_avatar;
               return (
                 <button
                   key={cid}
                   type="button"
                   onClick={() => selectCharacter(cid)}
-                  className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium border transition-all ${
+                  className={`flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[11.5px] font-semibold border transition-all ${
                     isSelected
-                      ? 'bg-white/15 text-white border-white/35 shadow-sm'
-                      : 'bg-white/5 text-slate-300 border-transparent hover:bg-white/10'
+                      ? 'bg-sky-500/30 text-white border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.35)]'
+                      : 'bg-slate-800/95 text-slate-100 border-slate-600/80 hover:bg-slate-700 hover:border-slate-400'
                   }`}
                 >
-                  <span
-                    className="h-2 w-2 rounded-full shrink-0"
-                    style={{ backgroundColor: item.accent }}
-                  />
+                  {thumbSrc ? (
+                    <img
+                      src={thumbSrc}
+                      alt=""
+                      className="h-5 w-5 rounded-md object-contain bg-slate-900/90 shrink-0"
+                    />
+                  ) : (
+                    <span
+                      className="h-2.5 w-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: item.accent }}
+                    />
+                  )}
                   <span className="truncate">{item.shortName}</span>
                 </button>
               );
             })}
           </div>
-          <div className="flex items-center justify-between pt-1 border-t border-white/10">
-            <span className="text-[10px] text-slate-400">支持 PNG / WebP / GIF / SVG</span>
+          <div className="flex items-center justify-between pt-1.5 border-t border-slate-700/80">
+            <span className="text-[10.5px] text-slate-300">支持 PNG / WebP / GIF / SVG</span>
             <button
               type="button"
               onClick={handleImportCustomAvatar}
-              className="inline-flex items-center gap-1 rounded-lg bg-purple-500/25 hover:bg-purple-500/40 text-purple-200 px-2.5 py-1 text-[10.5px] font-semibold transition-colors"
+              className="inline-flex items-center gap-1 rounded-lg bg-purple-600/80 hover:bg-purple-500 text-white px-2.5 py-1 text-[10.5px] font-semibold transition-colors"
             >
               <ImagePlus className="w-3 h-3" />
               导入自定义形象
@@ -1234,15 +1153,15 @@ const PetWindowView: React.FC = () => {
         </div>
       )}
 
-      {/* 玻璃微胶囊对白气泡（点击可循环聆听当前角色动漫原生经典金句） */}
+      {/* 高对比实心对白气泡（点击可循环聆听当前角色动漫原生经典金句） */}
       <button
         type="button"
         data-no-drag
         onClick={handleCycleAnimeQuote}
         title="点击切换并播放下一句动漫原生金句语音"
-        className="group mb-1.5 max-w-[346px] rounded-2xl bg-slate-950/80 hover:bg-slate-900/90 px-3.5 py-1.5 text-center text-[11.5px] font-medium text-slate-100 backdrop-blur-2xl border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+        className="group mb-1.5 max-w-[354px] rounded-2xl bg-[#0b1120]/[0.97] hover:bg-[#131d36] px-3.5 py-1.5 text-center text-[12px] font-semibold text-white border border-slate-500/75 hover:border-sky-400/80 transition-all cursor-pointer"
         style={{
-          boxShadow: '0 10px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.16)',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.2)',
         }}
       >
         <div className="inline-flex items-center justify-center gap-1.5 leading-snug">
@@ -1250,15 +1169,15 @@ const PetWindowView: React.FC = () => {
             <Volume2
               className={`w-3.5 h-3.5 shrink-0 transition-transform ${
                 voicePlaying
-                  ? 'text-pink-400 scale-110 animate-pulse'
-                  : 'text-sky-300/70 group-hover:text-sky-300'
+                  ? 'text-pink-400 scale-115 animate-pulse'
+                  : 'text-sky-300 group-hover:text-sky-200'
               }`}
             />
           )}
           <span>{bubble}</span>
         </div>
         {subBubble && (
-          <div className="text-[9.5px] italic text-amber-200/85 mt-0.5">{subBubble}</div>
+          <div className="text-[10px] font-medium text-amber-300 mt-0.5">{subBubble}</div>
         )}
       </button>
 
@@ -1437,14 +1356,19 @@ const PetWindowView: React.FC = () => {
           <ParticleSvg key={p.id} p={p} accentColor={themeAccent} />
         ))}
 
-        {/* 前景柔和接触投影 */}
+        {/* 3D 潮玩手办立体透视展台底座（隔离杂乱壁纸透底并塑造真实 3D 手办立体空间感） */}
         <div
-          className="pointer-events-none absolute bottom-1 h-3.5 w-28 rounded-full bg-black/55 blur-md transition-transform duration-300"
-          style={{
-            transform: `translate3d(${tilt.x * 4}px, 0, 0) scale(${
-              action === 'picked_up' ? 0.62 : action === 'blood' ? 0.85 : 1
-            })`,
-          }}
+          className="pet-3d-pedestal"
+          style={
+            {
+              '--pedestal-accent': `${themeAccent}b8`,
+              '--pedestal-glow': `${themeAccent}52`,
+              opacity: action === 'picked_up' ? 0.45 : 0.96,
+              transform: `translate3d(${tilt.x * 4}px, 0, 0) rotateX(68deg) scale(${
+                action === 'picked_up' ? 0.72 : action === 'land_squash' ? 1.12 : 1
+              })`,
+            } as React.CSSProperties
+          }
         />
 
         {/* 前景角色动画本体容器（分离内外层变换避免镜像翻转破坏 3D 陀螺仪倾斜矩阵） */}
@@ -1491,16 +1415,6 @@ const PetWindowView: React.FC = () => {
               <div
                 className={`relative flex h-48 w-44 items-end justify-center ${activeMotionClass}`}
               >
-                {/* 小王子双尾绘本描边物理丝绸围巾（贴合颈后，置于角色立绘正后方 z-[1]） */}
-                {showPrinceScarf && (
-                  <PrinceScarfCanvas
-                    windBoost={
-                      action === 'dash' ? 1.85 : action === 'walk' ? 1.25 : sunsetMode ? 0.65 : 0.42
-                    }
-                    pointerWind={tilt.x * facing}
-                  />
-                )}
-
                 {/* 祢豆子风火轮高速旋风残影涡流环 */}
                 {character === 'nezuko' && action === 'dash' && <div className="wind-wheel-ring" />}
 
@@ -1537,13 +1451,13 @@ const PetWindowView: React.FC = () => {
         </div>
       </div>
 
-      {/* 底部磨砂互动控制胶囊（自适应当前角色专属动作组） */}
+      {/* 底部高对比实心互动控制胶囊（自适应当前角色专属动作组，清晰不透底） */}
       <div
         id="nezuko-action-capsule"
         data-no-drag
-        className="mt-1.5 flex flex-wrap items-center justify-center gap-1 rounded-full bg-slate-950/82 px-2.5 py-1 text-[11px] font-medium text-slate-200 border border-white/15 backdrop-blur-2xl"
+        className="mt-1.5 flex flex-wrap items-center justify-center gap-1 rounded-full bg-[#0b1120]/[0.97] px-2.5 py-1 text-[11.5px] font-semibold text-white border border-slate-500/75"
         style={{
-          boxShadow: '0 10px 26px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.16)',
+          boxShadow: '0 12px 28px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.2)',
         }}
       >
         {profile.actions.map((act) => (
@@ -1660,9 +1574,9 @@ const PetWindowView: React.FC = () => {
         <div
           id="nezuko-main-card"
           data-no-drag
-          className="mt-2 w-full max-w-[346px] rounded-2xl bg-slate-950/88 p-3.5 text-xs text-slate-200 border border-white/15 backdrop-blur-2xl"
+          className="mt-2 w-full max-w-[354px] rounded-2xl bg-[#0b1120]/[0.98] p-3.5 text-xs text-slate-100 border border-slate-500/75"
           style={{
-            boxShadow: '0 22px 48px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.2)',
+            boxShadow: '0 22px 48px rgba(0,0,0,0.88), inset 0 1px 0 rgba(255,255,255,0.2)',
           }}
         >
           {panelMode === 'quota' && (

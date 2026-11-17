@@ -787,45 +787,114 @@ pub fn localize_all_skills() -> SkillLocalizeResult {
     }
 }
 
-/// 生成可选的《CLANNAD》纯矢量 60fps 客户端启动序幕模块（内置 getHubWebContents 就绪感知与 4.8s 硬超时防死锁保护）
+/// 生成可选的《CLANNAD》原版名场面 60fps 客户端启动序幕模块（支持内嵌原动画剧照与经典台词流 + 4.8s 硬超时防死锁保护）
 fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Option<String> {
-    let runtime_path = resources_dir().join("clannad-splash-runtime.js");
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+
+    let rdir = resources_dir();
+    let runtime_path = rdir.join("clannad-splash-runtime.js");
     let engine_js = std::fs::read_to_string(&runtime_path).ok()?;
     let safe_engine = engine_js.replace("</script>", "<\\/script>");
 
-    let (title, subtitle, quote, accent) = match character {
-        "clannad-sakura" => (
-            "CLANNAD · 光坂坡道与团子",
-            "SAKURA SLOPE // 漫长坡道的起点",
-            "「我们开始一起攀登，这长长的、长长的樱花坡道」",
-            "#e57399",
-        ),
-        "clannad-sunflower" => (
-            "CLANNAD · 汐与晴空花田",
-            "SUNFLOWER FIELD // 晴空下的约定",
-            "「在阳光洒满的黄金向日葵花田之后，去迎接崭新的每一天吧」",
-            "#e08e14",
-        ),
-        "clannad-starfish" => (
-            "CLANNAD · 海星与提琴恋曲",
-            "TWILIGHT LIBRARY // 弦音与海星",
-            "「请收下这枚小小的海星，愿温柔的旋律陪伴每一次思考」",
-            "#c084fc",
-        ),
-        _ => (
-            "CLANNAD · 幻想世界光玉",
-            "ILLUSIONARY WORLD // 小镇的心愿",
-            "「这座小镇，承载着无数温柔的心愿与奇迹 —— 欢迎回到工作台」",
-            "#f6c453",
-        ),
-    };
+    let (title, episode_tag, quote, accent, secondary_accent, media_file, dialogues) =
+        match character {
+            "clannad-sakura" => (
+                "光坂坡道 · 樱花雨中的初遇与回眸",
+                "CLANNAD · EP.01 & EP.22「桜並木の坂道」",
+                "「无论重来多少次，我依然会在洒满春樱的坡道上喊出你的名字。」",
+                "#f472b6",
+                "#7dd3fc",
+                "splash_sakura.webp",
+                json!([
+                    {
+                        "speaker": "古河渚",
+                        "zh": "「你喜欢这所学校吗？……我非常、非常喜欢这里，尽管一切都在慢慢改变。」",
+                        "en": "Do you like this school? I love it dearly, even though everything slowly changes."
+                    },
+                    {
+                        "speaker": "冈崎朋也",
+                        "zh": "「就算曾经迷茫停滞，只要想到你在坡道上等我，我便从未后悔那天与你相遇。」",
+                        "en": "Even if time rewound a thousand times, I would still call out to you on this hill."
+                    }
+                ]),
+            ),
+            "clannad-sunflower" => (
+                "盛夏花海 · 在爸爸怀里哭泣",
+                "CLANNAD ~After Story~ · EP.18「大地の果て」",
+                "「早苗阿姨说过……能哭的地方，只有厕所，和爸爸的怀里。」",
+                "#fbbf24",
+                "#38bdf8",
+                "splash_sunflower.webp",
+                json!([
+                    {
+                        "speaker": "冈崎汐",
+                        "zh": "「早苗阿姨说过……能哭的地方，只有厕所，和爸爸的怀里。」",
+                        "en": "Sanae-san told me... the only places I can cry are the bathroom, and in Daddy's arms."
+                    },
+                    {
+                        "speaker": "冈崎朋也",
+                        "zh": "「在那片阳光洒满的黄金向日葵花海之后，我们终于重新成为了家人。」",
+                        "en": "Beyond the endless golden sea of sunflowers, our warmth begins anew."
+                    }
+                ]),
+            ),
+            "clannad-starfish" => (
+                "木雕海星的约定 · 直到梦的尽头",
+                "CLANNAD · EP.09「夢の最後まで」",
+                "「请收下这枚风子亲手雕刻的海星！哪怕有一天梦醒了，祝福也会永远留下……」",
+                "#c084fc",
+                "#fb923c",
+                "splash_starfish.webp",
+                json!([
+                    {
+                        "speaker": "伊吹风子",
+                        "zh": "「请收下这枚风子亲手雕刻的海星！哪怕梦醒后被大家遗忘，这份祝福也会留下……」",
+                        "en": "Please accept this carved starfish! Even when the dream fades, my wish remains."
+                    },
+                    {
+                        "speaker": "古河渚",
+                        "zh": "「就算记忆暂时沉睡，掌心里木雕海星的温暖，一定会让大家重逢。」",
+                        "en": "Even if memories sleep for a while, the warmth in our palms will reunite us."
+                    }
+                ]),
+            ),
+            _ => (
+                "幻想世界 · 漫天升腾的心愿光玉",
+                "CLANNAD ~After Story~ · EP.22「小さなてのひら」",
+                "「每一颗缓缓升向夜空的光玉，都是小镇里人们用真心守护过的幸福。」",
+                "#f6c453",
+                "#7dd3fc",
+                "splash_orbs.webp",
+                json!([
+                    {
+                        "speaker": "幻想世界少女",
+                        "zh": "「这座小镇就像一个温暖的大家庭，承载着所有欢笑、泪水与心愿。」",
+                        "en": "This town is like one big family, holding every gentle wish and tear."
+                    },
+                    {
+                        "speaker": "小小手心",
+                        "zh": "「愿漫天汇聚的奇迹光玉，守护你今天每一次专注与创造。」",
+                        "en": "May these gathered lights illuminate every line of thought in your studio."
+                    }
+                ]),
+            ),
+        };
+
+    let artwork_data_url = std::fs::read(rdir.join("media").join(media_file))
+        .ok()
+        .filter(|b| !b.is_empty())
+        .map(|bytes| format!("data:image/webp;base64,{}", STANDARD.encode(&bytes)))
+        .unwrap_or_default();
 
     let cfg_json = serde_json::to_string(&json!({
         "theme": character,
         "title": title,
-        "subtitle": subtitle,
+        "episodeTag": episode_tag,
         "quote": quote,
         "accent": accent,
+        "secondaryAccent": secondary_accent,
+        "artworkDataUrl": artwork_data_url,
+        "dialogues": dialogues,
         "version": version_str,
     }))
     .unwrap_or_else(|_| "{}".to_string());

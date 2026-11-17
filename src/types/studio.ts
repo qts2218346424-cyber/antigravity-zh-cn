@@ -211,9 +211,21 @@ export interface PetAssets {
   ushio_walk?: string | null;
   ushio_sunflower?: string | null;
   ushio_sleep?: string | null;
+  tanjiro_chibi?: string | null;
+  tanjiro_blink?: string | null;
   tanjiro_water?: string | null;
+  tanjiro_run?: string | null;
+  tanjiro_happy?: string | null;
+  zenitsu_chibi?: string | null;
+  zenitsu_blink?: string | null;
   zenitsu_thunder?: string | null;
+  zenitsu_happy?: string | null;
+  zenitsu_sleep?: string | null;
+  inosuke_chibi?: string | null;
+  inosuke_blink?: string | null;
   inosuke_beast?: string | null;
+  inosuke_happy?: string | null;
+  inosuke_sleep?: string | null;
   custom_avatar?: string | null;
   voices?: Record<string, string>;
 }

@@ -1,16 +1,18 @@
 /**
- * 《CLANNAD》四大高定光学材质包与 60fps 启动动画引擎单元测试
+ * 《CLANNAD》四大高定光学材质包、原版动画名场面剧照配置与多曲目背景音乐引擎单元测试
  * 运行命令: npm test
  */
 import sakuraHillSkin from '../../../../resources/skins/clannad-sakura-hill/skin.json';
 import orbsSkin from '../../../../resources/skins/clannad-illusionary-orbs/skin.json';
 import sunflowerSkin from '../../../../resources/skins/clannad-after-sunflower/skin.json';
 import starfishSkin from '../../../../resources/skins/clannad-starfish-library/skin.json';
+import { BUILTIN_BGM_TRACKS } from '../clannadAudioEngine';
 import {
   CLANNAD_SPLASH_THEMES,
   getSplashThemeSpec,
   loadStudioSplashPrefs,
   normalizeSplashThemeId,
+  resolveEffectiveBgmTrack,
   saveStudioSplashPrefs,
 } from '../clannadSplashData';
 
@@ -64,7 +66,7 @@ test('1. 4 款《CLANNAD》高定材质包 Schema、深浅分类与配色变量�
   }
 });
 
-test('2. 4 大《CLANNAD》启动序幕分镜与材质包一一对应且归一化准确', () => {
+test('2. 4 大原版动画名场面剧照路由与双语三幕台词完整对应', () => {
   assertEqual(CLANNAD_SPLASH_THEMES.length, 4);
   const validSkinIds = new Set([
     'clannad-sakura-hill',
@@ -76,33 +78,60 @@ test('2. 4 大《CLANNAD》启动序幕分镜与材质包一一对应且归一�
   for (const spec of CLANNAD_SPLASH_THEMES) {
     assertOk(validSkinIds.has(spec.linkedSkinId), `${spec.id} 关联材质包不存在`);
     assertEqual(spec.steps.length, 3, `${spec.id} 应包含 3 个进度阶段提示`);
+    assertEqual(spec.dialogues.length, 3, `${spec.id} 应包含 3 幕经典感人双语台词`);
+    assertOk(
+      spec.artworkUrl.startsWith('/images/splash/scene-') && spec.artworkUrl.endsWith('.webp'),
+      `${spec.id} 原版动画剧照路径格式不合法: ${spec.artworkUrl}`,
+    );
+    assertOk(spec.episodeTag.includes('CLANNAD'), `${spec.id} 应标明原动画剧集出处`);
   }
 
   assertEqual(normalizeSplashThemeId('sakura'), 'clannad-sakura');
   assertEqual(normalizeSplashThemeId('dango'), 'clannad-sakura');
   assertEqual(normalizeSplashThemeId('ushio'), 'clannad-sunflower');
   assertEqual(normalizeSplashThemeId('kotomi'), 'clannad-starfish');
+  assertEqual(normalizeSplashThemeId('fuko'), 'clannad-starfish');
   assertEqual(normalizeSplashThemeId('none'), 'none');
   assertEqual(normalizeSplashThemeId('unknown'), 'clannad-orbs');
   assertEqual(getSplashThemeSpec('clannad-sakura').linkedSkinId, 'clannad-sakura-hill');
 });
 
-test('3. 启动动画本地偏好读写与安全回退正常', () => {
+test('3. 背景音乐曲库编配与启动偏好读写联动准确', () => {
+  assertEqual(BUILTIN_BGM_TRACKS.length, 4, '应内置 4 首多声部治愈乐曲');
+  assertEqual(
+    resolveEffectiveBgmTrack({ musicBoxEnabled: true, bgmTrackId: 'follow-scene' }, 'clannad-sunflower'),
+    'ushio-pocket',
+  );
+  assertEqual(
+    resolveEffectiveBgmTrack({ musicBoxEnabled: true, bgmTrackId: 'dango-family' }, 'clannad-sakura'),
+    'dango-family',
+  );
+  assertEqual(
+    resolveEffectiveBgmTrack({ musicBoxEnabled: false, bgmTrackId: 'dango-family' }, 'clannad-sakura'),
+    'off',
+  );
+
   const saved = saveStudioSplashPrefs({
     studioBootEnabled: true,
-    themeId: 'clannad-sakura',
-    durationMs: 3800,
+    themeId: 'clannad-sunflower',
+    randomSceneOnBoot: true,
+    durationMs: 8000,
     musicBoxEnabled: true,
+    bgmTrackId: 'custom-file',
+    bgmVolume: 0.85,
+    bgmStartOffsetSec: 65,
+    cinemaLetterbox: true,
   });
-  assertEqual(saved.themeId, 'clannad-sakura');
+  assertEqual(saved.themeId, 'clannad-sunflower');
+  assertEqual(saved.bgmTrackId, 'custom-file');
 
   const loaded = loadStudioSplashPrefs();
   assertEqual(loaded.studioBootEnabled, true);
-  assertEqual(loaded.themeId, 'clannad-sakura');
-  assertEqual(loaded.durationMs, 3800);
+  assertEqual(loaded.themeId, 'clannad-sunflower');
+  assertEqual(loaded.durationMs, 8000);
   assertEqual(loaded.musicBoxEnabled, true);
 });
 
 if (failed > 0) {
-  throw new Error(`CLANNAD 主题与启动动画单元测试存在 ${failed} 项失败 (通过 ${passed} 项)`);
+  throw new Error(`CLANNAD 名场面与背景音乐单元测试存在 ${failed} 项失败 (通过 ${passed} 项)`);
 }
