@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#050811"/>
+      <stop offset="58%" stop-color="#0d162c"/>
+      <stop offset="100%" stop-color="#182a4f"/>
+    </linearGradient>
+    <radialGradient id="orbGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="35%" stop-color="#fde047" stop-opacity="0.88"/>
+      <stop offset="70%" stop-color="#f59e0b" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f0f9ff"/>
+      <stop offset="38%" stop-color="#7dd3fc" stop-opacity="0.82"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#night)"/>
+  <!-- 星海柔雾光带 -->
+  <ellipse cx="320" cy="150" rx="280" ry="95" fill="#38bdf8" opacity="0.08" transform="rotate(-14 320 150)"/>
+  <!-- 漂浮光玉群 -->
+  <circle cx="190" cy="210" r="36" fill="url(#orbGold)"/>
+  <circle cx="315" cy="118" r="52" fill="url(#orbGold)"/>
+  <circle cx="455" cy="165" r="42" fill="url(#orbBlue)"/>
+  <circle cx="520" cy="88" r="28" fill="url(#orbGold)"/>
+  <circle cx="118" cy="108" r="26" fill="url(#orbBlue)"/>
+  <circle cx="255" cy="260" r="22" fill="url(#orbBlue)"/>
+  <circle cx="395" cy="242" r="30" fill="url(#orbGold)"/>
+  <!-- 星芒细点 -->
+  <g fill="#ffffff" opacity="0.72">
+    <circle cx="84" cy="54" r="1.5"/>
+    <circle cx="164" cy="42" r="1.2"/>
+    <circle cx="268" cy="36" r="1.8"/>
+    <circle cx="408" cy="52" r="1.4"/>
+    <circle cx="574" cy="44" r="1.6"/>
+    <circle cx="592" cy="142" r="1.2"/>
+  </g>
+  <!-- 幻想世界静谧草丘地平线 -->
+  <path d="M0 322 Q180 286 360 310 T640 294 L640 360 L0 360 Z" fill="#060913"/>
+</svg>

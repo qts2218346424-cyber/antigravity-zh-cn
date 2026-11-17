@@ -75,6 +75,7 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
   const previewSrcForCharacter = (cid: PetCharacterId): string | null | undefined => {
     if (cid === 'nezuko') return assets.nezuko_chibi;
     if (cid === 'prince') return assets.little_prince;
+    if (cid === 'ushio') return assets.ushio_chibi;
     if (cid === 'tanjiro') return assets.tanjiro_water;
     if (cid === 'zenitsu') return assets.zenitsu_thunder;
     if (cid === 'inosuke') return assets.inosuke_beast;
@@ -161,7 +162,7 @@ export const PetCenterTab: React.FC<TabProps> = ({ status, onRefresh }) => {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
               <Sparkles className="h-4 w-4 text-pink-500" />
-              3D 视差全明星透明伴侣系统（6 角色生态 + 自定义立绘）
+              3D 视差全明星透明伴侣系统（7 角色生态 + 自定义立绘）
             </div>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-[11px] font-semibold ${

@@ -7,7 +7,7 @@ import {
   PET_CHARACTER_PROFILES,
   SCALE_PRESETS,
   shouldStartWindowDrag,
-} from '../petLogic';
+} from '../petLogic.ts';
 
 let passed = 0;
 let failed = 0;
@@ -39,8 +39,8 @@ function test(description: string, fn: () => void): void {
 
 console.log('=== 桌面伴侣角色与交互逻辑单元测试 ===');
 
-test('1. 6 大角色生态与动作/语录配置完整无缺失', () => {
-  assertEqual(PET_CHARACTER_ORDER.length, 6);
+test('1. 7 大角色生态与动作/语录配置完整无缺失（含冈崎汐与团子大家族）', () => {
+  assertEqual(PET_CHARACTER_ORDER.length, 7);
   assertEqual(SCALE_PRESETS.length, 3);
 
   for (const id of PET_CHARACTER_ORDER) {
@@ -52,6 +52,7 @@ test('1. 6 大角色生态与动作/语录配置完整无缺失', () => {
 
   const nezuko = PET_CHARACTER_PROFILES.nezuko;
   const prince = PET_CHARACTER_PROFILES.prince;
+  const ushio = PET_CHARACTER_PROFILES.ushio;
   assertEqual(nezuko.doubleClickAction, 'box_spin');
   assertOk(nezuko.actions.some((a) => a.action === 'pat'));
   assertOk(nezuko.actions.some((a) => a.action === 'box_spin'));
@@ -66,9 +67,15 @@ test('1. 6 大角色生态与动作/语录配置完整无缺失', () => {
   assertOk(prince.actions.some((a) => a.action === 'stars'));
   assertOk(prince.actions.some((a) => a.action === 'volcano'));
   assertOk(prince.actions.some((a) => a.action === 'walk'));
+
+  assertEqual(ushio.doubleClickAction, 'dango_song');
+  assertEqual(ushio.particleKind, 'dango');
+  assertOk(ushio.actions.some((a) => a.action === 'dango_song'));
+  assertOk(ushio.actions.some((a) => a.action === 'sunflower'));
+  assertOk(ushio.actions.some((a) => a.action === 'light_orb'));
 });
 
-test('2. 支持小王子与米豆子/祢豆子等多别名规范化映射', () => {
+test('2. 支持小王子、米豆子与冈崎汐/团子等多别名规范化映射', () => {
   assertEqual(normalizePetCharacter('米豆子'), 'nezuko');
   assertEqual(normalizePetCharacter('祢豆子'), 'nezuko');
   assertEqual(normalizePetCharacter('midouzi'), 'nezuko');
@@ -76,6 +83,11 @@ test('2. 支持小王子与米豆子/祢豆子等多别名规范化映射', () =
   assertEqual(normalizePetCharacter('小王子'), 'prince');
   assertEqual(normalizePetCharacter('little-prince'), 'prince');
   assertEqual(normalizePetCharacter('little_prince'), 'prince');
+  assertEqual(normalizePetCharacter('ushio'), 'ushio');
+  assertEqual(normalizePetCharacter('冈崎汐'), 'ushio');
+  assertEqual(normalizePetCharacter('小汐'), 'ushio');
+  assertEqual(normalizePetCharacter('clannad'), 'ushio');
+  assertEqual(normalizePetCharacter('团子'), 'ushio');
   assertEqual(normalizePetCharacter('tanjiro'), 'tanjiro');
   assertEqual(normalizePetCharacter('zenitsu'), 'zenitsu');
   assertEqual(normalizePetCharacter('inosuke'), 'inosuke');

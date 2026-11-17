@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" fill="none">
+  <!-- 右下角半透明团子大家族与飘落樱瓣暗纹 -->
+  <g opacity="0.88">
+    <ellipse cx="250" cy="202" rx="46" ry="36" fill="#f48fb1"/>
+    <ellipse cx="236" cy="188" rx="11" ry="5" fill="#ffffff" opacity="0.5"/>
+    <line x1="238" y1="192" x2="238" y2="206" stroke="#5d3a47" stroke-width="3.2" stroke-linecap="round"/>
+    <line x1="260" y1="192" x2="260" y2="206" stroke="#5d3a47" stroke-width="3.2" stroke-linecap="round"/>
+    <ellipse cx="226" cy="208" rx="6" ry="3.2" fill="#e91e63" opacity="0.35"/>
+    <ellipse cx="272" cy="208" rx="6" ry="3.2" fill="#e91e63" opacity="0.35"/>
+
+    <ellipse cx="314" cy="212" rx="34" ry="27" fill="#81d4fa"/>
+    <line x1="305" y1="205" x2="305" y2="216" stroke="#2c4a5e" stroke-width="2.8" stroke-linecap="round"/>
+    <line x1="322" y1="205" x2="322" y2="216" stroke="#2c4a5e" stroke-width="2.8" stroke-linecap="round"/>
+
+    <ellipse cx="186" cy="216" rx="32" ry="25" fill="#ffe082"/>
+    <line x1="178" y1="209" x2="178" y2="219" stroke="#5c4722" stroke-width="2.8" stroke-linecap="round"/>
+    <line x1="194" y1="209" x2="194" y2="219" stroke="#5c4722" stroke-width="2.8" stroke-linecap="round"/>
+  </g>
+  <g fill="#f06292" opacity="0.55">
+    <path d="M90 62 C98 52, 112 56, 106 68 C100 76, 86 72, 90 62 Z"/>
+    <path d="M168 96 C175 88, 188 92, 182 102 C176 109, 164 105, 168 96 Z"/>
+    <path d="M278 78 C286 68, 300 73, 293 85 C286 93, 273 88, 278 78 Z"/>
+    <path d="M132 154 C139 146, 150 150, 145 159 C140 166, 128 162, 132 154 Z"/>
+  </g>
+</svg>

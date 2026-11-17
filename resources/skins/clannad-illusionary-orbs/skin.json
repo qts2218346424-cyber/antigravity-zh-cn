@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "id": "clannad-illusionary-orbs",
+  "name": "CLANNAD · 幻想世界光玉",
+  "author": "Antigravity Studio",
+  "version": "2.0.0",
+  "description": "「承载着小镇每一份温柔心愿与奇迹的光玉，在无人苍穹下缓缓升向星海。」深宵幻想世界苍穹蓝基底搭配暖金光玉高亮、22px 液态亚克力折射与静谧星尘。",
+  "base": "dark",
+  "preview": "preview.svg",
+  "colors": {
+    "background": "#090d18",
+    "foreground": "#e8eef9",
+    "accent": "#f6c453",
+    "accentForeground": "#171206",
+    "sidebar": "#0d1324",
+    "activityBar": "#070a13",
+    "titleBar": "#080c16",
+    "statusBar": "#172542",
+    "panel": "#0c1221",
+    "border": "#1f2d4a",
+    "selection": "#f6c4532e",
+    "input": "#11192e",
+    "muted": "#8294b8"
+  },
+  "surfaces": {
+    "radius": "14px",
+    "glass_blur": 22,
+    "card_opacity": 0.74,
+    "border_glow": "rgba(246, 196, 83, 0.24)",
+    "noise_grain": 0.03,
+    "shadow_elevation": "0 22px 52px -12px rgba(4, 8, 20, 0.84)"
+  },
+  "variables": {
+    "--agzh-hikari-gold": "#f6c453",
+    "--agzh-hikari-ice": "#7dd3fc"
+  },
+  "background": [
+    {
+      "image": "hikari-orbs.svg",
+      "target": "editor",
+      "opacity": 0.2,
+      "blur": 0,
+      "position": "right bottom",
+      "size": "cover",
+      "repeat": "no-repeat"
+    }
+  ],
+  "font": {
+    "family": "Inter, 'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
+    "monoFamily": "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+    "size": 13,
+    "ligatures": true
+  },
+  "icons": {
+    "color": "#f6c453",
+    "codicons": {
+      "sparkle": "icons/hikari-orb.svg",
+      "star-full": "icons/hikari-orb.svg"
+    }
+  },
+  "css": ".monaco-workbench .part.sidebar, .monaco-workbench .part.panel { backdrop-filter: blur(var(--agzh-glass-blur, 22px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 22px)); }\n.monaco-workbench .monaco-list-row.selected { box-shadow: inset 2px 0 0 #f6c453, 0 0 18px rgba(246, 196, 83, 0.10); }",
+  "pet": {
+    "character": "ushio",
+    "accent": "#f6c453",
+    "scale": 1.0
+  }
+}

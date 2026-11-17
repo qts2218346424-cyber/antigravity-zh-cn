@@ -19,11 +19,22 @@ export type PetAction =
   | 'rose'
   | 'stars'
   | 'volcano'
+  | 'dango_song'
+  | 'sunflower'
+  | 'light_orb'
   | 'water_slash'
   | 'thunder_dash'
   | 'beast_rush';
 
-export type ParticleKind = 'petal' | 'spark' | 'star' | 'dust' | 'water' | 'lightning';
+export type ParticleKind =
+  | 'petal'
+  | 'spark'
+  | 'star'
+  | 'dust'
+  | 'water'
+  | 'lightning'
+  | 'dango'
+  | 'orb';
 
 export interface PetQuoteItem {
   zh: string;
@@ -114,6 +125,34 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
       { action: 'stars', label: '流星', bubble: '仰望 B612 夜空双子流星划过 🌠', toneClass: 'hover:bg-indigo-500/25 text-indigo-200' },
       { action: 'volcano', label: '火山', bubble: '认真清扫 B612 星球的小火山烟尘 🌋', toneClass: 'hover:bg-orange-500/25 text-orange-200' },
       { action: 'walk', label: '漫步', bubble: '金黄丝巾随风飘扬，踏着星尘轻盈漫步', toneClass: 'hover:bg-purple-500/25 text-purple-200' },
+    ],
+  },
+  ushio: {
+    id: 'ushio',
+    name: '冈崎汐 · 团子大家族版',
+    shortName: '冈崎汐',
+    badge: 'CLANNAD · 光玉花田',
+    accent: '#f59e0b',
+    secondaryAccent: '#f472b6',
+    particleKind: 'dango',
+    description:
+      '《CLANNAD》温暖治愈女儿小汐怀抱樱粉团子大家族：双呆毛呼吸眨眼、八音盒《团子大家族》叠叠乐、向日葵花田寻宝、小镇愿望光玉升空与团子堆甜睡。',
+    quotes: [
+      { zh: '团子，团子，团子，团子，团子大家族 ♪', sub: '软乎乎的团子一直陪在身边哦' },
+      { zh: '在金灿灿的向日葵花田里，找到了爸爸送的第一个宝物 🌻', sub: '最重要的回忆永远闪闪发光' },
+      { zh: '爸爸说，能哭的地方只有厕所，和爸爸的怀里…', sub: '今天也要带着温暖的勇气出发' },
+      { zh: '快看呀，夜空升起了好多温柔的光玉，愿望一定会实现的 ✨' },
+      { zh: '小汐和粉色大团子，今天也会乖巧守护你的每一行代码 🍡' },
+    ],
+    doubleClickAction: 'dango_song',
+    doubleClickBubble: '八音盒奏响《团子大家族》，三色小团子开心叠叠乐 ♪',
+    actions: [
+      { action: 'pat', label: '摸呆毛', bubble: '轻抚小汐头顶的小呆毛 ~ 团子叠叠乐开心晃动 🍡', toneClass: 'hover:bg-pink-500/25 text-pink-200' },
+      { action: 'dango_song', label: '团子歌', bubble: '团子、团子、团子大家族 ~ 温暖八音盒响起 ♪', toneClass: 'hover:bg-amber-500/25 text-amber-200' },
+      { action: 'sunflower', label: '花田', bubble: '金黄向日葵花田盛开，举起灿烂向日葵与小机器人 🌻', toneClass: 'hover:bg-yellow-500/25 text-yellow-200' },
+      { action: 'light_orb', label: '光玉', bubble: '小镇的愿望光玉在天穹温柔飘升，守护奇迹 ✨', toneClass: 'hover:bg-sky-500/25 text-sky-200' },
+      { action: 'dash', label: '小跑', bubble: '紧紧抱着粉团子哒哒哒欢快小跑！', toneClass: 'hover:bg-emerald-500/25 text-emerald-200' },
+      { action: 'feed', label: '甜团子', bubble: '一口吃掉甜甜糯米团（躲开早苗阿姨的特制面包啦~）🍡', toneClass: 'hover:bg-rose-500/25 text-rose-200' },
     ],
   },
   tanjiro: {
@@ -227,6 +266,7 @@ export const PET_CHARACTER_PROFILES: Record<PetCharacterId, PetCharacterProfile>
 export const PET_CHARACTER_ORDER: PetCharacterId[] = [
   'nezuko',
   'prince',
+  'ushio',
   'tanjiro',
   'zenitsu',
   'inosuke',
@@ -243,6 +283,17 @@ export function normalizePetCharacter(raw?: string | null): PetCharacterId {
     cleaned === '小王子'
   ) {
     return 'prince';
+  }
+  if (
+    cleaned === 'ushio' ||
+    cleaned === 'clannad' ||
+    cleaned === 'dango' ||
+    cleaned === '冈崎汐' ||
+    cleaned === '小汐' ||
+    cleaned === '汐' ||
+    cleaned === '团子'
+  ) {
+    return 'ushio';
   }
   if (cleaned === 'tanjiro') return 'tanjiro';
   if (cleaned === 'zenitsu') return 'zenitsu';

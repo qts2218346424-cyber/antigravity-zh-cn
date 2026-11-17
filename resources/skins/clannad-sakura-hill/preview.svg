@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffeef5"/>
+      <stop offset="55%" stop-color="#fff7fa"/>
+      <stop offset="100%" stop-color="#fde4ee"/>
+    </linearGradient>
+    <linearGradient id="sunbeam" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#ffd6e5" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7d4e1"/>
+      <stop offset="100%" stop-color="#eab4c8"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#sky)"/>
+  <polygon points="80,0 260,0 520,360 260,360" fill="url(#sunbeam)"/>
+  <circle cx="95" cy="65" r="115" fill="#fbcfe0" opacity="0.72"/>
+  <circle cx="185" cy="40" r="88" fill="#f9a8c9" opacity="0.48"/>
+  <circle cx="565" cy="70" r="105" fill="#fbcfe0" opacity="0.65"/>
+  <path d="M0 295 Q240 245 640 195 L640 360 L0 360 Z" fill="url(#hill)"/>
+  <path d="M0 325 L640 218 L640 258 L0 360 Z" fill="#fff9fb" opacity="0.82"/>
+  <!-- 团子大家族三兄弟 -->
+  <g transform="translate(405, 196)">
+    <ellipse cx="42" cy="40" rx="34" ry="27" fill="#f48fb1"/>
+    <ellipse cx="32" cy="31" rx="8" ry="4" fill="#ffffff" opacity="0.45"/>
+    <line x1="33" y1="34" x2="33" y2="43" stroke="#5d3a47" stroke-width="2.6" stroke-linecap="round"/>
+    <line x1="49" y1="34" x2="49" y2="43" stroke="#5d3a47" stroke-width="2.6" stroke-linecap="round"/>
+    <ellipse cx="25" cy="44" rx="4.5" ry="2.5" fill="#ec407a" opacity="0.45"/>
+    <ellipse cx="57" cy="44" rx="4.5" ry="2.5" fill="#ec407a" opacity="0.45"/>
+  </g>
+  <g transform="translate(468, 202)">
+    <ellipse cx="36" cy="34" rx="29" ry="23" fill="#81d4fa"/>
+    <ellipse cx="27" cy="26" rx="7" ry="3.5" fill="#ffffff" opacity="0.5"/>
+    <line x1="29" y1="29" x2="29" y2="37" stroke="#2c4a5e" stroke-width="2.4" stroke-linecap="round"/>
+    <line x1="43" y1="29" x2="43" y2="37" stroke="#2c4a5e" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(352, 212)">
+    <ellipse cx="30" cy="28" rx="25" ry="20" fill="#ffe082"/>
+    <ellipse cx="22" cy="21" rx="6" ry="3" fill="#ffffff" opacity="0.55"/>
+    <line x1="24" y1="24" x2="24" y2="31" stroke="#5c4722" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="36" y1="24" x2="36" y2="31" stroke="#5c4722" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+  <!-- 飘舞樱瓣 -->
+  <g fill="#f06292" opacity="0.65">
+    <ellipse cx="220" cy="118" rx="8" ry="4.5" transform="rotate(-28 220 118)"/>
+    <ellipse cx="295" cy="86" rx="6.5" ry="3.5" transform="rotate(18 295 86)"/>
+    <ellipse cx="360" cy="142" rx="9" ry="4.8" transform="rotate(-40 360 142)"/>
+    <ellipse cx="475" cy="112" rx="7" ry="4" transform="rotate(24 475 112)"/>
+    <ellipse cx="150" cy="195" rx="7.5" ry="4" transform="rotate(-15 150 195)"/>
+  </g>
+</svg>

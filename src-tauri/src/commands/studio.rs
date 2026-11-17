@@ -328,6 +328,7 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
             "desktop-zh-CN.json",
             "runtime-zh.js",
             "skin-runtime.js",
+            "clannad-splash-runtime.js",
         ];
         let mut missing = Vec::new();
         let mut cn_entries = 0usize;
@@ -349,7 +350,11 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
             passed: missing.is_empty() && cn_entries > 100,
             duration_ms: t1.elapsed().as_millis() as u64,
             detail: if missing.is_empty() {
-                format!("7 项核心资源完好，简体主词典已载入 {} 条精准词条", cn_entries)
+                format!(
+                    "{} 项核心资源完好，简体主词典已载入 {} 条精准词条",
+                    dict_files.len(),
+                    cn_entries
+                )
             } else {
                 format!("缺失资源文件: {}", missing.join(", "))
             },
@@ -397,6 +402,12 @@ pub async fn studio_run_diagnostics(app: tauri::AppHandle) -> Result<StudioDiagn
             assets.prince_fox.is_some(),
             assets.prince_rose_pose.is_some(),
             assets.prince_sleep.is_some(),
+            assets.ushio_chibi.is_some(),
+            assets.ushio_blink.is_some(),
+            assets.ushio_happy.is_some(),
+            assets.ushio_walk.is_some(),
+            assets.ushio_sunflower.is_some(),
+            assets.ushio_sleep.is_some(),
             assets.tanjiro_water.is_some(),
             assets.zenitsu_thunder.is_some(),
             assets.inosuke_beast.is_some(),

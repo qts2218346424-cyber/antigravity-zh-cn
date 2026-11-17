@@ -704,6 +704,82 @@
   filter: drop-shadow(0 0 18px rgba(96, 165, 250, 0.75));
 }
 
+/* ---------------- 冈崎汐 & 团子大家族专属：Q弹团子律动 / 向日葵花田 / 愿望光玉 ---------------- */
+@keyframes ushioDangoBounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.045, 0.955) rotate(-3deg);
+  }
+  25% {
+    transform: translateY(-11px) scale(0.96, 1.045) rotate(0deg);
+  }
+  50% {
+    transform: translateY(0) scale(1.045, 0.955) rotate(3deg);
+  }
+  75% {
+    transform: translateY(-11px) scale(0.96, 1.045) rotate(0deg);
+  }
+}
+
+.ushio-dango-sway {
+  animation: ushioDangoBounce 0.88s infinite ease-in-out !important;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 12px 24px rgba(244, 114, 182, 0.42));
+}
+
+@keyframes ushioSunflowerGlow {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 10px 20px rgba(245, 158, 11, 0.42));
+  }
+  50% {
+    transform: translateY(-5px) scale(1.03);
+    filter: drop-shadow(0 14px 28px rgba(250, 204, 21, 0.68));
+  }
+}
+
+.ushio-sunflower-pose {
+  animation: ushioSunflowerGlow 2.1s infinite ease-in-out !important;
+  transform-origin: 50% 100%;
+}
+
+@keyframes clannadLightOrbRise {
+  0% {
+    transform: translate3d(0, 22px, 0) scale(0.55);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.92;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(var(--orb-dx, 14px), -88px, 0) scale(1.15);
+    opacity: 0;
+  }
+}
+
+.clannad-light-orb {
+  position: absolute;
+  bottom: 24px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(254, 240, 138, 0.85) 42%,
+    rgba(186, 230, 253, 0.35) 72%,
+    transparent 100%
+  );
+  box-shadow: 0 0 16px rgba(254, 243, 199, 0.9), 0 0 28px rgba(56, 189, 248, 0.45);
+  animation: clannadLightOrbRise 2.6s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 8;
+}
+
 /* ---------------- 尊重系统减弱动态效果偏好 (WCAG 2.2.2 / Reduced Motion) ---------------- */
 @media (prefers-reduced-motion: reduce) {
   .pet-spring-transform {

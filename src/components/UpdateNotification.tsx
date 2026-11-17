@@ -192,16 +192,9 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onClose 
                     : t('update_notification.title')}
                 </h3>
                 {updateInfo && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                      v{updateInfo.latest_version}
-                    </p>
-                    {updateInfo.channel === 'beta' && (
-                      <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                        Beta
-                      </span>
-                    )}
-                  </div>
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mt-0.5">
+                    v{updateInfo.latest_version}
+                  </p>
                 )}
               </div>
             </div>

@@ -62,7 +62,7 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
       const res = await studioService.applyL10n({
         install_dir: installDir || null,
         lang,
-        character: 'none',
+        character: status.splash_character || 'none',
         enable_pet: false,
         enable_skin: enableSkin,
       });

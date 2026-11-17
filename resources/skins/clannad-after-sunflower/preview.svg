@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <defs>
+    <linearGradient id="summerSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="52%" stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#fef9c3"/>
+    </linearGradient>
+    <radialGradient id="sunFlare" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="45%" stop-color="#fef08a" stop-opacity="0.72"/>
+      <stop offset="100%" stop-color="#fde047" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#summerSky)"/>
+  <circle cx="520" cy="72" r="96" fill="url(#sunFlare)"/>
+  <!-- 夏云 -->
+  <g fill="#ffffff" opacity="0.82">
+    <ellipse cx="165" cy="112" rx="68" ry="26"/>
+    <ellipse cx="205" cy="100" rx="52" ry="30"/>
+    <ellipse cx="122" cy="116" rx="42" ry="20"/>
+  </g>
+  <!-- 向日葵金色花田山坡 -->
+  <path d="M0 250 Q220 218 430 242 T640 226 L640 360 L0 360 Z" fill="#facc15"/>
+  <path d="M0 282 Q240 252 640 268 L640 360 L0 360 Z" fill="#eab308"/>
+  <!-- 前景盛放向日葵与草帽剪影 -->
+  <g transform="translate(456, 178)">
+    <line x1="48" y1="58" x2="48" y2="170" stroke="#4d7c0f" stroke-width="7" stroke-linecap="round"/>
+    <g fill="#fbbf24">
+      <ellipse cx="48" cy="20" rx="10" ry="22"/>
+      <ellipse cx="48" cy="84" rx="10" ry="22"/>
+      <ellipse cx="16" cy="52" rx="22" ry="10"/>
+      <ellipse cx="80" cy="52" rx="22" ry="10"/>
+      <ellipse cx="25" cy="29" rx="18" ry="9" transform="rotate(45 25 29)"/>
+      <ellipse cx="71" cy="75" rx="18" ry="9" transform="rotate(45 71 75)"/>
+      <ellipse cx="71" cy="29" rx="18" ry="9" transform="rotate(-45 71 29)"/>
+      <ellipse cx="25" cy="75" rx="18" ry="9" transform="rotate(-45 25 75)"/>
+    </g>
+    <circle cx="48" cy="52" r="19" fill="#78350f"/>
+    <circle cx="43" cy="47" r="4" fill="#a16207" opacity="0.6"/>
+  </g>
+  <!-- 汐的夏日草帽小意象 -->
+  <g transform="translate(115, 255)">
+    <ellipse cx="52" cy="30" rx="46" ry="11" fill="#fde68a"/>
+    <path d="M24 28 Q52 2 80 28 Z" fill="#fcd34d"/>
+    <path d="M25 26 Q52 31 79 26" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>
+  </g>
+</svg>

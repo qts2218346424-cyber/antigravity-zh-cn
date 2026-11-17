@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import {
+  Film,
   FlaskConical,
   Heart,
   Languages,
@@ -18,8 +19,9 @@ import { DiagnosticsTab } from './DiagnosticsTab';
 import { L10nTab } from './L10nTab';
 import { PetCenterTab, WatchdogTab } from './PetAndWatchdogTab';
 import { SkinGalleryTab } from './SkinGalleryTab';
+import { SplashTab } from './SplashTab';
 
-type StudioTabKey = 'skins' | 'customizer' | 'l10n' | 'pet' | 'watchdog' | 'diagnostics';
+type StudioTabKey = 'skins' | 'splash' | 'customizer' | 'l10n' | 'pet' | 'watchdog' | 'diagnostics';
 
 const EMPTY_STATUS: StudioStatus = {
   install_dir: null,
@@ -107,6 +109,7 @@ const Studio: React.FC = () => {
     icon: React.ComponentType<{ className?: string }>;
   }> = [
     { key: 'skins', label: '光学材质画廊', icon: Sparkles },
+    { key: 'splash', label: '启动动画剧场', icon: Film },
     { key: 'customizer', label: '色彩与材质实验室', icon: Palette },
     { key: 'l10n', label: '全量汉化引擎', icon: Languages },
     { key: 'pet', label: '全明星桌面伴侣', icon: Heart },
@@ -280,6 +283,7 @@ const Studio: React.FC = () => {
             }}
           />
         )}
+        {activeTab === 'splash' && <SplashTab status={status} onRefresh={refreshAll} />}
         {activeTab === 'customizer' && (
           <CustomizerTab
             skins={skins}

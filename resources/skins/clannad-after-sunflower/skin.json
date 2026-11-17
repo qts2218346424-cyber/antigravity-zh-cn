@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "id": "clannad-after-sunflower",
+  "name": "CLANNAD · 汐与晴空花田",
+  "author": "Antigravity Studio",
+  "version": "2.0.0",
+  "description": "致敬《CLANNAD ~AFTER STORY~》无边无际的黄金向日葵花海与冈崎汐的草帽晴日：温暖麦穗米白阅读基底、向日葵琥珀金高光与盛夏晴空蓝状态栏。",
+  "base": "light",
+  "preview": "preview.svg",
+  "colors": {
+    "background": "#fdfbf4",
+    "foreground": "#332a1d",
+    "accent": "#e08e14",
+    "accentForeground": "#ffffff",
+    "sidebar": "#f8f3e3",
+    "activityBar": "#f1ead3",
+    "titleBar": "#f3edd8",
+    "statusBar": "#0284c7",
+    "panel": "#fbf7ea",
+    "border": "#e8dec3",
+    "selection": "#fbbf2442",
+    "input": "#ffffff",
+    "muted": "#8a7a5f"
+  },
+  "surfaces": {
+    "radius": "15px",
+    "glass_blur": 14,
+    "card_opacity": 0.88,
+    "border_glow": "rgba(245, 158, 11, 0.25)",
+    "noise_grain": 0.018,
+    "shadow_elevation": "0 16px 36px -12px rgba(217, 119, 6, 0.18)"
+  },
+  "variables": {
+    "--agzh-sunflower-gold": "#f59e0b",
+    "--agzh-summer-sky": "#0284c7"
+  },
+  "background": [
+    {
+      "image": "sunflower-breeze.svg",
+      "target": "editor",
+      "opacity": 0.15,
+      "blur": 0,
+      "position": "right bottom",
+      "size": "340px",
+      "repeat": "no-repeat"
+    }
+  ],
+  "font": {
+    "family": "'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
+    "monoFamily": "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+    "size": 13,
+    "ligatures": true
+  },
+  "icons": {
+    "color": "#d97706",
+    "codicons": {
+      "sun": "icons/sunflower.svg",
+      "star-full": "icons/sunflower.svg"
+    }
+  },
+  "css": ".monaco-workbench .part.statusbar { background-image: linear-gradient(90deg, #0284c7 0%, #0ea5e9 60%, #38bdf8 100%) !important; color: #ffffff !important; }\n.monaco-workbench .monaco-list-row.selected { box-shadow: inset 3px 0 0 #e08e14; }",
+  "pet": {
+    "character": "ushio",
+    "accent": "#f59e0b",
+    "scale": 1.0
+  }
+}

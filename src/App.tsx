@@ -9,6 +9,7 @@ import PetWindowView from './components/pet/PetWindowView';
 import { UpdateNotification } from './components/UpdateNotification';
 import SuggestionDeleteThinkingModal from './components/common/SuggestionDeleteThinkingModal';
 import DebugConsole from './components/debug/DebugConsole';
+import { ClannadBootOverlay } from './components/Studio/ClannadBootOverlay';
 import { useConfigStore, normalizeLanguageCode } from './stores/useConfigStore';
 import { useAccountStore } from './stores/useAccountStore';
 import { useViewStore } from './stores/useViewStore';
@@ -419,6 +420,7 @@ function App() {
     <AdminAuthGuard>
       <ThemeManager />
       <ZoomManager />
+      <ClannadBootOverlay />
       <DebugConsole />
       <SuggestionDeleteThinkingModal />
       {showUpdateNotification && (

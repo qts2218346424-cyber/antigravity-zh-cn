@@ -1354,15 +1354,7 @@ pub async fn check_native_update<R: tauri::Runtime>(
     let target_endpoint = if let Some(ep) = endpoint.filter(|s| !s.trim().is_empty()) {
         ep
     } else {
-        let settings = crate::modules::update_checker::load_update_settings().unwrap_or_default();
-        match settings.update_channel {
-            crate::modules::update_checker::UpdateChannel::Beta => {
-                crate::modules::update_checker::PREVIEW_UPDATER_JSON_URL.to_string()
-            }
-            crate::modules::update_checker::UpdateChannel::Stable => {
-                crate::modules::update_checker::STABLE_UPDATER_JSON_URL.to_string()
-            }
-        }
+        crate::modules::update_checker::STABLE_UPDATER_JSON_URL.to_string()
     };
 
     crate::modules::logger::log_info(&format!("原生更新器准备检查目标地址: {}", target_endpoint));

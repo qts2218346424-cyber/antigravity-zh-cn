@@ -1,5 +1,5 @@
 use regex::Regex;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use sysinfo::{Pid, System};
@@ -539,10 +539,32 @@ pub fn apply_l10n_patch(
         patched_files.push("dist/updater.js".to_string());
     }
 
-    // 4. 清理旧版本残留的开机动画视频文件，保持官方原版 dist/loadingOverlay.js 极速进入工作台
+    // 4. 清理旧版本残留的开机动画视频文件；若用户显式选择了《CLANNAD》客户端序幕则按需注入轻量纯矢量遮罩
     let dst_video = asar_path.parent().unwrap_or(&install_dir).join("splash_video.mp4");
     if dst_video.is_file() {
         let _ = std::fs::remove_file(&dst_video);
+    }
+
+    if character.starts_with("clannad-") {
+        if read_asar_file_content(&work_bytes, "dist/loadingOverlay.js").is_ok() {
+            let pkg_version = read_asar_file_content(&work_bytes, "package.json")
+                .ok()
+                .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+                .and_then(|v| v.get("version").and_then(|s| s.as_str()).map(|s| s.to_string()))
+                .unwrap_or_else(|| "latest".to_string());
+            if let Some(overlay_js) = generate_clannad_loading_overlay(character, &pkg_version) {
+                replace_asar_file_content(
+                    &mut work_bytes,
+                    "dist/loadingOverlay.js",
+                    overlay_js.as_bytes(),
+                )?;
+                patched_files.push("dist/loadingOverlay.js".to_string());
+            } else {
+                warnings.push("未找到 clannad-splash-runtime.js，已保留原版启动流程".to_string());
+            }
+        } else {
+            warnings.push("当前客户端不含 dist/loadingOverlay.js，已跳过启动序幕注入".to_string());
+        }
     }
 
     // 5. dist/main.js
@@ -763,6 +785,238 @@ pub fn localize_all_skills() -> SkillLocalizeResult {
         skipped,
         details,
     }
+}
+
+/// 生成可选的《CLANNAD》纯矢量 60fps 客户端启动序幕模块（内置 getHubWebContents 就绪感知与 4.8s 硬超时防死锁保护）
+fn generate_clannad_loading_overlay(character: &str, version_str: &str) -> Option<String> {
+    let runtime_path = resources_dir().join("clannad-splash-runtime.js");
+    let engine_js = std::fs::read_to_string(&runtime_path).ok()?;
+    let safe_engine = engine_js.replace("</script>", "<\\/script>");
+
+    let (title, subtitle, quote, accent) = match character {
+        "clannad-sakura" => (
+            "CLANNAD · 光坂坡道与团子",
+            "SAKURA SLOPE // 漫长坡道的起点",
+            "「我们开始一起攀登，这长长的、长长的樱花坡道」",
+            "#e57399",
+        ),
+        "clannad-sunflower" => (
+            "CLANNAD · 汐与晴空花田",
+            "SUNFLOWER FIELD // 晴空下的约定",
+            "「在阳光洒满的黄金向日葵花田之后，去迎接崭新的每一天吧」",
+            "#e08e14",
+        ),
+        "clannad-starfish" => (
+            "CLANNAD · 海星与提琴恋曲",
+            "TWILIGHT LIBRARY // 弦音与海星",
+            "「请收下这枚小小的海星，愿温柔的旋律陪伴每一次思考」",
+            "#c084fc",
+        ),
+        _ => (
+            "CLANNAD · 幻想世界光玉",
+            "ILLUSIONARY WORLD // 小镇的心愿",
+            "「这座小镇，承载着无数温柔的心愿与奇迹 —— 欢迎回到工作台」",
+            "#f6c453",
+        ),
+    };
+
+    let cfg_json = serde_json::to_string(&json!({
+        "theme": character,
+        "title": title,
+        "subtitle": subtitle,
+        "quote": quote,
+        "accent": accent,
+        "version": version_str,
+    }))
+    .unwrap_or_else(|_| "{}".to_string());
+
+    let html = r#"<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Antigravity Studio</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #070b14; transition: opacity 0.36s ease, transform 0.36s ease; }
+</style>
+</head>
+<body>
+  <div id="clannad-splash-root"></div>
+  <script>__ENGINE_JS__</script>
+  <script>
+    (function () {
+      var cfg = __CFG_JSON__;
+      cfg.onSkip = function () { document.title = "__AG_SPLASH_SKIP__"; };
+      if (window.ClannadSplashEngine) {
+        window.ClannadSplashEngine.mount(document.getElementById("clannad-splash-root"), cfg);
+      }
+    })();
+  </script>
+</body>
+</html>"#
+        .replace("__ENGINE_JS__", &safe_engine)
+        .replace("__CFG_JSON__", &cfg_json);
+
+    let html_literal = serde_json::to_string(&html).unwrap_or_else(|_| "\"\"".to_string());
+
+    let overlay_template = r#"__PATCH_MARKER__
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.attachLoadingOverlay = attachLoadingOverlay;
+const electron_1 = require("electron");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+
+let utilsMod = null;
+try { utilsMod = require("./utils"); } catch (_) {}
+
+const SPLASH_HTML_TEMPLATE = __HTML_LITERAL__;
+
+function attachLoadingOverlay(win, _foregroundColor, _backgroundColor) {
+  let view = null;
+  try {
+    view = new electron_1.WebContentsView({
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    });
+  } catch (_) {
+    return;
+  }
+
+  const tmpHtml = path.join(
+    os.tmpdir(),
+    "ag_clannad_splash_" + process.pid + "_" + Date.now() + ".html"
+  );
+  let usingTmpFile = false;
+  try {
+    fs.writeFileSync(tmpHtml, SPLASH_HTML_TEMPLATE, "utf8");
+    usingTmpFile = true;
+    void view.webContents.loadFile(tmpHtml);
+  } catch (_) {
+    void view.webContents.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(SPLASH_HTML_TEMPLATE));
+  }
+
+  win.contentView.addChildView(view);
+  const updateBounds = () => {
+    if (win.isDestroyed?.() || view.webContents?.isDestroyed?.()) return;
+    const [width, height] = win.getContentSize();
+    view.setBounds({ x: 0, y: 0, width, height });
+  };
+  updateBounds();
+  win.on("resize", updateBounds);
+
+  const hubContents =
+    (utilsMod && typeof utilsMod.getHubWebContents === "function"
+      ? utilsMod.getHubWebContents(win)
+      : null) ??
+    win.webContents ??
+    win.contentView?.children?.find?.((c) => c && c !== view && c.webContents)?.webContents;
+
+  let removed = false;
+  let fading = false;
+  let minTimer = null;
+  let maxTimer = null;
+  let pollTimer = null;
+  let fadeTimer = null;
+  const start = Date.now();
+  const MIN_MS = 1800;
+  const MAX_MS = 4800;
+  let loaded = Boolean(
+    hubContents && typeof hubContents.isLoading === "function" && !hubContents.isLoading()
+  );
+
+  const cleanupNow = () => {
+    if (removed) return;
+    removed = true;
+    if (minTimer) clearTimeout(minTimer);
+    if (maxTimer) clearTimeout(maxTimer);
+    if (pollTimer) clearTimeout(pollTimer);
+    if (fadeTimer) clearTimeout(fadeTimer);
+    try { hubContents?.off?.("did-finish-load", onHubLoaded); } catch (_) {}
+    try {
+      if (!win.isDestroyed?.()) {
+        win.off?.("resize", updateBounds);
+        win.contentView.removeChildView(view);
+      }
+    } catch (_) {}
+    try {
+      if (!view.webContents?.isDestroyed?.()) {
+        view.webContents.close?.();
+      }
+    } catch (_) {}
+    if (usingTmpFile) {
+      try { fs.unlinkSync(tmpHtml); } catch (_) {}
+    }
+  };
+
+  const dismiss = async (forceImmediate) => {
+    if (removed || fading) return;
+    const elapsed = Date.now() - start;
+    if (!forceImmediate && elapsed < MIN_MS) {
+      if (minTimer) clearTimeout(minTimer);
+      minTimer = setTimeout(() => void dismiss(false), MIN_MS - elapsed);
+      return;
+    }
+    let ready = loaded;
+    if (!ready && hubContents && typeof hubContents.isLoading === "function" && !hubContents.isLoading()) {
+      ready = true;
+      loaded = true;
+    }
+    if (!forceImmediate && !ready && elapsed < MAX_MS) {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(() => void dismiss(false), 180);
+      return;
+    }
+    fading = true;
+    if (fadeTimer) clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(cleanupNow, 380);
+    try {
+      if (!view.webContents?.isDestroyed?.()) {
+        void view.webContents
+          .executeJavaScript("if(document.body){document.body.style.opacity='0';document.body.style.transform='scale(1.015)';}")
+          .catch(() => {});
+      }
+    } catch (_) {}
+  };
+
+  const onHubLoaded = () => {
+    loaded = true;
+    if (Date.now() - start >= MIN_MS) {
+      void dismiss(false);
+    }
+  };
+
+  if (!loaded && hubContents && typeof hubContents.once === "function") {
+    hubContents.once("did-finish-load", onHubLoaded);
+  }
+
+  try {
+    view.webContents.on("page-title-updated", (_ev, pageTitle) => {
+      if (pageTitle === "__AG_SPLASH_SKIP__") {
+        void dismiss(true);
+      }
+    });
+    view.webContents.on("before-input-event", (_ev, input) => {
+      if (
+        input &&
+        input.type === "keyDown" &&
+        (input.key === "Escape" || input.key === " " || input.key === "Enter")
+      ) {
+        void dismiss(true);
+      }
+    });
+  } catch (_) {}
+
+  win.once?.("closed", cleanupNow);
+  minTimer = setTimeout(() => void dismiss(false), MIN_MS);
+  maxTimer = setTimeout(() => void dismiss(true), MAX_MS);
+}
+"#;
+
+    Some(
+        overlay_template
+            .replace("__PATCH_MARKER__", PATCH_MARKER)
+            .replace("__HTML_LITERAL__", &html_literal),
+    )
 }
 
 /// 自动在 `~/.gemini/GEMINI.md` 注入全局中文深度思考规范

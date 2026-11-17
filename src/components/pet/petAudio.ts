@@ -139,6 +139,29 @@ class PetAudioEngine {
     this.playTone(783.99, 659.25, 0.18, 'sine', 0.06, 0);
     this.playTone(659.25, 523.25, 0.24, 'sine', 0.055, 0.16);
   }
+
+  /** 冈崎汐 ·《团子大家族》八音盒晶莹五音前奏微旋律 (6-5-6-3-4) */
+  playDangoMelody() {
+    const notes = [
+      { f: 880.0, d: 0.16, t: 0.0 },
+      { f: 783.99, d: 0.16, t: 0.15 },
+      { f: 880.0, d: 0.18, t: 0.3 },
+      { f: 659.25, d: 0.24, t: 0.47 },
+      { f: 698.46, d: 0.32, t: 0.7 },
+    ];
+    for (const n of notes) {
+      this.playTone(n.f, n.f * 1.002, n.d, 'sine', 0.068, n.t);
+      this.playTone(n.f * 2, n.f * 2, n.d * 0.75, 'triangle', 0.022, n.t);
+    }
+  }
+
+  /** CLANNAD 小镇愿望光玉空灵水晶琶音 */
+  playLightOrb() {
+    this.playTone(1046.5, 1046.5, 0.28, 'sine', 0.05, 0);
+    this.playTone(1318.51, 1318.51, 0.3, 'sine', 0.05, 0.09);
+    this.playTone(1567.98, 1567.98, 0.34, 'sine', 0.048, 0.18);
+    this.playTone(1975.53, 1975.53, 0.42, 'triangle', 0.038, 0.27);
+  }
 }
 
 export const petAudio = new PetAudioEngine();

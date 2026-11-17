@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "id": "clannad-sakura-hill",
+  "name": "CLANNAD · 光坂坡道与团子",
+  "author": "Antigravity Studio",
+  "version": "2.0.0",
+  "description": "「我们开始一起攀登这长长的坡道。」灵感源自《CLANNAD》春季樱花坡道与古河渚挚爱的团子大家族：晨曦奶油樱白护眼底色、柔粉樱花缎带状态栏与右下角微笑团子三兄弟暗纹。",
+  "base": "light",
+  "preview": "preview.svg",
+  "colors": {
+    "background": "#fdf8fa",
+    "foreground": "#3b2c35",
+    "accent": "#e57399",
+    "accentForeground": "#ffffff",
+    "sidebar": "#f9eff3",
+    "activityBar": "#f3e2e9",
+    "titleBar": "#f5e6ec",
+    "statusBar": "#d96b90",
+    "panel": "#fcf3f7",
+    "border": "#edd0dd",
+    "selection": "#f48fb145",
+    "input": "#ffffff",
+    "muted": "#947684"
+  },
+  "surfaces": {
+    "radius": "16px",
+    "glass_blur": 16,
+    "card_opacity": 0.86,
+    "border_glow": "rgba(229, 115, 153, 0.24)",
+    "noise_grain": 0.015,
+    "shadow_elevation": "0 16px 38px -12px rgba(217, 107, 144, 0.20)"
+  },
+  "variables": {
+    "--agzh-clannad-dango-pink": "#f48fb1",
+    "--agzh-clannad-dango-blue": "#81d4fa",
+    "--agzh-clannad-dango-amber": "#ffe082"
+  },
+  "background": [
+    {
+      "image": "dango-sakura.svg",
+      "target": "editor",
+      "opacity": 0.16,
+      "blur": 0,
+      "position": "right bottom",
+      "size": "320px",
+      "repeat": "no-repeat"
+    }
+  ],
+  "font": {
+    "family": "'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
+    "monoFamily": "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+    "size": 13,
+    "ligatures": true
+  },
+  "icons": {
+    "color": "#d85a84",
+    "codicons": {
+      "heart": "icons/dango.svg",
+      "star-full": "icons/dango.svg"
+    }
+  },
+  "css": ".monaco-workbench .part.statusbar { border-top: 1px solid #edd0dd; background-image: linear-gradient(90deg, #d96b90 0%, #e57399 55%, #ec87a8 100%) !important; }\n.monaco-workbench .monaco-list-row.selected { box-shadow: inset 3px 0 0 #e57399; }",
+  "pet": {
+    "character": "ushio",
+    "filter": "saturate(1.06) brightness(1.03)",
+    "accent": "#e57399",
+    "scale": 1.0
+  }
+}

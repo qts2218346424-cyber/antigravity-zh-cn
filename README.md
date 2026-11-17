@@ -27,10 +27,10 @@
 
 | 功能板块 | 架构设计与关键特性 |
 | :--- | :--- |
-| 🎨 **高定光学材质引擎** | 内置 6 款精选主题与 `surfaces` 物理表面参数编译器（圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`），支持画廊微缩 IDE 实时预览与 **Color DNA** 在线调色实验室。 |
+| 🎨 **高定光学材质引擎** | 内置 10 款精选主题（含《CLANNAD》四重奏皮肤）与 `surfaces` 物理表面参数编译器（圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`），支持画廊微缩 IDE 实时预览与 **Color DNA** 在线调色实验室。 |
 | ⚡ **双端同步无损注入** | 主程序 (`Antigravity` 客户端) 通过 `BaseWindow + WebContentsView` 全子视图监听器与实时 CSS 变量引擎驱动热重载；`Antigravity IDE` 同步编译至 `workbench.desktop.main.css` 与 `jetskiMain.tailwind.css`，彻底免除主进程 `FSWatcher EPERM` 崩溃与旧补丁污染。 |
 | 🈶 **全量双层汉化系统** | 原生 Rust 实现 `app.asar` 无损解包与 SHA-256 Integrity 重建，支持 `zh-CN` / `zh-TW` / `zh-HK`，覆盖 Electron 主进程菜单/托盘与渲染层全部 UI；保留官方原版极速启动流程，精确避让代码区、终端与模型正文，并内置 **老版本内置宠物代码 (`__AGY_NEZUKO_PET_INITIALIZED__`) 自动侦测与剥离清理**。 |
-| 🪐 **独立灵动桌面伴侣** | 从客户端进程完全剥离，运行于独立透明置顶窗口（`index.html?pet=1`），搭载多关节骨骼动画、物理缓动与 3D 视差效果、灵动岛状态玻璃坞、毫秒级 LRC 二分时间轴黑胶歌词舱、低配额预警及配额舱内一键刷新/切号；内置 **祢豆子、小王子、炭治郎、善逸、伊之助** 5 大生态角色，并支持 **自定义本地 PNG/WebP/GIF/SVG 立绘热导入**。 |
+| 🪐 **独立灵动桌面伴侣** | 从客户端进程完全剥离，运行于独立透明置顶窗口（`index.html?pet=1`），搭载高精零白边多姿态透明原画、2.5D 弹性动力学与 3D 视差效果、灵动岛状态玻璃坞、毫秒级 LRC 二分时间轴黑胶歌词舱、低配额预警及配额舱内一键刷新/切号；内置 **祢豆子（米豆子）、小王子、冈崎汐（团子大家族）、炭治郎、善逸、伊之助** 6 大动漫角色，并支持 **自定义本地 PNG/WebP/GIF/SVG 立绘热导入**。 |
 | 🧪 **全链路自检与测试台** | 内置可视化 **全链路测试台 (`DiagnosticsTab`)** 一键巡检后端词典、光学材质编译器、伴侣骨骼缓存、客户端路径探测与本地 API 反代连通性，同时提供伴侣动作/合成音效沙盒演练；工程侧配备零外部依赖 `npm test` 自动化单元测试引擎。 |
 | 🛡️ **Tokio 自动维护哨兵** | 后台异步守护线程定时检查官方版本更新及哈希变更，一旦官方更新覆盖了 `app.asar` 或 IDE 样式，待客户端空闲后自动静默重注汉化、Skill 描述与当前激活材质。 |
 | 🔑 **账号调度与反代网关** | 原生管理多账号 OAuth / Token 刷新、额度监控、“蹬额度”智能切换调度、Token 用量统计、请求调用监控与本地 HTTP API 代理服务。 |
@@ -50,6 +50,10 @@
 | **`nezuko-bamboo`** | 祢豆子竹林和风 | 麻叶织纹视觉基底与绯樱竹翠撞色体系 |
 | **`sakura-light`** | 樱雪晴空浅色 | 清透高亮日间色板、矢量樱瓣质感与柔和玻璃边线 |
 | **`midnight-dark`** | 午夜星尘深空 | 深空星海高对比阅读色域与专注代码高亮氛围 |
+| **`clannad-sakura-hill`** | CLANNAD · 光坂坡道与团子 | 春季奶油樱白浅色基底、樱花缎带状态栏与右下角微笑团子大家族暗纹 |
+| **`clannad-illusionary-orbs`** | CLANNAD · 幻想世界光玉 | 深宵苍穹蓝黑基底、奇迹暖金与冰蓝光玉微光、22px 液态亚克力折射 |
+| **`clannad-after-sunflower`** | CLANNAD · 汐与晴空花田 | 盛夏麦穗米白护眼底色、向日葵琥珀金高光与澄澈晴空蓝状态栏 |
+| **`clannad-starfish-library`** | CLANNAD · 图书室海星与提琴 | 暮色紫檀深空底色、薰衣草提琴弦光与风子纪念木雕海星纹理 |
 
 在工作台 **「汉化与美化 → 光学材质画廊 / Color DNA 实验室」** 中支持：
 - **画廊微缩实时渲染**：直观对比各主题色谱条与模拟窗口效果，一键应用至客户端与 IDE；
@@ -72,7 +76,7 @@
 ## 🪐 独立灵动桌面伴侣
 
 桌面伴侣（[`PetWindowView.tsx`](src/components/pet/PetWindowView.tsx)、[`petLogic.ts`](src/components/pet/petLogic.ts) 与 [`PetAndWatchdogTab.tsx`](src/pages/Studio/PetAndWatchdogTab.tsx)）作为完全独立的透明无边框悬浮窗运行，顶栏右侧与系统托盘均内置快捷呼出开关：
-- **6 大角色生态与自由立绘定制**：内置 **灶门祢豆子（六关节骨骼）**、**B612 小王子（Verlet 丝巾与狐狸玫瑰）**、**灶门炭治郎（水之呼吸流体刀纹）**、**我妻善逸（霹雳一闪金雷残影）**、**嘴平伊之助（猪突猛进兽之呼吸）**，并支持一键热导入本地透明 PNG / WebP / GIF / SVG 自定义形象；
+- **7 大角色生态与自由立绘定制**：内置 **灶门祢豆子（8 态高精原画与 3D 大正木箱）**、**B612 小王子（颈后双尾 Verlet 物理丝巾与星海玫瑰）**、**冈崎汐 & 团子大家族（八音盒旋律、三色团子叠叠乐与向日葵花田光玉）**、**灶门炭治郎（水之呼吸流体刀纹）**、**我妻善逸（霹雳一闪金雷残影）**、**嘴平伊之助（猪突猛进兽之呼吸）**，并支持一键热导入本地透明 PNG / WebP / GIF / SVG 自定义形象；
 - **物理弹簧缓动与防抖解耦拖拽**：采用现代 CSS `linear()` 弹簧曲线（自动适配系统 `prefers-reduced-motion` 无障碍减弱动态设置）与 `5px` 指针位移物理阈值解耦，完美兼顾单击摸头、双击绝技、拖拽拎起与窗口底边任务栏安全锚定；
 - **灵动岛、低配额预警与一键切号**：实时监控当前账号主模型算力健康度，低于阈值自动弹出预警气泡，支持在悬浮配额舱内直接刷新额度或一键切换备用账号；
 - **声学黑胶与毫秒级 LRC 歌词舱**：搭载 10 组 WebAudio 程序化合成音色，联动本机媒体播放状态，基于二分查找实现多时间标签与 `offset` 校准的毫秒级歌词滚动同步。
@@ -85,7 +89,7 @@
 
 ```bash
 # 1. 统一递增 package.json / src-tauri/tauri.conf.json / src-tauri/Cargo.toml 版本号
-node scripts/bump-version.mjs 5.1.0
+node scripts/bump-version.mjs 5.2.0
 
 # 2. 执行全量自动化单元测试与 TypeScript + Vite 生产打包校验
 npm test
@@ -93,9 +97,9 @@ npm run build
 
 # 3. 提交并推送版本标签以触发全平台构建与 OTA 制品发布
 git add -A
-git commit -m "chore: 发布 v5.1.0"
-git tag v5.1.0
-git push origin main v5.1.0
+git commit -m "chore: 发布 v5.2.0"
+git tag v5.2.0
+git push origin main v5.2.0
 ```
 
 ---

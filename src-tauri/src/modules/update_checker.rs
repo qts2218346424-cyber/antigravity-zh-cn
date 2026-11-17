@@ -23,11 +23,7 @@ pub enum UpdateChannel {
 
 impl Default for UpdateChannel {
     fn default() -> Self {
-        if CURRENT_VERSION.contains('-') {
-            UpdateChannel::Beta
-        } else {
-            UpdateChannel::Stable
-        }
+        UpdateChannel::Stable
     }
 }
 
@@ -188,10 +184,11 @@ pub fn get_upstream_proxy_url() -> Option<String> {
 /// 1. Check updater.json based on selected channel (Stable vs Beta)
 /// 2. Fallback to GitHub API (Release or Pre-release)
 pub async fn check_for_updates() -> Result<UpdateInfo, String> {
-    let settings = load_update_settings().unwrap_or_default();
-    let mut info = check_for_updates_internal(settings.update_channel).await?;
+    // 统一仅检查正式版通道，避免历史配置残留 beta 导致无法切回正式版
+    let channel = UpdateChannel::Stable;
+    let mut info = check_for_updates_internal(channel).await?;
     info.proxy_url = get_upstream_proxy_url();
-    info.channel = Some(settings.update_channel);
+    info.channel = Some(channel);
     Ok(info)
 }
 
@@ -626,7 +623,10 @@ pub fn load_update_settings() -> Result<UpdateSettings, String> {
     let content = std::fs::read_to_string(&settings_path)
         .map_err(|e| format!("Failed to read settings file: {}", e))?;
 
-    serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))
+    let mut settings: UpdateSettings =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?;
+    settings.update_channel = UpdateChannel::Stable;
+    Ok(settings)
 }
 
 /// Save update settings to config file

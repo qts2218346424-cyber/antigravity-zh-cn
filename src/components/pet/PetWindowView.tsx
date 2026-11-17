@@ -270,6 +270,32 @@ const ParticleSvg: React.FC<{ p: Particle; accentColor: string }> = ({ p, accent
           <path d="M13 2L4 14H11L9 22L20 10H13L13 2Z" fill="#facc15" />
         </svg>
       )}
+      {p.kind === 'dango' && (
+        <svg width="17" height="15" viewBox="0 0 28 24" fill="none">
+          <ellipse
+            cx="14"
+            cy="13"
+            rx="11"
+            ry="8.8"
+            fill={p.rotate % 3 === 0 ? '#f9a8d4' : p.rotate % 3 === 1 ? '#fde68a' : '#93c5fd'}
+            stroke="#5c3a21"
+            strokeWidth="1.8"
+          />
+          <line x1="11" y1="10.2" x2="11" y2="14.2" stroke="#4a2c1d" strokeWidth="1.8" strokeLinecap="round" />
+          <line x1="17" y1="10.2" x2="17" y2="14.2" stroke="#4a2c1d" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="8" cy="14.5" r="1.5" fill="#fb7185" fillOpacity="0.55" />
+          <circle cx="20" cy="14.5" r="1.5" fill="#fb7185" fillOpacity="0.55" />
+        </svg>
+      )}
+      {p.kind === 'orb' && (
+        <span
+          className="block h-3.5 w-3.5 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, #ffffff 0%, #fef08a 52%, transparent 100%)',
+            boxShadow: '0 0 14px #fef08a, 0 0 22px #38bdf8',
+          }}
+        />
+      )}
       {p.kind === 'spark' && (
         <span
           className="block h-2.5 w-2.5 rounded-full"
@@ -428,6 +454,18 @@ const PetWindowView: React.FC = () => {
         petAudio.playWoodThud();
         showMood('🌋');
         spawnBatch('dust', 6);
+      } else if (next === 'dango_song') {
+        petAudio.playDangoMelody();
+        showMood('🍡', 2600);
+        spawnBatch('dango', 13);
+      } else if (next === 'sunflower') {
+        petAudio.playStardust();
+        showMood('🌻', 2400);
+        spawnBatch('star', 11);
+      } else if (next === 'light_orb') {
+        petAudio.playLightOrb();
+        showMood('✨', 2600);
+        spawnBatch('orb', 14);
       } else if (next === 'water_slash') {
         petAudio.playWaterBreath();
         showMood('🌊');
@@ -906,6 +944,8 @@ const PetWindowView: React.FC = () => {
     if (action === 'walk') return 'prince-walk';
     if (action === 'fox') return 'prince-fox-cuddle';
     if (action === 'rose') return 'prince-rose-cherish';
+    if (action === 'dango_song') return 'ushio-dango-sway';
+    if (action === 'sunflower') return 'ushio-sunflower-pose';
     if (action === 'water_slash') return 'hero-water-slash';
     if (action === 'thunder_dash') return 'hero-thunder-dash';
     if (action === 'beast_rush') return 'hero-beast-rush';
@@ -940,6 +980,24 @@ const PetWindowView: React.FC = () => {
         return assets.prince_blink;
       }
       return assets.little_prince || null;
+    }
+
+    if (character === 'ushio') {
+      if (action === 'sleep' && assets.ushio_sleep) return assets.ushio_sleep;
+      if (
+        (action === 'pat' || action === 'dango_song' || action === 'feed' || action === 'dance') &&
+        assets.ushio_happy
+      ) {
+        return assets.ushio_happy;
+      }
+      if ((action === 'walk' || action === 'dash' || action === 'skid') && assets.ushio_walk) {
+        return assets.ushio_walk;
+      }
+      if (action === 'sunflower' && assets.ushio_sunflower) return assets.ushio_sunflower;
+      if ((action === 'idle' || action === 'light_orb') && blinking && assets.ushio_blink) {
+        return assets.ushio_blink;
+      }
+      return assets.ushio_chibi || null;
     }
 
     if (character === 'tanjiro') return assets.tanjiro_water || null;
@@ -1139,17 +1197,63 @@ const PetWindowView: React.FC = () => {
         className="relative flex h-56 w-64 items-end justify-center cursor-grab active:cursor-grabbing"
         style={{ perspective: '760px' }}
       >
-        {/* 远景环境体积光晕（日落模式下切换为温暖金橙霞光） */}
+        {/* 远景环境体积光晕（日落或向日葵花田模式下切换为温暖金橙霞光） */}
         <div
           className="pointer-events-none absolute inset-4 rounded-full blur-2xl transition-all duration-700"
           style={{
             background:
-              character === 'prince' && (sunsetMode || action === 'rose')
-                ? 'radial-gradient(circle, rgba(251, 191, 36, 0.42) 0%, rgba(244, 63, 94, 0.22) 48%, transparent 74%)'
+              (character === 'prince' && (sunsetMode || action === 'rose')) ||
+              (character === 'ushio' && action === 'sunflower')
+                ? 'radial-gradient(circle, rgba(251, 191, 36, 0.48) 0%, rgba(244, 114, 182, 0.22) 52%, transparent 74%)'
                 : `radial-gradient(circle, ${themeAccent}42 0%, transparent 72%)`,
             transform: `translate3d(${tilt.x * -8}px, ${tilt.y * -8}px, 0)`,
           }}
         />
+
+        {/* 冈崎汐专属：《CLANNAD》小镇温暖愿望光玉漂浮层 */}
+        {character === 'ushio' && (
+          <>
+            <div
+              className="clannad-light-orb"
+              style={{ left: '22%', animationDuration: '3.4s', '--orb-dx': '16px' } as React.CSSProperties}
+            />
+            <div
+              className="clannad-light-orb"
+              style={{
+                left: '74%',
+                animationDuration: '3.9s',
+                animationDelay: '1.3s',
+                '--orb-dx': '-14px',
+              } as React.CSSProperties}
+            />
+            {(action === 'light_orb' || action === 'dango_song') && (
+              <>
+                <div
+                  className="clannad-light-orb"
+                  style={{ left: '36%', animationDuration: '2.2s', '--orb-dx': '-20px' } as React.CSSProperties}
+                />
+                <div
+                  className="clannad-light-orb"
+                  style={{
+                    left: '58%',
+                    animationDuration: '2.5s',
+                    animationDelay: '0.45s',
+                    '--orb-dx': '22px',
+                  } as React.CSSProperties}
+                />
+                <div
+                  className="clannad-light-orb"
+                  style={{
+                    left: '48%',
+                    animationDuration: '2.1s',
+                    animationDelay: '0.85s',
+                    '--orb-dx': '8px',
+                  } as React.CSSProperties}
+                />
+              </>
+            )}
+          </>
+        )}
 
         {/* 情绪飘浮气泡 */}
         {moodIcon && (
@@ -1406,18 +1510,24 @@ const PetWindowView: React.FC = () => {
           </>
         )}
 
-        {character === 'nezuko' && (
+        {(character === 'nezuko' || character === 'ushio') && (
           <button
             type="button"
             onClick={() =>
               triggerAction(
                 action === 'sleep' ? 'idle' : 'sleep',
-                action === 'sleep' ? '睡醒伸个懒腰，重新元气满满陪着你' : '缩小钻进手工编织竹篓安心甜睡…',
+                character === 'ushio'
+                  ? action === 'sleep'
+                    ? '揉揉眼睛醒来啦，粉色大团子也精神满满 🍡'
+                    : '趴在软绵绵的团子大家族抱枕堆上香甜午睡…'
+                  : action === 'sleep'
+                    ? '睡醒伸个懒腰，重新元气满满陪着你'
+                    : '缩小钻进手工编织竹篓安心甜睡…',
               )
             }
             className="px-2 py-0.5 rounded-full hover:bg-indigo-500/25 text-indigo-200 transition-colors"
           >
-            {action === 'sleep' ? '唤醒' : '休眠'}
+            {action === 'sleep' ? '唤醒' : character === 'ushio' ? '午睡' : '休眠'}
           </button>
         )}
 

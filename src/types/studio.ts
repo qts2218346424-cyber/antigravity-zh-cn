@@ -1,6 +1,7 @@
 export type PetCharacterId =
   | 'nezuko'
   | 'prince'
+  | 'ushio'
   | 'tanjiro'
   | 'zenitsu'
   | 'inosuke'
@@ -204,6 +205,12 @@ export interface PetAssets {
   prince_fox?: string | null;
   prince_rose_pose?: string | null;
   prince_sleep?: string | null;
+  ushio_chibi?: string | null;
+  ushio_blink?: string | null;
+  ushio_happy?: string | null;
+  ushio_walk?: string | null;
+  ushio_sunflower?: string | null;
+  ushio_sleep?: string | null;
   tanjiro_water?: string | null;
   zenitsu_thunder?: string | null;
   inosuke_beast?: string | null;

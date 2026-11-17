@@ -24,7 +24,7 @@ interface SkinGalleryTabProps {
   onSelectForCustomize: (skinId: string) => void;
 }
 
-type FilterMode = 'all' | 'dark' | 'light' | 'custom';
+type FilterMode = 'all' | 'clannad' | 'dark' | 'light' | 'custom';
 
 /** 微缩真实 IDE 光学结构预览组件：直观体现配色阶梯、强调光束与面板材质 */
 const MiniWorkbenchPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
@@ -174,6 +174,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
 
   const filteredSkins = useMemo(() => {
     return skins.filter((s) => {
+      if (filterMode === 'clannad') return s.id.startsWith('clannad-');
       if (filterMode === 'dark') return s.base !== 'light';
       if (filterMode === 'light') return s.base === 'light';
       if (filterMode === 'custom') return !s.builtin;
@@ -325,6 +326,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
             {(
               [
                 ['all', '全部主题'],
+                ['clannad', '🌸 CLANNAD 典藏'],
                 ['dark', '深邃暗调'],
                 ['light', '浅色护眼'],
                 ['custom', '我的派生'],
@@ -500,13 +502,18 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
                     >
                       {skin.builtin ? '高定内置' : '自定义包'}
                     </span>
+                    {skin.id.startsWith('clannad-') && (
+                      <span className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide backdrop-blur-md bg-pink-500/85 text-white border border-pink-300/40">
+                        🌸 CLANNAD 典藏
+                      </span>
+                    )}
                   </div>
 
                   {/* 右上激活徽章 */}
                   {skin.active && (
                     <div className="absolute top-3 right-3 z-20 inline-flex items-center gap-1 rounded-full bg-emerald-500/95 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-lg backdrop-blur">
                       <Check className="h-3 w-3" />
-                      LIVE 生效中
+                      生效中
                     </div>
                   )}
                 </div>
@@ -523,7 +530,7 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
                       </p>
                     </div>
                     <span className="shrink-0 rounded-md bg-gray-100 dark:bg-white/5 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 border border-gray-200/60 dark:border-white/10">
-                      {skin.base === 'light' ? 'Light' : 'Dark'}
+                      {skin.base === 'light' ? '浅色' : '深色'}
                     </span>
                   </div>
 
