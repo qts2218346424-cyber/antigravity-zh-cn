@@ -17,6 +17,10 @@ use super::{
 pub const SKILL_TRANSLATION_MAP: &[(&str, &str)] = &[
     ("a11y-debugging", "基于 web.dev 指南通过 Chrome DevTools MCP 进行无障碍 (a11y) 调试与审计。在测试语义化 HTML、ARIA 标签、焦点状态、键盘导航、点击目标与色彩对比度时使用此技能。"),
     ("agy-customizations", "Antigravity 自定义扩展系统综合指南与参考手册。用于解释自定义功能的工作原理、加载优先级、发现机制，并指导技能、规则、插件、Hook 与 MCP 服务的创建。"),
+    ("alphafold-database-fetch-and-analyze", "检索并分析蛋白质的 AlphaFold 预测三维结构。当用户提供具体的 UniProt 登录号并需要结构置信度度量 (pLDDT)、结构域边界分析或无序区域评估时使用。"),
+    ("alphagenome-atlas-website-links", "为 AlphaGenome Atlas 网站构建深层链接与 URL。支持生成单变异探索链接、基因组位点视图、候选变异摘要表及 AlphaGenome 参考与突变预测对比。"),
+    ("alphagenome-single-variant-analysis", "利用 AlphaGenome API 分析基因变异对基因表达 (RNA-seq)、染色质可及性 (DNASE)、组蛋白修饰 (ChIP) 及转录因子的功能影响。"),
+    ("alphagenome-variant-impact-score", "使用 AlphaGenome 变异影响 (AVI) 分数评估、注释并分析遗传变异的功能影响。支持单变异查询、批注 VCF 变异集及饱和突变扫描。"),
     ("android-cli", "Android 官方命令行工具使用指南。辅助创建 Android 工程、在真实或虚拟设备上运行应用、管理 AVD、截屏并检查 UI 布局、检索官方文档。"),
     ("android-device-hub", "Android 设备控制中心 (Device Hub) 协同操作指南。用于列出、启停、创建和删除 Android 模拟器 (AVD)，镜像控制物理设备并进行布局检查与交互。"),
     ("antigravity-guide", "Google Antigravity (AGY) 官方综合指南与全景速查手册。涵盖 agy CLI、Antigravity 2.0、IDE 架构、Python SDK、快捷指令与扩展定制体系。"),
@@ -25,6 +29,7 @@ pub const SKILL_TRANSLATION_MAP: &[(&str, &str)] = &[
     ("base44-cli", "Base44 命令行工具 (CLI) 全方位开发与运维指南。覆盖资源配置（实体、后端函数、实时 Actor、AI 智能体）、项目初始化与部署操作，以及通过 Base44 公开 API 管理现有应用或工作区。"),
     ("base44-sdk", "Base44 SDK 核心开发库参考手册，用于在项目中与远程服务交互（实体、后端函数、实时 Actor、AI 智能体与 AI 网关），并编写实时协作/WebSocket 通信原语。"),
     ("base44-troubleshooter", "通过后端函数日志与工作流运行历史排查 Base44 应用生产环境故障，解决线上函数调用异常。"),
+    ("biomolecular-structure-viewer", "基于 Mol* 的交互式 3D 生物大分子结构视窗。支持渲染本地工作区或工件中的 .cif、.mmcif、.pdb 结构文件，并管理 3D 注释与关键残基高亮。"),
     ("browse", "使用 browse CLI 执行 Browserbase 浏览器自动化、云端 API 调用、网页抓取/搜索及环境诊断。"),
     ("canva-brand-check", "对照品牌套件检查 Canva 设计并报告偏差（包括非品牌色板、非规范字体、Logo 误用与文案语调偏差）。"),
     ("canva-bulk-create", "使用带自动填充字段的品牌模板从表格或 JSON 数据批量生成 Canva 设计。"),
@@ -32,12 +37,44 @@ pub const SKILL_TRANSLATION_MAP: &[(&str, &str)] = &[
     ("canva-edit-design", "编辑现有 Canva 设计——修改文本、替换媒体、调整样式颜色及移动元素。"),
     ("canva-implement-feedback", "在 Canva 设计中自动汇总并落实审阅评论批注。"),
     ("canva-resize-for-social-media", "将 Canva 设计一键调整为多种主流社交媒体尺寸格式。"),
+    ("chembl-database", "查询 ChEMBL 生物活性分子数据库。用于检索化合物、药物靶点、IC50/Ki 活性数据、上市批准药物及化学结构式搜索。"),
+    ("cheminformatics-cofolding", "预测蛋白质-配体、蛋白质-核酸及共价抑制剂复合物的协同折叠三维构象：生成 AlphaFold 3 JSON 与 Boltz-2 输入配置，提取结合姿态并计算相互作用指纹。"),
+    ("cheminformatics-core", "计算 RDKit 分子理化性质描述符（MW、cLogP、TPSA、CNS MPO、SA 评分）、PAINS/Brenk 结构警示、pH 7.4 电离状态与活性断崖分析。"),
+    ("cheminformatics-doc2mol", "从专利、学术文献与合成方案中抽取并校验化学结构式：通过 OPSIN 与 PubChem 解析 IUPAC 命名与 Markush 骨架表并导出规范 SDF/CSV。"),
+    ("cheminformatics-ml", "训练、基准评估并校验化学分子系列的预测性 SAR 与 QSAR/ADMET 机器学习模型，支持嵌套交叉验证、分子骨架切分与匹配分子对分析。"),
+    ("cheminformatics-physics", "模拟 3D 分子物理场、构象系综与计算机辅助药物设计 (CADD) 工作流：涵盖 ETKDGv3 构象生成、扭转扫描、Vina 分子对接与 OpenMM 动力学模拟。"),
+    ("cheminformatics-reactions", "推导并模拟有机化学反应、逆合成路线、多步合成路径及反应 SMARTS，校验原子守恒与立体异构并渲染电子转移机理图。"),
     ("chrome-devtools", "通过 MCP 使用 Chrome DevTools 进行高效调试、故障排查、性能分析与浏览器自动化。"),
     ("chrome-extensions", "遵循 Manifest V3 最佳实践构建、调试与发布 Chrome 浏览器扩展。"),
+    ("clinical-trials-database", "通过 APIv2 查询 ClinicalTrials.gov 临床试验数据库。支持按适应症、药物、地点、状态或分期搜索临床试验及入排标准。"),
+    ("clinvar-database", "查询 NCBI ClinVar 人类基因变异临床意义与致病性分类数据库，检索临床证据与阳性基准对照。"),
     ("code-review", "运行 CodeRabbit CLI 代码审查，针对本地变更或 GitHub PR 提供按严重程度分级的代码质量与安全修复建议。"),
     ("compose-preview", "Android Jetpack Compose 实时预览侧边栏操作指南，在视窗中渲染并检查 @Preview UI 组件。"),
     ("cookie-debugging", "通过 Chrome DevTools MCP 检查与调试 Cookie、会话状态、401/403 鉴权与 SameSite 问题。"),
+    ("credentials", "安全处理 API 密钥与凭据的规范协议。用于验证凭据是否存在，并在缺失时引导用户通过安全配置通道添加密钥。"),
+    ("dbsnp-database", "查询、映射与检索 NCBI dbSNP 数据库中的短遗传变异（SNP、Indel），支持在 rsID、VCF 坐标与 HGVS 标识符之间转换。"),
     ("debug-optimize-lcp", "使用 Chrome DevTools MCP 工具调试与优化网页核心指标最大内容绘制 (LCP)。"),
+    ("embl-ebi-ols", "查询并检索 EMBL-EBI 本体查找服务 (OLS)，跨 250 多个生物医学本体库（如 GO、DOID、HP）导航词条层级与属性定义。"),
+    ("encode-ccres-database", "通过 SCREEN GraphQL API 查询 ENCODE 顺式调控元件登记库 (cCRE)，检索人类细胞类型实验与 ChIP-seq 峰图数据。"),
+    ("ensembl-database", "查询 Ensembl 数据库以解析基因、转录本与蛋白质 ID，抓取基因组序列与外显子结构，获取变异效应预测 (VEP)。"),
+    ("extension-to-functions-codebase", "将已安装的 Firebase 扩展迁移转换为独立的 Cloud Functions for Firebase 代码库或 npm 包，支持 V1 到 V2 触发器升级。"),
+    ("figma-3d-transforms", "添加或编辑 Figma 3D 变换效果——处理平面 2D 旋转无法表达的景深、透视、Z 轴旋转、倾斜、等距视图与视差效果。"),
+    ("figma-code-connect", "创建并维护将 Figma 组件映射至代码片段的 Figma Code Connect 模板文件（.figma.ts / .figma.js）。"),
+    ("figma-code-workflows", "将本地 HTML 或工程文件导入上传至 Figma，选择可编辑设计画框、可运行代码图层或独立 Code/Make 文件并修复导入预览。"),
+    ("figma-create-new-file", "创建全新的 Figma Design、FigJam 或 Slides 文件。在每次调用 create_new_file 工具前必须先加载此技能。"),
+    ("figma-design-to-code", "将 Figma 设计稿精准还原并实现为生产级代码。在调用 get_design_context Figma MCP 工具前必须优先加载此技能。"),
+    ("figma-generate-design", "配合 figma-use 将应用页面、视图或多区块布局转化为 Figma 设计稿，自动发现并复用设计系统组件与设计令牌。"),
+    ("figma-generate-diagram", "在 FigJam 中生成流程图、架构图、时序图、ER 图、状态机或甘特图。调用 generate_diagram 工具前必须先加载此技能。"),
+    ("figma-generate-library", "从代码库在 Figma 中构建或更新专业级设计系统、设计变量/令牌、多变体组件库与深浅色主题绑定。"),
+    ("figma-generative-plugins", "创建、编写、修改或扩展可复用的生成式 Figma 插件。调用 create_generative_plugin 前必须先加载此技能。"),
+    ("figma-implement-motion", "将 Figma 动效与过渡动画转化为生产级前端应用代码，配合 get_motion_context 还原关键帧与缓动曲线。"),
+    ("figma-shaders", "在 Figma 中创建、编写、修复或迭代着色器特效 (Shader Effect) 与程序化纹理填充。"),
+    ("figma-spec", "创建、读取、编辑、审阅或批注独立或内嵌的 Figma 产品需求文档 (PRD)、技术方案与设计规范 (Figma Spec)。"),
+    ("figma-swiftui", "SwiftUI 与 Figma 双向互转技能：支持将 Figma 设计稿实现为 iOS/iPadOS SwiftUI 视图，或将 SwiftUI 代码同步回 Figma。"),
+    ("figma-use", "通过 use_figma 工具在 Figma 文件上下文中执行插件 API 脚本（增删改节点、配置变量令牌、构建组件与自动布局）。调用 use_figma 前必读。"),
+    ("figma-use-figjam", "辅助智能体在 FigJam 白板上下文中使用 Figma 的 use_figma MCP 工具进行节点操作。"),
+    ("figma-use-motion", "为 use_figma MCP 工具提供动效与时间轴上下文支持，通过关键帧、动画样式与缓动曲线为 Figma 节点添加动画。"),
+    ("figma-use-slides", "辅助智能体在 Figma Slides 演示文稿上下文中使用 use_figma MCP 工具编排幻灯片。"),
     ("firebase-ai-logic-basics", "在 Web 应用中集成 Firebase AI Logic (Gemini API) 的官方指南，涵盖多模态推理与结构化输出。"),
     ("firebase-app-hosting-basics", "使用 Firebase App Hosting 部署并管理支持 SSR 的 Next.js / Angular 全栈 Web 应用。"),
     ("firebase-auth-basics", "Firebase Authentication 身份认证配置与登录权限控制使用指南。"),
@@ -49,22 +86,68 @@ pub const SKILL_TRANSLATION_MAP: &[(&str, &str)] = &[
     ("firebase-remote-config-basics", "Firebase Remote Config 远程配置模板与特性开关 (Feature Flags) 完整指南。"),
     ("firebase-security-rules-auditor", "审计 Firestore 与 Cloud Storage 安全规则中的权限提升与越权访问隐患。"),
     ("firestore-rules-creation", "设计、编写并加固生产级 Cloud Firestore 安全规则 (firestore.rules)。"),
+    ("foldseek-structural-search", "利用 Foldseek API 对蛋白质 3D 结构文件 (.cif, .pdb) 在 PDB、AlphaFold 等大型数据库中进行三维结构相似性对齐检索。"),
     ("gdrive", "浏览、搜索、下载、导出并管理 Google Drive 云端硬盘文件、权限与批注。"),
+    ("generate-project-plan", "结合 PRD 与代码库上下文在 FigJam 中交互式生成项目规划看板。"),
     ("generative_ui", "在对话中或作为独立工件渲染丰富的交互式 HTML 数据图表与可视化微件。"),
+    ("gnomad-database", "查询人类基因组通识数据库 (gnomAD)，检索遗传变异的人群等位基因频率与基因功能丧失不耐受约束指标 (pLI, LOEUF)。"),
+    ("google-antigravity-sdk", "使用 Google Antigravity (AGY) SDK 设计、实现和调试自主 AI 智能体与多智能体协作系统。"),
     ("gslides", "读取、创建并编辑 Google Slides 演示文稿，提取摘要或批量更新幻灯片内容。"),
+    ("gtex-database", "从 GTEx 项目中检索跨 54 个正常人体组织器官的定量 RNA 表达数据及表达数量性状位点 (eQTL) 关联信息。"),
+    ("human-protein-atlas-database", "从人类蛋白质图谱 (HPA) 中检索蛋白质在人体各组织器官、细胞及亚细胞结构中的表达水平与空间定位分布数据。"),
+    ("interpro-database", "检索 InterPro 蛋白质家族、结构域与功能位点集成数据库，支持结构域架构检索与 GO 功能注释。"),
+    ("jaspar-database", "查询 JASPAR 转录因子结合轮廓数据库，检索转录因子的位置频率矩阵 (PFM) 与位置权重矩阵 (PWM)。"),
+    ("literature-search-arxiv", "检索 arXiv 预印本学术文献，提取论文元数据、摘要并支持下载开放获取全文 PDF 或 HTML 论文。"),
+    ("literature-search-biorxiv", "检索、筛选并下载 bioRxiv 与 medRxiv 生命科学、生物学与医学领域预印本论文元数据及 PDF 全文。"),
+    ("literature-search-europepmc", "检索 Europe PMC 生命科学学术文献库，获取开放获取全文 XML/纯文本、PDF 论文及引用文献列表。"),
+    ("literature-search-openalex", "查询 OpenAlex 全球学术图谱数据库，检索研究论文、学者画像、机构、学术主题与引用计量指标。"),
+    ("mcp-app-development", "构建、打包并调试面向 Antigravity 的 MCP 交互式应用（在对话或侧边栏中渲染为丰富 UI 的 MCP 服务器工具）。"),
     ("memory-leak-debugging", "诊断并解决 JavaScript/Node.js 应用程序中的堆内存泄漏与 OOM 溢出问题。"),
     ("migrate-agent-settings", "将其他编码智能体（Claude Code、Codex、Cursor、Gemini CLI）的配置一键迁移整合为 Antigravity 插件。"),
     ("migrate-workflows", "自动将旧版工作流 (Workflows) 扫描并迁移为现代 SKILL.md 技能规范。"),
     ("modern-web-guidance", "现代 Web 开发最佳实践检索工具，处理 HTML/CSS 与客户端 JS 任务前优先查阅最新规范。"),
+    ("native_swarm", "运行多智能体蜂群协作，调度多个代理在独立上下文并行执行并共享任务看板。"),
+    ("ncbi-sequence-fetch", "使用 E-utilities 从 NCBI 数据库检索蛋白质与核苷酸序列，支持通过登录号、基因名称关联提取序列。"),
+    ("openfda-database", "查询并下载美国 FDA openFDA 开放监管数据，涵盖药物与医疗器械不良事件、召回警示、说明书标签与审批记录。"),
+    ("opentargets-database", "查询 Open Targets 药物靶点发现平台，检索靶点-疾病关联度、可药性评估、安全证据与已知化合物信息。"),
+    ("pdb-database", "检索并下载蛋白质数据库 (PDB) 实验解析的三维生物大分子结构（X-射线晶体衍射、冷冻电镜 cryo-EM、NMR）及实验元数据。"),
+    ("permissioned-github", "与 GitHub 交互并在命令受沙箱环境限制时向用户规范申请所需权限的操作指南（涵盖 gh CLI 与 git 操作）。"),
     ("plugin", "管理与创建 Antigravity 插件系统，指导插件启用、打包以及 MCP/技能组件集成。"),
+    ("predictingthepast", "利用 Aeneas (拉丁文) 与 Ithaca (古希腊文) AI 模型对古代历史碑文与铭文手稿进行残缺复原、测年定位与语境分析。"),
+    ("protein-sequence-msa", "使用 EBI Clustal Omega 执行蛋白质多序列比对 (MSA)，评估序列同源性、结构域保守性与关键活性残基特征。"),
+    ("protein-sequence-similarity-search", "使用 MMseqs2（极速）或 BLAST（高灵敏度）检索同源蛋白质序列，基于序列相似度推断蛋白质潜在生物学功能。"),
+    ("pubchem-database", "查询 PubChem 化学物质数据库，支持按化学品名称、CID、SMILES 检索分子式、理化性质、同分异构体及生物活性数据。"),
+    ("pubmed-database", "检索 PubMed / PMC 生物医学文献数据库，获取论文摘要、全文并关联基因、蛋白质及化合物数据库信息。"),
+    ("pymol", "使用 PyMOL 3D 引擎对蛋白质与分子结构进行可视化、渲染出图、三维对齐重叠、结合口袋分析与按 pLDDT 置信度上色。"),
+    ("quickgo-database", "查询 QuickGO 基因本体论 (GO) 与证据本体 (ECO) 接口，将基因映射到生物学过程、分子功能与细胞组分层次。"),
+    ("rdkit-general", "基于 ACS 1996 出版级样式生成 2D 化学结构示意图 (PNG/SVG)、交互式分子网格及 ChemDraw 文件，并校验化学立体命名。"),
+    ("reactome-database", "查询 Reactome 生物反应与通路数据库，支持通路富集分析、反应参与物拓扑分析与信号传导层次图谱导出。"),
     ("retrieving-developer-knowledge", "检索并综合 Google 官方开发者文档（覆盖 Android、Chrome、Cloud、Gemini API、Firebase 等）。"),
     ("run-workflow", "通过 run_workflow 工具使用 Python 脚本并发编排多个智能体与工具流水线。"),
+    ("string-database", "查询 STRING 蛋白质相互作用 (PPI) 数据库，检索蛋白质物理与功能相互作用网络、证据可信度评分与功能通路富集。"),
     ("swarm", "运行多智能体蜂群协作，调度多个代理在独立上下文并行执行并共享任务看板。"),
     ("swarm_monitor", "原生蜂群专用的监控工作节点，定时巡检停滞状态并唤醒关键成员。"),
+    ("swarm_narrator", "原生蜂群专用的旁白汇总工作节点，实时监听共享看板动态并维护可视化总览状态。"),
+    ("swarm_pane", "在侧边面板中打开并查看多智能体蜂群实时协作看板视图。"),
     ("troubleshooting", "使用 Chrome DevTools MCP 排查浏览器页面连接与初始化目标故障。"),
     ("typesafe-coprocessor", "通用的 TypeSafe Jev (系统一) 直觉式协处理器，用于极速危险命令门禁拦截、方案评分与错误分类。"),
+    ("ucsc-conservation-and-tfbs", "从 UCSC 基因组浏览器获取进化保守性评分 (phyloP, phastCons) 与转录因子结合位点 (TFBS) 调控区域数据。"),
     ("ui-plugin-navigation", "发现关联 UI 插件面板并在对话中渲染快捷开启胶囊链接。"),
+    ("unibind-database", "查询 UniBind 经实验验证的转录因子结合位点数据集，获取高可信度的 TF-DNA 直接相互作用区域坐标数据。"),
+    ("uniprot-database", "访问 UniProtKB、UniParc 与 UniRef 蛋白质核心数据库，检索蛋白质详细注释、功能、分类学谱系、序列与文献证据。"),
+    ("uv", "检查并管理 Python uv 极速包管理器，确保 uv 已安装并正确配置在系统 PATH 环境变量中。"),
+    ("video-interaction-mapper", "解析界面录屏视频中的交互动作与页面流转序列，辅助还原高保真设计原型与动效规范。"),
+    ("workflow-skill-creator", "将已完成的用户工作流或交互操作沉淀提炼为可复用的自定义智能体技能 (Skill)。"),
     ("xcode-project-setup", "安全修改 Xcode .pbxproj 工程文件以添加 Swift Package 依赖并链接框架。"),
+];
+
+pub const AGENT_TRANSLATION_MAP: &[(&str, &str)] = &[
+    ("autofix", "准备 CodeRabbit 自动修复。收集当前拉取请求中未解决的 CodeRabbit 评审讨论串，对照本地代码进行核验，并返回附带建议差异 (diff) 的修复方案。绝不直接编辑、提交、推送或发布评论。"),
+    ("code-reviewer", "在独立上下文中对当前代码变更运行 CodeRabbit CLI 审查，并按严重程度返回问题发现与修复建议。适用于提交或发起拉取请求前的全面审查。"),
+    ("firestore-rules-author", "Cloud Firestore 安全规则 (firestore.rules) 的强制专属专家子智能体。每当任务需要创建、编写或修改 Firestore 安全规则 (firestore.rules) 时，必须将规则编写工作委派给此子智能体，而不要在主智能体中直接编写。"),
+    ("ai-architect", "专注于在 Vercel 上架构设计 AI 驱动的应用——选择 AI SDK 模式、配置模型提供商、构建智能体、搭建持久化工作流以及集成 MCP 服务器。适用于设计 AI 功能、构建聊天机器人或开发智能体应用。"),
+    ("deployment-expert", "专注于 Vercel 部署策略、CI/CD 流水线、预览链接、生产环境晋升、版本回滚、环境变量与域名配置。适用于排查部署故障、搭建 CI/CD 或优化部署流水线。"),
+    ("performance-optimizer", "专注于优化 Vercel 应用性能——涵盖核心网页指标 (Core Web Vitals)、渲染策略、缓存机制、图像优化、字体加载、边缘计算与产物包体积优化。适用于排查页面缓慢、提升 Lighthouse 评分或优化加载性能。"),
 ];
 
 pub const GEMINI_CHINESE_PROTOCOL: &str = r#"
@@ -600,6 +683,7 @@ pub fn apply_l10n_patch(
     save_studio_config(&cfg)?;
 
     let _ = ensure_chinese_thinking_protocol();
+    let _ = localize_all_skills();
 
     Ok(L10nPatchResult {
         success: true,
@@ -683,16 +767,42 @@ pub fn toggle_auto_updates(
     }
 }
 
-fn collect_skill_files(dir: &Path, out: &mut Vec<PathBuf>) {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CustomizationMdKind {
+    Skill,
+    Agent,
+}
+
+fn collect_customization_files(dir: &Path, out: &mut Vec<(PathBuf, CustomizationMdKind)>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
         let p = entry.path();
+        let Some(name_str) = p.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
         if p.is_dir() {
-            collect_skill_files(&p, out);
-        } else if p.file_name().and_then(|n| n.to_str()) == Some("SKILL.md") {
-            out.push(p);
+            if matches!(
+                name_str,
+                "node_modules" | ".git" | "venv" | ".venv" | "__pycache__" | "brain"
+            ) {
+                continue;
+            }
+            collect_customization_files(&p, out);
+        } else if name_str == "SKILL.md" {
+            out.push((p, CustomizationMdKind::Skill));
+        } else if name_str.ends_with(".md")
+            && !matches!(
+                name_str.to_ascii_uppercase().as_str(),
+                "README.MD" | "CHANGELOG.MD" | "LICENSE.MD"
+            )
+            && p.parent()
+                .and_then(|parent| parent.file_name())
+                .and_then(|pn| pn.to_str())
+                == Some("agents")
+        {
+            out.push((p, CustomizationMdKind::Agent));
         }
     }
 }
@@ -702,9 +812,89 @@ fn has_cjk(s: &str) -> bool {
         .any(|c| ('\u{4E00}'..='\u{9FFF}').contains(&c) || ('\u{3400}'..='\u{4DBF}').contains(&c))
 }
 
-/// 批量扫描并汉化 `~/.gemini` 下所有 `SKILL.md` 的 `description` 字段
+fn is_closed_quoted_scalar(val: &str) -> bool {
+    if val.len() < 2 {
+        return false;
+    }
+    if val.starts_with('"') && val.ends_with('"') && !val.ends_with("\\\"") {
+        return true;
+    }
+    if val.starts_with('\'') && val.ends_with('\'') {
+        return true;
+    }
+    false
+}
+
+/// 安全替换 YAML Frontmatter 中的 `description` 字段（兼容单行引号、无引号折行与 `>-`/`>`/`|` 多行块标量）
+fn replace_frontmatter_description(fm: &str, zh_desc: &str) -> Option<(String, bool)> {
+    let lines: Vec<&str> = fm.lines().collect();
+    let mut desc_idx = None;
+    let mut inline_val = "";
+
+    for (idx, line) in lines.iter().enumerate() {
+        if let Some(rest) = line.strip_prefix("description:") {
+            desc_idx = Some(idx);
+            inline_val = rest.trim();
+            break;
+        }
+    }
+
+    let start = desc_idx?;
+    let is_block_scalar = matches!(inline_val, ">" | ">-" | ">+" | "|" | "|-" | "|+" | "");
+    let is_closed_quote = is_closed_quoted_scalar(inline_val);
+
+    let mut end = start + 1;
+    let mut collected = String::new();
+    if !is_block_scalar {
+        collected.push_str(inline_val);
+    }
+
+    if !is_closed_quote {
+        while end < lines.len() {
+            let next_line = lines[end];
+            if next_line.trim().is_empty() {
+                if is_block_scalar {
+                    end += 1;
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            if next_line.starts_with(' ') || next_line.starts_with('\t') {
+                if !collected.is_empty() {
+                    collected.push(' ');
+                }
+                collected.push_str(next_line.trim());
+                end += 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    if collected.trim().is_empty() || has_cjk(&collected) {
+        return Some((fm.to_string(), false));
+    }
+
+    let escaped = zh_desc.replace('\\', "\\\\").replace('"', "\\\"");
+    let replacement_line = format!("description: \"{}\"", escaped);
+
+    let mut out_lines: Vec<String> = Vec::with_capacity(lines.len());
+    for line in &lines[..start] {
+        out_lines.push((*line).to_string());
+    }
+    out_lines.push(replacement_line);
+    for line in &lines[end..] {
+        out_lines.push((*line).to_string());
+    }
+
+    Some((out_lines.join("\n"), true))
+}
+
+/// 批量扫描并汉化 `~/.gemini` 下所有 `SKILL.md` 与自定义智能体 `agents/*.md` 的 `description` 字段
 pub fn localize_all_skills() -> SkillLocalizeResult {
-    let dict: HashMap<&str, &str> = SKILL_TRANSLATION_MAP.iter().copied().collect();
+    let skill_dict: HashMap<&str, &str> = SKILL_TRANSLATION_MAP.iter().copied().collect();
+    let agent_dict: HashMap<&str, &str> = AGENT_TRANSLATION_MAP.iter().copied().collect();
     let Some(home) = dirs::home_dir() else {
         return SkillLocalizeResult {
             scanned: 0,
@@ -717,26 +907,28 @@ pub fn localize_all_skills() -> SkillLocalizeResult {
     let gemini_dir = home.join(".gemini");
     let roots = [
         gemini_dir.join("antigravity").join("builtin").join("skills"),
+        gemini_dir.join("antigravity").join("builtin").join("plugins"),
+        gemini_dir.join("antigravity").join("cache").join("marketplaces"),
         gemini_dir.join("config").join("plugins"),
         gemini_dir.join("skills"),
+        gemini_dir.join("agents"),
     ];
 
-    let mut skill_files = Vec::new();
+    let mut md_files = Vec::new();
     for root in &roots {
         if root.is_dir() {
-            collect_skill_files(root, &mut skill_files);
+            collect_customization_files(root, &mut md_files);
         }
     }
 
     let fm_re = Regex::new(r"(?s)^---\r?\n(.*?)\r?\n---").unwrap();
     let name_re = Regex::new(r"(?m)^name:\s*(.+?)\s*$").unwrap();
-    let desc_re = Regex::new(r"(?m)^description:\s*(.+?)\s*$").unwrap();
 
     let mut updated = 0usize;
     let mut skipped = 0usize;
     let mut details = Vec::new();
 
-    for file in &skill_files {
+    for (file, kind) in &md_files {
         let Ok(raw) = std::fs::read_to_string(file) else {
             skipped += 1;
             continue;
@@ -751,38 +943,55 @@ pub fn localize_all_skills() -> SkillLocalizeResult {
             .and_then(|c| c.get(1))
             .map(|m| m.as_str().trim().trim_matches(|q| q == '"' || q == '\''))
             .unwrap_or("");
-        let old_desc = desc_re
-            .captures(fm)
-            .and_then(|c| c.get(1))
-            .map(|m| m.as_str().trim())
-            .unwrap_or("");
 
-        if name.is_empty() || old_desc.is_empty() || has_cjk(old_desc) {
+        if name.is_empty() {
             skipped += 1;
             continue;
         }
 
-        if let Some(&zh_desc) = dict.get(name) {
-            let escaped = zh_desc.replace('"', "\\\"");
-            let new_fm = desc_re.replace(fm, format!("description: \"{}\"", escaped));
-            let new_raw = format!(
-                "---\n{}\n---{}",
-                new_fm.trim_end(),
-                &raw[cap.get(0).unwrap().end()..]
-            );
-            if atomic_write_text(file, &new_raw).is_ok() {
-                updated += 1;
-                details.push(format!("已汉化技能 {}", name));
+        let target_zh = match kind {
+            CustomizationMdKind::Skill => skill_dict.get(name).copied(),
+            CustomizationMdKind::Agent => agent_dict
+                .get(name)
+                .copied()
+                .or_else(|| skill_dict.get(name).copied()),
+        };
+
+        let Some(zh_desc) = target_zh else {
+            skipped += 1;
+            continue;
+        };
+
+        let Some((new_fm, changed)) = replace_frontmatter_description(fm, zh_desc) else {
+            skipped += 1;
+            continue;
+        };
+
+        if !changed {
+            skipped += 1;
+            continue;
+        }
+
+        let new_raw = format!(
+            "---\n{}\n---{}",
+            new_fm.trim_end(),
+            &raw[cap.get(0).unwrap().end()..]
+        );
+        if atomic_write_text(file, &new_raw).is_ok() {
+            updated += 1;
+            let label = if *kind == CustomizationMdKind::Agent {
+                "自定义智能体"
             } else {
-                skipped += 1;
-            }
+                "技能"
+            };
+            details.push(format!("已汉化{} {}", label, name));
         } else {
             skipped += 1;
         }
     }
 
     SkillLocalizeResult {
-        scanned: skill_files.len(),
+        scanned: md_files.len(),
         updated,
         skipped,
         details,
@@ -1140,5 +1349,31 @@ mod tests {
     fn test_has_cjk_detection() {
         assert!(has_cjk("中文描述"));
         assert!(!has_cjk("Pure English description"));
+    }
+
+    #[test]
+    fn test_replace_frontmatter_description_multiline_and_agent_tools() {
+        let multiline_fm = "name: agy-customizations\ndescription: >-\n  Comprehensive guide and reference\n  for Antigravity Customizations.\nallowed-tools:\n  - view_file";
+        let (updated_fm, changed) =
+            replace_frontmatter_description(multiline_fm, "Antigravity 自定义指南").unwrap();
+        assert!(changed);
+        assert_eq!(
+            updated_fm,
+            "name: agy-customizations\ndescription: \"Antigravity 自定义指南\"\nallowed-tools:\n  - view_file"
+        );
+
+        let agent_fm = "name: firestore-rules-author\ndescription: \"MANDATORY specialist subagent for Cloud Firestore.\"\ntools:\n  - view_file\nmainAgent: true";
+        let (updated_agent, agent_changed) =
+            replace_frontmatter_description(agent_fm, "Firestore 安全规则专家子智能体").unwrap();
+        assert!(agent_changed);
+        assert_eq!(
+            updated_agent,
+            "name: firestore-rules-author\ndescription: \"Firestore 安全规则专家子智能体\"\ntools:\n  - view_file\nmainAgent: true"
+        );
+
+        // 幂等性校验：已含中文时不再重复修改
+        let (_, changed_again) =
+            replace_frontmatter_description(&updated_agent, "Firestore 安全规则专家子智能体").unwrap();
+        assert!(!changed_again);
     }
 }

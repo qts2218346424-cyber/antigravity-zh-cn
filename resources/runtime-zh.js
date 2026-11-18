@@ -805,9 +805,9 @@
       }
 
       // 1.40 双向长描述省略号与截断前缀智能容错（适配插件市场卡片完整长句与动态省略号截断）
-      if ((text.endsWith('...') || text.endsWith('…')) && text.length >= 28) {
+      if ((text.endsWith('...') || text.endsWith('…')) && text.length >= 26) {
         const stemLower = lower.replace(/(?:\.\.\.|…)+$/, '').trim();
-        if (stemLower.length >= 25) {
+        if (stemLower.length >= 23) {
           for (let i = 0; i < LONG_FULL_ENTRIES.length; i++) {
             if (LONG_FULL_ENTRIES[i].keyLower.startsWith(stemLower)) {
               return LONG_FULL_ENTRIES[i].val;
@@ -821,6 +821,57 @@
             return TRUNCATED_KEY_PREFIXES[i].val;
           }
         }
+      }
+
+      // 1.41 第三方开发者工具免责声明、自定义智能体与 GitHub 远程连接器卡片自适应匹配
+      const disclaimerMatch = text.match(/^Google does not control the availability or functionality of third[- ]party developer tools\.\s*Your data from third[- ]party developer tools connected to your Antigravity instance may be shared with Google\.\s*Google will protect any such data in accordance with the Google Privacy Policy,\s*found here(?::\s*(https?:\/\/\S+)?)?\.?$/i);
+      if (disclaimerMatch) {
+        const isTw = /^zh-TW$/i.test(LANG);
+        const isHk = /^zh-HK$/i.test(LANG);
+        const urlSuffix = disclaimerMatch[1] ? disclaimerMatch[1] : '';
+        if (isTw) {
+          return 'Google 不控制第三方開發者工具的可用性或功能。連結至您的 Antigravity 執行個體的第三方開發者工具中的資料可能會與 Google 共享。Google 將依據 Google 隱私權政策保護任何此類資料，詳見：' + urlSuffix;
+        }
+        if (isHk) {
+          return 'Google 不控制第三方開發者工具的可用性或功能。連接至您的 Antigravity 實例的第三方開發者工具中的資料可能會與 Google 共享。Google 將依據 Google 私隱權政策保護任何此類資料，詳見：' + urlSuffix;
+        }
+        return 'Google 不控制第三方开发者工具的可用性或功能。连接到您的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将根据 Google 隐私权政策保护任何此类数据，详见：' + urlSuffix;
+      }
+
+      if (/^Access and clone GitHub repositories in remot/i.test(text)) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        if (/remote\s+workspaces/i.test(text)) {
+          return isSimplified ? '在远程工作区中访问并克隆 GitHub 仓库。' : '在遠端工作區中存取並複製 GitHub 儲存庫。';
+        }
+        if (/remote\s+conversations/i.test(text)) {
+          return isSimplified ? '在远程会话中访问并克隆 GitHub 仓库。' : '在遠端對話中存取並複製 GitHub 儲存庫。';
+        }
+        return isSimplified ? '在远程环境中访问并克隆 GitHub 仓库。' : '在遠端環境中存取並複製 GitHub 儲存庫。';
+      }
+
+      if (/^Prepares CodeRabbit autofix\.\s*Collects unresolved CodeRabbit review/i.test(text)) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        return isSimplified
+          ? '准备 CodeRabbit 自动修复。收集当前拉取请求中未解决的 CodeRabbit 评审讨论串，对照本地代码进行核验，并返回附带建议差异 (diff) 的修复方案。绝不直接编辑、提交、推送或发布评论。'
+          : '準備 CodeRabbit 自動修復。收集目前拉取請求中未解決的 CodeRabbit 審查討論串，對照本機程式碼進行核驗，並傳回附帶建議差異 (diff) 的修復方案。絕不直接編輯、提交、推送或發佈評論。';
+      }
+      if (/^Runs a CodeRabbit CLI review of the current code changes/i.test(text)) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        return isSimplified
+          ? '在独立上下文中对当前代码变更运行 CodeRabbit CLI 审查，并按严重程度返回问题发现与修复建议。适用于提交或发起拉取请求前的全面审查。'
+          : '在獨立上下文中對目前程式碼變更執行 CodeRabbit CLI 審查，並依嚴重程度傳回問題發現與修復建議。適用於提交或發起拉取請求前的全面審查。';
+      }
+      if (/^Reviews local code through the installed CodeRabbit CLI/i.test(text)) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        return isSimplified
+          ? '通过已安装的 CodeRabbit CLI 审查本地代码，返回原始问题严重程度与修复建议。适用于提交或发起拉取请求前的全面审查。'
+          : '透過已安裝的 CodeRabbit CLI 審查本機程式碼，傳回原始問題嚴重程度與修復建議。適用於提交或發起拉取請求前的全面審查。';
+      }
+      if (/^MANDATORY specialist subagent for Cloud Firestore Security Rules/i.test(text)) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        return isSimplified
+          ? 'Cloud Firestore 安全规则 (firestore.rules) 的强制专属专家子智能体。每当任务需要创建、编写或修改 Firestore 安全规则 (firestore.rules) 时，必须将规则编写工作委派给此子智能体，而不要在主智能体中直接编写。'
+          : 'Cloud Firestore 安全規則 (firestore.rules) 的強制專屬專家子代理。每當任務需要建立、撰寫或修改 Firestore 安全規則 (firestore.rules) 時，必須將規則撰寫工作委派給此子代理，而不要在主代理中直接撰寫。';
       }
 
       // 2. 正则动态匹配
@@ -1302,6 +1353,29 @@
                 const linkText = norm(node.textContent);
                 if (/Legal\s+Help/i.test(linkText)) {
                   node.textContent = '法律帮助';
+                  count++;
+                }
+              }
+            }
+            try { translatedNodeSet.add(el); } catch (_) {}
+          }
+
+          if (/^Google does not control the availability or functionality of third[- ]party developer tools\./i.test(text)) {
+            const isTw = /^zh-TW$/i.test(LANG);
+            const isHk = /^zh-HK$/i.test(LANG);
+            const zhPrefix = isTw
+              ? 'Google 不控制第三方開發者工具的可用性或功能。連結至您的 Antigravity 執行個體的第三方開發者工具中的資料可能會與 Google 共享。Google 將依據 Google 隱私權政策保護任何此類資料，詳見：'
+              : isHk
+                ? 'Google 不控制第三方開發者工具的可用性或功能。連接至您的 Antigravity 實例的第三方開發者工具中的資料可能會與 Google 共享。Google 將依據 Google 私隱權政策保護任何此類資料，詳見：'
+                : 'Google 不控制第三方开发者工具的可用性或功能。连接到您的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将根据 Google 隐私权政策保护任何此类数据，详见：';
+            for (let j = 0; j < el.childNodes.length; j++) {
+              const node = el.childNodes[j];
+              if (node.nodeType === 3) {
+                const val = norm(node.nodeValue);
+                if (/^Google does not control the availability/i.test(val)) {
+                  const hasTrailingSpace = /\s$/.test(node.nodeValue || '');
+                  node.nodeValue = zhPrefix + (hasTrailingSpace ? ' ' : '');
+                  try { translatedNodeSet.add(node); } catch (_) {}
                   count++;
                 }
               }

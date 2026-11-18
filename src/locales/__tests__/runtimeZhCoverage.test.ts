@@ -381,6 +381,83 @@ async function main() {
     }
   });
 
+  test('6. 自定义智能体 (autofix / code-reviewer / firestore-rules-author) 完整描述与截断汉化', () => {
+    const agentCases: [string, string][] = [
+      [
+        'Prepares CodeRabbit autofix. Collects unresolved CodeRabbit review threads on the current pull request, checks them against the local code, and returns a fix plan with proposed diffs. Never edits, commits, pushes, or posts.',
+        '准备 CodeRabbit 自动修复。收集当前拉取请求中未解决的 CodeRabbit 评审讨论串，对照本地代码进行核验，并返回附带建议差异 (diff) 的修复方案。绝不直接编辑、提交、推送或发布评论。',
+      ],
+      [
+        'Runs a CodeRabbit CLI review of the current code changes in its own context and returns the findings by severity with suggested fixes. Use for a thorough review before a commit or pull request.',
+        '在独立上下文中对当前代码变更运行 CodeRabbit CLI 审查，并按严重程度返回问题发现与修复建议。适用于提交或发起拉取请求前的全面审查。',
+      ],
+      [
+        'MANDATORY specialist subagent for Cloud Firestore Security Rules (firestore.rules). Whenever your task requires creating, authoring, or modifying Firestore Security Rules (firestore.rules), you MUST delegate rules authoring to this subagent rather than writing firestore.rules directly in the main agent.',
+        'Cloud Firestore 安全规则 (firestore.rules) 的强制专属专家子智能体。每当任务需要创建、编写或修改 Firestore 安全规则 (firestore.rules) 时，必须将规则编写工作委派给此子智能体，而不要在主智能体中直接编写。',
+      ],
+    ];
+    for (const [en, zhExpected] of agentCases) {
+      assertEqual(translateSingleText(en), zhExpected, `自定义智能体完整描述未汉化: ${en.slice(0, 35)}`);
+    }
+
+    const truncatedAgents = [
+      'Prepares CodeRabbit autofix. Collects unresolved CodeRabbit review threads on the current pull request, checks them against the local code, and returns a fix plan with...',
+      'Runs a CodeRabbit CLI review of the current code changes in its own context and returns the findings by severity with suggested fixes. Use for a thorough review...',
+      'MANDATORY specialist subagent for Cloud Firestore Security Rules (firestore.rules). Whenever your task requires creating, authoring, or modifying Firestore Security...',
+    ];
+    for (const sample of truncatedAgents) {
+      const tr = translateSingleText(sample);
+      if (!/[\u4e00-\u9fa5]/.test(tr) || tr === sample) {
+        throw new Error(`自定义智能体截断描述未汉化: ${sample} -> ${tr}`);
+      }
+    }
+  });
+
+  test('7. 第三方开发者工具隐私免责声明（含内联链接拆分节点与整句）汉化', () => {
+    const p = new MockElement('p');
+    p.setAttribute('data-testid', 'third-party-tools-disclaimer');
+    p.appendChild(
+      new MockTextNode(
+        'Google does not control the availability or functionality of third party developer tools. Your data from third party developer tools connected to your Antigravity instance may be shared with Google. Google will protect any such data in accordance with the Google Privacy Policy, found here: ',
+      ),
+    );
+    const span = new MockElement('span');
+    const a = new MockElement('a');
+    a.setAttribute('href', 'https://policies.google.com/privacy');
+    a.appendChild(new MockTextNode('https://policies.google.com/privacy'));
+    span.appendChild(a);
+    p.appendChild(span);
+
+    assertEqual(
+      runOnNode(p),
+      'Google 不控制第三方开发者工具的可用性或功能。连接到您的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将根据 Google 隐私权政策保护任何此类数据，详见： https://policies.google.com/privacy',
+      '第三方工具免责声明 DOM 拆分节点未汉化',
+    );
+  });
+
+  test('8. 插件市场新增合作伙伴卡片与 GitHub 远程连接器完整及截断全覆盖', () => {
+    const marketplaceTruncated = [
+      "Investigate incidents, check who's on call, and...",
+      'Build, deploy and manage apps on Cloudflare ...',
+      'Query Grafana Cloud metrics, logs, traces and...',
+      'The AI notepad for meetings. Connect to your ...',
+      'Respond to and investigate incidents, manage ...',
+      "Connect your agent to invideo's AI-native vide...",
+      'Real salaries and company levels from Levels.f...',
+      'Agent skills for Neo4j graph database — write ...',
+      'SonarQube is the AI code quality and security ...',
+      'Turn an idea into a website, dashboard, report,...',
+      'Web search, content extraction, website crawli...',
+      'Access and clone GitHub repositories in remot...',
+    ];
+    for (const item of marketplaceTruncated) {
+      const tr = translateSingleText(item);
+      if (!/[\u4e00-\u9fa5]/.test(tr) || tr === item) {
+        throw new Error(`市场卡片未汉化: ${item} -> ${tr}`);
+      }
+    }
+  });
+
   if (failed > 0) {
     throw new Error(`运行时汉化回归测试失败: ${failed} 项未通过 (通过 ${passed} 项)`);
   }

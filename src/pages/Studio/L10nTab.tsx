@@ -104,11 +104,11 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
     try {
       const res = await studioService.localizeSkills();
       showToast(
-        `扫描 ${res.scanned} 个 Skill 描述，成功汉化 ${res.updated} 项`,
+        `扫描 ${res.scanned} 个技能与智能体文件，成功汉化 ${res.updated} 项`,
         res.updated > 0 ? 'success' : 'info',
       );
     } catch (err: unknown) {
-      showToast(`Skill 汉化失败: ${String(err)}`, 'error');
+      showToast(`技能与智能体汉化失败: ${String(err)}`, 'error');
     } finally {
       setBusy(null);
     }
@@ -218,7 +218,7 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
               onChange={(e) => setLang(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-base-300 bg-white dark:bg-base-200 px-3 py-2 text-xs"
             >
-              <option value="zh-cn">简体中文 (中国大陆 · 3500+ 词条)</option>
+              <option value="zh-cn">简体中文 (中国大陆 · 4700+ 词条)</option>
               <option value="zh-tw">繁體中文 (台灣常用術語)</option>
               <option value="zh-hk">繁體中文 (香港特別行政區)</option>
             </select>
@@ -307,10 +307,10 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-100">
             <BookOpen className="h-4 w-4 text-purple-500" />
-            AI 技能列表汉化与思考规范固化
+            AI 技能、自定义智能体汉化与思考规范固化
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            批量翻译 <code className="font-mono">~/.gemini</code> 下所有内置与插件 Skill 技能面板描述，并注入全局中文深度思考协议。
+            批量翻译 <code className="font-mono">~/.gemini</code> 下所有内置与插件 Skill 技能及自定义智能体面板描述，并注入全局中文深度思考协议。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -319,7 +319,7 @@ export const L10nTab: React.FC<L10nTabProps> = ({ status, onRefresh }) => {
             disabled={busy !== null}
             className="rounded-lg bg-purple-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-60"
           >
-            {busy === 'skills' ? '扫描汉化中...' : '一键汉化全部 Skill 描述'}
+            {busy === 'skills' ? '扫描汉化中...' : '一键汉化全部技能与智能体'}
           </button>
           <button
             onClick={handleEnsureProtocol}
