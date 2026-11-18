@@ -104,6 +104,24 @@ test('3. 客户端多语种汉化词典 (CN/TW/HK) 与正则规则 JSON 结构�
     'Pin / Unpin Conversation': '固定 / 取消固定会话',
     'Terminal: Select All': '终端：全选',
     'Search or enter a URL': '搜索或输入网址',
+    "Good to see you. What's next?": '很高兴见到你。接下来做什么？',
+    'Hey there, what should we build today?': '你好，今天想构建些什么？',
+    'Welcome back. Where should we pick up?': '欢迎回来。我们从哪里继续？',
+    'Weekly limit': '每周配额',
+    'Daily limit': '每日配额',
+    '5h limit': '5 小时配额',
+    'Argon that may offload routine steps to Hydrogen. Same Argon-level quality, fewer tokens used.':
+      '可将常规步骤卸载给 Hydrogen 处理的 Argon 模型。保持同等 Argon 级质量，消耗更少 Token。',
+    'SSH Host': 'SSH 主机',
+    'Search Hosts…': '搜索主机...',
+    'No hosts in ~/.ssh/config yet': '~/.ssh/config 中暂无主机',
+    'Connect to SSH Host…': '连接到 SSH 主机...',
+    'Knowledge Work': '知识工作',
+    'Simplified interface for research, writing, and everyday tasks.':
+      '面向研究、写作与日常任务的精简界面。',
+    'Software Engineering': '软件工程',
+    'Full interface for coding, developer tools, and managing agents.':
+      '面向编程、开发者工具与智能体管理的完整界面。',
   };
 
   for (const [enKey, expectedZh] of Object.entries(expectedCnEntries)) {
@@ -262,6 +280,35 @@ async function runRuntimeEngineTest(): Promise<void> {
   const ariaInput = body.appendChildEl(new MockElement('DIV'));
   ariaInput.setAttribute('aria-placeholder', 'Search or enter a URL');
 
+  // 覆盖 v2.33.0 五大界面区域（首页问候语、配额时间窗口、Argon 分流气泡、SSH 主机菜单、界面布局卡片）
+  const tGreet1 = body.appendChildEl(new MockElement('DIV')).appendText("Good to see you, xinxin. What's next?");
+  const tGreet2 = body.appendChildEl(new MockElement('DIV')).appendText('Hey xinxin, what should we build today?');
+  const tGreet3 = body.appendChildEl(new MockElement('DIV')).appendText('Welcome back, xinxin. Where should we pick up?');
+  const tWeeklyLimit = body.appendChildEl(new MockElement('SPAN')).appendText('Weekly limit');
+  const tFiveHourLimit = body.appendChildEl(new MockElement('SPAN')).appendText('5h limit');
+  const tDynamicWindowLimit = body.appendChildEl(new MockElement('SPAN')).appendText('12h limit');
+  const tCompoundLimitReset = body.appendChildEl(new MockElement('SPAN')).appendText('5h limit, resets in 4h 30m');
+  const tArgonOffload = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('Argon that may offload routine steps to Hydrogen. Same Argon-level quality, fewer tokens used.');
+  const tCarbonOffload = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('Carbon that may offload routine steps to Hydrogen. Same Carbon-level quality, fewer tokens used.');
+  const tSshHost = body.appendChildEl(new MockElement('SPAN')).appendText('SSH Host');
+  const tNoSshHosts = body.appendChildEl(new MockElement('DIV')).appendText('No hosts in ~/.ssh/config yet');
+  const tConnectSsh = body.appendChildEl(new MockElement('SPAN')).appendText('Connect to SSH Host\u2026');
+  const sshSearchInput = body.appendChildEl(new MockElement('INPUT'));
+  sshSearchInput.setAttribute('type', 'text');
+  sshSearchInput.setAttribute('placeholder', 'Search Hosts\u2026');
+  const tKnowledgeWork = body.appendChildEl(new MockElement('SPAN')).appendText('Knowledge Work');
+  const tKnowledgeDesc = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('Simplified interface for research, writing, and everyday tasks.');
+  const tSoftEng = body.appendChildEl(new MockElement('SPAN')).appendText('Software Engineering');
+  const tSoftEngDesc = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('Full interface for coding, developer tools, and managing agents.');
+
   let observerCallback: ((mutations: unknown[]) => void) | null = null;
 
   const collectTextNodes = (root: MockNode): MockTextNode[] => {
@@ -368,6 +415,41 @@ async function runRuntimeEngineTest(): Promise<void> {
   }
   if (urlInput.value !== 'Select All') {
     throw new Error(`严重缺陷：用户输入 value 被误篡改为 ${urlInput.value}`);
+  }
+  if (tGreet1.nodeValue !== '很高兴见到你，xinxin。接下来做什么？') {
+    throw new Error(`首页问候语1翻译不符: ${tGreet1.nodeValue}`);
+  }
+  if (tGreet2.nodeValue !== '你好 xinxin，今天想构建些什么？') {
+    throw new Error(`首页问候语2翻译不符: ${tGreet2.nodeValue}`);
+  }
+  if (tGreet3.nodeValue !== '欢迎回来，xinxin。我们从哪里继续？') {
+    throw new Error(`首页问候语3翻译不符: ${tGreet3.nodeValue}`);
+  }
+  if (tWeeklyLimit.nodeValue !== '每周配额' || tFiveHourLimit.nodeValue !== '5 小时配额' || tDynamicWindowLimit.nodeValue !== '12 小时配额') {
+    throw new Error(`配额限制窗口翻译不符: ${tWeeklyLimit.nodeValue} / ${tFiveHourLimit.nodeValue} / ${tDynamicWindowLimit.nodeValue}`);
+  }
+  if (tCompoundLimitReset.nodeValue !== '5 小时配额，4 小时 30 分钟后重置') {
+    throw new Error(`复合配额重置文本翻译不符: ${tCompoundLimitReset.nodeValue}`);
+  }
+  if (tArgonOffload.nodeValue !== '可将常规步骤卸载给 Hydrogen 处理的 Argon 模型。保持同等 Argon 级质量，消耗更少 Token。') {
+    throw new Error(`Argon 分流提示翻译不符: ${tArgonOffload.nodeValue}`);
+  }
+  if (tCarbonOffload.nodeValue !== '可将常规步骤卸载给 Hydrogen 处理的 Carbon 模型。保持同等 Carbon 级质量，消耗更少 Token。') {
+    throw new Error(`泛化模型分流提示翻译不符: ${tCarbonOffload.nodeValue}`);
+  }
+  if (tSshHost.nodeValue !== 'SSH 主机' || tNoSshHosts.nodeValue !== '~/.ssh/config 中暂无主机' || tConnectSsh.nodeValue !== '连接到 SSH 主机...') {
+    throw new Error(`SSH 菜单文本翻译不符: ${tSshHost.nodeValue} / ${tNoSshHosts.nodeValue} / ${tConnectSsh.nodeValue}`);
+  }
+  if (sshSearchInput.getAttribute('placeholder') !== '搜索主机...') {
+    throw new Error(`SSH 搜索框 placeholder 翻译不符: ${sshSearchInput.getAttribute('placeholder')}`);
+  }
+  if (
+    tKnowledgeWork.nodeValue !== '知识工作' ||
+    tKnowledgeDesc.nodeValue !== '面向研究、写作与日常任务的精简界面。' ||
+    tSoftEng.nodeValue !== '软件工程' ||
+    tSoftEngDesc.nodeValue !== '面向编程、开发者工具与智能体管理的完整界面。'
+  ) {
+    throw new Error(`界面布局卡片翻译不符: ${tKnowledgeWork.nodeValue} / ${tSoftEng.nodeValue}`);
   }
 
   // 验证单节点 attributes MutationObserver (m.target 为独立 input 自身，无任何子节点) 依然能即时翻译

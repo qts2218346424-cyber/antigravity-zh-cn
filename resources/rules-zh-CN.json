@@ -164,6 +164,18 @@
     "确定要删除 $1 吗？"
   ],
   [
+    "^Connected to SSH(?:\\s+host)?:?\\s+(.+)$",
+    "已连接到 SSH 主机: $1"
+  ],
+  [
+    "^Connecting to SSH(?:\\s+host)?:?\\s+(.+?)(?:\\.\\.\\.|…)?$",
+    "正在连接 SSH 主机 $1..."
+  ],
+  [
+    "^Disconnected from SSH(?:\\s+host)?:?\\s+(.+)$",
+    "已断开与 SSH 主机 $1 的连接"
+  ],
+  [
     "^Connecting to (.+)\\.\\.\\.$",
     "正在连接至 $1..."
   ],
@@ -3518,5 +3530,253 @@
   [
     "^(?:插件[:：]\\s*)?科学计算\\s*\\((?:Science|science)\\)$",
     "科学计算"
+  ],
+  [
+    "^\\+\\s*(?:See|Show|View)\\s+(\\d+)\\s+more$",
+    "+ 展开另外 $1 项"
+  ],
+  [
+    "^(?:See|Show|View)\\s+(\\d+)\\s+more$",
+    "展开另外 $1 项"
+  ],
+  [
+    "^\\+\\s*(\\d+)\\s+more$",
+    "+ 另外 $1 项"
+  ],
+  [
+    "^[Cc]onfigure what the agent can do in local and remote conversations\\.\\s*(?:Learn more|了解详情)\\.?$",
+    "配置智能体在本地与远程会话中可执行的操作。了解详情。"
+  ],
+  [
+    "^[Cc]onfigure allowed and denied URLs for the browser subagent\\.\\s*It runs in the built-in browser,\\s*so no separate browser install is needed\\.?$",
+    "配置浏览器子智能体的允许和拒绝访问网址列表。它在内置浏览器中运行，无需单独安装外部浏览器。"
+  ],
+  [
+    "^[Cc]reate a project on a machine you reach over SSH\\.\\s*It opens in that host['’]s own window\\.?$",
+    "在通过 SSH 连接的远程主机上创建项目。该项目将在对应主机的独立窗口中打开。"
+  ],
+  [
+    "^[Ss]ettings for conversations outside of projects\\.?$",
+    "项目外部会话的设置。"
+  ],
+  [
+    "^Connected to SSH(?:\\s+host)?:?\\s+(.+)$",
+    "已连接到 SSH 主机: $1"
+  ],
+  [
+    "^Connecting to SSH(?:\\s+host)?:?\\s+(.+?)(?:\\.\\.\\.|…)?$",
+    "正在连接 SSH 主机 $1..."
+  ],
+  [
+    "^Disconnected from SSH(?:\\s+host)?:?\\s+(.+)$",
+    "已断开与 SSH 主机 $1 的连接"
+  ],
+  [
+    "^Teamwork Graph CLI is Atlassian['’]s agent-first interface to your entire work context:[\\s\\S]*$",
+    "Teamwork Graph CLI 是 Atlassian 面向智能体打造的全局工作上下文接口，涵盖 Jira 议题、Confluence 页面、Bitbucket PR 及已连接的第三方数据源，专为 Antigravity 等编程智能体量身构建。"
+  ],
+  [
+    "^This plugin provides a specialized suite of skills for data engineers and database practitioners working on Google Cloud\\.[\\s\\S]*$",
+    "专为在 Google Cloud 上工作的数据工程师与数据库从业者打造的专业技能套件。作为专家助手，支持通过自然语言提示词进行数据架构设计、优化与运维。"
+  ],
+  [
+    "^Google Cloud guidance for coding agents:\\s*first-project onboarding,[\\s\\S]*$",
+    "面向编程智能体的 Google Cloud 官方开发指南：涵盖首个项目引导、身份认证与凭据选择，以及 gcloud CLI 命令的安全校验，内置 Google 开发者知识库 MCP 服务以获取最新权威文档。"
+  ],
+  [
+    "^Official plugin for Dart and Flutter that installs Flutter/Dart Skills,[\\s\\S]*$",
+    "Dart 与 Flutter 官方插件，集成专属技能、开发规范、自定义智能体与 Dart MCP 服务，助力从单一代码库构建覆盖移动端、Web、桌面与嵌入式设备的原生编译精美应用。"
+  ],
+  [
+    "^Robotics skills for any robot:\\s*3D perception,[\\s\\S]*$",
+    "适用于各类机器人的全栈开发技能：涵盖 3D 感知、无碰撞运动规划、视觉伺服、硬件启动调试、Sim2Real 迁移、MuJoCo 物理仿真、SimReady 3D 资产构建与实时 3D 伴生视窗。"
+  ],
+  [
+    "^SonarQube is the AI code quality and security verification platform used by millions of developers[\\s\\S]*$",
+    "SonarQube 是数百万开发者信赖的代码质量与安全验证平台，用于捕获缺陷、漏洞与密钥泄露，在智能体编码闭环中自动执行代码质量标准。"
+  ],
+  [
+    "^Official Antigravity plugin for MongoDB Atlas \\(hosted MCP Server \\+ Skills\\)\\.[\\s\\S]*$",
+    "MongoDB Atlas 官方 Antigravity 插件（托管 MCP 服务 + 技能套件）。连接官方托管的 Atlas MCP 服务以探索数据、管理集合、优化查询并遵循最佳实践生成高可靠代码。"
+  ],
+  [
+    "^Good\\s+to\\s+see\\s+you,\\s*(.+?)\\.\\s*What['’]s\\s+next\\??$",
+    "很高兴见到你，$1。接下来做什么？"
+  ],
+  [
+    "^Good\\s+to\\s+see\\s+you\\.\\s*What['’]s\\s+next\\??$",
+    "很高兴见到你。接下来做什么？"
+  ],
+  [
+    "^(?:Hey|Hi|Hello)\\s+there,\\s*what\\s+should\\s+we\\s+build\\s+today\\??$",
+    "你好，今天想构建些什么？"
+  ],
+  [
+    "^(?:Hey|Hi|Hello)\\s+(.+?),\\s*what\\s+should\\s+we\\s+build\\s+today\\??$",
+    "你好 $1，今天想构建些什么？"
+  ],
+  [
+    "^Welcome\\s+back,\\s*(.+?)\\.\\s*Where\\s+should\\s+we\\s+pick\\s+up\\??$",
+    "欢迎回来，$1。我们从哪里继续？"
+  ],
+  [
+    "^Welcome\\s+back\\.\\s*Where\\s+should\\s+we\\s+pick\\s+up\\??$",
+    "欢迎回来。我们从哪里继续？"
+  ],
+  [
+    "^(\\d+)\\s*h\\s+limit$",
+    "$1 小时配额"
+  ],
+  [
+    "^(\\d+)\\s*m\\s+limit$",
+    "$1 分钟配额"
+  ],
+  [
+    "^(\\d+)\\s*s\\s+limit$",
+    "$1 秒配额"
+  ],
+  [
+    "^(\\d+)\\s*d\\s+limit$",
+    "$1 天配额"
+  ],
+  [
+    "^(\\d+(?:\\.\\d+)?)%\\s*left$",
+    "剩余 $1%"
+  ],
+  [
+    "^(.+?)\\s+that\\s+may\\s+offload\\s+routine\\s+steps\\s+to\\s+(.+?)\\.\\s*Same\\s+(.+?)-level\\s+quality,\\s*fewer\\s+tokens\\s+used\\.?$",
+    "可将常规步骤卸载给 $2 处理的 $1 模型。保持同等 $3 级质量，消耗更少 Token。"
+  ],
+  [
+    "^(\\d+)\\s+hidden\\s+hosts?$",
+    "$1 个已隐藏主机"
+  ],
+  [
+    "^No\\s+hosts\\s+in\\s+(.+?)\\s+yet\\.\\s*Type\\s+one\\s+above\\.?$",
+    "$1 中暂无主机，请在上方直接输入。"
+  ],
+  [
+    "^No\\s+hosts\\s+in\\s+(.+?)\\s+yet$",
+    "$1 中暂无主机"
+  ],
+  [
+    "^Connecting\\s+to\\s+(.+?)(?:\\.\\.\\.|…)?$",
+    "正在连接到 $1..."
+  ],
+  [
+    "^Couldn['’]t\\s+connect\\s+to\\s+(.+?)\\.?$",
+    "无法连接到 $1"
+  ],
+  [
+    "^SSH\\s+Config\\s*\\((.+?)\\)$",
+    "SSH 配置 ($1)"
+  ],
+  [
+    "^SSH\\s+config:\\s*(.+)$",
+    "SSH 配置：$1"
+  ],
+  [
+    "^Remove\\s+(.+?)\\s+from\\s+Recent$",
+    "从最近记录中移除 $1"
+  ],
+  [
+    "^Removed\\s+(.+?)\\s+from\\s+Recent$",
+    "已从最近记录中移除 $1"
+  ],
+  [
+    "^Couldn['’]t\\s+remove\\s+(.+?)\\s+from\\s+Recent$",
+    "无法从最近记录中移除 $1"
+  ],
+  [
+    "^Hide\\s+(.+?)\\s+from\\s+this\\s+list$",
+    "在此列表中隐藏 $1"
+  ],
+  [
+    "^Show\\s+(.+?)\\s+in\\s+the\\s+list\\s+again$",
+    "重新在列表中显示 $1"
+  ],
+  [
+    "^Hid\\s+(.+)$",
+    "已隐藏 $1"
+  ],
+  [
+    "^Showing\\s+(.+?)\\s+again$",
+    "已重新显示 $1"
+  ],
+  [
+    "^Connected\\s+to\\s+(.+)$",
+    "已连接到 $1"
+  ],
+  [
+    "^This\\s+window['’]s\\s+agents,\\s*files,\\s*and\\s+terminals\\s+are\\s+on\\s+(.+?)\\.?$",
+    "此窗口的智能体、文件与终端均运行于 $1。"
+  ],
+  [
+    "^You['’]re\\s+signing\\s+in\\s+on\\s+(.+?)\\.\\s*Your\\s+sign-in\\s+stays\\s+on\\s+that\\s+machine\\.?$",
+    "您正在登录 $1，登录凭证仅保留在该远程机器上。"
+  ],
+  [
+    "^(\\d+)\\s+models?\\s+selected$",
+    "已选择 $1 个模型"
+  ],
+  [
+    "^Select\\s+model,\\s*current:\\s*(.+)$",
+    "选择模型，当前：$1"
+  ],
+  [
+    "^No\\s+audio\\s+from\\s+(.+)$",
+    "未检测到来自 $1 的音频"
+  ],
+  [
+    "^(.+?)\\.\\s*Switch\\s+mic(?:rophone)?\\.?$",
+    "$1。请切换麦克风。"
+  ],
+  [
+    "^Created\\s+automation\\s+[\"“](.+?)[\"”]\\.?$",
+    "已创建自动化任务“$1”。"
+  ],
+  [
+    "^Restarted\\s+[\"“](.+?)[\"”]\\.?$",
+    "已重启“$1”。"
+  ],
+  [
+    "^Deleted\\s+[\"“](.+?)[\"”]\\.?$",
+    "已删除“$1”。"
+  ],
+  [
+    "^Failed\\s+to\\s+update\\s+[\"“](.+?)[\"”]\\.?$",
+    "更新“$1”失败"
+  ],
+  [
+    "^Failed\\s+to\\s+delete\\s+[\"“](.+?)[\"”]\\.?$",
+    "删除“$1”失败"
+  ],
+  [
+    "^Search\\s+for\\s+[\"“](.+?)[\"”]\\s+in\\s+the\\s+Marketplace$",
+    "在插件市场中搜索“$1”"
+  ],
+  [
+    "^No\\s+plugins\\s+found\\s+for\\s+[\"“](.+?)[\"”]\\.?$",
+    "未找到与“$1”匹配的插件。"
+  ],
+  [
+    "^No\\s+apps\\s+found\\s+for\\s+[\"“](.+?)[\"”]\\.?$",
+    "未找到与“$1”匹配的应用。"
+  ],
+  [
+    "^Plugins\\s+in\\s+(.+)$",
+    "$1 中的插件"
+  ],
+  [
+    "^Details\\s+for\\s+(.+)$",
+    "$1 详情"
+  ],
+  [
+    "^Show\\s+(\\d+)\\s+more\\s+subagents?$",
+    "展开另外 $1 个子智能体"
+  ],
+  [
+    "^An?\\s+(automation|scheduled\\s+task)\\s+with\\s+this\\s+name\\s+already\\s+exists\\s+on\\s+this\\s+computer\\.\\s*Run\\s+it\\s+remotely,\\s*or\\s+go\\s+back\\s+and\\s+rename\\s+it\\.?$",
+    "此电脑上已存在同名的自动化任务。请改为远程运行，或返回并重命名。"
   ]
 ]

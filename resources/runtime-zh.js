@@ -15,12 +15,25 @@
     const RULES = window.__AGY_ZH_RULES__ || [];
     const LANG = window.__AGY_ZH_LANG__ || 'zh-CN';
 
-    // 构建小写不敏感字典索引，提升各类样式大小写与动态拼接场景的容错率
+    // 构建小写不敏感字典索引与双向长描述省略号容错索引，提升动态拼接与市场卡片截断场景的命中率
     const LOWER_DICT = {};
+    const TRUNCATED_KEY_PREFIXES = [];
+    const LONG_FULL_ENTRIES = [];
     for (const k in DICT) {
       const lk = k.toLowerCase();
       if (!LOWER_DICT[lk]) LOWER_DICT[lk] = DICT[k];
+      if ((k.endsWith('...') || k.endsWith('…')) && k.includes(' ')) {
+        const stem = k.replace(/(?:\.\.\.|…)+$/, '').trim();
+        if (stem.length >= 50) {
+          const stemLower = stem.toLowerCase();
+          TRUNCATED_KEY_PREFIXES.push({ stemLower, val: DICT[k] });
+          LONG_FULL_ENTRIES.push({ keyLower: stemLower, val: DICT[k] });
+        }
+      } else if (lk.length >= 35 && k.includes(' ')) {
+        LONG_FULL_ENTRIES.push({ keyLower: lk, val: DICT[k] });
+      }
     }
+    TRUNCATED_KEY_PREFIXES.sort((a, b) => b.stemLower.length - a.stemLower.length);
 
     // 格式化与查词工具：去除零宽字符，合并连续空白
     const norm = (s) => (s || '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
@@ -110,12 +123,52 @@
         return '（' + (DICT[text.slice(1, -1).trim()] || LOWER_DICT[lower.slice(1, -1).trim()]) + '）';
       }
       const countMatch = text.match(/^(.+?)\s*\(([0-9]+)\)$/);
-      if (countMatch && (DICT[countMatch[1].trim()] || LOWER_DICT[countMatch[1].trim().toLowerCase()])) {
-        return (DICT[countMatch[1].trim()] || LOWER_DICT[countMatch[1].trim().toLowerCase()]) + ' (' + countMatch[2] + ')';
+      if (countMatch) {
+        const innerBase = countMatch[1].trim();
+        const trBase = DICT[innerBase] || LOWER_DICT[innerBase.toLowerCase()] || translate(innerBase);
+        if (trBase && norm(trBase) !== norm(innerBase)) {
+          return trBase + ' (' + countMatch[2] + ')';
+        }
       }
-      const modelTagMatch = text.match(/^(.+?)\s*\((Thinking|Fast|Medium|High|Low)\)$/i);
-      if (modelTagMatch && (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()])) {
-        return modelTagMatch[1] + '（' + (DICT[modelTagMatch[2]] || LOWER_DICT[modelTagMatch[2].toLowerCase()]) + '）';
+      const modelTagMatch = text.match(/^(.+?)\s*\((Thinking|Fast|Minimal|Low|Medium|High|Extra|XHigh|Max|unavailable|latest)(?:\s+thinking)?\)$/i);
+      if (modelTagMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        const tagKey = modelTagMatch[2].toLowerCase();
+        const effortFallbackMap = {
+          thinking: '深度思考',
+          fast: '快速',
+          minimal: isSimplified ? '极低' : '極低',
+          low: '低',
+          medium: '中等',
+          high: '高',
+          extra: '超高',
+          xhigh: '超高',
+          max: '最高',
+          unavailable: '不可用',
+          latest: '最新'
+        };
+        const trTag = DICT[modelTagMatch[2]] || LOWER_DICT[tagKey] || effortFallbackMap[tagKey];
+        if (trTag) {
+          return modelTagMatch[1].trim() + '（' + trTag + '）';
+        }
+      }
+      const effortCtxMatch = text.match(/^(Minimal|Low|Medium|High|Extra|XHigh|Max)\s*·\s*(.+)$/i);
+      if (effortCtxMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        const effKey = effortCtxMatch[1].toLowerCase();
+        const effMap = {
+          minimal: isSimplified ? '极低' : '極低',
+          low: '低',
+          medium: '中等',
+          high: '高',
+          extra: '超高',
+          xhigh: '超高',
+          max: '最高'
+        };
+        const trEff = DICT[effortCtxMatch[1]] || LOWER_DICT[effKey] || effMap[effKey];
+        if (trEff) {
+          return trEff + ' · ' + effortCtxMatch[2].trim();
+        }
       }
 
       // 1.15 分类与排序模式匹配: e.g. "Projects (Status)", "Conversations (Date)"
@@ -287,13 +340,48 @@
         return '欢迎使用 ';
       }
 
-      // 1.23.1 首页个性化问候语动态匹配 (Hi {name}, what can we get done today? / What can we get done today?)
+      // 1.23.1 首页个性化问候语动态匹配（完整覆盖 v2.33+ 三组带用户名/无用户名轮换及旧版问候语）
+      const isTraditional = /^zh-(?:TW|HK)$/i.test(LANG);
+      const isHk = /^zh-HK$/i.test(LANG);
+
+      const goodToSeeNamedMatch = text.match(/^Good\s+to\s+see\s+you,\s*(.+?)\.\s*What['’]s\s+next\??$/i);
+      if (goodToSeeNamedMatch) {
+        return isTraditional
+          ? `很高興見到你，${goodToSeeNamedMatch[1]}。接下來做什麼？`
+          : `很高兴见到你，${goodToSeeNamedMatch[1]}。接下来做什么？`;
+      }
+      if (/^Good\s+to\s+see\s+you\.\s*What['’]s\s+next\??$/i.test(text)) {
+        return isTraditional ? '很高興見到你。接下來做什麼？' : '很高兴见到你。接下来做什么？';
+      }
+
+      if (/^(?:Hey|Hi|Hello)\s+there,\s*what\s+should\s+we\s+build\s+today\??$/i.test(text)) {
+        return isTraditional ? '你好，今天想建構些什麼？' : '你好，今天想构建些什么？';
+      }
+      const heyBuildNamedMatch = text.match(/^(?:Hey|Hi|Hello)\s+(.+?),\s*what\s+should\s+we\s+build\s+today\??$/i);
+      if (heyBuildNamedMatch) {
+        return isTraditional
+          ? `你好 ${heyBuildNamedMatch[1]}，今天想建構些什麼？`
+          : `你好 ${heyBuildNamedMatch[1]}，今天想构建些什么？`;
+      }
+
+      const welcomeBackNamedMatch = text.match(/^Welcome\s+back,\s*(.+?)\.\s*Where\s+should\s+we\s+pick\s+up\??$/i);
+      if (welcomeBackNamedMatch) {
+        return isTraditional
+          ? `歡迎回來，${welcomeBackNamedMatch[1]}。我們從哪裡繼續？`
+          : `欢迎回来，${welcomeBackNamedMatch[1]}。我们从哪里继续？`;
+      }
+      if (/^Welcome\s+back\.\s*Where\s+should\s+we\s+pick\s+up\??$/i.test(text)) {
+        return isTraditional ? '歡迎回來。我們從哪裡繼續？' : '欢迎回来。我们从哪里继续？';
+      }
+
       const homeGreetingMatch = text.match(/^(?:Hi|Hello|Hey)\s+(.+?),\s*what\s+can\s+we\s+get\s+done\s+today\??$/i);
       if (homeGreetingMatch) {
-        return `你好 ${homeGreetingMatch[1]}，今天想做些什么？`;
+        return isTraditional
+          ? `你好 ${homeGreetingMatch[1]}，今天想做些什麼？`
+          : `你好 ${homeGreetingMatch[1]}，今天想做些什么？`;
       }
       if (/^what\s+can\s+we\s+get\s+done\s+today\??$/i.test(text)) {
-        return '今天想做些什么？';
+        return isTraditional ? '今天想做些什麼？' : '今天想做些什么？';
       }
 
       // 1.24 动态空状态与通知提示
@@ -460,6 +548,66 @@
         return `将在 ${zhDuration}后完全刷新。`;
       }
 
+      // 1.33.1 动态配额时间窗口、剩余百分比与模型分层卸载提示匹配 (Weekly limit / 5h limit / Argon -> Hydrogen)
+      const windowLimitMatch = text.match(/^(\d+)\s*([smhd])\s+limit$/i);
+      if (windowLimitMatch) {
+        const num = windowLimitMatch[1];
+        const u = windowLimitMatch[2].toLowerCase();
+        const unitLabel = u === 'h'
+          ? (isTraditional ? '小時' : '小时')
+          : u === 'm'
+            ? (isTraditional ? '分鐘' : '分钟')
+            : u === 's'
+              ? '秒'
+              : '天';
+        return isTraditional ? `${num} ${unitLabel}配額` : `${num} ${unitLabel}配额`;
+      }
+
+      const compoundLimitResetMatch = text.match(/^(Daily\s+limit|Weekly\s+limit|Monthly\s+limit|Hourly\s+limit|\d+\s*[smhd]\s+limit),\s*(resets\s+in\s+.+)$/i);
+      if (compoundLimitResetMatch) {
+        const headZh = translate(compoundLimitResetMatch[1]) || compoundLimitResetMatch[1];
+        const tailRaw = 'Resets' + compoundLimitResetMatch[2].slice(6);
+        const tailZh = translate(tailRaw) || compoundLimitResetMatch[2];
+        return `${headZh}，${tailZh}`;
+      }
+
+      const pctLeftMatch = text.match(/^(\d+(?:\.\d+)?)%\s*left$/i);
+      if (pctLeftMatch) {
+        return isTraditional ? `剩餘 ${pctLeftMatch[1]}%` : `剩余 ${pctLeftMatch[1]}%`;
+      }
+
+      const offloadTooltipMatch = text.match(/^(.+?)\s+that\s+may\s+offload\s+routine\s+steps\s+to\s+(.+?)\.\s*Same\s+(.+?)-level\s+quality,\s*fewer\s+tokens\s+used\.?$/i);
+      if (offloadTooltipMatch) {
+        const [, primaryModel, helperModel, qualityModel] = offloadTooltipMatch;
+        if (isHk) {
+          return `可將常規步驟卸載給 ${helperModel} 處理的 ${primaryModel} 模型。保持同等 ${qualityModel} 級質素，消耗更少 Token。`;
+        }
+        if (isTraditional) {
+          return `可將常規步驟卸載給 ${helperModel} 處理的 ${primaryModel} 模型。保持同等 ${qualityModel} 級品質，消耗更少 Token。`;
+        }
+        return `可将常规步骤卸载给 ${helperModel} 处理的 ${primaryModel} 模型。保持同等 ${qualityModel} 级质量，消耗更少 Token。`;
+      }
+
+      // 1.33.2 SSH 远程主机动态状态与计数匹配
+      const hiddenHostsMatch = text.match(/^(\d+)\s+hidden\s+hosts?$/i);
+      if (hiddenHostsMatch) {
+        return isTraditional
+          ? `${hiddenHostsMatch[1]} 個已隱藏主機`
+          : `${hiddenHostsMatch[1]} 个已隐藏主机`;
+      }
+      const noHostsFileAboveMatch = text.match(/^No\s+hosts\s+in\s+(.+?)\s+yet\.\s*Type\s+one\s+above\.?$/i);
+      if (noHostsFileAboveMatch) {
+        return isTraditional
+          ? `${noHostsFileAboveMatch[1]} 中暫無主機，請在上方直接輸入。`
+          : `${noHostsFileAboveMatch[1]} 中暂无主机，请在上方直接输入。`;
+      }
+      const noHostsFileMatch = text.match(/^No\s+hosts\s+in\s+(.+?)\s+yet$/i);
+      if (noHostsFileMatch) {
+        return isTraditional
+          ? `${noHostsFileMatch[1]} 中暫無主機`
+          : `${noHostsFileMatch[1]} 中暂无主机`;
+      }
+
       // 1.34 官方技能卡片动态前缀与截断匹配 (AlphaFold, AlphaGenome, Android CLI, Automation, ChEMBL)
       if (/^Retrieve and analyze AlphaFold predicted structures for a protein/i.test(text)) {
         return '获取并分析蛋白质的 AlphaFold 预测结构。当用户提供特定 UniProt ID 并需要结构置信度指标 (pLDDT)、结构域边界分析或无序评估时使用。若用户仅提供蛋白质名称、基因名称或氨基酸序列，请先要求提供 UniProt ID。';
@@ -578,6 +726,100 @@
         const trSub = DICT[subKey] || LOWER_DICT[subKey.toLowerCase()];
         if (trSub) {
           return `${scopeMap[scopedCmdMatch[1].toLowerCase()]}：${trSub}`;
+        }
+      }
+
+      // 1.39 插件市场与折叠列表动态展开/收起计数匹配 (例如 "+ See 1 more", "See 3 more", "- See less")
+      const seeMoreCountMatch = text.match(/^(\+\s*)?(?:See|Show|View)\s+(\d+)\s+more$/i);
+      if (seeMoreCountMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        const prefix = seeMoreCountMatch[1] ? '+ ' : '';
+        return isSimplified
+          ? `${prefix}展开另外 ${seeMoreCountMatch[2]} 项`
+          : `${prefix}展開另外 ${seeMoreCountMatch[2]} 項`;
+      }
+      const plusMoreMatch = text.match(/^\+\s*(\d+)\s+more$/i);
+      if (plusMoreMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        return isSimplified ? `+ 另外 ${plusMoreMatch[1]} 项` : `+ 另外 ${plusMoreMatch[1]} 項`;
+      }
+      if (/^-\s*(?:See|Show|View)\s+less$/i.test(text)) {
+        return '- 收起';
+      }
+      const seeMoreInMatch = text.match(/^See\s+(more|less)\s+in\s+(.+)$/i);
+      if (seeMoreInMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        const isMore = seeMoreInMatch[1].toLowerCase() === 'more';
+        const rawTarget = seeMoreInMatch[2].trim();
+        const trTarget = DICT[rawTarget] || LOWER_DICT[rawTarget.toLowerCase()] || rawTarget;
+        if (isMore) {
+          return isSimplified ? `在“${trTarget}”中查看更多` : `在「${trTarget}」中查看更多`;
+        }
+        return isSimplified ? `收起“${trTarget}”` : `收起「${trTarget}」`;
+      }
+
+      // 1.395 麦克风与音频输入/输出设备名称复合汉化（兼容 System default / Communications - / Default - 前缀与声卡后缀）
+      const sysDefaultMicMatch = text.match(/^System\s+default\s*\((.+)\)$/i);
+      if (sysDefaultMicMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        const innerMic = sysDefaultMicMatch[1].trim();
+        const trMic = translate(innerMic) || innerMic;
+        return (isSimplified ? '系统默认' : '系統預設') + ' (' + trMic + ')';
+      }
+      const commDeviceMatch = text.match(/^(Communications|Default)\s*-\s*(.+)$/i);
+      if (commDeviceMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        const isComm = commDeviceMatch[1].toLowerCase() === 'communications';
+        const innerDev = commDeviceMatch[2].trim();
+        const trDev = translate(innerDev) || innerDev;
+        const devPrefix = isComm
+          ? (isSimplified ? '通信设备 - ' : '通訊裝置 - ')
+          : (isSimplified ? '默认设备 - ' : '預設裝置 - ');
+        return devPrefix + trDev;
+      }
+      if (
+        /Noise-cancell?ing\s+(?:Input|Output)|ASUS\s+Utility|\b(?:Headset\s+Microphone|Microphone\s+Array|Internal\s+Microphone|External\s+Microphone|Desktop\s+Microphone|Webcam\s+Microphone|Stereo\s+Mix)\b/i.test(text) ||
+        /^(?:麦克风|麥克風|立体声混音|立體聲混音|线路输入|線路輸入|扬声器|揚聲器|耳机|耳機|耳麦|耳麥|Microphone\s*\()/i.test(text)
+      ) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        let audioTr = text
+          .replace(/\bAI\s+Noise-cancell?ing\s+Input\b/gi, isSimplified ? 'AI 降噪输入' : 'AI 降噪輸入')
+          .replace(/\bAI\s+Noise-cancell?ing\s+Output\b/gi, isSimplified ? 'AI 降噪输出' : 'AI 降噪輸出')
+          .replace(/\(\s*ASUS\s+Utility\s*\)/gi, isSimplified ? '(华硕实用程序)' : '(華碩公用程式)')
+          .replace(/^Headset\s+Microphone(?=\s*\()/i, isSimplified ? '耳麦麦克风' : '耳麥麥克風')
+          .replace(/^Microphone\s+Array(?=\s*\()/i, isSimplified ? '麦克风阵列' : '麥克風陣列')
+          .replace(/^Internal\s+Microphone(?=\s*\()/i, isSimplified ? '内置麦克风' : '內建麥克風')
+          .replace(/^External\s+Microphone(?=\s*\()/i, isSimplified ? '外接麦克风' : '外接麥克風')
+          .replace(/^Desktop\s+Microphone(?=\s*\()/i, isSimplified ? '桌面麦克风' : '桌面麥克風')
+          .replace(/^Webcam\s+Microphone(?=\s*\()/i, isSimplified ? '摄像头麦克风' : '網路攝影機麥克風')
+          .replace(/^Microphone(?=\s*\()/i, isSimplified ? '麦克风' : '麥克風')
+          .replace(/^Stereo\s+Mix(?=\s*\()/i, isSimplified ? '立体声混音' : '立體聲混音')
+          .replace(/^Line\s+In(?=\s*\()/i, isSimplified ? '线路输入' : '線路輸入')
+          .replace(/\(\s*High\s+Definition\s+Audio\s+Device\s*\)/gi, isSimplified ? '(高保真音频设备)' : '(高傳真音訊裝置)')
+          .replace(/\(\s*USB\s+Audio\s+Device\s*\)/gi, isSimplified ? '(USB 音频设备)' : '(USB 音訊裝置)')
+          .replace(/\(\s*Bluetooth\s+Hands-Free\s+Audio\s*\)/gi, isSimplified ? '(蓝牙免提音频)' : '(藍牙免持音訊)')
+          .replace(/\(([^()]+?)\s+Audio\)/gi, (_, vendor) => `(${vendor.trim()} ${isSimplified ? '音频' : '音訊'})`);
+        if (audioTr !== text) {
+          return audioTr;
+        }
+      }
+
+      // 1.40 双向长描述省略号与截断前缀智能容错（适配插件市场卡片完整长句与动态省略号截断）
+      if ((text.endsWith('...') || text.endsWith('…')) && text.length >= 28) {
+        const stemLower = lower.replace(/(?:\.\.\.|…)+$/, '').trim();
+        if (stemLower.length >= 25) {
+          for (let i = 0; i < LONG_FULL_ENTRIES.length; i++) {
+            if (LONG_FULL_ENTRIES[i].keyLower.startsWith(stemLower)) {
+              return LONG_FULL_ENTRIES[i].val;
+            }
+          }
+        }
+      }
+      if (lower.length >= 50) {
+        for (let i = 0; i < TRUNCATED_KEY_PREFIXES.length; i++) {
+          if (lower.startsWith(TRUNCATED_KEY_PREFIXES[i].stemLower)) {
+            return TRUNCATED_KEY_PREFIXES[i].val;
+          }
         }
       }
 
@@ -752,6 +994,23 @@
             continue;
           }
 
+          // 若前一个同级内联超链接/按钮已汉化为中文（例如 <a>了解详情</a>.），将其后紧跟的孤立段末英文句点 "." 转为中文句号 "。"
+          if (trimmed === '.') {
+            const prev = current.previousSibling;
+            const next = current.nextSibling;
+            const isAtEnd = !next || (next.nodeType === 3 && /^\s*$/.test(next.nodeValue || ''));
+            if (isAtEnd && prev && prev.nodeType === 1) {
+              const prevTag = (prev.tagName || '').toUpperCase();
+              const isLinkLike = prevTag === 'A' || prevTag === 'BUTTON' || (prev.matches && prev.matches('[role="link"], [class*="link"]'));
+              if (isLinkLike && /[\u4e00-\u9fa5]/.test(prev.textContent || '')) {
+                current.nodeValue = original.replace('.', '。');
+                try { translatedNodeSet.add(current); } catch (_) {}
+                count++;
+                continue;
+              }
+            }
+          }
+
           const translated = translate(original);
           if (translated) {
             const trimmedOrig = norm(original);
@@ -845,7 +1104,7 @@
           if (isProtectedTextNode(container)) continue;
           const rawText = container.textContent || '';
           const fullText = norm(rawText);
-          if (!fullText || fullText.length < 3 || fullText.length > 400) continue;
+          if (!fullText || fullText.length < 3 || fullText.length > 1200) continue;
 
           const translated = translate(fullText);
           if (translated && norm(translated) !== fullText) {
@@ -917,6 +1176,26 @@
           if (translatedNodeSet.has(el) || isProtectedTextNode(el)) continue;
           const text = norm(el.textContent || '');
           if (!text || text.length > 300) continue;
+
+          // 匹配 SSH 弹窗中被拆分为多个相邻文本节点的空状态提示: ["No hosts in ", "~/.ssh/config", " yet. Type one above."]
+          // 严格原地更新原有 TextNode.nodeValue，绝不销毁或替换 React Fiber 持有的子节点引用
+          if (el.children.length === 0 && el.childNodes && el.childNodes.length > 1 && /^No\s+hosts\s+in\s+.+?\s+yet(?:\.\s*Type\s+one\s+above\.?)?$/i.test(text)) {
+            const trNoHosts = translate(text);
+            if (trNoHosts && norm(trNoHosts) !== text) {
+              let written = false;
+              for (let c = 0; c < el.childNodes.length; c++) {
+                const cn = el.childNodes[c];
+                if (cn.nodeType === 3) {
+                  cn.nodeValue = written ? '' : trNoHosts;
+                  written = true;
+                  try { translatedNodeSet.add(cn); } catch (_) {}
+                }
+              }
+              try { translatedNodeSet.add(el); } catch (_) {}
+              count++;
+              continue;
+            }
+          }
 
           // 匹配包含超链接或内联文本的归档通知: "View archived conversations in history."
           if (/^View archived conversations in\s+history\.?$/i.test(text)) {
@@ -1616,7 +1895,7 @@
         Object.defineProperty(Node.prototype, 'textContent', {
           set(val) {
             try {
-              if (typeof val === 'string' && val.length > 0 && val.length < 500) {
+              if (typeof val === 'string' && val.length > 0 && val.length < 1600) {
                 if (!isProtectedTextNode(this)) {
                   const tr = translate(val);
                   if (tr && norm(val) !== norm(tr)) {
@@ -1641,7 +1920,7 @@
         Object.defineProperty(Node.prototype, 'nodeValue', {
           set(val) {
             try {
-              if (this.nodeType === 3 && typeof val === 'string' && val.length > 0 && val.length < 500) {
+              if (this.nodeType === 3 && typeof val === 'string' && val.length > 0 && val.length < 1600) {
                 if (!isProtectedTextNode(this)) {
                   const tr = translate(val);
                   if (tr && norm(val) !== norm(tr)) {
@@ -1665,7 +1944,7 @@
       if (origSetAttribute) {
         Element.prototype.setAttribute = function(name, val) {
           try {
-            if (['aria-label', 'placeholder', 'aria-placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].includes(name) && typeof val === 'string' && val.length > 0 && val.length < 500) {
+            if (['aria-label', 'placeholder', 'aria-placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].includes(name) && typeof val === 'string' && val.length > 0 && val.length < 1600) {
               if (!(name === 'value' && !(this.matches && this.matches('input[type="button"], input[type="submit"]'))) && !isProtectedAttrNode(this)) {
                 const tr = translate(val);
                 if (tr && norm(val) !== norm(tr)) {
@@ -1688,7 +1967,7 @@
             Object.defineProperty(proto, 'placeholder', {
               set(val) {
                 try {
-                  if (typeof val === 'string' && val.length > 0 && val.length < 500 && !isProtectedAttrNode(this)) {
+                  if (typeof val === 'string' && val.length > 0 && val.length < 1600 && !isProtectedAttrNode(this)) {
                     const tr = translate(val);
                     if (tr && norm(val) !== norm(tr)) {
                       return origSet.call(this, tr);
@@ -1710,7 +1989,7 @@
       if (origCreateTextNode) {
         document.createTextNode = function(data) {
           try {
-            if (typeof data === 'string' && data.length > 2 && data.length < 500) {
+            if (typeof data === 'string' && data.length > 2 && data.length < 1600) {
               const tr = translate(data);
               if (tr && norm(data) !== norm(tr)) {
                 const lead = (data.match(/^\s*/) || [''])[0];

@@ -16,6 +16,22 @@
     "Restart to Update": "重启以更新",
     "Docs": "官方文档",
     "Connect to WSL": "连接到 WSL",
+    "Connect to SSH": "连接到 SSH",
+    "Connect to SSH...": "连接到 SSH...",
+    "Connect to SSH Host": "连接到 SSH 主机",
+    "Connect to SSH Host...": "连接到 SSH 主机...",
+    "Connect to SSH Host…": "连接到 SSH 主机...",
+    "Open SSH Host": "打开 SSH 主机",
+    "SSH Host": "SSH 主机",
+    "SSH Host...": "SSH 主机...",
+    "SSH Host…": "SSH 主机...",
+    "Stop SSH Server": "停止 SSH 服务端",
+    "Stop SSH Server...": "停止 SSH 服务端...",
+    "Stop SSH Server…": "停止 SSH 服务端...",
+    "Switch to This Computer": "切换到此电脑",
+    "Disconnect from SSH": "断开 SSH 连接",
+    "Disconnect from SSH Host": "断开 SSH 主机连接",
+    "Close Remote Connection": "关闭远程连接",
     "Reopen Locally": "在本地重新打开",
     "Reopen locally": "在本地重新打开",
     "Undo": "撤消",
@@ -44,12 +60,18 @@
     "Open Antigravity": "打开 Antigravity",
     "Quit": "退出",
     "Connect to WSL": "连接到 WSL",
+    "Connect to SSH": "连接到 SSH",
+    "Connect to SSH Host": "连接到 SSH 主机",
+    "SSH Host...": "SSH 主机...",
+    "Disconnect from SSH": "断开 SSH 连接",
     "Reopen Locally": "在本地重新打开",
     "Reopen locally": "在本地重新打开"
   },
   "dialog": {
     "Binary not found": "未找到二进制文件",
     "Startup failed": "启动失败",
-    "WSL setup failed": "WSL 环境配置失败"
+    "WSL setup failed": "WSL 环境配置失败",
+    "SSH setup failed": "SSH 环境配置失败",
+    "SSH connection failed": "SSH 连接失败"
   }
 }
