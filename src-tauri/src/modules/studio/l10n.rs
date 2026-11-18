@@ -1338,11 +1338,17 @@ mod tests {
     #[test]
     fn test_strip_legacy_preload_injections_removes_old_pet() {
         let legacy = "const a = 1;\n;(function() { if (window.__AGY_NEZUKO_PET_INITIALIZED__) return; })();";
+        assert!(super::super::auto_reapply::is_legacy_pet_present_in_script(legacy));
         let cleaned = strip_legacy_preload_injections(legacy);
         assert_eq!(cleaned, "const a = 1;");
-        let bundled = patch_preload_or_utils(legacy, "/* new bundle */");
+        let fake_new_bundle = format!(
+            "\n{}\n;(function(){{ ['nezuko-pet-root'].forEach(() => {{}}); }})();",
+            PATCH_MARKER
+        );
+        let bundled = patch_preload_or_utils(legacy, &fake_new_bundle);
         assert!(!bundled.contains("__AGY_NEZUKO_PET_INITIALIZED__"));
-        assert!(bundled.contains("/* new bundle */"));
+        // 验证注入新版补丁后绝不会触发自指老宠物残留误报
+        assert!(!super::super::auto_reapply::is_legacy_pet_present_in_script(&bundled));
     }
 
     #[test]

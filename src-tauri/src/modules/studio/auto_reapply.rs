@@ -47,6 +47,18 @@ pub fn agent_status(explicit_dir: Option<&str>) -> String {
     }
 }
 
+/// 判断 preload/utils 源码文本中是否仍残留早期内置老宠物脚本（排除新版自身的 PATCH_MARKER 清理段）
+pub fn is_legacy_pet_present_in_script(text: &str) -> bool {
+    // 截取新版 PATCH_MARKER 之前的基底部分（避免新版自身注入的选择器字面量触发自指误报）
+    let inspect_slice = match text.find(PATCH_MARKER) {
+        Some(pos) => &text[..pos],
+        None => text,
+    };
+    inspect_slice.contains("__AGY_NEZUKO_PET_INITIALIZED__")
+        || inspect_slice.contains("id = 'nezuko-pet-root'")
+        || inspect_slice.contains("id=\"nezuko-pet-root\"")
+}
+
 /// 检测 Antigravity 客户端 app.asar 渲染层是否仍残留旧版脚本注入的老宠物代码
 pub fn has_legacy_pet_in_agent(explicit_dir: Option<&str>) -> bool {
     let Some(install_dir) = detect_install_dir(explicit_dir) else {
@@ -61,7 +73,7 @@ pub fn has_legacy_pet_in_agent(explicit_dir: Option<&str>) -> bool {
     for target in ["dist/preload.js", "dist/utils.js"] {
         if let Ok(content) = read_asar_file_content(&bytes, target) {
             let text = String::from_utf8_lossy(&content);
-            if text.contains("__AGY_NEZUKO_PET_INITIALIZED__") || text.contains("nezuko-pet") {
+            if is_legacy_pet_present_in_script(&text) {
                 return true;
             }
         }
