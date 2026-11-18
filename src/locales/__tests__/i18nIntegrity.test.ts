@@ -122,6 +122,22 @@ test('3. 客户端多语种汉化词典 (CN/TW/HK) 与正则规则 JSON 结构�
     'Software Engineering': '软件工程',
     'Full interface for coding, developer tools, and managing agents.':
       '面向编程、开发者工具与智能体管理的完整界面。',
+    Extra: '超高',
+    Max: '最高',
+    'AI Noise-cancelling Input (ASUS Utility)': 'AI 降噪输入 (华硕实用程序)',
+    'Uses your local files and tools. Schedules only.': '使用您的本地文件与工具。仅支持定时计划。',
+    'Runs even when your computer is off. Schedules and events.':
+      '即使您的电脑关机也能继续运行。支持定时计划与事件触发。',
+    'Connect Antigravity to your Notion workspace with the Notion MCP server, plus skills for research, documentation, meeting prep, specs, trackers, and project updates.':
+      '通过 Notion MCP 服务器将 Antigravity 连接至您的 Notion 工作区，并提供涵盖资料调研、文档撰写、会议筹备、技术方案、任务追踪与项目进展更新的专属技能。',
+    'Create and send proposals, quotes, and contracts for e-signature. Track signing progress and identify documents that need follow-up.':
+      '创建并发送商业提案、报价单与电子签约合同，实时追踪签署进度并自动识别需要跟进催办的文档。',
+    'Official Trello plugin with the Trello MCP server and a skill for boards, lists, cards, checklists, Inbox, and Planner.':
+      'Trello 官方插件，内置 Trello MCP 服务器及专属技能，轻松管理看板、列表、卡片、检查清单、收件箱与日程规划器。',
+    'Build and deploy on Netlify: functions, edge functions, blobs, database, identity, forms, image CDN, caching, and AI Gateway, plus the Netlify MCP server.':
+      '在 Netlify 上构建与部署应用：支持云函数、边缘函数、Blob 存储、数据库、身份认证、表单、图像 CDN、缓存策略与 AI 网关，内置 Netlify MCP 服务器。',
+    "Deploy, configure, monitor, and troubleshoot apps, databases, and infrastructure on Railway from Antigravity with Railway's agent skill and hosted MCP server.":
+      '借助 Railway 智能体技能与官方托管的 MCP 服务器，在 Antigravity 中一站式部署、配置、监控并排查 Railway 上的应用、数据库与基础设施故障。',
   };
 
   for (const [enKey, expectedZh] of Object.entries(expectedCnEntries)) {
@@ -308,6 +324,40 @@ async function runRuntimeEngineTest(): Promise<void> {
   const tSoftEngDesc = body
     .appendChildEl(new MockElement('DIV'))
     .appendText('Full interface for coding, developer tools, and managing agents.');
+  const tEffortExtra = body.appendChildEl(new MockElement('SPAN')).appendText('Extra');
+  const tModelExtra = body.appendChildEl(new MockElement('SPAN')).appendText('Gemini 4 Carbon (Extra)');
+  const tModelXHigh = body.appendChildEl(new MockElement('SPAN')).appendText('Gemini 4 Carbon (xhigh)');
+  const tEffortCtx = body.appendChildEl(new MockElement('SPAN')).appendText('Extra \u00b7 1M');
+  const tMicComm = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('Communications - 麦克风 (C-Media(R) Audio) (0b05:6208)');
+  const tMicPlain = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('麦克风 (C-Media(R) Audio) (0b05:6208)');
+  const tMicAsus = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('AI Noise-cancelling Input (ASUS Utility)');
+  const tMicSysDefault = body
+    .appendChildEl(new MockElement('DIV'))
+    .appendText('System default (AI Noise-cancelling Input (ASUS Utility))');
+  const tLocalSchedule = body
+    .appendChildEl(new MockElement('SPAN'))
+    .appendText('Uses your local files and tools. Schedules only.');
+  const tNotionTruncated = body
+    .appendChildEl(new MockElement('SPAN'))
+    .appendText('Connect Antigravity to your Notion workspace ...');
+  const tPandaTruncated = body
+    .appendChildEl(new MockElement('SPAN'))
+    .appendText('Create and send proposals, quotes, and contr...');
+  const tTrelloTruncated = body
+    .appendChildEl(new MockElement('SPAN'))
+    .appendText('Official Trello plugin with the Trello MCP serve...');
+  const tNetlifyTruncated = body
+    .appendChildEl(new MockElement('SPAN'))
+    .appendText('Build and deploy on Netlify: functions, edge fu...');
+  const tRailwayTruncated = body
+    .appendChildEl(new MockElement('SPAN'))
+    .appendText('Deploy, configure, monitor, and troubleshoot a...');
 
   let observerCallback: ((mutations: unknown[]) => void) | null = null;
 
@@ -450,6 +500,40 @@ async function runRuntimeEngineTest(): Promise<void> {
     tSoftEngDesc.nodeValue !== '面向编程、开发者工具与智能体管理的完整界面。'
   ) {
     throw new Error(`界面布局卡片翻译不符: ${tKnowledgeWork.nodeValue} / ${tSoftEng.nodeValue}`);
+  }
+  if (
+    tEffortExtra.nodeValue !== '超高' ||
+    tModelExtra.nodeValue !== 'Gemini 4 Carbon（超高）' ||
+    tModelXHigh.nodeValue !== 'Gemini 4 Carbon（超高）' ||
+    tEffortCtx.nodeValue !== '超高 · 1M'
+  ) {
+    throw new Error(
+      `模型思考等级翻译不符: ${tEffortExtra.nodeValue} / ${tModelExtra.nodeValue} / ${tModelXHigh.nodeValue} / ${tEffortCtx.nodeValue}`,
+    );
+  }
+  if (
+    tMicComm.nodeValue !== '通信设备 - 麦克风 (C-Media(R) 音频) (0b05:6208)' ||
+    tMicPlain.nodeValue !== '麦克风 (C-Media(R) 音频) (0b05:6208)' ||
+    tMicAsus.nodeValue !== 'AI 降噪输入 (华硕实用程序)' ||
+    tMicSysDefault.nodeValue !== '系统默认 (AI 降噪输入 (华硕实用程序))'
+  ) {
+    throw new Error(
+      `麦克风设备名称翻译不符: ${tMicComm.nodeValue} / ${tMicPlain.nodeValue} / ${tMicAsus.nodeValue} / ${tMicSysDefault.nodeValue}`,
+    );
+  }
+  if (tLocalSchedule.nodeValue !== '使用您的本地文件与工具。仅支持定时计划。') {
+    throw new Error(`自动化本地计划说明翻译不符: ${tLocalSchedule.nodeValue}`);
+  }
+  if (
+    !tNotionTruncated.nodeValue?.startsWith('通过 Notion MCP 服务器') ||
+    !tPandaTruncated.nodeValue?.startsWith('创建并发送商业提案') ||
+    !tTrelloTruncated.nodeValue?.startsWith('Trello 官方插件') ||
+    !tNetlifyTruncated.nodeValue?.startsWith('在 Netlify 上构建与部署应用') ||
+    !tRailwayTruncated.nodeValue?.startsWith('借助 Railway 智能体技能')
+  ) {
+    throw new Error(
+      `插件市场截断卡片描述翻译不符: ${tNotionTruncated.nodeValue} / ${tPandaTruncated.nodeValue}`,
+    );
   }
 
   // 验证单节点 attributes MutationObserver (m.target 为独立 input 自身，无任何子节点) 依然能即时翻译

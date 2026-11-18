@@ -798,7 +798,7 @@
           .replace(/\(\s*High\s+Definition\s+Audio\s+Device\s*\)/gi, isSimplified ? '(高保真音频设备)' : '(高傳真音訊裝置)')
           .replace(/\(\s*USB\s+Audio\s+Device\s*\)/gi, isSimplified ? '(USB 音频设备)' : '(USB 音訊裝置)')
           .replace(/\(\s*Bluetooth\s+Hands-Free\s+Audio\s*\)/gi, isSimplified ? '(蓝牙免提音频)' : '(藍牙免持音訊)')
-          .replace(/\(([^()]+?)\s+Audio\)/gi, (_, vendor) => `(${vendor.trim()} ${isSimplified ? '音频' : '音訊'})`);
+          .replace(/\(([^()]*(?:\([^()]*\)[^()]*)*?)\s+Audio\)/gi, (_, vendor) => `(${vendor.trim()} ${isSimplified ? '音频' : '音訊'})`);
         if (audioTr !== text) {
           return audioTr;
         }

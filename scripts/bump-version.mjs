@@ -35,6 +35,28 @@ const cargoUpdated = cargoRaw.replace(
 );
 fs.writeFileSync(cargoPath, cargoUpdated, 'utf8');
 
+// 3.1 同步更新 package-lock.json 根版本号
+const pkgLockPath = path.join(rootDir, 'package-lock.json');
+if (fs.existsSync(pkgLockPath)) {
+  const pkgLock = JSON.parse(fs.readFileSync(pkgLockPath, 'utf8'));
+  pkgLock.version = cleanVersion;
+  if (pkgLock.packages && pkgLock.packages['']) {
+    pkgLock.packages[''].version = cleanVersion;
+  }
+  fs.writeFileSync(pkgLockPath, JSON.stringify(pkgLock, null, 2) + '\n', 'utf8');
+}
+
+// 3.2 同步更新 src-tauri/Cargo.lock 中 antigravity-tools 版本号
+const cargoLockPath = path.join(rootDir, 'src-tauri', 'Cargo.lock');
+if (fs.existsSync(cargoLockPath)) {
+  const cargoLockRaw = fs.readFileSync(cargoLockPath, 'utf8');
+  const cargoLockUpdated = cargoLockRaw.replace(
+    /(\[\[package\]\]\r?\nname = "antigravity-tools"\r?\nversion = )"[^"]+"/,
+    `$1"${cleanVersion}"`,
+  );
+  fs.writeFileSync(cargoLockPath, cargoLockUpdated, 'utf8');
+}
+
 // 4. 同步 README.md 中的发布命令版本号示例
 const readmePath = path.join(rootDir, 'README.md');
 if (fs.existsSync(readmePath)) {
