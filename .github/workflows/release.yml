@@ -79,10 +79,29 @@ jobs:
           ANTIGRAVITY_GCP_CLIENT_ID: ${{ secrets.ANTIGRAVITY_GCP_CLIENT_ID }}
           ANTIGRAVITY_GCP_CLIENT_SECRET: ${{ secrets.ANTIGRAVITY_GCP_CLIENT_SECRET }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Antigravity Studio ${{ github.ref_name }}'
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: 'Antigravity Studio ${{ inputs.tag || github.ref_name }}'
           releaseBody: '## Antigravity Studio 自动更新发布\n请通过客户端「检查更新」自动完成 OTA 升级，或下载对应平台安装包。'
           releaseDraft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: true
+          updaterJsonPreferNsis: true
           updaterJsonKeepUniversal: true
           args: ${{ matrix.args }}
+
+  finalize-updater-manifest:
+    needs: release-desktop
+    runs-on: ubuntu-latest
+    steps:
+      - name: 同步生成兼容旧版客户端的 updater.json 并在全平台就绪后原子切换为 Latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release download "${TAG}" --repo "${REPO}" --pattern "latest.json" --clobber
+          cp latest.json updater.json
+          gh release upload "${TAG}" updater.json --repo "${REPO}" --clobber
+          if [[ "${TAG}" != *-* ]]; then
+            gh release edit "${TAG}" --repo "${REPO}" --prerelease=false --latest
+          fi

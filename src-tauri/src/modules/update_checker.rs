@@ -1,16 +1,13 @@
 use crate::modules::logger;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const GITHUB_API_URL: &str =
     "https://api.github.com/repos/qts2218346424-cyber/antigravity-zh-cn/releases/latest";
 const GITHUB_RELEASES_API_URL: &str =
     "https://api.github.com/repos/qts2218346424-cyber/antigravity-zh-cn/releases?per_page=15";
-const GITHUB_RAW_URL: &str =
-    "https://raw.githubusercontent.com/qts2218346424-cyber/antigravity-zh-cn/main/package.json";
-const JSDELIVR_URL: &str =
-    "https://cdn.jsdelivr.net/gh/qts2218346424-cyber/antigravity-zh-cn@main/package.json";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_CHECK_INTERVAL_HOURS: u64 = 24;
 
@@ -133,8 +130,12 @@ struct GitHubReleaseAsset {
     browser_download_url: String,
 }
 
+pub const STABLE_LATEST_JSON_URL: &str =
+    "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/latest/download/latest.json";
 pub const STABLE_UPDATER_JSON_URL: &str =
     "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/latest/download/updater.json";
+pub const PREVIEW_LATEST_JSON_URL: &str =
+    "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/download/preview/latest.json";
 pub const PREVIEW_UPDATER_JSON_URL: &str =
     "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/download/preview/updater.json";
 
@@ -193,35 +194,22 @@ pub async fn check_for_updates() -> Result<UpdateInfo, String> {
 }
 
 async fn check_for_updates_internal(channel: UpdateChannel) -> Result<UpdateInfo, String> {
-    // 1. Try updater.json first (Critical for functional Auto-Update)
+    // 1. 优先通过签名 OTA 清单 (latest.json / updater.json) 检查可用更新
     match check_updater_json_channel(channel).await {
         Ok(info) => return Ok(info),
         Err(e) => {
             logger::log_warn(&format!(
-                "{:?} updater.json check failed: {}. Trying fallbacks...",
+                "{:?} OTA manifest check failed: {}. Trying GitHub Releases API...",
                 channel, e
             ));
         }
     }
 
-    // 2. Try GitHub API
+    // 2. 降级至 GitHub Releases API（仅当对应系统安装包已就绪时提示更新，避免构建半途抢跑报错）
     match check_github_api_channel(channel).await {
         Ok(info) => return Ok(info),
         Err(e) => {
-            logger::log_warn(&format!(
-                "GitHub API ({:?}) check failed: {}. Trying static fallbacks...",
-                channel, e
-            ));
-        }
-    }
-
-    // 3. Try GitHub Raw (only applies to stable/main)
-    if channel == UpdateChannel::Stable {
-        if let Ok(info) = check_static_url(GITHUB_RAW_URL, "GitHub Raw").await {
-            return Ok(info);
-        }
-        if let Ok(info) = check_static_url(JSDELIVR_URL, "jsDelivr").await {
-            return Ok(info);
+            logger::log_warn(&format!("GitHub API ({:?}) check failed: {}", channel, e));
         }
     }
 
@@ -236,6 +224,53 @@ struct UpdaterJson {
     version: String,
     notes: Option<String>,
     pub_date: Option<String>,
+    #[serde(default)]
+    platforms: HashMap<String, serde_json::Value>,
+}
+
+fn is_platform_ready_for_os(platforms: &HashMap<String, serde_json::Value>, os: &str) -> bool {
+    if platforms.is_empty() {
+        return false;
+    }
+    match os {
+        "windows" => [
+            "windows-x86_64",
+            "windows-x86_64-nsis",
+            "windows-x86_64-msi",
+            "windows-aarch64",
+        ]
+        .iter()
+        .any(|k| platforms.contains_key(*k)),
+        "macos" => [
+            "darwin-universal",
+            "darwin-universal-app",
+            "darwin-aarch64",
+            "darwin-x86_64",
+        ]
+        .iter()
+        .any(|k| platforms.contains_key(*k)),
+        "linux" => ["linux-x86_64", "linux-x86_64-appimage"]
+            .iter()
+            .any(|k| platforms.contains_key(*k)),
+        _ => true,
+    }
+}
+
+fn has_release_installer_for_os(assets: &[GitHubReleaseAsset], os: &str) -> bool {
+    assets.iter().any(|a| {
+        let lower = a.name.to_ascii_lowercase();
+        if lower.ends_with(".sig") || lower.ends_with(".json") {
+            return false;
+        }
+        match os {
+            "windows" => lower.ends_with(".exe") || lower.ends_with(".msi"),
+            "macos" => lower.ends_with(".dmg") || lower.ends_with(".app.tar.gz"),
+            "linux" => {
+                lower.ends_with(".appimage") || lower.ends_with(".deb") || lower.ends_with(".rpm")
+            }
+            _ => true,
+        }
+    })
 }
 
 async fn create_client() -> Result<reqwest::Client, String> {
@@ -266,43 +301,53 @@ async fn create_client() -> Result<reqwest::Client, String> {
 
 async fn check_updater_json_channel(channel: UpdateChannel) -> Result<UpdateInfo, String> {
     let client = create_client().await?;
-    let target_url = match channel {
-        UpdateChannel::Stable => STABLE_UPDATER_JSON_URL,
-        UpdateChannel::Beta => PREVIEW_UPDATER_JSON_URL,
+    let candidate_urls: &[&str] = match channel {
+        UpdateChannel::Stable => &[STABLE_LATEST_JSON_URL, STABLE_UPDATER_JSON_URL],
+        UpdateChannel::Beta => &[PREVIEW_LATEST_JSON_URL, PREVIEW_UPDATER_JSON_URL],
     };
 
-    logger::log_info(&format!(
-        "Checking for updates via {:?} updater.json ({})...",
-        channel, target_url
-    ));
+    let mut chosen: Option<(reqwest::Response, String)> = None;
+    let mut last_err = String::new();
 
-    let response = client.get(target_url).send().await;
+    for &url in candidate_urls {
+        logger::log_info(&format!(
+            "Checking for updates via {:?} manifest ({})...",
+            channel, url
+        ));
+        match client.get(url).send().await {
+            Ok(res) if res.status().is_success() => {
+                chosen = Some((res, url.to_string()));
+                break;
+            }
+            Ok(res) => {
+                last_err = format!("{} returned status {}", url, res.status());
+            }
+            Err(e) => {
+                last_err = format!("{} error: {}", url, e);
+            }
+        }
+    }
 
-    let (response, actual_url) = match response {
-        Ok(res) if res.status().is_success() => (res, target_url.to_string()),
-        other => {
+    let (response, actual_url) = match chosen {
+        Some(pair) => pair,
+        None => {
             if channel == UpdateChannel::Beta {
-                logger::log_info("Preview updater.json endpoint unavailable, checking latest prerelease assets from GitHub API...");
+                logger::log_info("Preview manifest endpoint unavailable, checking latest prerelease assets from GitHub API...");
                 if let Ok(asset_url) = fetch_prerelease_updater_json_url(&client).await {
                     let res = client
                         .get(&asset_url)
                         .send()
                         .await
                         .map_err(|e| format!("Request failed: {}", e))?;
+                    if !res.status().is_success() {
+                        return Err(format!("Prerelease manifest returned status {}", res.status()));
+                    }
                     (res, asset_url)
                 } else {
-                    let err_msg = match other {
-                        Ok(res) => format!("status {}", res.status()),
-                        Err(e) => e.to_string(),
-                    };
-                    return Err(format!("updater.json returned {}", err_msg));
+                    return Err(format!("Manifest unavailable ({})", last_err));
                 }
             } else {
-                let err_msg = match other {
-                    Ok(res) => format!("status {}", res.status()),
-                    Err(e) => e.to_string(),
-                };
-                return Err(format!("updater.json returned {}", err_msg));
+                return Err(format!("Manifest unavailable ({})", last_err));
             }
         }
     };
@@ -310,20 +355,28 @@ async fn check_updater_json_channel(channel: UpdateChannel) -> Result<UpdateInfo
     let updater_info: UpdaterJson = response
         .json()
         .await
-        .map_err(|e| format!("Failed to parse updater.json: {}", e))?;
+        .map_err(|e| format!("Failed to parse OTA manifest: {}", e))?;
 
     let latest_version = updater_info.version.trim_start_matches('v').to_string();
     let current_version = CURRENT_VERSION.to_string();
-    let has_update = compare_versions(&latest_version, &current_version);
+    let version_is_newer = compare_versions(&latest_version, &current_version);
+    let platform_ready = is_platform_ready_for_os(&updater_info.platforms, std::env::consts::OS);
+    let has_update = version_is_newer && platform_ready;
 
-    if has_update {
+    if version_is_newer && !platform_ready {
         logger::log_info(&format!(
-            "New version found ({:?} updater.json): {} (Current: {})",
+            "New version {} detected in manifest, but {} platform artifact is still building; deferring prompt.",
+            latest_version,
+            std::env::consts::OS
+        ));
+    } else if has_update {
+        logger::log_info(&format!(
+            "New version found ({:?} manifest): {} (Current: {})",
             channel, latest_version, current_version
         ));
     } else {
         logger::log_info(&format!(
-            "Up to date ({:?} updater.json): {} (Matches {})",
+            "Up to date ({:?} manifest): {} (Matches {})",
             channel, current_version, latest_version
         ));
     }
@@ -344,10 +397,14 @@ async fn check_updater_json_channel(channel: UpdateChannel) -> Result<UpdateInfo
         published_at: updater_info
             .pub_date
             .unwrap_or_else(|| Utc::now().to_rfc3339()),
-        source: Some(format!("{:?} updater.json", channel)),
+        source: Some(format!("{:?} OTA manifest", channel)),
         proxy_url: None,
         channel: Some(channel),
-        updater_json_url: Some(actual_url),
+        updater_json_url: if platform_ready {
+            Some(actual_url)
+        } else {
+            None
+        },
     })
 }
 
@@ -372,17 +429,16 @@ async fn fetch_prerelease_updater_json_url(client: &reqwest::Client) -> Result<S
 
     for release in releases {
         if release.prerelease {
-            if let Some(asset) = release
-                .assets
-                .into_iter()
-                .find(|a| a.name.eq_ignore_ascii_case("updater.json"))
-            {
-                return Ok(asset.browser_download_url);
+            if let Some(asset) = release.assets.iter().find(|a| {
+                a.name.eq_ignore_ascii_case("latest.json")
+                    || a.name.eq_ignore_ascii_case("updater.json")
+            }) {
+                return Ok(asset.browser_download_url.clone());
             }
         }
     }
 
-    Err("No updater.json found in latest pre-releases".to_string())
+    Err("No latest.json/updater.json found in latest pre-releases".to_string())
 }
 
 async fn check_github_api_channel(channel: UpdateChannel) -> Result<UpdateInfo, String> {
@@ -425,21 +481,39 @@ async fn check_github_api_channel(channel: UpdateChannel) -> Result<UpdateInfo, 
                 .await
                 .map_err(|e| format!("Failed to parse releases: {}", e))?;
 
-            // 优先查找最新的 pre-release
-            let latest_pre = releases
+            releases
                 .into_iter()
                 .find(|r| r.prerelease)
-                .ok_or_else(|| "No pre-release found on GitHub".to_string())?;
-
-            latest_pre
+                .ok_or_else(|| "No pre-release found on GitHub".to_string())?
         }
     };
 
     let latest_version = release.tag_name.trim_start_matches('v').to_string();
     let current_version = CURRENT_VERSION.to_string();
-    let has_update = compare_versions(&latest_version, &current_version);
+    let version_is_newer = compare_versions(&latest_version, &current_version);
 
-    if has_update {
+    let manifest_asset_url = release
+        .assets
+        .iter()
+        .find(|a| a.name.eq_ignore_ascii_case("latest.json"))
+        .or_else(|| {
+            release
+                .assets
+                .iter()
+                .find(|a| a.name.eq_ignore_ascii_case("updater.json"))
+        })
+        .map(|a| a.browser_download_url.clone());
+
+    let installer_ready = has_release_installer_for_os(&release.assets, std::env::consts::OS);
+    let has_update = version_is_newer && (manifest_asset_url.is_some() || installer_ready);
+
+    if version_is_newer && !has_update {
+        logger::log_info(&format!(
+            "Release {} exists on GitHub, but artifacts for {} are not uploaded yet; deferring update prompt.",
+            latest_version,
+            std::env::consts::OS
+        ));
+    } else if has_update {
         logger::log_info(&format!(
             "New version found (API {:?}): {} (Current: {})",
             channel, latest_version, current_version
@@ -463,76 +537,7 @@ async fn check_github_api_channel(channel: UpdateChannel) -> Result<UpdateInfo, 
         source: Some(format!("GitHub API ({:?})", channel)),
         proxy_url: None,
         channel: Some(channel),
-        updater_json_url: match channel {
-            UpdateChannel::Beta => Some(PREVIEW_UPDATER_JSON_URL.to_string()),
-            UpdateChannel::Stable => Some(STABLE_UPDATER_JSON_URL.to_string()),
-        },
-    })
-}
-
-#[derive(Deserialize)]
-struct PackageJson {
-    version: String,
-}
-
-async fn check_static_url(url: &str, source_name: &str) -> Result<UpdateInfo, String> {
-    let client = create_client().await?;
-
-    logger::log_info(&format!("Checking for updates via {}...", source_name));
-
-    let response = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| format!("Request failed: {}", e))?;
-
-    if !response.status().is_success() {
-        return Err(format!(
-            "{} returned status: {}",
-            source_name,
-            response.status()
-        ));
-    }
-
-    let package_json: PackageJson = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse package.json: {}", e))?;
-
-    let latest_version = package_json.version;
-    let current_version = CURRENT_VERSION.to_string();
-    let has_update = compare_versions(&latest_version, &current_version);
-
-    if has_update {
-        logger::log_info(&format!(
-            "New version found ({}): {} (Current: {})",
-            source_name, latest_version, current_version
-        ));
-    } else {
-        logger::log_info(&format!(
-            "Up to date ({}): {} (Matches {})",
-            source_name, current_version, latest_version
-        ));
-    }
-
-    // fallback sources generally don't provide release notes or download specific URL, construct generic
-    let download_url = "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/latest".to_string();
-    let release_notes = format!(
-        "New version detected via {}. Please check release page for details.",
-        source_name
-    );
-
-    Ok(UpdateInfo {
-        current_version,
-        latest_version,
-        has_update,
-        download_url,
-        release_notes,
-        published_at: Utc::now().to_rfc3339(), // Approximate time
-        source: Some(source_name.to_string()),
-        proxy_url: None,
-        channel: Some(UpdateChannel::Stable),
-        updater_json_url: Some(STABLE_UPDATER_JSON_URL.to_string()),
+        updater_json_url: manifest_asset_url,
     })
 }
 
@@ -847,5 +852,25 @@ mod tests {
 
         settings.auto_check = false;
         assert!(!should_check_for_updates(&settings));
+    }
+
+    #[test]
+    fn test_platform_and_installer_readiness_guards() {
+        let mut platforms = HashMap::new();
+        assert!(!is_platform_ready_for_os(&platforms, "windows"));
+
+        platforms.insert("darwin-universal".to_string(), serde_json::json!({}));
+        assert!(is_platform_ready_for_os(&platforms, "macos"));
+        assert!(!is_platform_ready_for_os(&platforms, "windows"));
+
+        platforms.insert("windows-x86_64".to_string(), serde_json::json!({}));
+        assert!(is_platform_ready_for_os(&platforms, "windows"));
+
+        let partial_assets = vec![GitHubReleaseAsset {
+            name: "Antigravity.Studio_5.7.0_universal.dmg".to_string(),
+            browser_download_url: "https://example.com/a.dmg".to_string(),
+        }];
+        assert!(has_release_installer_for_os(&partial_assets, "macos"));
+        assert!(!has_release_installer_for_os(&partial_assets, "windows"));
     }
 }

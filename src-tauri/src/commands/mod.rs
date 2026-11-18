@@ -1351,19 +1351,39 @@ pub async fn check_native_update<R: tauri::Runtime>(
     use tauri_plugin_updater::UpdaterExt;
     use url::Url;
 
-    let target_endpoint = if let Some(ep) = endpoint.filter(|s| !s.trim().is_empty()) {
-        ep
-    } else {
-        crate::modules::update_checker::STABLE_UPDATER_JSON_URL.to_string()
-    };
+    let candidate_endpoints: Vec<String> =
+        if let Some(ep) = endpoint.filter(|s| !s.trim().is_empty()) {
+            vec![
+                ep,
+                crate::modules::update_checker::STABLE_LATEST_JSON_URL.to_string(),
+                crate::modules::update_checker::STABLE_UPDATER_JSON_URL.to_string(),
+            ]
+        } else {
+            vec![
+                crate::modules::update_checker::STABLE_LATEST_JSON_URL.to_string(),
+                crate::modules::update_checker::STABLE_UPDATER_JSON_URL.to_string(),
+            ]
+        };
 
-    crate::modules::logger::log_info(&format!("原生更新器准备检查目标地址: {}", target_endpoint));
+    crate::modules::logger::log_info(&format!(
+        "原生更新器准备检查目标地址列表: {:?}",
+        candidate_endpoints
+    ));
 
     let mut builder = webview.updater_builder();
 
-    let url = Url::parse(&target_endpoint)
-        .map_err(|e| format!("无效的更新地址 '{}': {}", target_endpoint, e))?;
-    builder = builder.endpoints(vec![url]).map_err(|e| e.to_string())?;
+    let mut parsed_urls: Vec<Url> = Vec::new();
+    for raw_ep in candidate_endpoints {
+        if let Ok(u) = Url::parse(&raw_ep) {
+            if !parsed_urls.contains(&u) {
+                parsed_urls.push(u);
+            }
+        }
+    }
+    if parsed_urls.is_empty() {
+        return Err("未配置有效的自动更新端点地址".to_string());
+    }
+    builder = builder.endpoints(parsed_urls).map_err(|e| e.to_string())?;
 
     let proxy_url = proxy.or_else(crate::modules::update_checker::get_upstream_proxy_url);
     if let Some(proxy_str) = proxy_url {

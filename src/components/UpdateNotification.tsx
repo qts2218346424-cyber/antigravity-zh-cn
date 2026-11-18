@@ -37,6 +37,20 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onClose 
     checkAndDownload();
   }, []);
 
+  const openReleaseDownloadPage = async (url?: string) => {
+    const targetUrl =
+      url ||
+      updateInfo?.download_url ||
+      'https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/latest';
+    try {
+      const { openUrl } = await import('@tauri-apps/plugin-opener');
+      await openUrl(targetUrl);
+    } catch (e) {
+      console.error('Failed to open download url:', e);
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const checkAndDownload = async () => {
     try {
       // 1. Check for updates via backend
@@ -66,6 +80,13 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onClose 
         }
       }
 
+      // 若当前发布仅包含手动安装包（无签名 OTA 清单），直接进入手动下载模式而不触发原生检查异常
+      if (!info.updater_json_url) {
+        setUpdateState('manual');
+        setTimeout(() => setIsVisible(true), 100);
+        return;
+      }
+
       // 3. Start background download immediately
       if (downloadStarted.current) return;
       downloadStarted.current = true;
@@ -90,18 +111,9 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onClose 
       }
 
       if (!update) {
-        // updater.json not ready yet or no update via native channel
         console.warn('Native updater returned null');
         showToast(t('update_notification.toast.not_ready'), 'info');
-        if (info.download_url) {
-          try {
-            const { openUrl } = await import('@tauri-apps/plugin-opener');
-            await openUrl(info.download_url);
-          } catch (e) {
-            console.error('Failed to open download url:', e);
-            window.open(info.download_url, '_blank', 'noopener,noreferrer');
-          }
-        }
+        await openReleaseDownloadPage(info.download_url);
         handleClose();
         return;
       }
@@ -222,9 +234,13 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onClose 
               {updateState === 'ready' && t('update_notification.restart_prompt')}
               {updateState === 'error' && `${t('update_notification.toast.failed')}`}
               {updateState === 'manual' && (
-                navigator.language.startsWith('zh')
-                  ? '检测到您当前运行的不是 AppImage 格式，自动更新仅支持 AppImage。请点击下方按钮手动下载更新。'
-                  : 'We detected that you are not running the AppImage version. Auto-updates are only supported for AppImage. Please download the update manually.'
+                navigator.userAgent.toLowerCase().includes('linux')
+                  ? (navigator.language.startsWith('zh')
+                      ? '检测到您当前运行的不是 AppImage 格式，自动更新仅支持 AppImage。请点击下方按钮手动下载更新。'
+                      : 'Auto-updates are only supported for AppImage on Linux. Please download the update manually.')
+                  : (navigator.language.startsWith('zh')
+                      ? '发现可用新版本，请点击下方按钮前往发布页面下载最新安装包。'
+                      : 'A new version is available. Please download the latest installer from the release page.')
               )}
             </p>
           </div>
@@ -324,29 +340,43 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ onClose 
             </div>
           )}
 
-          {/* Error state — retry button */}
+          {/* Error state — retry & manual download buttons */}
           {updateState === 'error' && (
-            <button
-              onClick={() => {
-                downloadStarted.current = false;
-                setUpdateState('checking');
-                setDownloadProgress(0);
-                checkAndDownload();
-              }}
-              className="
-                w-full
-                bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500
-                text-white font-medium
-                py-2.5 px-4 rounded-xl
-                shadow-lg shadow-blue-500/25
-                transition-all duration-300
-                flex items-center justify-center gap-2
-                active:scale-[0.98]
-              "
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>{t('common.retry')}</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  downloadStarted.current = false;
+                  setUpdateState('checking');
+                  setDownloadProgress(0);
+                  checkAndDownload();
+                }}
+                className="
+                  flex-1
+                  bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500
+                  text-white font-medium
+                  py-2.5 px-4 rounded-xl
+                  shadow-lg shadow-blue-500/25
+                  transition-all duration-300
+                  flex items-center justify-center gap-2
+                  active:scale-[0.98]
+                "
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>{t('common.retry')}</span>
+              </button>
+              <button
+                onClick={() => void openReleaseDownloadPage()}
+                className="
+                  px-3 py-2.5 rounded-xl
+                  text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white
+                  bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20
+                  transition-all duration-200
+                  text-sm font-medium
+                "
+              >
+                <span>{navigator.language.startsWith('zh') ? '手动下载' : 'Download'}</span>
+              </button>
+            </div>
           )}
         </div>
       </div>

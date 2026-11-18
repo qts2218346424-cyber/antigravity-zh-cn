@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Antigravity Studio",
-  "version": "5.7.0",
+  "version": "5.7.1",
   "identifier": "com.qts.antigravity-studio",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -122,8 +122,8 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/latest/download/updater.json",
-        "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/download/preview/updater.json"
+        "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/latest/download/latest.json",
+        "https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases/latest/download/updater.json"
       ],
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU0MEEzMkMwRjVEMjI4MUQKUldRZEtOTDF3RElLNURDK0tsZE1GckNUaXVmR1lJSTVGL3kvZDlpY0hkVDhzdVU1MTg0TTZuM2EK"
