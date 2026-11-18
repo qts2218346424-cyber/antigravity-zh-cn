@@ -562,6 +562,25 @@
         return text.includes('插件') ? '插件: 科学计算' : '科学计算';
       }
 
+      // 1.38 快捷键与命令面板通用分类前缀动态组合匹配 (例如 "Terminal: Select All", "Browser: Reload")
+      const scopedCmdMatch = text.match(/^(Terminal|Editor|Browser|Developer|Conversation|Workspace):\s+(.+)$/i);
+      if (scopedCmdMatch) {
+        const isSimplified = !/^zh-(?:TW|HK)$/i.test(LANG);
+        const scopeMap = {
+          terminal: isSimplified ? '终端' : '終端機',
+          editor: isSimplified ? '编辑器' : '編輯器',
+          browser: isSimplified ? '浏览器' : '瀏覽器',
+          developer: isSimplified ? '开发者' : '開發者',
+          conversation: isSimplified ? '会话' : '對話',
+          workspace: isSimplified ? '工作区' : '工作區'
+        };
+        const subKey = scopedCmdMatch[2].trim();
+        const trSub = DICT[subKey] || LOWER_DICT[subKey.toLowerCase()];
+        if (trSub) {
+          return `${scopeMap[scopedCmdMatch[1].toLowerCase()]}：${trSub}`;
+        }
+      }
+
       // 2. 正则动态匹配
       for (let i = 0; i < RULES.length; i++) {
         const item = RULES[i];
@@ -755,31 +774,46 @@
       return count;
     };
 
-    // 属性翻译 (aria-label, placeholder, data-placeholder, title, value, alt, data-tooltip)
+    // 属性翻译 (aria-label, placeholder, aria-placeholder, data-placeholder, title, value, alt, data-tooltip)
+    const ATTR_SELECTOR = '[aria-label],[placeholder],[aria-placeholder],[data-placeholder],[title],[alt],[data-tooltip],input[type="button"],input[type="submit"]';
+    const TRANSLATABLE_ATTRS = ['aria-label', 'placeholder', 'aria-placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'];
+
+    const translateElementAttributes = (el) => {
+      if (!el || isProtectedAttrNode(el)) return 0;
+      let count = 0;
+      for (let i = 0; i < TRANSLATABLE_ATTRS.length; i++) {
+        const attr = TRANSLATABLE_ATTRS[i];
+        // 绝对不可修改常规文本输入框或文本域的 value，防止篡改用户键入的真实字符
+        if (attr === 'value' && !(el.matches && el.matches('input[type="button"], input[type="submit"]'))) {
+          continue;
+        }
+        let val = el.getAttribute ? el.getAttribute(attr) : null;
+        if (!val && attr in el && typeof el[attr] === 'string') val = el[attr];
+        if (val) {
+          const tr = translate(val);
+          if (tr && norm(val) !== norm(tr)) {
+            if (el.setAttribute) el.setAttribute(attr, tr);
+            try { if (attr in el) el[attr] = tr; } catch (_) {}
+            count++;
+          }
+        }
+      }
+      return count;
+    };
+
     const translateAttributes = (root) => {
-      if (!root || !root.querySelectorAll) return 0;
+      if (!root) return 0;
       let count = 0;
       try {
-        const elements = root.querySelectorAll('[aria-label],[placeholder],[data-placeholder],[title],[alt],[data-tooltip],input[type="button"],input[type="submit"]');
-        elements.forEach((el) => {
-          if (isProtectedAttrNode(el)) return;
-          ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].forEach((attr) => {
-            // 绝对不可修改常规文本输入框或文本域的 value，防止篡改用户键入的真实字符
-            if (attr === 'value' && !(el.matches && el.matches('input[type="button"], input[type="submit"]'))) {
-              return;
-            }
-            let val = el.getAttribute ? el.getAttribute(attr) : null;
-            if (!val && attr in el && typeof el[attr] === 'string') val = el[attr];
-            if (val) {
-              const tr = translate(val);
-              if (tr && norm(val) !== norm(tr)) {
-                if (el.setAttribute) el.setAttribute(attr, tr);
-                try { if (attr in el) el[attr] = tr; } catch (_) {}
-                count++;
-              }
-            }
+        if (root.nodeType === 1 && root.matches && root.matches(ATTR_SELECTOR)) {
+          count += translateElementAttributes(root);
+        }
+        if (root.querySelectorAll) {
+          const elements = root.querySelectorAll(ATTR_SELECTOR);
+          elements.forEach((el) => {
+            count += translateElementAttributes(el);
           });
-        });
+        }
       } catch (_) {}
       return count;
     };
@@ -1476,7 +1510,7 @@
           childList: true,
           characterData: true,
           attributes: true,
-          attributeFilter: ['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value']
+          attributeFilter: ['aria-label', 'placeholder', 'aria-placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value']
         });
         observedRoots.add(target);
       } catch (_) {}
@@ -1631,8 +1665,8 @@
       if (origSetAttribute) {
         Element.prototype.setAttribute = function(name, val) {
           try {
-            if (['aria-label', 'placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].includes(name) && typeof val === 'string' && val.length > 0 && val.length < 500) {
-              if (!isProtectedAttrNode(this)) {
+            if (['aria-label', 'placeholder', 'aria-placeholder', 'data-placeholder', 'title', 'alt', 'data-tooltip', 'value'].includes(name) && typeof val === 'string' && val.length > 0 && val.length < 500) {
+              if (!(name === 'value' && !(this.matches && this.matches('input[type="button"], input[type="submit"]'))) && !isProtectedAttrNode(this)) {
                 const tr = translate(val);
                 if (tr && norm(val) !== norm(tr)) {
                   return origSetAttribute.call(this, name, tr);
@@ -1643,6 +1677,33 @@
           return origSetAttribute.call(this, name, val);
         };
       }
+
+      // 拦截 HTMLInputElement / HTMLTextAreaElement 的 placeholder 原生属性写入 (消灭 React 受控属性更新时的英文闪烁)
+      [typeof HTMLInputElement !== 'undefined' && HTMLInputElement.prototype, typeof HTMLTextAreaElement !== 'undefined' && HTMLTextAreaElement.prototype].forEach((proto) => {
+        if (!proto) return;
+        try {
+          const desc = Object.getOwnPropertyDescriptor(proto, 'placeholder');
+          if (desc && desc.set) {
+            const origSet = desc.set;
+            Object.defineProperty(proto, 'placeholder', {
+              set(val) {
+                try {
+                  if (typeof val === 'string' && val.length > 0 && val.length < 500 && !isProtectedAttrNode(this)) {
+                    const tr = translate(val);
+                    if (tr && norm(val) !== norm(tr)) {
+                      return origSet.call(this, tr);
+                    }
+                  }
+                } catch (_) {}
+                return origSet.call(this, val);
+              },
+              get: desc.get,
+              configurable: true,
+              enumerable: desc.enumerable
+            });
+          }
+        } catch (_) {}
+      });
 
       // 拦截 document.createTextNode (消灭 React 动态创建文本节点的闪烁)
       const origCreateTextNode = document.createTextNode;

@@ -4,6 +4,10 @@
  */
 import zh from '../zh.json';
 import en from '../en.json';
+import agyZhCn from '../../../resources/antigravity-zh-CN.json';
+import agyZhTw from '../../../resources/antigravity-zh-TW.json';
+import agyZhHk from '../../../resources/antigravity-zh-HK.json';
+import agyRules from '../../../resources/rules-zh-CN.json';
 
 let passed = 0;
 let failed = 0;
@@ -84,6 +88,314 @@ test('2. 中文语言包 (zh.json) 零日文平假名/片假名残留', () => {
     throw new Error(`zh.json 检测到日文假名残留:\n${polluted.slice(0, 5).join('\n')}`);
   }
 });
+
+test('3. 客户端多语种汉化词典 (CN/TW/HK) 与正则规则 JSON 结构完整且覆盖新增快捷键及地址栏词条', () => {
+  const cnDict = agyZhCn as Record<string, string>;
+  const twDict = agyZhTw as Record<string, string>;
+  const hkDict = agyZhHk as Record<string, string>;
+  const rules = agyRules as [string, string][];
+
+  const expectedCnEntries: Record<string, string> = {
+    'Submit Prompt (Alternate to Enter)': '提交提示词（Enter 备用快捷键）',
+    'Enter always submits. This adds a second shortcut.': '按 Enter 键始终提交。此项可添加第二个快捷键。',
+    'Jump to Previous Prompt': '跳转到上一条提示词',
+    'Jump to Next Prompt': '跳转到下一条提示词',
+    'Side Question Selection': '对所选内容发起侧边提问',
+    'Pin / Unpin Conversation': '固定 / 取消固定会话',
+    'Terminal: Select All': '终端：全选',
+    'Search or enter a URL': '搜索或输入网址',
+  };
+
+  for (const [enKey, expectedZh] of Object.entries(expectedCnEntries)) {
+    if (cnDict[enKey] !== expectedZh) {
+      throw new Error(`antigravity-zh-CN.json 词条 [${enKey}] 期望 "${expectedZh}"，实际为 "${cnDict[enKey]}"`);
+    }
+    if (!twDict[enKey]?.trim()) {
+      throw new Error(`antigravity-zh-TW.json 缺失词条: ${enKey}`);
+    }
+    if (!hkDict[enKey]?.trim()) {
+      throw new Error(`antigravity-zh-HK.json 缺失词条: ${enKey}`);
+    }
+  }
+
+  for (const [pattern, replacement] of rules) {
+    // 校验所有正则表达式均可正常编译
+    new RegExp(pattern, 'i');
+    if (typeof replacement !== 'string') {
+      throw new Error(`rules-zh-CN.json 存在非法替换目标: ${pattern}`);
+    }
+  }
+});
+
+async function runRuntimeEngineTest(): Promise<void> {
+  const dynImport = new Function('m', 'return import(m)') as (m: string) => Promise<Record<string, unknown>>;
+  const fsMod = (await dynImport('node:fs')) as { readFileSync: (p: URL, enc: string) => string };
+  const vmMod = (await dynImport('node:vm')) as { runInNewContext: (code: string, ctx: Record<string, unknown>) => void };
+
+  const cnDict = agyZhCn as Record<string, string>;
+  const rules = agyRules as [string, string][];
+  const runtimeUrl = new URL('../../../resources/runtime-zh.js', import.meta.url);
+  const runtimeCode = fsMod.readFileSync(runtimeUrl, 'utf8');
+
+  class MockNode {
+    nodeType: number;
+    nodeValue: string | null = null;
+    parentElement: MockElement | null = null;
+    constructor(nodeType: number) {
+      this.nodeType = nodeType;
+    }
+  }
+
+  class MockTextNode extends MockNode {
+    constructor(text: string, parent: MockElement | null = null) {
+      super(3);
+      this.nodeValue = text;
+      this.parentElement = parent;
+    }
+  }
+
+  class MockElement extends MockNode {
+    tagName: string;
+    attrs = new Map<string, string>();
+    children: MockElement[] = [];
+    childNodes: MockNode[] = [];
+    placeholder = '';
+    value = '';
+
+    constructor(tagName: string) {
+      super(1);
+      this.tagName = tagName.toUpperCase();
+    }
+
+    get textContent(): string {
+      return this.childNodes
+        .map((n) => (n.nodeType === 3 ? n.nodeValue || '' : (n as MockElement).textContent))
+        .join('');
+    }
+
+    set textContent(v: string) {
+      this.childNodes = [new MockTextNode(v, this)];
+      this.children = [];
+    }
+
+    appendText(t: string): MockTextNode {
+      const tn = new MockTextNode(t, this);
+      this.childNodes.push(tn);
+      return tn;
+    }
+
+    appendChildEl(el: MockElement): MockElement {
+      el.parentElement = this;
+      this.children.push(el);
+      this.childNodes.push(el);
+      return el;
+    }
+
+    setAttribute(name: string, val: string): void {
+      this.attrs.set(name, val);
+      if (name === 'placeholder') this.placeholder = val;
+      if (name === 'value') this.value = val;
+    }
+
+    getAttribute(name: string): string | null {
+      return this.attrs.has(name) ? (this.attrs.get(name) ?? null) : null;
+    }
+
+    matches(selector: string): boolean {
+      const parts = selector.split(',').map((s) => s.trim());
+      for (const p of parts) {
+        if (p.startsWith('[') && p.endsWith(']')) {
+          const attrName = p.slice(1, -1).split('=')[0].trim();
+          if (this.attrs.has(attrName)) return true;
+        } else if (p === 'input[type="button"]') {
+          if (this.tagName === 'INPUT' && this.getAttribute('type') === 'button') return true;
+        } else if (p === 'input[type="submit"]') {
+          if (this.tagName === 'INPUT' && this.getAttribute('type') === 'submit') return true;
+        } else if (p.toUpperCase() === this.tagName) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    closest(selector: string): MockElement | null {
+      let cur: MockElement | null = this;
+      while (cur) {
+        if (cur.matches(selector)) return cur;
+        cur = cur.parentElement;
+      }
+      return null;
+    }
+
+    querySelectorAll(selector: string): MockElement[] {
+      const out: MockElement[] = [];
+      const visit = (el: MockElement) => {
+        for (const child of el.children) {
+          if (child.matches(selector)) out.push(child);
+          visit(child);
+        }
+      };
+      visit(this);
+      return out;
+    }
+  }
+
+  const body = new MockElement('BODY');
+  const row1 = body.appendChildEl(new MockElement('DIV'));
+  const tSubmit = row1.appendText('Submit Prompt (Alternate to Enter)');
+  const tDesc = body.appendChildEl(new MockElement('DIV')).appendText('Enter always submits. This adds a second shortcut.');
+  const tPrev = body.appendChildEl(new MockElement('DIV')).appendText('Jump to Previous Prompt');
+  const tNext = body.appendChildEl(new MockElement('DIV')).appendText('Jump to Next Prompt');
+  const tSide = body.appendChildEl(new MockElement('DIV')).appendText('Side Question Selection');
+  const tPin = body.appendChildEl(new MockElement('DIV')).appendText('Pin / Unpin Conversation');
+  const tTerm = body.appendChildEl(new MockElement('DIV')).appendText('Terminal: Select All');
+  // 测试未显式写入全句但满足通用模块前缀组合的词条 (Browser + Reload -> 浏览器：重新加载)
+  const tScopedFallback = body.appendChildEl(new MockElement('DIV')).appendText('Browser: Reload');
+  // 测试未知子命令绝不拼接成半中半英
+  const tUnknownScoped = body.appendChildEl(new MockElement('DIV')).appendText('Terminal: UnknownActionXYZ');
+
+  const urlInput = body.appendChildEl(new MockElement('INPUT'));
+  urlInput.setAttribute('type', 'text');
+  urlInput.setAttribute('placeholder', 'Search or enter a URL');
+  urlInput.value = 'Select All'; // 模拟用户刚好输入了与词典键同名的英文，绝不可被误翻译
+
+  const ariaInput = body.appendChildEl(new MockElement('DIV'));
+  ariaInput.setAttribute('aria-placeholder', 'Search or enter a URL');
+
+  let observerCallback: ((mutations: unknown[]) => void) | null = null;
+
+  const collectTextNodes = (root: MockNode): MockTextNode[] => {
+    const list: MockTextNode[] = [];
+    const walk = (n: MockNode) => {
+      if (n.nodeType === 3) {
+        list.push(n as MockTextNode);
+      } else if (n instanceof MockElement) {
+        for (const c of n.childNodes) walk(c);
+      }
+    };
+    walk(root);
+    return list;
+  };
+
+  const sandbox: Record<string, unknown> = {
+    NodeFilter: { SHOW_TEXT: 4, FILTER_ACCEPT: 1, FILTER_REJECT: 2 },
+    Node: MockNode,
+    Element: MockElement,
+    MutationObserver: class {
+      constructor(cb: (mutations: unknown[]) => void) {
+        observerCallback = cb;
+      }
+      observe() {}
+      disconnect() {}
+    },
+    WeakSet,
+    Set,
+    Map,
+    RegExp,
+    Object,
+    Array,
+    console: { log() {}, warn() {}, error() {} },
+    setTimeout: () => 0,
+    clearTimeout: () => {},
+    setInterval: () => 0,
+    clearInterval: () => {},
+    performance: { now: () => 0 },
+    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    document: {
+      readyState: 'complete',
+      body,
+      documentElement: body,
+      addEventListener() {},
+      createTextNode: (d: string) => new MockTextNode(d),
+      createTreeWalker: (
+        root: MockNode,
+        _what: number,
+        filter: { acceptNode: (n: MockTextNode) => number },
+      ) => {
+        const all = collectTextNodes(root).filter((n) => filter.acceptNode(n) === 1);
+        let idx = -1;
+        return {
+          nextNode() {
+            idx += 1;
+            return idx < all.length ? all[idx] : null;
+          },
+        };
+      },
+    },
+  };
+  sandbox.window = {
+    __AGY_ZH_DICT__: cnDict,
+    __AGY_ZH_RULES__: rules,
+    __AGY_ZH_LANG__: 'zh-CN',
+    addEventListener() {},
+    document: sandbox.document,
+  };
+
+  vmMod.runInNewContext(runtimeCode, sandbox);
+
+  if (tSubmit.nodeValue !== '提交提示词（Enter 备用快捷键）') {
+    throw new Error(`Submit Prompt 翻译不符: ${tSubmit.nodeValue}`);
+  }
+  if (tDesc.nodeValue !== '按 Enter 键始终提交。此项可添加第二个快捷键。') {
+    throw new Error(`副标题翻译不符: ${tDesc.nodeValue}`);
+  }
+  if (tPrev.nodeValue !== '跳转到上一条提示词') {
+    throw new Error(`Jump to Previous Prompt 翻译不符: ${tPrev.nodeValue}`);
+  }
+  if (tNext.nodeValue !== '跳转到下一条提示词') {
+    throw new Error(`Jump to Next Prompt 翻译不符: ${tNext.nodeValue}`);
+  }
+  if (tSide.nodeValue !== '对所选内容发起侧边提问') {
+    throw new Error(`Side Question Selection 翻译不符: ${tSide.nodeValue}`);
+  }
+  if (tPin.nodeValue !== '固定 / 取消固定会话') {
+    throw new Error(`Pin / Unpin Conversation 翻译不符: ${tPin.nodeValue}`);
+  }
+  if (tTerm.nodeValue !== '终端：全选') {
+    throw new Error(`Terminal: Select All 翻译不符: ${tTerm.nodeValue}`);
+  }
+  if (tScopedFallback.nodeValue !== '浏览器：重新加载') {
+    throw new Error(`通用分类前缀组合翻译不符: ${tScopedFallback.nodeValue}`);
+  }
+  if (tUnknownScoped.nodeValue !== 'Terminal: UnknownActionXYZ') {
+    throw new Error(`未知子动作不应被半汉化: ${tUnknownScoped.nodeValue}`);
+  }
+  if (urlInput.getAttribute('placeholder') !== '搜索或输入网址' || urlInput.placeholder !== '搜索或输入网址') {
+    throw new Error(`地址栏 placeholder 翻译不符: ${urlInput.getAttribute('placeholder')}`);
+  }
+  if (ariaInput.getAttribute('aria-placeholder') !== '搜索或输入网址') {
+    throw new Error(`aria-placeholder 翻译不符: ${ariaInput.getAttribute('aria-placeholder')}`);
+  }
+  if (urlInput.value !== 'Select All') {
+    throw new Error(`严重缺陷：用户输入 value 被误篡改为 ${urlInput.value}`);
+  }
+
+  // 验证单节点 attributes MutationObserver (m.target 为独立 input 自身，无任何子节点) 依然能即时翻译
+  const lateInput = new MockElement('INPUT');
+  lateInput.attrs.set('placeholder', 'Search or enter a URL');
+  lateInput.placeholder = 'Search or enter a URL';
+  if (!observerCallback) {
+    throw new Error('MutationObserver 未成功挂载');
+  }
+  (observerCallback as (m: unknown[]) => void)([
+    { type: 'attributes', target: lateInput, addedNodes: [] },
+  ]);
+  if (lateInput.getAttribute('placeholder') !== '搜索或输入网址') {
+    throw new Error(`单元素 attributes 变更未能翻译自身 placeholder: ${lateInput.getAttribute('placeholder')}`);
+  }
+}
+
+await runRuntimeEngineTest().then(
+  () => {
+    passed += 1;
+    console.log('  ok  4. runtime-zh.js 运行时引擎精准翻译新增文本节点、独立 input placeholder 属性及通用模块前缀并保护用户输入 value');
+  },
+  (err) => {
+    failed += 1;
+    console.error('  FAIL  4. runtime-zh.js 运行时引擎精准翻译新增文本节点、独立 input placeholder 属性及通用模块前缀并保护用户输入 value');
+    console.error(err);
+  },
+);
 
 if (failed > 0) {
   throw new Error(`国际化校验测试失败: ${failed} 项未通过 (通过 ${passed} 项)`);

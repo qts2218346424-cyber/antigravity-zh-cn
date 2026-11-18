@@ -1,5 +1,37 @@
 [
   [
+    "^Submit Prompt\\s*\\(Alternate to Enter\\)$",
+    "提交提示词（Enter 备用快捷键）"
+  ],
+  [
+    "^Enter always submits\\.\\s*This adds a second shortcut\\.?$",
+    "按 Enter 键始终提交。此项可添加第二个快捷键。"
+  ],
+  [
+    "^Jump to Previous Prompt$",
+    "跳转到上一条提示词"
+  ],
+  [
+    "^Jump to Next Prompt$",
+    "跳转到下一条提示词"
+  ],
+  [
+    "^Side Question Selection$",
+    "对所选内容发起侧边提问"
+  ],
+  [
+    "^Pin\\s*/\\s*Unpin Conversation$",
+    "固定 / 取消固定会话"
+  ],
+  [
+    "^Terminal:\\s*Select All$",
+    "终端：全选"
+  ],
+  [
+    "^Search or (?:enter|type) a?\\s*URL(?:\\.\\.\\.|…)?$",
+    "搜索或输入网址"
+  ],
+  [
     "^Clear visited URLs and autocomplete suggestions from (?:the built-in browser|side panel preview)\\.?$",
     "清除内置浏览器中已访问的网址与自动补全建议。"
   ],
