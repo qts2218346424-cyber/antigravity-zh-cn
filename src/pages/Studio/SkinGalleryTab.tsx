@@ -15,6 +15,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
+import { resolveSkinVisualMotifs } from '../../components/Studio/skinIconRegistry';
 import { studioService } from '../../services/studioService';
 import type { SkinInfo, StudioStatus } from '../../types/studio';
 import { isTauri } from '../../utils/env';
@@ -43,12 +44,14 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
   const accent = c.accent || '#38bdf8';
   const accentFg = c.accentForeground || '#090d18';
   const selection = c.selection || `${accent}2e`;
+  const motifs = resolveSkinVisualMotifs(skin);
+  const [logoUri, newChatUri, autoUri, customUri, thinkingUri] = motifs.iconPack;
 
   return (
     <div
       className="relative h-44 w-full overflow-hidden select-none p-3 flex items-center justify-center"
       style={{
-        background: `radial-gradient(circle at 18% 20%, ${accent}28, transparent 58%), radial-gradient(circle at 86% 82%, ${accent}20, transparent 62%), ${bg}`,
+        background: `radial-gradient(circle at 18% 20%, ${accent}24, transparent 58%), radial-gradient(circle at 86% 82%, ${accent}1c, transparent 62%), ${bg}`,
       }}
     >
       {/* 主题专属意境插画暗纹叠加（如 CLANNAD 光玉、樱花团子、向日葵、海星） */}
@@ -56,7 +59,7 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
         <img
           src={skin.preview_data_uri}
           alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity transition-transform duration-700 group-hover:scale-105"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-35 transition-transform duration-700 group-hover:scale-105"
         />
       )}
 
@@ -66,19 +69,23 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
         style={{
           backgroundColor: bg,
           border: `1px solid ${border}`,
-          boxShadow: '0 18px 36px -12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)',
+          boxShadow: '0 18px 36px -12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.12)',
         }}
       >
-        {/* 应用无边框顶栏 */}
+        {/* 应用无边框顶栏（展示专属角色/团子主徽标） */}
         <div
           className="h-5 px-2.5 flex items-center justify-between border-b"
           style={{ backgroundColor: titleBar, borderColor: border }}
         >
           <div className="flex items-center gap-1.5">
-            <span
-              className="h-2 w-2 rounded-md shadow-sm"
-              style={{ backgroundColor: accent }}
-            />
+            {logoUri ? (
+              <img src={logoUri} alt="" className="h-3.5 w-3.5 object-contain drop-shadow-sm" />
+            ) : (
+              <span
+                className="h-2 w-2 rounded-md shadow-sm"
+                style={{ backgroundColor: accent }}
+              />
+            )}
             <span
               className="h-1.5 w-11 rounded-full opacity-75"
               style={{ backgroundColor: fg }}
@@ -99,22 +106,26 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
 
         {/* 应用主体：会话导航侧边栏 + 智能体对话画布 + 伴生工件面板 */}
         <div className="flex flex-1 min-h-0">
-          {/* 左侧会话与工作区抽屉（无 VS Code 竖排活动栏） */}
+          {/* 左侧会话与工作区抽屉（融入新建团子、定时怀表团子与扩展礼盒图标） */}
           <div
-            className="w-[74px] p-1.5 flex flex-col justify-between border-r"
+            className="w-[76px] p-1.5 flex flex-col justify-between border-r"
             style={{ backgroundColor: sidebar, borderColor: border }}
           >
             <div className="space-y-1">
               {/* 新建对话胶囊按钮 */}
               <div
-                className="h-3 w-full rounded-md px-1.5 flex items-center gap-1"
+                className="h-3.5 w-full rounded-md px-1 flex items-center gap-1"
                 style={{
-                  backgroundColor: `${accent}22`,
-                  border: `1px solid ${accent}45`,
+                  backgroundColor: `${accent}20`,
+                  border: `1px solid ${accent}42`,
                 }}
               >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
-                <span className="h-1 w-8 rounded-full opacity-85" style={{ backgroundColor: fg }} />
+                {newChatUri ? (
+                  <img src={newChatUri} alt="" className="h-2.5 w-2.5 object-contain shrink-0" />
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
+                )}
+                <span className="h-1 w-7 rounded-full opacity-80" style={{ backgroundColor: fg }} />
               </div>
               {/* 当前激活会话项 */}
               <div
@@ -123,18 +134,23 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
               >
                 <span className="h-1 w-10 rounded-full" style={{ backgroundColor: fg }} />
               </div>
-              <div
-                className="h-1.5 w-11 rounded-full opacity-35 ml-1"
-                style={{ backgroundColor: fg }}
-              />
-              <div
-                className="h-1.5 w-9 rounded-full opacity-25 ml-1"
-                style={{ backgroundColor: muted }}
-              />
+              {/* 定时任务与自定义扩展微缩项 */}
+              <div className="flex items-center gap-1 px-0.5 pt-0.5">
+                {autoUri && <img src={autoUri} alt="" className="h-2.5 w-2.5 object-contain opacity-90" />}
+                <span className="h-1 w-8 rounded-full opacity-35" style={{ backgroundColor: fg }} />
+              </div>
+              <div className="flex items-center gap-1 px-0.5">
+                {customUri && <img src={customUri} alt="" className="h-2.5 w-2.5 object-contain opacity-90" />}
+                <span className="h-1 w-7 rounded-full opacity-25" style={{ backgroundColor: muted }} />
+              </div>
             </div>
-            <div className="flex items-center gap-1 px-0.5 opacity-55">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-              <span className="h-1 w-7 rounded-full" style={{ backgroundColor: muted }} />
+            <div className="flex items-center gap-1 px-0.5 opacity-75">
+              {logoUri ? (
+                <img src={logoUri} alt="" className="h-2.5 w-2.5 object-contain" />
+              ) : (
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
+              )}
+              <span className="h-1 w-7 rounded-full opacity-65" style={{ backgroundColor: muted }} />
             </div>
           </div>
 
@@ -154,19 +170,23 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
                 </div>
               </div>
 
-              {/* 智能体毛玻璃深度思考与回复卡片 */}
+              {/* 智能体毛玻璃深度思考与回复卡片（带思考团子/光玉微章） */}
               <div
                 className="rounded-lg p-1.5 space-y-1"
                 style={{
                   backgroundColor: panel,
                   border: `1px solid ${border}`,
-                  boxShadow: '0 6px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08)',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.08)',
                 }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
-                    <span className="h-1.5 w-10 rounded-full" style={{ backgroundColor: accent }} />
+                    {thinkingUri ? (
+                      <img src={thinkingUri} alt="" className="h-2.5 w-2.5 object-contain" />
+                    ) : (
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
+                    )}
+                    <span className="h-1.5 w-10 rounded-full opacity-85" style={{ backgroundColor: accent }} />
                   </div>
                   <span className="h-1 w-4 rounded-full opacity-40" style={{ backgroundColor: muted }} />
                 </div>
@@ -175,15 +195,22 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
               </div>
             </div>
 
-            {/* 底部圆角悬浮指令输入舱（Composer） */}
+            {/* 底部圆角悬浮指令输入舱（Composer）+ 右上沿趴趴团子伴读摆件 */}
             <div
-              className="h-5 rounded-lg px-2 flex items-center justify-between"
+              className="relative h-5 rounded-lg px-2 flex items-center justify-between mt-1"
               style={{
                 backgroundColor: inputBg,
                 border: `1px solid ${border}`,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.14)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
               }}
             >
+              {motifs.composerCharmUri && (
+                <img
+                  src={motifs.composerCharmUri}
+                  alt=""
+                  className="pointer-events-none absolute -top-[11px] right-2.5 h-3.5 w-auto object-contain opacity-95"
+                />
+              )}
               <span className="h-1 w-14 rounded-full opacity-45" style={{ backgroundColor: muted }} />
               <span
                 className="h-3 w-3 rounded-full flex items-center justify-center"
@@ -647,6 +674,30 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
                   <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[34px] leading-relaxed">
                     {skin.description || '专为 Antigravity 桌面应用打造的光学渐变与高对比材质方案'}
                   </p>
+
+                  {/* 角色与团子专属信物图标组预览栏 */}
+                  {(() => {
+                    const motifs = resolveSkinVisualMotifs(skin);
+                    if (!motifs.iconPack.length) return null;
+                    return (
+                      <div className="flex items-center justify-between gap-2 rounded-xl bg-gray-50/85 dark:bg-white/[0.04] px-2.5 py-1.5 border border-gray-200/60 dark:border-white/10">
+                        <div className="flex items-center gap-1.5">
+                          {motifs.iconPack.map((uri, idx) => (
+                            <span
+                              key={`${skin.id}-motif-${idx}`}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-white/80 dark:bg-slate-800/80 p-0.5 shadow-sm border border-black/5 dark:border-white/10 transition-transform hover:scale-125"
+                              title={motifs.motifLabel}
+                            >
+                              <img src={uri} alt="" className="h-full w-full object-contain" />
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[130px]">
+                          {motifs.motifLabel}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Color DNA 色谱条 */}
                   <div className="flex items-center gap-1.5 pt-1">

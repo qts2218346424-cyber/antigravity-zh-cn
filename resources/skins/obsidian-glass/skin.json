@@ -3,8 +3,8 @@
   "id": "obsidian-glass",
   "name": "黑曜石 · 液态光学",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "受苹果 VisionOS 与线性极简工业美学启发：深邃黑曜石对话基底搭配 20px 液态亚克力模糊、微距钛银折射边框与冰川蓝信号光束。",
+  "version": "2.2.0",
+  "description": "深邃黑曜石液态亚克力光学主题，融入半透冰川琉璃小团子与微距星芒光玉信物，冷冽克制、夜间久看不疲。",
   "base": "dark",
   "colors": {
     "background": "#080a0f",
@@ -37,6 +37,21 @@
   "pet": {
     "character": "prince",
     "accent": "#38bdf8",
-    "scale": 1.0
-  }
+    "scale": 1
+  },
+  "icons": {
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
+  },
+  "cssFile": "theme.css"
 }

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><g>
+      <defs>
+        <radialGradient id="orb_16_15_5" cx="45%" cy="42%" r="58%">
+          <stop offset="0%" stop-color="#fffef7"/>
+          <stop offset="48%" stop-color="#f6c453" stop-opacity="0.92"/>
+          <stop offset="82%" stop-color="#7dd3fc" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="15.5" r="12.42" fill="url(#orb_16_15_5)"/>
+      <circle cx="16" cy="15.5" r="5.15" fill="#fffef7" opacity="0.92"/>
+      <ellipse cx="16" cy="15.5" rx="11.50" ry="3.86"
+               transform="rotate(-24 16 15.5)" fill="none" stroke="#fffef7" stroke-width="0.85" opacity="0.58"/>
+    </g>
+  
+      <path d="M 6.2 21.5 C 7.5 16.5, 11.2 15.8, 14.2 19.8 C 10.8 22.4, 7.8 23.0, 6.2 21.5 Z"
+            fill="#f1f5f9" fill-opacity="0.88" stroke="#94a3b8" stroke-width="0.85"/>
+      <path d="M 25.8 21.5 C 24.5 16.5, 20.8 15.8, 17.8 19.8 C 21.2 22.4, 24.2 23.0, 25.8 21.5 Z"
+            fill="#f1f5f9" fill-opacity="0.88" stroke="#94a3b8" stroke-width="0.85"/></svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><line x1="16" y1="17" x2="16" y2="27.5" stroke="#7c4d5e" stroke-width="1.5" stroke-linecap="round"/>
+      <g><g transform="translate(16,12.8) rotate(-18)">
+        <path d="M 0 0 C -3.96 -3.24, -3.46 -8.28, 0 -7.34 C 3.46 -8.28, 3.96 -3.24, 0 0 Z"
+              fill="#f5acc5" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,12.8) rotate(54)">
+        <path d="M 0 0 C -3.96 -3.24, -3.46 -8.28, 0 -7.34 C 3.46 -8.28, 3.96 -3.24, 0 0 Z"
+              fill="#f5acc5" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,12.8) rotate(126)">
+        <path d="M 0 0 C -3.96 -3.24, -3.46 -8.28, 0 -7.34 C 3.46 -8.28, 3.96 -3.24, 0 0 Z"
+              fill="#f5acc5" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,12.8) rotate(198)">
+        <path d="M 0 0 C -3.96 -3.24, -3.46 -8.28, 0 -7.34 C 3.46 -8.28, 3.96 -3.24, 0 0 Z"
+              fill="#f5acc5" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,12.8) rotate(270)">
+        <path d="M 0 0 C -3.96 -3.24, -3.46 -8.28, 0 -7.34 C 3.46 -8.28, 3.96 -3.24, 0 0 Z"
+              fill="#f5acc5" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><circle cx="16" cy="12.8" r="1.87" fill="#ffe39f"/></g></svg>

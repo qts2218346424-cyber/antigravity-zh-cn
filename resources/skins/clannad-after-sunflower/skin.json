@@ -3,12 +3,12 @@
   "id": "clannad-after-sunflower",
   "name": "CLANNAD · 汐与晴空花田",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "致敬《CLANNAD ~AFTER STORY~》无边无际的黄金向日葵花海与冈崎汐的草帽晴日：温暖麦穗米白对话画布、向日葵琥珀金强调色与盛夏晴空蓝微光点缀。",
+  "version": "2.2.0",
+  "description": "致敬《CLANNAD ~AFTER STORY~》向日葵花海与冈崎汐的晴日：内置蓝丝带夏草帽小汐团子主徽标、向日葵时计图标组与一家三口花田伴读摆件，暖麦米白柔和护眼。",
   "base": "light",
   "preview": "preview.svg",
   "colors": {
-    "background": "#fdfbf4",
+    "background": "#fcfaf2",
     "foreground": "#332a1d",
     "accent": "#e08e14",
     "accentForeground": "#ffffff",
@@ -16,8 +16,8 @@
     "titleBar": "#f3edd8",
     "panel": "#fbf7ea",
     "border": "#e8dec3",
-    "selection": "#fbbf2442",
-    "input": "#ffffff",
+    "selection": "#f59e0b30",
+    "input": "#fffdf8",
     "muted": "#8a7a5f"
   },
   "surfaces": {
@@ -50,12 +50,25 @@
     "ligatures": true
   },
   "icons": {
-    "color": "#d97706"
+    "color": "#d97706",
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
   },
   "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid #e8dec3 !important; }\nform:has(textarea) { border: 1px solid rgba(224, 142, 20, 0.32) !important; box-shadow: 0 12px 28px -10px rgba(2, 132, 199, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.85); }",
   "pet": {
     "character": "ushio",
     "accent": "#f59e0b",
-    "scale": 1.0
-  }
+    "scale": 1
+  },
+  "cssFile": "theme.css"
 }

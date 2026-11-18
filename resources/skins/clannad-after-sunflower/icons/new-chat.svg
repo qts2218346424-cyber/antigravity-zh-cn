@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+      <radialGradient id="sf-new-fill" cx="38%" cy="28%" r="72%">
+        <stop offset="0%" stop-color="#fffef6"/>
+        <stop offset="100%" stop-color="#fbe4ad"/>
+      </radialGradient>
+    </defs>
+    
+          <path d="M 16 12.6 L 16 8.2" stroke="#5c8d3e" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M 16 9.5 C 12.2 6.5, 9.8 8.6, 12.6 11.2 C 14.0 12.2, 15.5 11.0, 16 9.5 Z" fill="#9ed670" stroke="#5c8d3e" stroke-width="1.0"/>
+          <path d="M 16 9.5 C 19.8 6.5, 22.2 8.6, 19.4 11.2 C 18.0 12.2, 16.5 11.0, 16 9.5 Z" fill="#9ed670" stroke="#5c8d3e" stroke-width="1.0"/>
+        
+    <ellipse cx="16" cy="28.11" rx="7.02" ry="1.8" fill="#785226" opacity="0.12"/>
+    <path d="M 7.00 21.24 C 7.00 12.80, 10.78 12.80, 16 12.80 C 21.22 12.80, 25.00 12.80, 25.00 21.24 C 25.00 27.01, 21.85 27.01, 16 27.01 C 10.15 27.01, 7.00 27.01, 7.00 21.24 Z"
+          fill="url(#sf-new-fill)" stroke="#785226" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M 10.96 17.09 Q 13.75 14.87 16.45 15.32"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="11.14" cy="21.53" rx="1.89" ry="0.96" fill="#f28b9f" opacity="0.48"/>
+    <ellipse cx="20.86" cy="21.53" rx="1.89" ry="0.96" fill="#f28b9f" opacity="0.48"/>
+    <path d="M 12.58 19.76 Q 13.48 17.98 14.56 19.76" fill="none" stroke="#785226" stroke-width="1.45" stroke-linecap="round"/>
+       <path d="M 17.44 19.76 Q 18.52 17.98 19.42 19.76" fill="none" stroke="#785226" stroke-width="1.45" stroke-linecap="round"/></svg>

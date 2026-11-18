@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><g>
+      <defs>
+        <radialGradient id="orb_12_2_17_5" cx="45%" cy="42%" r="58%">
+          <stop offset="0%" stop-color="#fffef7"/>
+          <stop offset="48%" stop-color="#f6c453" stop-opacity="0.92"/>
+          <stop offset="82%" stop-color="#7dd3fc" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="12.2" cy="17.5" r="8.78" fill="url(#orb_12_2_17_5)"/>
+      <circle cx="12.2" cy="17.5" r="3.64" fill="#fffef7" opacity="0.92"/>
+      <ellipse cx="12.2" cy="17.5" rx="8.13" ry="2.73"
+               transform="rotate(-24 12.2 17.5)" fill="none" stroke="#fffef7" stroke-width="0.85" opacity="0.58"/>
+    </g>
+  
+      
+    <g>
+      <defs>
+        <radialGradient id="orb_20_8_12_8" cx="45%" cy="42%" r="58%">
+          <stop offset="0%" stop-color="#f0f9ff"/>
+          <stop offset="48%" stop-color="#7dd3fc" stop-opacity="0.92"/>
+          <stop offset="82%" stop-color="#bae6fd" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#bae6fd" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="20.8" cy="12.8" r="7.02" fill="url(#orb_20_8_12_8)"/>
+      <circle cx="20.8" cy="12.8" r="2.91" fill="#f0f9ff" opacity="0.92"/>
+      <ellipse cx="20.8" cy="12.8" rx="6.50" ry="2.18"
+               transform="rotate(-24 20.8 12.8)" fill="none" stroke="#f0f9ff" stroke-width="0.85" opacity="0.58"/>
+    </g></svg>

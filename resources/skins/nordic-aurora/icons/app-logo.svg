@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+      <radialGradient id="nordic-aurora-logo-fill" cx="38%" cy="28%" r="72%">
+        <stop offset="0%" stop-color="#f0fdfa"/>
+        <stop offset="100%" stop-color="#80e5d4"/>
+      </radialGradient>
+    </defs>
+    <path d="M 15.6 11.5 C 14.4 6.5, 11.0 5.8, 9.4 7.5 M 16.4 11.5 C 17.6 6.5, 21.0 5.8, 22.6 7.5" fill="none" stroke="#2d5a56" stroke-width="1.35" stroke-linecap="round"/>
+    <ellipse cx="16" cy="27.87" rx="7.49" ry="1.8" fill="#2d5a56" opacity="0.12"/>
+    <path d="M 6.40 20.61 C 6.40 11.60, 10.43 11.60, 16 11.60 C 21.57 11.60, 25.60 11.60, 25.60 20.61 C 25.60 26.77, 22.24 26.77, 16 26.77 C 9.76 26.77, 6.40 26.77, 6.40 20.61 Z"
+          fill="url(#nordic-aurora-logo-fill)" stroke="#2d5a56" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M 10.62 16.18 Q 13.60 13.81 16.48 14.29"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="10.82" cy="20.92" rx="2.02" ry="1.03" fill="#2dd4bf" opacity="0.48"/>
+    <ellipse cx="21.18" cy="20.92" rx="2.02" ry="1.03" fill="#2dd4bf" opacity="0.48"/>
+    <line x1="13.31" y1="17.29" x2="13.31" y2="20.13" stroke="#2d5a56" stroke-width="1.55" stroke-linecap="round"/>
+       <line x1="18.69" y1="17.29" x2="18.69" y2="20.13" stroke="#2d5a56" stroke-width="1.55" stroke-linecap="round"/>
+    
+    <g>
+      <defs>
+        <radialGradient id="orb_24_10_8" cx="45%" cy="42%" r="58%">
+          <stop offset="0%" stop-color="#f0fdfa"/>
+          <stop offset="48%" stop-color="#2dd4bf" stop-opacity="0.92"/>
+          <stop offset="82%" stop-color="#80e5d4" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#80e5d4" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="24" cy="10.8" r="5.67" fill="url(#orb_24_10_8)"/>
+      <circle cx="24" cy="10.8" r="2.35" fill="#f0fdfa" opacity="0.92"/>
+      <ellipse cx="24" cy="10.8" rx="5.25" ry="1.76"
+               transform="rotate(-24 24 10.8)" fill="none" stroke="#f0fdfa" stroke-width="0.85" opacity="0.58"/>
+    </g></svg>

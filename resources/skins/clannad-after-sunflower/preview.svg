@@ -1,47 +1,66 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
-  <defs>
-    <linearGradient id="summerSky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="52%" stop-color="#bae6fd"/>
-      <stop offset="100%" stop-color="#fef9c3"/>
-    </linearGradient>
-    <radialGradient id="sunFlare" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="45%" stop-color="#fef08a" stop-opacity="0.72"/>
-      <stop offset="100%" stop-color="#fde047" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="640" height="360" fill="url(#summerSky)"/>
-  <circle cx="520" cy="72" r="96" fill="url(#sunFlare)"/>
-  <!-- 夏云 -->
-  <g fill="#ffffff" opacity="0.82">
-    <ellipse cx="165" cy="112" rx="68" ry="26"/>
-    <ellipse cx="205" cy="100" rx="52" ry="30"/>
-    <ellipse cx="122" cy="116" rx="42" ry="20"/>
-  </g>
-  <!-- 向日葵金色花田山坡 -->
-  <path d="M0 250 Q220 218 430 242 T640 226 L640 360 L0 360 Z" fill="#facc15"/>
-  <path d="M0 282 Q240 252 640 268 L640 360 L0 360 Z" fill="#eab308"/>
-  <!-- 前景盛放向日葵与草帽剪影 -->
-  <g transform="translate(456, 178)">
-    <line x1="48" y1="58" x2="48" y2="170" stroke="#4d7c0f" stroke-width="7" stroke-linecap="round"/>
-    <g fill="#fbbf24">
-      <ellipse cx="48" cy="20" rx="10" ry="22"/>
-      <ellipse cx="48" cy="84" rx="10" ry="22"/>
-      <ellipse cx="16" cy="52" rx="22" ry="10"/>
-      <ellipse cx="80" cy="52" rx="22" ry="10"/>
-      <ellipse cx="25" cy="29" rx="18" ry="9" transform="rotate(45 25 29)"/>
-      <ellipse cx="71" cy="75" rx="18" ry="9" transform="rotate(45 71 75)"/>
-      <ellipse cx="71" cy="29" rx="18" ry="9" transform="rotate(-45 71 29)"/>
-      <ellipse cx="25" cy="75" rx="18" ry="9" transform="rotate(-45 25 75)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 270" fill="none">
+    <defs>
+      <linearGradient id="p-sf" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#eef8ff"/>
+        <stop offset="55%" stop-color="#fdfbf2"/>
+        <stop offset="100%" stop-color="#f7ebc9"/>
+      </linearGradient>
+    </defs>
+    <rect width="480" height="270" fill="url(#p-sf)"/>
+    <g><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(0 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(36 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(72 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(108 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(144 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(180 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(216 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(252 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(288 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="392" cy="174.60" rx="7.80" ry="14.40"
+                transform="rotate(324 392 198)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><circle cx="392" cy="198" r="13.20" fill="#784b22" stroke="#785226" stroke-width="0.75"/><circle cx="387.80" cy="194.40" r="3.00" fill="#fff6d6" opacity="0.55"/></g>
+    <g><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(0 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(36 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(72 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(108 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(144 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(180 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(216 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(252 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(288 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="334" cy="204.84" rx="5.72" ry="10.56"
+                transform="rotate(324 334 222)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><circle cx="334" cy="222" r="9.68" fill="#784b22" stroke="#785226" stroke-width="0.75"/><circle cx="330.92" cy="219.36" r="2.20" fill="#fff6d6" opacity="0.55"/></g>
+    <g transform="translate(242, 170) scale(1.8)">
+      <defs>
+      <radialGradient id="sf-pink" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff6f9"/><stop offset="100%" stop-color="#f6b8cd"/></radialGradient>
+      <radialGradient id="sf-blue" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#f2faff"/><stop offset="100%" stop-color="#a2d5f2"/></radialGradient>
+      <radialGradient id="sf-ushio" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#fffef6"/><stop offset="100%" stop-color="#fae09e"/></radialGradient>
+    </defs>
+    <g><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(0 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(36 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(72 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(108 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(144 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(180 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(216 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(252 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(288 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="13" cy="19.16" rx="1.61" ry="2.98"
+                transform="rotate(324 13 24)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><circle cx="13" cy="24" r="2.73" fill="#784b22" stroke="#785226" stroke-width="0.75"/><circle cx="12.13" cy="23.26" r="0.62" fill="#fff6d6" opacity="0.55"/></g>
+    <!-- 粉团子妈妈 -->
+    <ellipse cx="31" cy="23.8" rx="9.8" ry="7.8" fill="url(#sf-pink)" stroke="#855364" stroke-width="1.15"/>
+    <line x1="28.8" y1="21.5" x2="28.8" y2="23.8" stroke="#855364" stroke-width="1.25" stroke-linecap="round"/>
+    <line x1="33.2" y1="21.5" x2="33.2" y2="23.8" stroke="#855364" stroke-width="1.25" stroke-linecap="round"/>
+    <!-- 蓝团子爸爸 -->
+    <ellipse cx="67" cy="23.4" rx="10.4" ry="8.4" fill="url(#sf-blue)" stroke="#4c6b82" stroke-width="1.15"/>
+    <line x1="64.5" y1="21.0" x2="64.5" y2="23.5" stroke="#4c6b82" stroke-width="1.25" stroke-linecap="round"/>
+    <line x1="69.2" y1="21.0" x2="69.2" y2="23.5" stroke="#4c6b82" stroke-width="1.25" stroke-linecap="round"/>
+    <!-- C位草帽小汐团子 -->
+    <ellipse cx="49" cy="25.2" rx="8.6" ry="6.8" fill="url(#sf-ushio)" stroke="#785226" stroke-width="1.2"/>
+    <ellipse cx="49" cy="18.2" rx="10.2" ry="2.3" fill="#f5d07a" stroke="#785226" stroke-width="1.05"/>
+    <path d="M 43.8 17.8 C 44.2 14.2, 53.8 14.2, 54.2 17.8 Z" fill="#fae29c" stroke="#785226" stroke-width="1.05"/>
+    <path d="M 44.0 17.4 Q 49 18.5 54.0 17.4" fill="none" stroke="#3898d4" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M 46.2 24.2 Q 47.2 22.8 48.2 24.2" fill="none" stroke="#785226" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M 49.8 24.2 Q 50.8 22.8 51.8 24.2" fill="none" stroke="#785226" stroke-width="1.2" stroke-linecap="round"/>
+
     </g>
-    <circle cx="48" cy="52" r="19" fill="#78350f"/>
-    <circle cx="43" cy="47" r="4" fill="#a16207" opacity="0.6"/>
-  </g>
-  <!-- 汐的夏日草帽小意象 -->
-  <g transform="translate(115, 255)">
-    <ellipse cx="52" cy="30" rx="46" ry="11" fill="#fde68a"/>
-    <path d="M24 28 Q52 2 80 28 Z" fill="#fcd34d"/>
-    <path d="M25 26 Q52 31 79 26" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>
-  </g>
-</svg>
+  </svg>

@@ -3,8 +3,8 @@
   "id": "nezuko-bamboo",
   "name": "祢豆子 · 竹筒与麻叶",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "以灶门祢豆子和服麻叶纹与绯樱竹翠配色为灵感：会话侧边栏麻叶织纹、应用右下角淡淡的竹篓剪影，联动祢豆子桌面伴侣。",
+  "version": "2.2.0",
+  "description": "灶门祢豆子麻叶纹与竹翠绯樱深色主题，融入竹筒粉樱软团子徽章与微光伴读摆件，柔和暗调温润护眼。",
   "base": "dark",
   "preview": "preview.png",
   "colors": {
@@ -54,12 +54,24 @@
     "monoFamily": "'Sarasa Mono SC', 'Cascadia Code', Consolas, monospace"
   },
   "icons": {
-    "filter": "hue-rotate(300deg) saturate(1.2)"
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
   },
   "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(95, 143, 62, 0.32) !important; }\nform:has(textarea) { border: 1px solid rgba(240, 98, 146, 0.32) !important; }",
   "pet": {
     "character": "nezuko",
     "accent": "#f06292",
     "scale": 1.1
-  }
+  },
+  "cssFile": "theme.css"
 }

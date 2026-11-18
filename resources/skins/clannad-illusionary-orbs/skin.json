@@ -3,8 +3,8 @@
   "id": "clannad-illusionary-orbs",
   "name": "CLANNAD · 幻想世界光玉",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "「承载着小镇每一份温柔心愿与奇迹的光玉，在无人苍穹下缓缓升向星海。」专为 Antigravity 应用定制：深宵苍穹蓝基底搭配暖金光玉高亮、22px 液态亚克力思考卡折射与静谧星尘。",
+  "version": "2.2.0",
+  "description": "「承载着小镇每一份温柔心愿与奇迹的光玉，缓缓升向星海。」内置星羽心愿光玉主徽标、月白琉璃团子图标组与仰望星尘伴读摆件，深宵静谧夜色久看不刺眼。",
   "base": "dark",
   "preview": "preview.svg",
   "colors": {
@@ -16,7 +16,7 @@
     "titleBar": "#080c16",
     "panel": "#0c1221",
     "border": "#1f2d4a",
-    "selection": "#f6c4532e",
+    "selection": "#f6c45326",
     "input": "#11192e",
     "muted": "#8294b8"
   },
@@ -50,12 +50,25 @@
     "ligatures": true
   },
   "icons": {
-    "color": "#f6c453"
+    "color": "#f6c453",
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
   },
   "css": "aside, [data-sidebar='sidebar'] { backdrop-filter: blur(var(--agzh-glass-blur, 22px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 22px)); border-right: 1px solid rgba(246, 196, 83, 0.16) !important; }\nform:has(textarea) { border: 1px solid rgba(246, 196, 83, 0.22) !important; box-shadow: 0 14px 36px -10px rgba(4, 8, 20, 0.78), inset 0 1px 0 rgba(246, 196, 83, 0.18); }",
   "pet": {
     "character": "ushio",
     "accent": "#f6c453",
-    "scale": 1.0
-  }
+    "scale": 1
+  },
+  "cssFile": "theme.css"
 }

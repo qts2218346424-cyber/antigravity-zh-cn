@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 34" fill="none"><defs>
+      <radialGradient id="c-pink" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff7fa"/><stop offset="100%" stop-color="#f6b6cc"/></radialGradient>
+      <radialGradient id="c-blue" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#f5fbff"/><stop offset="100%" stop-color="#abd9f2"/></radialGradient>
+      <radialGradient id="c-amber" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#fffdf4"/><stop offset="100%" stop-color="#f9df9b"/></radialGradient>
+    </defs>
+    <!-- 飘落樱瓣 -->
+    <path d="M 11 14 C 8 11, 9 7, 13 9 C 15 11, 14 15, 11 14 Z" fill="#f7bfd2" opacity="0.8"/>
+    <path d="M 85 11 C 88 8, 91 11, 88 14 C 86 16, 83 13, 85 11 Z" fill="#f7bfd2" opacity="0.75"/>
+    <!-- 蓝团子（左） -->
+    <ellipse cx="28" cy="24" rx="10.5" ry="8.4" fill="url(#c-blue)" stroke="#556e82" stroke-width="1.2"/>
+    <line x1="25.5" y1="21.8" x2="25.5" y2="24.3" stroke="#556e82" stroke-width="1.3" stroke-linecap="round"/>
+    <line x1="30.2" y1="21.8" x2="30.2" y2="24.3" stroke="#556e82" stroke-width="1.3" stroke-linecap="round"/>
+    <ellipse cx="22.8" cy="24.8" rx="1.8" ry="1.0" fill="#f28fa8" opacity="0.42"/>
+    <ellipse cx="33.0" cy="24.8" rx="1.8" ry="1.0" fill="#f28fa8" opacity="0.42"/>
+    <!-- 黄团子（右） -->
+    <ellipse cx="68" cy="24.5" rx="9.8" ry="7.8" fill="url(#c-amber)" stroke="#7c6344" stroke-width="1.2"/>
+    <path d="M 64.5 23.2 Q 65.8 21.4 67.1 23.2" fill="none" stroke="#7c6344" stroke-width="1.25" stroke-linecap="round"/>
+    <path d="M 69.2 23.2 Q 70.5 21.4 71.8 23.2" fill="none" stroke="#7c6344" stroke-width="1.25" stroke-linecap="round"/>
+    <ellipse cx="62.8" cy="25.2" rx="1.7" ry="0.95" fill="#f28fa8" opacity="0.42"/>
+    <ellipse cx="73.2" cy="25.2" rx="1.7" ry="0.95" fill="#f28fa8" opacity="0.42"/>
+    <!-- 古河渚双呆毛粉团子（C位） -->
+    <path d="M 47.4 13.8 C 46.0 8.2, 41.8 7.2, 39.8 9.2" fill="none" stroke="#7c4d5e" stroke-width="1.35" stroke-linecap="round"/>
+    <path d="M 48.6 13.8 C 50.0 8.2, 54.2 7.2, 56.2 9.2" fill="none" stroke="#7c4d5e" stroke-width="1.35" stroke-linecap="round"/>
+    <ellipse cx="48" cy="23.2" rx="11.6" ry="9.4" fill="url(#c-pink)" stroke="#7c4d5e" stroke-width="1.28"/>
+    <line x1="45.0" y1="20.6" x2="45.0" y2="23.4" stroke="#7c4d5e" stroke-width="1.4" stroke-linecap="round"/>
+    <line x1="51.0" y1="20.6" x2="51.0" y2="23.4" stroke="#7c4d5e" stroke-width="1.4" stroke-linecap="round"/>
+    <ellipse cx="42.0" cy="24.0" rx="2.1" ry="1.1" fill="#e86f92" opacity="0.48"/>
+    <ellipse cx="54.0" cy="24.0" rx="2.1" ry="1.1" fill="#e86f92" opacity="0.48"/></svg>

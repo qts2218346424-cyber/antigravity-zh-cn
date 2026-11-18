@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><circle cx="14.2" cy="13.8" r="7.4" fill="#13203b" fill-opacity="0.85" stroke="#93c5fd" stroke-width="1.45"/>
+      <line x1="19.6" y1="19.2" x2="25.8" y2="25.4" stroke="#f6c453" stroke-width="2.1" stroke-linecap="round"/>
+      
+    <g>
+      <defs>
+        <radialGradient id="orb_14_2_13_8" cx="45%" cy="42%" r="58%">
+          <stop offset="0%" stop-color="#fffef7"/>
+          <stop offset="48%" stop-color="#f6c453" stop-opacity="0.92"/>
+          <stop offset="82%" stop-color="#7dd3fc" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="14.2" cy="13.8" r="6.48" fill="url(#orb_14_2_13_8)"/>
+      <circle cx="14.2" cy="13.8" r="2.69" fill="#fffef7" opacity="0.92"/>
+      <ellipse cx="14.2" cy="13.8" rx="6.00" ry="2.02"
+               transform="rotate(-24 14.2 13.8)" fill="none" stroke="#fffef7" stroke-width="0.85" opacity="0.58"/>
+    </g></svg>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+      <radialGradient id="st-new-fill" cx="38%" cy="28%" r="72%">
+        <stop offset="0%" stop-color="#faf5ff"/>
+        <stop offset="100%" stop-color="#dcc4fc"/>
+      </radialGradient>
+    </defs>
+    
+          <path d="M 10.5 13.2 C 7.2 9.2, 5.2 12.0, 8.8 15.0" fill="#c084fc" stroke="#6d4b8c" stroke-width="1.0"/>
+          <path d="M 18.5 13.2 C 21.8 9.2, 23.8 12.0, 20.2 15.0" fill="#c084fc" stroke="#6d4b8c" stroke-width="1.0"/>
+        
+    <ellipse cx="14.5" cy="27.72" rx="6.71" ry="1.8" fill="#6d4b8c" opacity="0.12"/>
+    <path d="M 5.90 21.01 C 5.90 12.80, 9.51 12.80, 14.5 12.80 C 19.49 12.80, 23.10 12.80, 23.10 21.01 C 23.10 26.62, 20.09 26.62, 14.5 26.62 C 8.91 26.62, 5.90 26.62, 5.90 21.01 Z"
+          fill="url(#st-new-fill)" stroke="#6d4b8c" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M 9.68 16.98 Q 12.35 14.82 14.93 15.25"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="9.86" cy="21.30" rx="1.81" ry="0.94" fill="#f59e8b" opacity="0.48"/>
+    <ellipse cx="19.14" cy="21.30" rx="1.81" ry="0.94" fill="#f59e8b" opacity="0.48"/>
+    <path d="M 11.23 19.57 Q 12.09 17.84 13.12 19.57" fill="none" stroke="#6d4b8c" stroke-width="1.45" stroke-linecap="round"/>
+       <path d="M 15.88 19.57 Q 16.91 17.84 17.77 19.57" fill="none" stroke="#6d4b8c" stroke-width="1.45" stroke-linecap="round"/>
+    
+          <path d="M 24.5 14.5 L 24.5 7.2 L 28.5 8.5 L 28.5 10.6 L 24.5 9.4" fill="none" stroke="#fb923c" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="23.0" cy="14.8" r="1.9" fill="#fb923c"/></svg>

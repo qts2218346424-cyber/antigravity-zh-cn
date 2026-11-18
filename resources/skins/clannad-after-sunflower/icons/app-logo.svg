@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+      <radialGradient id="ushio-logo-fill" cx="38%" cy="28%" r="72%">
+        <stop offset="0%" stop-color="#fffdf4"/>
+        <stop offset="100%" stop-color="#f9dfa2"/>
+      </radialGradient>
+    </defs>
+    
+          <!-- 小汐小呆毛 -->
+          <path d="M 16.2 6.8 C 17.2 3.2, 20.5 3.0, 21.6 4.8" fill="none" stroke="#785226" stroke-width="1.35" stroke-linecap="round"/>
+          <!-- 盛夏编织麦草帽与晴空蓝丝带 -->
+          <ellipse cx="16" cy="12.2" rx="11.6" ry="2.8" fill="#f5d07a" stroke="#785226" stroke-width="1.2"/>
+          <path d="M 9.8 11.8 C 10.2 7.2, 21.8 7.2, 22.2 11.8 Z" fill="#fae29c" stroke="#785226" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M 10.1 11.2 Q 16 12.6 21.9 11.2" fill="none" stroke="#3898d4" stroke-width="1.8" stroke-linecap="round"/>
+        
+    <ellipse cx="16" cy="28.29" rx="7.33" ry="1.8" fill="#785226" opacity="0.12"/>
+    <path d="M 6.60 21.26 C 6.60 12.60, 10.55 12.60, 16 12.60 C 21.45 12.60, 25.40 12.60, 25.40 21.26 C 25.40 27.19, 22.11 27.19, 16 27.19 C 9.89 27.19, 6.60 27.19, 6.60 21.26 Z"
+          fill="url(#ushio-logo-fill)" stroke="#785226" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M 10.74 17.01 Q 13.65 14.73 16.47 15.18"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="10.92" cy="21.57" rx="1.97" ry="0.99" fill="#f28b82" opacity="0.48"/>
+    <ellipse cx="21.08" cy="21.57" rx="1.97" ry="0.99" fill="#f28b82" opacity="0.48"/>
+    <line x1="13.37" y1="18.07" x2="13.37" y2="20.81" stroke="#785226" stroke-width="1.55" stroke-linecap="round"/>
+       <line x1="18.63" y1="18.07" x2="18.63" y2="20.81" stroke="#785226" stroke-width="1.55" stroke-linecap="round"/>
+    <g><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(0 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(36 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(72 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(108 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(144 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(180 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(216 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(252 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(288 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="24.6" cy="18.97" rx="1.14" ry="2.11"
+                transform="rotate(324 24.6 22.4)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><circle cx="24.6" cy="22.4" r="1.94" fill="#784b22" stroke="#785226" stroke-width="0.75"/><circle cx="23.98" cy="21.87" r="0.44" fill="#fff6d6" opacity="0.55"/></g></svg>

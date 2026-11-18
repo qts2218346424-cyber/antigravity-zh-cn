@@ -13,6 +13,7 @@ import nezukoSkin from '../../../../resources/skins/nezuko-bamboo/skin.json';
 import midnightSkin from '../../../../resources/skins/midnight-dark/skin.json';
 import sakuraLightSkin from '../../../../resources/skins/sakura-light/skin.json';
 import { BUILTIN_BGM_TRACKS } from '../clannadAudioEngine';
+import { BUILTIN_SKIN_ICONS, resolveSkinVisualMotifs } from '../skinIconRegistry';
 import {
   CLANNAD_SPLASH_THEMES,
   getSplashThemeSpec,
@@ -168,6 +169,89 @@ test('3. 背景音乐曲库编配与启动偏好读写联动准确', () => {
   assertEqual(loaded.themeId, 'clannad-sunflower');
   assertEqual(loaded.durationMs, 8000);
   assertEqual(loaded.musicBoxEnabled, true);
+});
+
+test('4. 全部 10 款材质包均内置《CLANNAD》角色/团子图标集、伴读挂件与护眼安全样式表', () => {
+  interface NodeFs {
+    existsSync: (p: string) => boolean;
+    readFileSync: (p: string, enc: string) => string;
+    statSync: (p: string) => { size: number };
+  }
+  interface NodePath {
+    resolve: (...parts: string[]) => string;
+    join: (...parts: string[]) => string;
+  }
+  const nodeProc = (
+    globalThis as unknown as {
+      process?: {
+        cwd: () => string;
+        getBuiltinModule?: (id: string) => unknown;
+      };
+    }
+  ).process;
+  const fs = nodeProc?.getBuiltinModule?.('node:fs') as NodeFs | undefined;
+  const path = nodeProc?.getBuiltinModule?.('node:path') as NodePath | undefined;
+
+  const allSkins = [
+    sakuraHillSkin,
+    orbsSkin,
+    sunflowerSkin,
+    starfishSkin,
+    sakuraLightSkin,
+    nezukoSkin,
+    obsidianSkin,
+    nordicSkin,
+    midnightSkin,
+    vermilionSkin,
+  ];
+  const requiredSemanticKeys = [
+    'app_logo',
+    'new_chat',
+    'automations',
+    'customizations',
+    'add_project',
+    'search',
+    'settings',
+    'pinned',
+    'thinking',
+  ];
+
+  for (const skin of allSkins) {
+    assertEqual(skin.cssFile, 'theme.css', `${skin.id} 应声明自包含 theme.css`);
+
+    const sem = (skin.icons as { semantic?: Record<string, string>; composer_charm?: string })?.semantic || {};
+    for (const k of requiredSemanticKeys) {
+      const rel = sem[k];
+      assertOk(Boolean(rel), `${skin.id} 缺少语义图标映射: ${k}`);
+    }
+    const charmRel = (skin.icons as { composer_charm?: string })?.composer_charm;
+    assertEqual(charmRel, 'icons/charm.svg', `${skin.id} 应绑定输入舱伴读挂件`);
+
+    if (fs && path && nodeProc) {
+      const skinDir = path.resolve(nodeProc.cwd(), 'resources/skins', skin.id);
+      const themeCssPath = path.join(skinDir, 'theme.css');
+      assertOk(fs.existsSync(themeCssPath), `${skin.id} 缺少 theme.css`);
+      const cssText = fs.readFileSync(themeCssPath, 'utf8');
+      assertOk(cssText.length > 5000 && cssText.length < 200000, `${skin.id} theme.css 长度异常`);
+      assertOk(!cssText.includes('.monaco-workbench'), `${skin.id} theme.css 不应污染旧版 IDE`);
+      assertOk(!/@keyframes/i.test(cssText), `${skin.id} theme.css 严禁包含刺眼频闪动画`);
+      assertOk(cssText.includes('--agzh-icon-app-logo'), `${skin.id} 应注入角色/团子主徽标变量`);
+      assertOk(cssText.includes('--agzh-composer-charm'), `${skin.id} 应注入输入舱伴读挂件变量`);
+
+      for (const k of requiredSemanticKeys) {
+        const iconPath = path.join(skinDir, sem[k]!);
+        assertOk(fs.existsSync(iconPath) && fs.statSync(iconPath).size > 100, `${skin.id} 图标文件缺失或为空`);
+      }
+      const charmPath = path.join(skinDir, charmRel!);
+      assertOk(fs.existsSync(charmPath) && fs.statSync(charmPath).size > 100, `${skin.id} 伴读挂件 SVG 缺失`);
+    }
+
+    const reg = BUILTIN_SKIN_ICONS[skin.id];
+    assertOk(Boolean(reg), `skinIconRegistry 缺少 ${skin.id}`);
+    const resolved = resolveSkinVisualMotifs({ id: skin.id });
+    assertEqual(resolved.iconPack.length, 5, `${skin.id} 画廊信物栏应包含 5 枚预览图标`);
+    assertOk(Boolean(resolved.composerCharmUri?.startsWith('data:image/svg+xml;base64,')), `${skin.id} 伴读挂件 Data URI 无效`);
+  }
 });
 
 if (failed > 0) {

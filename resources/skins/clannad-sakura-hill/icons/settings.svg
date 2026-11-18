@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><g><g transform="translate(16,16) rotate(-18)">
+        <path d="M 0 0 C -5.28 -4.32, -4.61 -11.04, 0 -9.79 C 4.61 -11.04, 5.28 -4.32, 0 0 Z"
+              fill="#f7bfd2" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,16) rotate(54)">
+        <path d="M 0 0 C -5.28 -4.32, -4.61 -11.04, 0 -9.79 C 4.61 -11.04, 5.28 -4.32, 0 0 Z"
+              fill="#f7bfd2" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,16) rotate(126)">
+        <path d="M 0 0 C -5.28 -4.32, -4.61 -11.04, 0 -9.79 C 4.61 -11.04, 5.28 -4.32, 0 0 Z"
+              fill="#f7bfd2" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,16) rotate(198)">
+        <path d="M 0 0 C -5.28 -4.32, -4.61 -11.04, 0 -9.79 C 4.61 -11.04, 5.28 -4.32, 0 0 Z"
+              fill="#f7bfd2" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><g transform="translate(16,16) rotate(270)">
+        <path d="M 0 0 C -5.28 -4.32, -4.61 -11.04, 0 -9.79 C 4.61 -11.04, 5.28 -4.32, 0 0 Z"
+              fill="#f7bfd2" stroke="#7c4d5e" stroke-width="0.75" stroke-linejoin="round"/>
+      </g><circle cx="16" cy="16" r="2.50" fill="#ffe29a"/></g></svg>

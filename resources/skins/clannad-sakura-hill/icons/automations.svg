@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+      <radialGradient id="sh-auto-fill" cx="38%" cy="28%" r="72%">
+        <stop offset="0%" stop-color="#f2faff"/>
+        <stop offset="100%" stop-color="#a8d8f0"/>
+      </radialGradient>
+    </defs>
+    
+    <ellipse cx="13.8" cy="27.22" rx="6.55" ry="1.8" fill="#4c677d" opacity="0.12"/>
+    <path d="M 5.40 20.51 C 5.40 12.30, 8.93 12.30, 13.8 12.30 C 18.67 12.30, 22.20 12.30, 22.20 20.51 C 22.20 26.12, 19.26 26.12, 13.8 26.12 C 8.34 26.12, 5.40 26.12, 5.40 20.51 Z"
+          fill="url(#sh-auto-fill)" stroke="#4c677d" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M 9.10 16.48 Q 11.70 14.32 14.22 14.75"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="9.26" cy="20.80" rx="1.76" ry="0.94" fill="#f49cb4" opacity="0.48"/>
+    <ellipse cx="18.34" cy="20.80" rx="1.76" ry="0.94" fill="#f49cb4" opacity="0.48"/>
+    <line x1="11.45" y1="17.48" x2="11.45" y2="20.08" stroke="#4c677d" stroke-width="1.55" stroke-linecap="round"/>
+       <line x1="16.15" y1="17.48" x2="16.15" y2="20.08" stroke="#4c677d" stroke-width="1.55" stroke-linecap="round"/>
+    
+          <circle cx="23.2" cy="12.2" r="5.6" fill="#fffaf0" stroke="#7c5d4d" stroke-width="1.25"/>
+          <path d="M 23.2 9.4 L 23.2 12.2 L 25.2 13.4" fill="none" stroke="#d46a8c" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="21.6" y1="5.2" x2="24.8" y2="5.2" stroke="#7c5d4d" stroke-width="1.25" stroke-linecap="round"/></svg>

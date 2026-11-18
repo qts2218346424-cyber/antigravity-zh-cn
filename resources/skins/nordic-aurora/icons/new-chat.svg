@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+      <radialGradient id="nordic-aurora-new-fill" cx="38%" cy="28%" r="72%">
+        <stop offset="0%" stop-color="#f0fdfa"/>
+        <stop offset="100%" stop-color="#80e5d4"/>
+      </radialGradient>
+    </defs>
+    
+    <ellipse cx="15" cy="27.52" rx="6.71" ry="1.8" fill="#2d5a56" opacity="0.12"/>
+    <path d="M 6.40 20.81 C 6.40 12.60, 10.01 12.60, 15 12.60 C 19.99 12.60, 23.60 12.60, 23.60 20.81 C 23.60 26.42, 20.59 26.42, 15 26.42 C 9.41 26.42, 6.40 26.42, 6.40 20.81 Z"
+          fill="url(#nordic-aurora-new-fill)" stroke="#2d5a56" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M 10.18 16.78 Q 12.85 14.62 15.43 15.05"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="10.36" cy="21.10" rx="1.81" ry="0.94" fill="#2dd4bf" opacity="0.48"/>
+    <ellipse cx="19.64" cy="21.10" rx="1.81" ry="0.94" fill="#2dd4bf" opacity="0.48"/>
+    <path d="M 11.73 19.37 Q 12.59 17.64 13.62 19.37" fill="none" stroke="#2d5a56" stroke-width="1.45" stroke-linecap="round"/>
+       <path d="M 16.38 19.37 Q 17.41 17.64 18.27 19.37" fill="none" stroke="#2d5a56" stroke-width="1.45" stroke-linecap="round"/>
+    <path d="M 24.5 6.8 L 25.4 9.5 L 28.1 10.4 L 25.4 11.3 L 24.5 14.0 L 23.6 11.3 L 20.9 10.4 L 23.6 9.5 Z" fill="#2dd4bf" opacity="0.9"/></svg>

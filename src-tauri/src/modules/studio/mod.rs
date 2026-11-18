@@ -191,6 +191,10 @@ pub struct SkinInfo {
     pub path: String,
     pub builtin: bool,
     pub preview_data_uri: Option<String>,
+    #[serde(default)]
+    pub icon_pack: Vec<String>,
+    #[serde(default)]
+    pub composer_charm_uri: Option<String>,
     pub colors: serde_json::Value,
     pub active: bool,
 }

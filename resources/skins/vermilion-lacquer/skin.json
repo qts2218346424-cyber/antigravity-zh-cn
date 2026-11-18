@@ -3,8 +3,8 @@
   "id": "vermilion-lacquer",
   "name": "朱漆 · 黑金莳绘",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "融合中国传统大漆工艺与宋刻人文美学：温润碳墨大漆对话画布、故宫朱砂红与赤金微光描边，适合静心推演方案。",
+  "version": "2.2.0",
+  "description": "中国传统碳墨大漆与赤金莳绘美学，融入朱砂赤金糯米团子纹章与暖金光玉信物，沉稳儒雅不刺眼。",
   "base": "dark",
   "colors": {
     "background": "#110c0d",
@@ -41,5 +41,20 @@
     "character": "nezuko",
     "accent": "#e15b47",
     "scale": 1.05
-  }
+  },
+  "icons": {
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
+  },
+  "cssFile": "theme.css"
 }

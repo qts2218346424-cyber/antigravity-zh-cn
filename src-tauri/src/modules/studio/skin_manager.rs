@@ -33,16 +33,40 @@ pub const COLOR_VARIABLES: &[(&str, &str)] = &[
 ];
 
 pub const BACKGROUND_TARGETS: &[(&str, &str)] = &[
-    ("window", ":root:not(:has([data-browser-hole])) html"),
-    ("app", ":root:not(:has([data-browser-hole])) body"),
-    ("conversation", ":root:not(:has([data-browser-hole])) body"),
-    ("chat", ":root:not(:has([data-browser-hole])) body"),
-    ("editor", ":root:not(:has([data-browser-hole])) body"),
-    ("sidebar", "aside, [data-sidebar='sidebar']"),
-    ("composer", "form:has(textarea)"),
-    ("panel", "aside, [role='complementary']"),
-    ("modal", "[role='dialog']"),
-    ("titlebar", "header"),
+    (
+        "window",
+        "body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))) .agy-sheet [data-main-content-body], body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))):not(:has([data-main-content-body]))",
+    ),
+    (
+        "app",
+        "body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))) .agy-sheet [data-main-content-body], body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))):not(:has([data-main-content-body]))",
+    ),
+    (
+        "conversation",
+        "body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))) .agy-sheet [data-main-content-body], body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))):not(:has([data-main-content-body]))",
+    ),
+    (
+        "chat",
+        "body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))) .agy-sheet [data-main-content-body], body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))):not(:has([data-main-content-body]))",
+    ),
+    (
+        "editor",
+        "body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))) .agy-sheet [data-main-content-body], body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))):not(:has([data-main-content-body]))",
+    ),
+    (
+        "sidebar",
+        "aside, [data-sidebar='sidebar'], .agy-inset-shell [data-peek-surface], [data-testid='in-tab-sidebar-overlay']",
+    ),
+    (
+        "composer",
+        ".surface-composer > .surface-composer-card, form:has(textarea)",
+    ),
+    (
+        "panel",
+        "[data-side-panel-body], aside, [role='complementary']",
+    ),
+    ("modal", "[role='dialog'], .agy-dialog"),
+    ("titlebar", ".agy-titlebar, header"),
 ];
 
 pub const PET_CHARACTERS: &[&str] = &[
@@ -487,6 +511,44 @@ fn find_preview_uri(skin_dir: &Path, manifest: &Value) -> Option<String> {
     None
 }
 
+fn extract_skin_icon_preview(skin_dir: &Path, manifest: &Value) -> (Vec<String>, Option<String>) {
+    let mut pack = Vec::new();
+    let mut charm_uri = None;
+    if let Some(icons) = manifest.get("icons").and_then(|v| v.as_object()) {
+        if let Some(sem) = icons.get("semantic").and_then(|v| v.as_object()) {
+            for key in [
+                "app_logo",
+                "new_chat",
+                "automations",
+                "customizations",
+                "settings",
+                "thinking",
+            ] {
+                if pack.len() >= 5 {
+                    break;
+                }
+                if let Some(rel) = sem.get(key).and_then(|v| v.as_str()) {
+                    if let Ok(uri) = resolve_asset_uri_or_inline(Some(skin_dir), rel, MAX_IMAGE_BYTES)
+                    {
+                        if !uri.is_empty() {
+                            pack.push(uri);
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(charm_rel) = icons.get("composer_charm").and_then(|v| v.as_str()) {
+            if let Ok(uri) = resolve_asset_uri_or_inline(Some(skin_dir), charm_rel, MAX_IMAGE_BYTES)
+            {
+                if !uri.is_empty() {
+                    charm_uri = Some(uri);
+                }
+            }
+        }
+    }
+    (pack, charm_uri)
+}
+
 /// 枚举所有可用材质包（用户目录优先于同 ID 内置材质包）
 pub fn list_skins() -> Vec<SkinInfo> {
     let cfg = load_studio_config();
@@ -525,6 +587,7 @@ pub fn list_skins() -> Vec<SkinInfo> {
                 continue;
             }
             let preview_data_uri = find_preview_uri(&dir, &raw);
+            let (icon_pack, composer_charm_uri) = extract_skin_icon_preview(&dir, &raw);
             let colors = raw.get("colors").cloned().unwrap_or_else(|| json!({}));
             out.push(SkinInfo {
                 id: id.clone(),
@@ -556,6 +619,8 @@ pub fn list_skins() -> Vec<SkinInfo> {
                 path: dir.to_string_lossy().to_string(),
                 builtin,
                 preview_data_uri,
+                icon_pack,
+                composer_charm_uri,
                 colors,
                 active: cfg.skin_enabled && id == active_id,
             });
@@ -1138,14 +1203,47 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         }));
     }
 
-    // 5. 应用内矢量图标色调与微滤镜（兼容保留自定义图标资产映射）
+    // 5. 应用内矢量图标色调与专属动漫角色/团子图标映射（支持 semantic、composer_charm 与 codicons）
     let mut resolved_icons = Map::new();
+    let mut icon_root_vars = Vec::new();
+    let mut has_semantic_icons = false;
+    let mut has_composer_charm = false;
+
     if let Some(icons) = manifest.get("icons").and_then(|v| v.as_object()) {
         if let Some(filter) = icons.get("filter").and_then(|v| v.as_str()) {
             css_parts.push(format!("aside svg {{ filter: {}; }}", filter));
         }
         if let Some(color) = icons.get("color").and_then(|v| v.as_str()) {
-            root_vars.push(format!("  --agzh-icon-accent: {};", color));
+            icon_root_vars.push(format!("  --agzh-icon-accent: {};", color));
+        }
+        if let Some(semantic) = icons.get("semantic").and_then(|v| v.as_object()) {
+            for (icon_key, raw_path) in semantic {
+                if let Some(rel) = raw_path.as_str() {
+                    if let Ok(uri) =
+                        resolve_asset_uri_or_inline(Some(&skin_dir), rel, MAX_IMAGE_BYTES)
+                    {
+                        if !uri.is_empty() {
+                            let kebab = camel_to_kebab(icon_key);
+                            icon_root_vars
+                                .push(format!("  --agzh-icon-{}: url('{}');", kebab, uri));
+                            resolved_icons.insert(icon_key.clone(), Value::String(uri));
+                            has_semantic_icons = true;
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(charm_rel) = icons.get("composer_charm").and_then(|v| v.as_str()) {
+            if let Ok(uri) =
+                resolve_asset_uri_or_inline(Some(&skin_dir), charm_rel, MAX_IMAGE_BYTES)
+            {
+                if !uri.is_empty() {
+                    icon_root_vars.push(format!("  --agzh-composer-charm: url('{}');", uri));
+                    resolved_icons
+                        .insert("composer_charm".to_string(), Value::String(uri));
+                    has_composer_charm = true;
+                }
+            }
         }
         if let Some(codicons) = icons.get("codicons").and_then(|v| v.as_object()) {
             for (icon_key, raw_path) in codicons {
@@ -1163,6 +1261,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     }
 
     // 6. 外部样式文件与自定义 CSS
+    let mut external_css_loaded = false;
     if let Some(css_file) = manifest
         .get("cssFile")
         .or_else(|| manifest.get("css_file"))
@@ -1172,7 +1271,38 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         let content =
             std::fs::read_to_string(&p).map_err(|e| format!("读取样式文件失败: {}", e))?;
         check_css_safety(&content)?;
+        external_css_loaded = content.contains("--agzh-icon-");
         css_parts.push(content);
+    }
+
+    if !icon_root_vars.is_empty() && !external_css_loaded {
+        css_parts.push(format!(":root {{\n{}\n}}", icon_root_vars.join("\n")));
+        if has_semantic_icons {
+            css_parts.push(
+                r#":root:not(:has([data-browser-hole])) [data-testid="app-icon-new-conversation-button"] svg,
+:root:not(:has([data-browser-hole])) [data-testid="sidebar-header-logo"] svg,
+:root:not(:has([data-browser-hole])) [data-testid="suggested-action-antigravity-icon"] svg {
+  background: var(--agzh-icon-app-logo) center / contain no-repeat !important;
+}
+:root:not(:has([data-browser-hole])) [data-testid="app-icon-new-conversation-button"] svg > *,
+:root:not(:has([data-browser-hole])) [data-testid="sidebar-header-logo"] svg > *,
+:root:not(:has([data-browser-hole])) [data-testid="suggested-action-antigravity-icon"] svg > * {
+  opacity: 0 !important;
+}"#
+                .to_string(),
+            );
+        }
+        if has_composer_charm {
+            css_parts.push(
+                r#":root:not(:has([data-browser-hole])) .surface-composer,
+:root:not(:has([data-browser-hole])) .surface-composer-card { overflow: visible !important; position: relative !important; }
+:root:not(:has([data-browser-hole])) .surface-composer-card::after {
+  content: ''; position: absolute; right: 18px; top: -21px; width: 68px; height: 24px;
+  pointer-events: none; z-index: 12; background: var(--agzh-composer-charm) right bottom / contain no-repeat; opacity: 0.9;
+}"#
+                .to_string(),
+            );
+        }
     }
     if let Some(custom_css) = manifest
         .get("css")

@@ -186,7 +186,8 @@ pub fn build_agent_main_hook() -> String {
         const defaultFg = isLightFallback ? '#383A42' : '#FAFAFA';
 
         const bg = colors ? (normalizeHex6(colors.background) || defaultBg) : defaultBg;
-        const titleBg = colors ? (normalizeHex6(colors.titleBar) || bg) : defaultBg;
+        const shellBg = colors ? (normalizeHex6(colors.sidebar) || bg) : defaultBg;
+        const titleBg = colors ? (normalizeHex6(colors.titleBar) || shellBg) : defaultBg;
         const fg = colors ? (normalizeHex6(colors.foreground) || defaultFg) : defaultFg;
 
         const wins = [
@@ -201,9 +202,9 @@ pub fn build_agent_main_hook() -> String {
           seen.add(win);
           try {{
             if (agyUtils && typeof agyUtils.setHubCurtainColor === 'function') {{
-              agyUtils.setHubCurtainColor(win, bg);
+              agyUtils.setHubCurtainColor(win, shellBg);
             }} else if (typeof win.setBackgroundColor === 'function') {{
-              win.setBackgroundColor(bg);
+              win.setBackgroundColor(shellBg);
             }}
           }} catch (_e) {{}}
           try {{
@@ -287,8 +288,15 @@ pub fn build_agent_main_hook() -> String {
     let lastCssStamp = getStamp(SKIN_CSS_PATH);
     let lastCfgStamp = getStamp(STUDIO_CFG_PATH);
 
-    if (ipcMain && typeof ipcMain.listenerCount === 'function' && !ipcMain.listenerCount('agzh:get-skin-runtime')) {{
-      ipcMain.handle('agzh:get-skin-runtime', () => readRuntimePayload());
+    if (ipcMain && typeof ipcMain.listenerCount === 'function') {{
+      if (!ipcMain.listenerCount('agzh:get-skin-runtime')) {{
+        ipcMain.handle('agzh:get-skin-runtime', () => readRuntimePayload());
+      }}
+      if (!ipcMain.listenerCount('agzh:get-skin-runtime-sync')) {{
+        ipcMain.on('agzh:get-skin-runtime-sync', (ev) => {{
+          ev.returnValue = readRuntimePayload();
+        }});
+      }}
     }}
 
     globalThis.__agzhSkin = {{

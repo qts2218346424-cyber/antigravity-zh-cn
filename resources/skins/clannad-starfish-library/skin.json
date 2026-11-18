@@ -3,8 +3,8 @@
   "id": "clannad-starfish-library",
   "name": "CLANNAD · 图书室海星与提琴",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "灵感源自一之濑琴美静谧的黄昏图书室与伊吹风子承载祝福的木雕海星：暮色紫檀深空对话画布、薰衣草提琴弦光思考卡片与斜阳暖橙窗影。",
+  "version": "2.2.0",
+  "description": "灵感源自一之濑琴美黄昏图书室与伊吹风子木雕海星：内置微笑木雕海星与琴美薰衣草垂耳缎带图标组、古籍共读摆件，暮色紫檀低眩光深邃护眼。",
   "base": "dark",
   "preview": "preview.svg",
   "colors": {
@@ -16,7 +16,7 @@
     "titleBar": "#100d19",
     "panel": "#161122",
     "border": "#2f2447",
-    "selection": "#c084fc30",
+    "selection": "#c084fc29",
     "input": "#1e1730",
     "muted": "#9b8cb8"
   },
@@ -50,12 +50,25 @@
     "ligatures": true
   },
   "icons": {
-    "color": "#c084fc"
+    "color": "#c084fc",
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
   },
   "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(192, 132, 252, 0.18) !important; }\nform:has(textarea) { border: 1px solid rgba(192, 132, 252, 0.28) !important; box-shadow: 0 14px 34px -10px rgba(10, 6, 20, 0.75), inset 0 1px 0 rgba(192, 132, 252, 0.18); }",
   "pet": {
     "character": "ushio",
     "accent": "#c084fc",
-    "scale": 1.0
-  }
+    "scale": 1
+  },
+  "cssFile": "theme.css"
 }

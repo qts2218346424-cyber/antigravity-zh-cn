@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 34" fill="none"><defs>
+      <radialGradient id="vermilion-lacquer-c1" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff7ed"/><stop offset="100%" stop-color="#f2b89b"/></radialGradient>
+      <radialGradient id="vermilion-lacquer-c2" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#fef9e7"/><stop offset="100%" stop-color="#e6c280"/></radialGradient>
+    </defs>
+    
+    <g>
+      <defs>
+        <radialGradient id="orb_28_15" cx="45%" cy="42%" r="58%">
+          <stop offset="0%" stop-color="#fffbeb"/>
+          <stop offset="48%" stop-color="#e15b47" stop-opacity="0.92"/>
+          <stop offset="82%" stop-color="#f2b89b" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#f2b89b" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="28" cy="15" r="6.48" fill="url(#orb_28_15)"/>
+      <circle cx="28" cy="15" r="2.69" fill="#fffbeb" opacity="0.92"/>
+      <ellipse cx="28" cy="15" rx="6.00" ry="2.02"
+               transform="rotate(-24 28 15)" fill="none" stroke="#fffbeb" stroke-width="0.85" opacity="0.58"/>
+    </g>
+  
+    <ellipse cx="46" cy="23.8" rx="10.2" ry="8.2" fill="url(#vermilion-lacquer-c1)" stroke="#6e3b32" stroke-width="1.18"/>
+    <line x1="43.6" y1="21.5" x2="43.6" y2="24.0" stroke="#6e3b32" stroke-width="1.25" stroke-linecap="round"/>
+    <line x1="48.4" y1="21.5" x2="48.4" y2="24.0" stroke="#6e3b32" stroke-width="1.25" stroke-linecap="round"/>
+    <ellipse cx="66" cy="24.6" rx="8.8" ry="7.0" fill="url(#vermilion-lacquer-c2)" stroke="#6e3b32" stroke-width="1.15"/>
+    <path d="M 63.2 23.4 Q 64.3 21.8 65.4 23.4" fill="none" stroke="#6e3b32" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M 66.8 23.4 Q 67.9 21.8 69.0 23.4" fill="none" stroke="#6e3b32" stroke-width="1.2" stroke-linecap="round"/></svg>

@@ -3,8 +3,8 @@
   "id": "nordic-aurora",
   "name": "北境极光 · 冰川矿",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "斯堪的纳维亚低饱和护眼视觉方案：冷杉深潭岩灰画布辅以幽微极光青翠高亮，久看不疲，兼顾清晰阅读层次。",
+  "version": "2.2.0",
+  "description": "斯堪的纳维亚低饱和冷杉岩灰护眼方案，点缀极光青翠琉璃团子与森之光玉微章，清冽宁静不刺眼。",
   "base": "dark",
   "colors": {
     "background": "#0b1417",
@@ -37,6 +37,21 @@
   "pet": {
     "character": "prince",
     "accent": "#2dd4bf",
-    "scale": 1.0
-  }
+    "scale": 1
+  },
+  "icons": {
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
+  },
+  "cssFile": "theme.css"
 }

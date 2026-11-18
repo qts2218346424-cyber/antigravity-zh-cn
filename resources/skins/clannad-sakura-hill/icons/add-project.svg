@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+        <linearGradient id="sh-folder" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fff6f9"/>
+          <stop offset="100%" stop-color="#f7d4e1"/>
+        </linearGradient>
+      </defs>
+      <path d="M 4.5 9.5 C 4.5 7.8, 5.8 6.8, 7.4 6.8 L 12.6 6.8 L 15.0 9.4 L 24.6 9.4 C 26.2 9.4, 27.5 10.6, 27.5 12.2 L 27.5 23.2 C 27.5 24.8, 26.2 26.0, 24.6 26.0 L 7.4 26.0 C 5.8 26.0, 4.5 24.8, 4.5 23.2 Z"
+            fill="url(#sh-folder)" stroke="#7c4d5e" stroke-width="1.35" stroke-linejoin="round"/>
+      <ellipse cx="16" cy="18.4" rx="4.6" ry="3.8" fill="#f5a9c1" stroke="#7c4d5e" stroke-width="1.05"/>
+      <line x1="14.7" y1="17.3" x2="14.7" y2="18.9" stroke="#7c4d5e" stroke-width="1.15" stroke-linecap="round"/>
+      <line x1="17.3" y1="17.3" x2="17.3" y2="18.9" stroke="#7c4d5e" stroke-width="1.15" stroke-linecap="round"/></svg>

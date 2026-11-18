@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><defs>
+      <radialGradient id="sh-ext-fill" cx="38%" cy="28%" r="72%">
+        <stop offset="0%" stop-color="#fffdf2"/>
+        <stop offset="100%" stop-color="#fae09e"/>
+      </radialGradient>
+    </defs>
+    
+    <ellipse cx="16" cy="26.89" rx="7.18" ry="1.8" fill="#7d6043" opacity="0.12"/>
+    <path d="M 6.80 19.86 C 6.80 11.20, 10.66 11.20, 16 11.20 C 21.34 11.20, 25.20 11.20, 25.20 19.86 C 25.20 25.79, 21.98 25.79, 16 25.79 C 10.02 25.79, 6.80 25.79, 6.80 19.86 Z"
+          fill="url(#sh-ext-fill)" stroke="#7d6043" stroke-width="1.35" stroke-linejoin="round"/>
+    <path d="M 10.85 15.61 Q 13.70 13.33 16.46 13.78"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65"/>
+    <ellipse cx="11.03" cy="20.17" rx="1.93" ry="0.99" fill="#f08a9d" opacity="0.48"/>
+    <ellipse cx="20.97" cy="20.17" rx="1.93" ry="0.99" fill="#f08a9d" opacity="0.48"/>
+    <line x1="13.42" y1="16.67" x2="13.42" y2="19.41" stroke="#7d6043" stroke-width="1.55" stroke-linecap="round"/>
+       <line x1="18.58" y1="16.67" x2="18.58" y2="19.41" stroke="#7d6043" stroke-width="1.55" stroke-linecap="round"/>
+    
+          <g transform="translate(16, 24.6)">
+            <path d="M 0 0 L -4.6 -2.4 L -4.2 2.4 Z" fill="#e06384" stroke="#7c4d5e" stroke-width="0.95" stroke-linejoin="round"/>
+            <path d="M 0 0 L 4.6 -2.4 L 4.2 2.4 Z" fill="#e06384" stroke="#7c4d5e" stroke-width="0.95" stroke-linejoin="round"/>
+            <circle cx="0" cy="0" r="1.4" fill="#f9d5df" stroke="#7c4d5e" stroke-width="0.85"/>
+          </g></svg>

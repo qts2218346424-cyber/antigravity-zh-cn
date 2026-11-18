@@ -1,21 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 280" fill="none">
-  <!-- 右下角向日葵与逆光花粉光斑 -->
-  <circle cx="145" cy="96" r="28" fill="#fde047" opacity="0.32"/>
-  <circle cx="210" cy="64" r="16" fill="#38bdf8" opacity="0.22"/>
-  <g transform="translate(215, 112)">
-    <line x1="64" y1="74" x2="56" y2="168" stroke="#65a30d" stroke-width="8" stroke-linecap="round"/>
-    <path d="M60 128 Q92 112 98 134 Q78 146 60 132 Z" fill="#84cc16"/>
-    <g fill="#f59e0b">
-      <ellipse cx="64" cy="24" rx="12" ry="26"/>
-      <ellipse cx="64" cy="108" rx="12" ry="26"/>
-      <ellipse cx="22" cy="66" rx="26" ry="12"/>
-      <ellipse cx="106" cy="66" rx="26" ry="12"/>
-      <ellipse cx="34" cy="36" rx="22" ry="11" transform="rotate(45 34 36)"/>
-      <ellipse cx="94" cy="96" rx="22" ry="11" transform="rotate(45 94 96)"/>
-      <ellipse cx="94" cy="36" rx="22" ry="11" transform="rotate(-45 94 36)"/>
-      <ellipse cx="34" cy="96" rx="22" ry="11" transform="rotate(-45 34 96)"/>
-    </g>
-    <circle cx="64" cy="66" r="24" fill="#78350f"/>
-    <circle cx="57" cy="59" r="6" fill="#b45309" opacity="0.5"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 320" fill="none">
+    <path d="M 60 320 Q 240 250 440 236 L 440 320 Z" fill="#f4e8c6" opacity="0.55"/>
+    <g><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(0 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(36 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(72 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(108 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(144 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(180 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(216 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(252 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(288 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="378" cy="202.16" rx="7.28" ry="13.44"
+                transform="rotate(324 378 224)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><circle cx="378" cy="224" r="12.32" fill="#784b22" stroke="#785226" stroke-width="0.75"/><circle cx="374.08" cy="220.64" r="2.80" fill="#fff6d6" opacity="0.55"/></g>
+    <g><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(0 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(36 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(72 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(108 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(144 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(180 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(216 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(252 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(288 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><ellipse cx="322" cy="235.62" rx="5.46" ry="10.08"
+                transform="rotate(324 322 252)" fill="#f7c957" stroke="#785226" stroke-width="0.7"/><circle cx="322" cy="252" r="9.24" fill="#784b22" stroke="#785226" stroke-width="0.75"/><circle cx="319.06" cy="249.48" r="2.10" fill="#fff6d6" opacity="0.55"/></g>
+    <g><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(0 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(36 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(72 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(108 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(144 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(180 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(216 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(252 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(288 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><ellipse cx="414" cy="251.96" rx="4.68" ry="8.64"
+                transform="rotate(324 414 266)" fill="#f5b82e" stroke="#785226" stroke-width="0.7"/><circle cx="414" cy="266" r="7.92" fill="#784b22" stroke="#785226" stroke-width="0.75"/><circle cx="411.48" cy="263.84" r="1.80" fill="#fff6d6" opacity="0.55"/></g>
+  </svg>

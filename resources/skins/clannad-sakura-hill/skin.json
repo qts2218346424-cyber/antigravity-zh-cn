@@ -3,21 +3,21 @@
   "id": "clannad-sakura-hill",
   "name": "CLANNAD · 光坂坡道与团子",
   "author": "Antigravity Studio",
-  "version": "2.1.0",
-  "description": "「我们开始一起攀登这长长的坡道。」灵感源自《CLANNAD》春季樱花坡道与古河渚挚爱的团子大家族：晨曦奶油樱白护眼画布、柔粉樱花微光卡片与右下角微笑团子三兄弟暗纹。",
+  "version": "2.2.0",
+  "description": "「我们开始一起攀登这长长的坡道。」融入古河渚双呆毛粉团子主徽标、团子大家族功能图标与输入舱趴趴三兄弟伴读摆件，晨曦柔雾樱白低饱和护眼画布，优美温润不晃眼。",
   "base": "light",
   "preview": "preview.svg",
   "colors": {
-    "background": "#fdf8fa",
+    "background": "#fcf7f9",
     "foreground": "#3b2c35",
     "accent": "#e57399",
     "accentForeground": "#ffffff",
     "sidebar": "#f9eff3",
     "titleBar": "#f5e6ec",
-    "panel": "#fcf3f7",
+    "panel": "#fbf2f6",
     "border": "#edd0dd",
-    "selection": "#f48fb145",
-    "input": "#ffffff",
+    "selection": "#f48fb136",
+    "input": "#fffcfd",
     "muted": "#947684"
   },
   "surfaces": {
@@ -51,13 +51,26 @@
     "ligatures": true
   },
   "icons": {
-    "color": "#d85a84"
+    "color": "#d85a84",
+    "semantic": {
+      "app_logo": "icons/app-logo.svg",
+      "new_chat": "icons/new-chat.svg",
+      "automations": "icons/automations.svg",
+      "customizations": "icons/customizations.svg",
+      "add_project": "icons/add-project.svg",
+      "search": "icons/search.svg",
+      "settings": "icons/settings.svg",
+      "pinned": "icons/pinned.svg",
+      "thinking": "icons/thinking.svg"
+    },
+    "composer_charm": "icons/charm.svg"
   },
   "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid #edd0dd !important; }\nform:has(textarea) { border: 1px solid rgba(229, 115, 153, 0.34) !important; box-shadow: 0 12px 30px -10px rgba(229, 115, 153, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9); }",
   "pet": {
     "character": "ushio",
     "filter": "saturate(1.06) brightness(1.03)",
     "accent": "#e57399",
-    "scale": 1.0
-  }
+    "scale": 1
+  },
+  "cssFile": "theme.css"
 }

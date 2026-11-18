@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"><path d="M 16 14 L 16 27" stroke="#f6c453" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 2" opacity="0.75"/>
+      
+    <g>
+      <defs>
+        <radialGradient id="orb_16_11_5" cx="45%" cy="42%" r="58%">
+          <stop offset="0%" stop-color="#fffef7"/>
+          <stop offset="48%" stop-color="#f6c453" stop-opacity="0.92"/>
+          <stop offset="82%" stop-color="#7dd3fc" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="11.5" r="9.18" fill="url(#orb_16_11_5)"/>
+      <circle cx="16" cy="11.5" r="3.81" fill="#fffef7" opacity="0.92"/>
+      <ellipse cx="16" cy="11.5" rx="8.50" ry="2.86"
+               transform="rotate(-24 16 11.5)" fill="none" stroke="#fffef7" stroke-width="0.85" opacity="0.58"/>
+    </g></svg>

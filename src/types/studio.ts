@@ -82,8 +82,12 @@ export interface SkinManifest {
   icons?: {
     filter?: string;
     color?: string;
+    semantic?: Record<string, string>;
+    composer_charm?: string;
     codicons?: Record<string, string>;
   };
+  cssFile?: string;
+  css_file?: string;
   css?: string;
   custom_css?: string;
   pet?: SkinPetConfig;
@@ -99,6 +103,8 @@ export interface SkinInfo {
   path: string;
   builtin: boolean;
   preview_data_uri?: string | null;
+  icon_pack?: string[];
+  composer_charm_uri?: string | null;
   colors: SkinColors;
   active: boolean;
 }

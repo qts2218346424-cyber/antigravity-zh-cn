@@ -6,9 +6,7 @@ use sysinfo::{Pid, System};
 
 use super::asar::{read_asar_file_content, replace_asar_file_content};
 use super::skin_injector::build_agent_main_hook;
-use super::skin_manager::{
-    compiled_dir, load_studio_config, save_studio_config,
-};
+use super::skin_manager::{load_studio_config, save_studio_config};
 use super::{
     atomic_write_bytes, atomic_write_text, resources_dir, L10nPatchResult, SkillLocalizeResult,
     PATCH_MARKER,
@@ -338,13 +336,8 @@ fn build_preload_runtime_bundle(
     );
 
     if enable_skin {
-        let runtime_path = compiled_dir().join("skin-runtime.json");
-        let cfg = load_studio_config();
-        if cfg.skin_enabled && runtime_path.is_file() {
-            if let Ok(raw) = std::fs::read_to_string(&runtime_path) {
-                parts.push(format!("  window.__AGZH_SKIN__ = {};", raw));
-            }
-        }
+        // 皮肤负载统一由主进程实时从 skin-compiled 目录读取并通过 IPC 同步下发，
+        // 不再在 preload.js 内硬编码静态快照，杜绝切换或停用材质后首帧残留旧皮肤。
         if let Ok(skin_rt) = std::fs::read_to_string(rdir.join("skin-runtime.js")) {
             parts.push(skin_rt);
         }
