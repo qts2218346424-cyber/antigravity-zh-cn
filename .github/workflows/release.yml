@@ -81,7 +81,17 @@ jobs:
         with:
           tagName: ${{ inputs.tag || github.ref_name }}
           releaseName: 'Antigravity Studio ${{ inputs.tag || github.ref_name }}'
-          releaseBody: '## Antigravity Studio 自动更新发布\n请通过客户端「检查更新」自动完成 OTA 升级，或下载对应平台安装包。'
+          releaseBody: |
+            ## Antigravity Studio ${{ inputs.tag || github.ref_name }} 更新说明
+
+            ### ✨ 核心亮点与视觉升级
+            - **重构暗色光学皮肤引擎（7 款深色材质全面焕新）**：全量对接官方客户端 `Onyx` + Tailwind v4 原生设计令牌（`--onyx-*`、`--shell`、`--glass` 等），彻底消除浅色宿主下开启黑色材质出现的惨白方块与代码高亮撕裂；移除顶层前景噪点与水印雾化层，改为底层画布光学合成与柔和天光晕染，重调五阶明度梯度并升级超清无损 SVG 矢量星轨与无缝麻叶晶格。
+            - **全套 10 款材质包融入《CLANNAD》水彩角色与团子图标体系**：全系内置专属团子主徽标、功能语义图标与输入舱伴读微章挂件。
+            - **修复 Studio 材质预览器渲染细节**：解决「光学精调」实验室中卡片通透度导致内部文字一并发虚的问题，优化画廊微缩视窗层次。
+
+            ### 🐛 问题修复
+            - **修复老宠物残留检测自指误报**：修正客户端哨兵在扫描 `preload.js` 时误匹配新版自身清理列表字面量，消除顶栏反复弹出「检测到客户端旧版老宠物残留」横幅的问题。
+            - **自动更新体验加固**：构建期采用预发布隔离，待 Windows / macOS / Linux 全平台安装包与 `updater.json` 签名索引全部就绪后原子切换为正式最新版。
           releaseDraft: false
           prerelease: true
           updaterJsonPreferNsis: true
