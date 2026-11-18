@@ -3,41 +3,36 @@
   "id": "nordic-aurora",
   "name": "北境极光 · 冰川矿",
   "author": "Antigravity Studio",
-  "version": "2.2.0",
-  "description": "斯堪的纳维亚低饱和冷杉岩灰护眼方案，点缀极光青翠琉璃团子与森之光玉微章，清冽宁静不刺眼。",
+  "version": "2.3.0",
+  "description": "斯堪的纳维亚低饱和冷杉岩灰护眼方案，点缀极光青翠琉璃团子与森之光玉微章，层次通透清冽不刺眼。",
   "base": "dark",
+  "preview": "preview.svg",
   "colors": {
-    "background": "#0b1417",
-    "foreground": "#dbe8eb",
+    "background": "#0e1a1f",
+    "foreground": "#e6f2f5",
     "accent": "#2dd4bf",
     "accentForeground": "#041c19",
-    "sidebar": "#0e1a1e",
-    "titleBar": "#091114",
-    "panel": "#111f24",
-    "border": "#1e333a",
-    "selection": "#2dd4bf30",
-    "input": "#14262c",
-    "muted": "#7b9ba3"
+    "sidebar": "#091216",
+    "titleBar": "#070e11",
+    "panel": "#162830",
+    "border": "#264450",
+    "selection": "#2dd4bf2b",
+    "input": "#1a3039",
+    "muted": "#88a8b0"
   },
   "surfaces": {
-    "radius": "12px",
-    "glass_blur": 16,
-    "card_opacity": 0.78,
-    "border_glow": "rgba(45, 212, 191, 0.16)",
-    "noise_grain": 0.025,
-    "shadow_elevation": "0 16px 40px -10px rgba(2, 10, 12, 0.72)"
+    "radius": "13px",
+    "glass_blur": 18,
+    "card_opacity": 0.84,
+    "border_glow": "rgba(45, 212, 191, 0.18)",
+    "noise_grain": 0.012,
+    "shadow_elevation": "0 18px 42px -10px rgba(2, 10, 12, 0.68), 0 3px 10px -2px rgba(2, 10, 12, 0.40)"
   },
   "font": {
     "family": "'HarmonyOS Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
     "monoFamily": "'Fira Code', 'Cascadia Code', monospace",
     "size": 13,
     "ligatures": true
-  },
-  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(45, 212, 191, 0.16) !important; }\nform:has(textarea) { border: 1px solid rgba(45, 212, 191, 0.24) !important; }",
-  "pet": {
-    "character": "prince",
-    "accent": "#2dd4bf",
-    "scale": 1
   },
   "icons": {
     "semantic": {
@@ -52,6 +47,12 @@
       "thinking": "icons/thinking.svg"
     },
     "composer_charm": "icons/charm.svg"
+  },
+  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(45, 212, 191, 0.16) !important; }\n.surface-composer > .surface-composer-card, form:has(textarea) { border: 1px solid rgba(45, 212, 191, 0.24) !important; }",
+  "pet": {
+    "character": "prince",
+    "accent": "#2dd4bf",
+    "scale": 1
   },
   "cssFile": "theme.css"
 }

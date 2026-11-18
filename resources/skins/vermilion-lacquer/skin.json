@@ -3,44 +3,39 @@
   "id": "vermilion-lacquer",
   "name": "朱漆 · 黑金莳绘",
   "author": "Antigravity Studio",
-  "version": "2.2.0",
-  "description": "中国传统碳墨大漆与赤金莳绘美学，融入朱砂赤金糯米团子纹章与暖金光玉信物，沉稳儒雅不刺眼。",
+  "version": "2.3.0",
+  "description": "中国传统碳墨大漆与赤金莳绘美学，融入朱砂赤金糯米团子纹章与暖金光玉信物，温润沉稳不刺眼。",
   "base": "dark",
+  "preview": "preview.svg",
   "colors": {
-    "background": "#110c0d",
-    "foreground": "#f5ebe4",
-    "accent": "#e15b47",
+    "background": "#150f10",
+    "foreground": "#f7efe9",
+    "accent": "#e85d4a",
     "accentForeground": "#fff7f5",
-    "sidebar": "#160f11",
-    "titleBar": "#0e0a0b",
-    "panel": "#1a1214",
-    "border": "#362320",
-    "selection": "#e15b4738",
-    "input": "#211719",
-    "muted": "#a88f88"
+    "sidebar": "#0f0a0b",
+    "titleBar": "#0c0809",
+    "panel": "#22181a",
+    "border": "#422b28",
+    "selection": "#e85d4a30",
+    "input": "#281c1e",
+    "muted": "#b29890"
   },
   "variables": {
     "--agzh-gold": "#d6a45e"
   },
   "surfaces": {
-    "radius": "10px",
-    "glass_blur": 14,
-    "card_opacity": 0.84,
+    "radius": "12px",
+    "glass_blur": 16,
+    "card_opacity": 0.86,
     "border_glow": "rgba(214, 164, 94, 0.22)",
-    "noise_grain": 0.04,
-    "shadow_elevation": "0 18px 42px -10px rgba(8, 3, 4, 0.8)"
+    "noise_grain": 0.015,
+    "shadow_elevation": "0 18px 44px -10px rgba(8, 3, 4, 0.72), 0 3px 10px -2px rgba(8, 3, 4, 0.45)"
   },
   "font": {
     "family": "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
     "monoFamily": "'Sarasa Mono SC', 'JetBrains Mono', monospace",
     "size": 13,
     "ligatures": true
-  },
-  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(214, 164, 94, 0.26) !important; }\nform:has(textarea) { border: 1px solid rgba(214, 164, 94, 0.32) !important; }",
-  "pet": {
-    "character": "nezuko",
-    "accent": "#e15b47",
-    "scale": 1.05
   },
   "icons": {
     "semantic": {
@@ -55,6 +50,12 @@
       "thinking": "icons/thinking.svg"
     },
     "composer_charm": "icons/charm.svg"
+  },
+  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(214, 164, 94, 0.24) !important; }\n.surface-composer > .surface-composer-card, form:has(textarea) { border: 1px solid rgba(214, 164, 94, 0.30) !important; }",
+  "pet": {
+    "character": "nezuko",
+    "accent": "#e85d4a",
+    "scale": 1.05
   },
   "cssFile": "theme.css"
 }

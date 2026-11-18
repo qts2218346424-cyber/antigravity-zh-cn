@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" fill="none">
+  <defs>
+    <radialGradient id="nz-glow" cx="82%" cy="80%" r="52%">
+      <stop offset="0%" stop-color="#f472b6" stop-opacity="0.28"/>
+      <stop offset="55%" stop-color="#5f8f3e" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#1b0e15" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bamboo-body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7cb342" stop-opacity="0.55"/>
+      <stop offset="50%" stop-color="#558b2f" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#33691e" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+  <rect width="520" height="360" fill="url(#nz-glow)"/>
+  <!-- 柔和透明羽化竹节与绯樱花瓣剪影 -->
+  <g transform="translate(388, 256) rotate(-14)" opacity="0.62">
+    <rect x="-52" y="-16" width="104" height="32" rx="14" fill="url(#bamboo-body)" stroke="#a5d6a7" stroke-opacity="0.35" stroke-width="1.2"/>
+    <line x1="-22" y1="-16" x2="-22" y2="16" stroke="#c5e1a5" stroke-opacity="0.45" stroke-width="2"/>
+    <line x1="22" y1="-16" x2="22" y2="16" stroke="#c5e1a5" stroke-opacity="0.45" stroke-width="2"/>
+    <path d="M -64 0 Q -56 -4 -52 0" stroke="#f472b6" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 52 0 Q 58 4 64 0" stroke="#f472b6" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g fill="#f9a8d4" opacity="0.48">
+    <path d="M 442 178 C 448 170, 458 174, 452 184 C 446 190, 438 186, 442 178 Z"/>
+    <path d="M 336 228 C 342 222, 350 226, 345 234 C 340 239, 333 235, 336 228 Z"/>
+    <path d="M 468 224 C 473 219, 480 222, 476 229 C 472 233, 465 230, 468 224 Z"/>
+  </g>
+</svg>

@@ -3,30 +3,30 @@
   "id": "clannad-starfish-library",
   "name": "CLANNAD · 图书室海星与提琴",
   "author": "Antigravity Studio",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "灵感源自一之濑琴美黄昏图书室与伊吹风子木雕海星：内置微笑木雕海星与琴美薰衣草垂耳缎带图标组、古籍共读摆件，暮色紫檀低眩光深邃护眼。",
   "base": "dark",
   "preview": "preview.svg",
   "colors": {
-    "background": "#120f1c",
-    "foreground": "#efeaf8",
+    "background": "#141022",
+    "foreground": "#f2eefb",
     "accent": "#c084fc",
     "accentForeground": "#1a1026",
-    "sidebar": "#181326",
-    "titleBar": "#100d19",
-    "panel": "#161122",
-    "border": "#2f2447",
-    "selection": "#c084fc29",
-    "input": "#1e1730",
-    "muted": "#9b8cb8"
+    "sidebar": "#0e0b18",
+    "titleBar": "#0b0813",
+    "panel": "#201936",
+    "border": "#3b2e5e",
+    "selection": "#c084fc2c",
+    "input": "#261e40",
+    "muted": "#a395c4"
   },
   "surfaces": {
     "radius": "14px",
     "glass_blur": 18,
-    "card_opacity": 0.78,
+    "card_opacity": 0.84,
     "border_glow": "rgba(192, 132, 252, 0.22)",
-    "noise_grain": 0.028,
-    "shadow_elevation": "0 20px 48px -12px rgba(10, 6, 20, 0.80)"
+    "noise_grain": 0.014,
+    "shadow_elevation": "0 20px 48px -12px rgba(10, 6, 20, 0.74), 0 3px 10px -2px rgba(10, 6, 20, 0.44)"
   },
   "variables": {
     "--agzh-kotomi-violet": "#c084fc",
@@ -36,10 +36,10 @@
     {
       "image": "starfish-twilight.svg",
       "target": "conversation",
-      "opacity": 0.18,
+      "opacity": 0.2,
       "blur": 0,
       "position": "right bottom",
-      "size": "360px",
+      "size": "380px",
       "repeat": "no-repeat"
     }
   ],
@@ -64,7 +64,7 @@
     },
     "composer_charm": "icons/charm.svg"
   },
-  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(192, 132, 252, 0.18) !important; }\nform:has(textarea) { border: 1px solid rgba(192, 132, 252, 0.28) !important; box-shadow: 0 14px 34px -10px rgba(10, 6, 20, 0.75), inset 0 1px 0 rgba(192, 132, 252, 0.18); }",
+  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(192, 132, 252, 0.18) !important; }\n.surface-composer > .surface-composer-card, form:has(textarea) { border: 1px solid rgba(192, 132, 252, 0.28) !important; }",
   "pet": {
     "character": "ushio",
     "accent": "#c084fc",

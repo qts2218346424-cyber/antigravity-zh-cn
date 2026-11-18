@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 270" fill="none">
+  <defs>
+    <linearGradient id="nz-p" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#150a10"/>
+      <stop offset="100%" stop-color="#2d1422"/>
+    </linearGradient>
+    <radialGradient id="nz-orb" cx="78%" cy="72%" r="48%">
+      <stop offset="0%" stop-color="#f472b6" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#f472b6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="270" fill="url(#nz-p)"/>
+  <rect width="480" height="270" fill="url(#nz-orb)"/>
+  <g stroke="#f472b6" stroke-opacity="0.22" stroke-width="1">
+    <polygon points="360,40 400,64 360,88 320,64"/>
+    <line x1="320" y1="64" x2="400" y2="64"/>
+    <line x1="360" y1="40" x2="360" y2="88"/>
+  </g>
+  <rect x="336" y="182" width="76" height="24" rx="11" transform="rotate(-12 374 194)" fill="#558b2f" fill-opacity="0.55" stroke="#a5d6a7" stroke-opacity="0.4"/>
+</svg>

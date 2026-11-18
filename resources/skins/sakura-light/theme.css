@@ -13,122 +13,122 @@
 }
 
 /* 1. 应用主徽标与欢迎徽章 —— 专属动漫角色 / 团子主信物 */
-:root:not(:has([data-browser-hole])) [data-testid="app-icon-new-conversation-button"] svg,
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-header-logo"] svg,
-:root:not(:has([data-browser-hole])) [data-testid="suggested-action-antigravity-icon"] svg,
-:root:not(:has([data-browser-hole])) aside svg[viewBox="0 0 180 180"],
-:root:not(:has([data-browser-hole])) main svg[viewBox="0 0 180 180"] {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="app-icon-new-conversation-button"] svg,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-header-logo"] svg,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="suggested-action-antigravity-icon"] svg,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside svg[viewBox="0 0 180 180"],
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) main svg[viewBox="0 0 180 180"] {
   background: var(--agzh-icon-app-logo) center / contain no-repeat !important;
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="app-icon-new-conversation-button"] svg > *,
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-header-logo"] svg > *,
-:root:not(:has([data-browser-hole])) [data-testid="suggested-action-antigravity-icon"] svg > *,
-:root:not(:has([data-browser-hole])) aside svg[viewBox="0 0 180 180"] > *,
-:root:not(:has([data-browser-hole])) main svg[viewBox="0 0 180 180"] > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="app-icon-new-conversation-button"] svg > *,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-header-logo"] svg > *,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="suggested-action-antigravity-icon"] svg > *,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside svg[viewBox="0 0 180 180"] > *,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) main svg[viewBox="0 0 180 180"] > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="app-icon-new-conversation-button"]:hover svg,
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-header-logo"]:hover svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="app-icon-new-conversation-button"]:hover svg,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-header-logo"]:hover svg {
   transform: scale(1.07) rotate(-3deg);
 }
 
 /* 2. 侧边栏与全局核心功能图标 —— 水彩角色与团子大家族替换 */
-:root:not(:has([data-browser-hole])) [data-testid="new-conversation-button"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="new-conversation-button"] svg {
   background: var(--agzh-icon-new-chat) center / contain no-repeat !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="new-conversation-button"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="new-conversation-button"] svg > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="new-conversation-button"] .google-symbols {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="new-conversation-button"] .google-symbols {
   color: transparent !important;
   background: var(--agzh-icon-new-chat) center / 18px 18px no-repeat !important;
 }
 
-:root:not(:has([data-browser-hole])) [data-testid="automations-button"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="automations-button"] svg {
   background: var(--agzh-icon-automations) center / contain no-repeat !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="automations-button"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="automations-button"] svg > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="automations-button"] .google-symbols,
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="schedule"] {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="automations-button"] .google-symbols,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="schedule"] {
   color: transparent !important;
   background: var(--agzh-icon-automations) center / 18px 18px no-repeat !important;
 }
 
-:root:not(:has([data-browser-hole])) aside a[href*="/customizations"] svg,
-:root:not(:has([data-browser-hole])) [data-testid="customizations-button"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside a[href*="/customizations"] svg,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="customizations-button"] svg {
   background: var(--agzh-icon-customizations) center / contain no-repeat !important;
 }
-:root:not(:has([data-browser-hole])) aside a[href*="/customizations"] svg > *,
-:root:not(:has([data-browser-hole])) [data-testid="customizations-button"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside a[href*="/customizations"] svg > *,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="customizations-button"] svg > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) aside a[href*="/customizations"] .google-symbols,
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="home_repair_service"],
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="extension"] {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside a[href*="/customizations"] .google-symbols,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="home_repair_service"],
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="extension"] {
   color: transparent !important;
   background: var(--agzh-icon-customizations) center / 18px 18px no-repeat !important;
 }
 
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-add-project-button"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-add-project-button"] svg {
   background: var(--agzh-icon-add-project) center / contain no-repeat !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-add-project-button"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-add-project-button"] svg > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-add-project-button"] .google-symbols,
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="create_new_folder"] {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-add-project-button"] .google-symbols,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="create_new_folder"] {
   color: transparent !important;
   background: var(--agzh-icon-add-project) center / 18px 18px no-repeat !important;
 }
 
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-search-button"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-search-button"] svg {
   background: var(--agzh-icon-search) center / contain no-repeat !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-search-button"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-search-button"] svg > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-search-button"] .google-symbols,
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="search"] {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="sidebar-search-button"] .google-symbols,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="search"] {
   color: transparent !important;
   background: var(--agzh-icon-search) center / 18px 18px no-repeat !important;
 }
 
-:root:not(:has([data-browser-hole])) [data-testid="settings-button"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="settings-button"] svg {
   background: var(--agzh-icon-settings) center / contain no-repeat !important;
   transition: transform 0.35s ease !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="settings-button"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="settings-button"] svg > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="settings-button"]:hover svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="settings-button"]:hover svg {
   transform: rotate(22deg) scale(1.06);
 }
-:root:not(:has([data-browser-hole])) [data-testid="settings-button"] .google-symbols,
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="settings"] {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="settings-button"] .google-symbols,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="settings"] {
   color: transparent !important;
   background: var(--agzh-icon-settings) center / 18px 18px no-repeat !important;
 }
 
 /* 3. 置顶会话信物与深度思考折叠头伴读微章 */
-:root:not(:has([data-browser-hole])) [data-testid="conversation-pinned-icon"] svg,
-:root:not(:has([data-browser-hole])) [data-testid="conversation-pinned-indicator"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="conversation-pinned-icon"] svg,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="conversation-pinned-indicator"] svg {
   background: var(--agzh-icon-pinned) center / contain no-repeat !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="conversation-pinned-icon"] svg > *,
-:root:not(:has([data-browser-hole])) [data-testid="conversation-pinned-indicator"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="conversation-pinned-icon"] svg > *,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="conversation-pinned-indicator"] svg > * {
   opacity: 0 !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="conversation-pinned-icon"] .google-symbols,
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="keep"],
-:root:not(:has([data-browser-hole])) aside .google-symbols[data-agzh-sym="push_pin"] {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="conversation-pinned-icon"] .google-symbols,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="keep"],
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside .google-symbols[data-agzh-sym="push_pin"] {
   color: transparent !important;
   background: var(--agzh-icon-pinned) center / 16px 16px no-repeat !important;
 }
 
-:root:not(:has([data-browser-hole])) [data-testid="thinking-collapsible-trigger"]::before {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="thinking-collapsible-trigger"]::before {
   content: '';
   display: inline-block;
   width: 16px;
@@ -139,23 +139,23 @@
   background: var(--agzh-icon-thinking) center / contain no-repeat;
   opacity: 0.92;
 }
-:root:not(:has([data-browser-hole])) [data-testid="ask-question-header-icon"] svg {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="ask-question-header-icon"] svg {
   background: var(--agzh-icon-thinking) center / contain no-repeat !important;
 }
-:root:not(:has([data-browser-hole])) [data-testid="ask-question-header-icon"] svg > * {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="ask-question-header-icon"] svg > * {
   opacity: 0 !important;
 }
 
 /* 4. 底部指令输入舱（Composer）右上沿静谧伴读团子挂件 */
-:root:not(:has([data-browser-hole])) .surface-composer,
-:root:not(:has([data-browser-hole])) .surface-composer-card {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) .surface-composer,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) .surface-composer-card {
   overflow: visible !important;
 }
-:root:not(:has([data-browser-hole])) .surface-composer-card {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) .surface-composer-card {
   position: relative !important;
 }
-:root:not(:has([data-browser-hole])) .surface-composer-card::after,
-:root:not(:has([data-browser-hole])) form:has(textarea):not(:has(.surface-composer-card))::after {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) .surface-composer-card::after,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) form:has(textarea):not(:has(.surface-composer-card))::after {
   content: '';
   position: absolute;
   right: 18px;
@@ -169,14 +169,14 @@
 }
 
 /* 5. 柔和圆润交互手感与低对比度护眼过渡 */
-:root:not(:has([data-browser-hole])) aside a,
-:root:not(:has([data-browser-hole])) aside button {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside a,
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) aside button {
   transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
-:root:not(:has([data-browser-hole])) [data-testid="new-conversation-button"]:hover {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) [data-testid="new-conversation-button"]:hover {
   box-shadow: 0 4px 12px -2px rgba(140, 88, 108, 0.14);
 }
-:root:not(:has([data-browser-hole])) ::-webkit-scrollbar-thumb {
+body:not([data-has-browser-hole="true"]):not(:has([data-browser-hole]:not([data-browser-hole="false"]))) ::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;

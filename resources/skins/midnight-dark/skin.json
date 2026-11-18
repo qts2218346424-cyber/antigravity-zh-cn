@@ -3,37 +3,37 @@
   "id": "midnight-dark",
   "name": "午夜深空 · 星海",
   "author": "Antigravity Studio",
-  "version": "2.2.0",
-  "description": "午夜星海低饱和深蓝夜色主题，点缀星尘夜光小团子与心愿光玉信物，适合深夜沉浸式长文阅读与编码。",
+  "version": "2.3.0",
+  "description": "午夜星海低饱和深蓝夜色主题，底层铺设星云微光并点缀星尘夜光小团子与心愿光玉信物，适合深夜沉浸式阅读与编码。",
   "base": "dark",
-  "preview": "preview.png",
+  "preview": "preview.svg",
   "colors": {
-    "background": "#0d1220",
-    "foreground": "#d5dcef",
+    "background": "#0d1426",
+    "foreground": "#e7eefc",
     "accent": "#5cc8ff",
-    "accentForeground": "#06121f",
-    "sidebar": "#0a0f1b",
-    "titleBar": "#080c16",
-    "panel": "#0b1020",
-    "border": "#1b2540",
-    "selection": "#22406688",
-    "input": "#121a2e",
-    "muted": "#7f8bab"
+    "accentForeground": "#051322",
+    "sidebar": "#080d1a",
+    "titleBar": "#060a14",
+    "panel": "#16223d",
+    "border": "#263961",
+    "selection": "#5cc8ff2c",
+    "input": "#1a2847",
+    "muted": "#8b9cc2"
   },
   "surfaces": {
     "radius": "14px",
-    "glass_blur": 16,
-    "card_opacity": 0.8,
-    "border_glow": "rgba(92, 200, 255, 0.18)",
-    "noise_grain": 0.02,
-    "shadow_elevation": "0 18px 44px -12px rgba(5, 8, 18, 0.8)"
+    "glass_blur": 18,
+    "card_opacity": 0.84,
+    "border_glow": "rgba(125, 211, 252, 0.18)",
+    "noise_grain": 0.012,
+    "shadow_elevation": "0 20px 46px -12px rgba(4, 8, 20, 0.70), 0 3px 10px -2px rgba(4, 8, 20, 0.42)"
   },
   "background": {
-    "image": "starfield.webp",
+    "image": "starfield.svg",
     "target": "conversation",
-    "opacity": 0.12,
+    "opacity": 0.22,
     "blur": 0,
-    "position": "center",
+    "position": "center center",
     "size": "cover"
   },
   "font": {
@@ -41,6 +41,7 @@
     "ligatures": true
   },
   "icons": {
+    "filter": "saturate(1.12)",
     "semantic": {
       "app_logo": "icons/app-logo.svg",
       "new_chat": "icons/new-chat.svg",
@@ -54,7 +55,7 @@
     },
     "composer_charm": "icons/charm.svg"
   },
-  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(92, 200, 255, 0.14) !important; }",
+  "css": "aside, [data-sidebar='sidebar'] { border-right: 1px solid rgba(92, 200, 255, 0.16) !important; }\n.surface-composer > .surface-composer-card, form:has(textarea) { border: 1px solid rgba(92, 200, 255, 0.24) !important; }",
   "pet": {
     "character": "prince",
     "accent": "#5cc8ff"

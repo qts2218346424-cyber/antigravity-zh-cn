@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" fill="none">
+  <defs>
+    <radialGradient id="nebula-1" cx="78%" cy="22%" r="48%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.24"/>
+      <stop offset="52%" stop-color="#1d4ed8" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#0c1324" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebula-2" cx="22%" cy="82%" r="44%">
+      <stop offset="0%" stop-color="#818cf8" stop-opacity="0.16"/>
+      <stop offset="60%" stop-color="#1e3a8a" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#0c1324" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="star-halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f0f9ff" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#7dd3fc" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="520" fill="url(#nebula-1)"/>
+  <rect width="800" height="520" fill="url(#nebula-2)"/>
+  <g opacity="0.72">
+    <circle cx="642" cy="108" r="14" fill="url(#star-halo)"/>
+    <circle cx="642" cy="108" r="1.8" fill="#ffffff"/>
+    <circle cx="548" cy="176" r="10" fill="url(#star-halo)"/>
+    <circle cx="548" cy="176" r="1.4" fill="#e0f2fe"/>
+    <circle cx="712" cy="238" r="11" fill="url(#star-halo)"/>
+    <circle cx="712" cy="238" r="1.5" fill="#f0f9ff"/>
+    <circle cx="186" cy="124" r="9" fill="url(#star-halo)"/>
+    <circle cx="186" cy="124" r="1.2" fill="#e0f2fe"/>
+  </g>
+  <g fill="#bae6fd" opacity="0.38">
+    <circle cx="118" cy="74" r="1"/>
+    <circle cx="264" cy="58" r="0.9"/>
+    <circle cx="392" cy="96" r="1.1"/>
+    <circle cx="486" cy="64" r="0.8"/>
+    <circle cx="694" cy="62" r="1"/>
+    <circle cx="748" cy="154" r="0.9"/>
+    <circle cx="606" cy="284" r="1"/>
+    <circle cx="688" cy="366" r="1.1"/>
+    <circle cx="524" cy="412" r="0.9"/>
+    <circle cx="312" cy="388" r="0.8"/>
+    <circle cx="154" cy="426" r="1"/>
+  </g>
+  <path d="M 490 198 Q 612 138 746 92" stroke="#7dd3fc" stroke-opacity="0.16" stroke-width="0.9" stroke-dasharray="3 6"/>
+</svg>

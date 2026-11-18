@@ -523,21 +523,9 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               borderColor: border,
               fontFamily,
               fontSize: `${fontSize}px`,
-              backgroundImage: `radial-gradient(circle at 16% 20%, ${accent}34 0%, transparent 48%), radial-gradient(circle at 86% 80%, ${accent}28 0%, transparent 52%)`,
+              backgroundImage: `radial-gradient(76% 42% at 50% 0%, ${accent}22 0%, transparent 72%), radial-gradient(circle at 86% 84%, ${accent}18 0%, transparent 56%)`,
             }}
           >
-            {/* 微粒噪点遮罩 */}
-            {noiseGrain > 0 && (
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  opacity: noiseGrain,
-                  backgroundImage:
-                    'radial-gradient(rgba(255,255,255,0.6) 0.5px, transparent 0.5px)',
-                  backgroundSize: '3px 3px',
-                }}
-              />
-            )}
 
             {/* 模拟 Antigravity 应用无边框顶栏 */}
             <div
@@ -637,12 +625,11 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                     </div>
                   </div>
 
-                  {/* 玻璃态深度思考折叠卡 */}
+                  {/* 玻璃态深度思考折叠卡（仅背景应用通透度，保持文字 100% 锐利清晰） */}
                   <div
                     className="p-3 space-y-1.5 transition-all"
                     style={{
-                      backgroundColor: panel,
-                      opacity: cardOpacity,
+                      backgroundColor: `color-mix(in srgb, ${panel} ${Math.round(cardOpacity * 100)}%, transparent)`,
                       borderRadius: `${borderRadius}px`,
                       border: `1px solid ${border}`,
                       backdropFilter: `blur(${glassBlur}px) saturate(1.35)`,

@@ -254,6 +254,113 @@ test('4. 全部 10 款材质包均内置《CLANNAD》角色/团子图标集、�
   }
 });
 
+test('5. 全部 7 款黑色/深色背景材质满足严格 5 阶光学明度抬升、WCAG AAA 对比度与高清矢量资产校验', () => {
+  function relLum(hex: string): number {
+    const clean = hex.replace('#', '').slice(0, 6);
+    const toLin = (c: number) => {
+      const s = c / 255;
+      return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    const r = toLin(parseInt(clean.slice(0, 2), 16));
+    const g = toLin(parseInt(clean.slice(2, 4), 16));
+    const b = toLin(parseInt(clean.slice(4, 6), 16));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  function contrastRatio(hexA: string, hexB: string): number {
+    const l1 = relLum(hexA);
+    const l2 = relLum(hexB);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+
+  const darkSkins = [
+    obsidianSkin,
+    midnightSkin,
+    vermilionSkin,
+    nordicSkin,
+    nezukoSkin,
+    orbsSkin,
+    starfishSkin,
+  ];
+
+  interface NodeFs {
+    existsSync: (p: string) => boolean;
+    statSync: (p: string) => { size: number };
+    readFileSync: (p: string, enc: string) => string;
+  }
+  interface NodePath {
+    resolve: (...parts: string[]) => string;
+    join: (...parts: string[]) => string;
+  }
+  const nodeProc = (
+    globalThis as unknown as {
+      process?: { cwd: () => string; getBuiltinModule?: (id: string) => unknown };
+    }
+  ).process;
+  const fs = nodeProc?.getBuiltinModule?.('node:fs') as NodeFs | undefined;
+  const path = nodeProc?.getBuiltinModule?.('node:path') as NodePath | undefined;
+
+  for (const skin of darkSkins) {
+    const c = skin.colors;
+    const lTitle = relLum(c.titleBar);
+    const lSidebar = relLum(c.sidebar);
+    const lBg = relLum(c.background);
+    const lPanel = relLum(c.panel);
+    const lInput = relLum(c.input);
+
+    assertOk(lTitle <= lSidebar, `${skin.id} titleBar 明度应不高于 sidebar 外框`);
+    assertOk(lSidebar < lBg, `${skin.id} sidebar 外框应比主画布更深邃以凸显内嵌圆角画布`);
+    assertOk(lBg < lPanel, `${skin.id} panel 卡片底色必须明显高于主画布，防止黑底卡片糊成一团`);
+    assertOk(lPanel < lInput, `${skin.id} input 悬浮输入舱明度应高于普通卡片`);
+
+    const fgContrast = contrastRatio(c.foreground, c.background);
+    const mutedContrast = contrastRatio(c.muted, c.background);
+    assertOk(fgContrast >= 12.0, `${skin.id} 正文对比度不足 AAA 标准: ${fgContrast.toFixed(2)}`);
+    assertOk(mutedContrast >= 4.8, `${skin.id} 次级说明文字对比度偏低: ${mutedContrast.toFixed(2)}`);
+
+    assertEqual(skin.preview, 'preview.svg', `${skin.id} 应使用超清矢量 preview.svg`);
+    assertOk(
+      String(skin.css || '').includes('.surface-composer > .surface-composer-card'),
+      `${skin.id} 应适配官方 Onyx .surface-composer-card 选择器`,
+    );
+    assertOk(
+      (skin.surfaces?.noise_grain ?? 0) <= 0.02,
+      `${skin.id} 噪点颗粒参数不应超过 0.02`,
+    );
+
+    if (fs && path && nodeProc) {
+      const skinDir = path.resolve(nodeProc.cwd(), 'resources/skins', skin.id);
+      const previewPath = path.join(skinDir, skin.preview);
+      assertOk(
+        fs.existsSync(previewPath) && fs.statSync(previewPath).size > 100,
+        `${skin.id} 预览图文件不存在或为空: ${skin.preview}`,
+      );
+
+      const bgField = (skin as { background?: unknown }).background;
+      const bgList = Array.isArray(bgField) ? bgField : bgField ? [bgField] : [];
+      for (const item of bgList as Array<{ image?: string }>) {
+        if (item?.image) {
+          const imgPath = path.join(skinDir, item.image);
+          assertOk(
+            fs.existsSync(imgPath) && fs.statSync(imgPath).size > 100,
+            `${skin.id} 背景资产缺失: ${item.image}`,
+          );
+          assertOk(item.image.endsWith('.svg'), `${skin.id} 暗色背景资产应采用无损矢量 SVG: ${item.image}`);
+        }
+      }
+    }
+  }
+
+  // 校验 skin-runtime.js 同步切换宿主 .dark / .theme-light 并在停用时还原的源码契约
+  if (fs && path && nodeProc) {
+    const rtPath = path.resolve(nodeProc.cwd(), 'resources/skin-runtime.js');
+    const rtCode = fs.readFileSync(rtPath, 'utf8');
+    assertOk(rtCode.includes("agzh:get-skin-runtime-sync"), 'skin-runtime.js 应支持首帧同步 IPC 拉取');
+    assertOk(rtCode.includes("'theme-dark'") && rtCode.includes("'theme-light'"), 'skin-runtime.js 应同步宿主 Prism 主题类名');
+    assertOk(rtCode.includes('stopClassGuardAndRestore'), 'skin-runtime.js 停用时必须无损恢复宿主原始主题类名');
+  }
+});
+
 if (failed > 0) {
   throw new Error(`CLANNAD 名场面与背景音乐单元测试存在 ${failed} 项失败 (通过 ${passed} 项)`);
 }

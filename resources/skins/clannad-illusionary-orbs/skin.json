@@ -3,30 +3,30 @@
   "id": "clannad-illusionary-orbs",
   "name": "CLANNAD · 幻想世界光玉",
   "author": "Antigravity Studio",
-  "version": "2.2.0",
-  "description": "「承载着小镇每一份温柔心愿与奇迹的光玉，缓缓升向星海。」内置星羽心愿光玉主徽标、月白琉璃团子图标组与仰望星尘伴读摆件，深宵静谧夜色久看不刺眼。",
+  "version": "2.3.0",
+  "description": "「承载着小镇每一份温柔心愿与奇迹的光玉，缓缓升向星海。」内置星羽心愿光玉主徽标、月白琉璃团子图标组与仰望星尘伴读摆件，深宵苍穹层次晶莹通透。",
   "base": "dark",
   "preview": "preview.svg",
   "colors": {
-    "background": "#090d18",
-    "foreground": "#e8eef9",
+    "background": "#0d1426",
+    "foreground": "#edf2fc",
     "accent": "#f6c453",
     "accentForeground": "#171206",
-    "sidebar": "#0d1324",
-    "titleBar": "#080c16",
-    "panel": "#0c1221",
-    "border": "#1f2d4a",
-    "selection": "#f6c45326",
-    "input": "#11192e",
-    "muted": "#8294b8"
+    "sidebar": "#080d1a",
+    "titleBar": "#060a14",
+    "panel": "#16223d",
+    "border": "#283b63",
+    "selection": "#f6c45329",
+    "input": "#1b2948",
+    "muted": "#8fa1c7"
   },
   "surfaces": {
     "radius": "14px",
     "glass_blur": 22,
-    "card_opacity": 0.74,
+    "card_opacity": 0.82,
     "border_glow": "rgba(246, 196, 83, 0.24)",
-    "noise_grain": 0.03,
-    "shadow_elevation": "0 22px 52px -12px rgba(4, 8, 20, 0.84)"
+    "noise_grain": 0.014,
+    "shadow_elevation": "0 22px 50px -12px rgba(4, 8, 20, 0.74), 0 3px 10px -2px rgba(4, 8, 20, 0.44)"
   },
   "variables": {
     "--agzh-hikari-gold": "#f6c453",
@@ -39,7 +39,7 @@
       "opacity": 0.2,
       "blur": 0,
       "position": "right bottom",
-      "size": "cover",
+      "size": "460px",
       "repeat": "no-repeat"
     }
   ],
@@ -64,7 +64,7 @@
     },
     "composer_charm": "icons/charm.svg"
   },
-  "css": "aside, [data-sidebar='sidebar'] { backdrop-filter: blur(var(--agzh-glass-blur, 22px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 22px)); border-right: 1px solid rgba(246, 196, 83, 0.16) !important; }\nform:has(textarea) { border: 1px solid rgba(246, 196, 83, 0.22) !important; box-shadow: 0 14px 36px -10px rgba(4, 8, 20, 0.78), inset 0 1px 0 rgba(246, 196, 83, 0.18); }",
+  "css": "aside, [data-sidebar='sidebar'] { backdrop-filter: blur(var(--agzh-glass-blur, 22px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 22px)); border-right: 1px solid rgba(246, 196, 83, 0.18) !important; }\n.surface-composer > .surface-composer-card, form:has(textarea) { border: 1px solid rgba(246, 196, 83, 0.26) !important; }",
   "pet": {
     "character": "ushio",
     "accent": "#f6c453",

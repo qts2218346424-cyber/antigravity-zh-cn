@@ -648,9 +648,10 @@ fn background_selector(target: &str, custom_selector: Option<&str>) -> String {
             return default_sel.to_string();
         }
     }
-    ":root:not(:has([data-browser-hole])) body".to_string()
+    "body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))) .agy-sheet [data-main-content-body], body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false']))):not(:has([data-main-content-body]))".to_string()
 }
 
+#[allow(dead_code)]
 fn append_pseudo_to_selectors(selector_list: &str, pseudo: &str) -> String {
     selector_list
         .split(',')
@@ -690,18 +691,31 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         .unwrap_or(false);
     let color_scheme = if is_light { "light" } else { "dark" };
 
-    let card_opacity = manifest
-        .get("surfaces")
+    let surfaces_obj = manifest.get("surfaces").and_then(|v| v.as_object());
+    let card_opacity = surfaces_obj
         .and_then(|v| v.get("card_opacity"))
         .and_then(|v| v.as_f64())
-        .map(|v| v.clamp(0.15, 1.0));
+        .map(|v| v.clamp(0.25, 1.0));
+    let border_glow_raw = surfaces_obj
+        .and_then(|v| v.get("border_glow"))
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let shadow_elevation_raw = surfaces_obj
+        .and_then(|v| v.get("shadow_elevation"))
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let no_hole_html = "html:not(:has(body[data-has-browser-hole='true'])):not(:has([data-browser-hole]:not([data-browser-hole='false'])))";
+    let no_hole_body = "body:not([data-has-browser-hole='true']):not(:has([data-browser-hole]:not([data-browser-hole='false'])))";
 
     let mut css_parts: Vec<String> = Vec::new();
     css_parts.push(format!("/* [AGZH_SKIN_START:{}] */", skin_id));
 
-    // 1. 颜色 CSS 变量 + Google Antigravity 桌面应用（AGY Hub）全量原生设计令牌映射
+    // 1. 颜色 CSS 变量 + Google Antigravity 桌面应用（AGY Hub Onyx + Tailwind v4）全量原生设计令牌映射
     let mut root_vars = Vec::new();
-    root_vars.push(format!("  color-scheme: {};", color_scheme));
+    root_vars.push(format!("  color-scheme: {} !important;", color_scheme));
 
     if let Some(colors) = manifest.get("colors").and_then(|v| v.as_object()) {
         for (k, v) in colors {
@@ -712,231 +726,423 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
                 } else {
                     format!("--agzh-{}", camel_to_kebab(k))
                 };
-                root_vars.push(format!("  {}: {};", var_name, val_trimmed));
+                root_vars.push(format!("  {}: {} !important;", var_name, val_trimmed));
             }
         }
 
-        let bg_color = colors.get("background").and_then(|v| v.as_str()).map(str::trim);
-        let fg_color = colors.get("foreground").and_then(|v| v.as_str()).map(str::trim);
-        let accent_color = colors.get("accent").and_then(|v| v.as_str()).map(str::trim);
-        let accent_fg_color = colors
+        let bg = colors
+            .get("background")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(if is_light { "#fff8fb" } else { "#0b101b" });
+        let fg = colors
+            .get("foreground")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(if is_light { "#27272a" } else { "#edf2fb" });
+        let acc = colors
+            .get("accent")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(if is_light { "#2563eb" } else { "#38bdf8" });
+        let acc_fg = colors
             .get("accentForeground")
             .and_then(|v| v.as_str())
-            .map(str::trim);
-        let sidebar_color = colors.get("sidebar").and_then(|v| v.as_str()).map(str::trim);
-        let titlebar_color = colors.get("titleBar").and_then(|v| v.as_str()).map(str::trim);
-        let panel_color = colors.get("panel").and_then(|v| v.as_str()).map(str::trim);
-        let border_color = colors.get("border").and_then(|v| v.as_str()).map(str::trim);
-        let sel_color = colors.get("selection").and_then(|v| v.as_str()).map(str::trim);
-        let input_color = colors.get("input").and_then(|v| v.as_str()).map(str::trim);
-        let muted_color = colors.get("muted").and_then(|v| v.as_str()).map(str::trim);
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(if is_light { "#ffffff" } else { "#06131f" });
+        let default_sb = if is_light {
+            format!("color-mix(in srgb, {} 94%, #000000)", bg)
+        } else {
+            format!("color-mix(in srgb, #000000 28%, {})", bg)
+        };
+        let sb = colors
+            .get("sidebar")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&default_sb);
+        let tb = colors
+            .get("titleBar")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(sb);
+        let default_pn = if is_light {
+            "#ffffff".to_string()
+        } else {
+            format!("color-mix(in srgb, {} 7.5%, {})", fg, bg)
+        };
+        let pn = colors
+            .get("panel")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&default_pn);
+        let default_bd = if is_light {
+            "rgba(15, 23, 42, 0.10)"
+        } else {
+            "rgba(255, 255, 255, 0.12)"
+        };
+        let bd = colors
+            .get("border")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(default_bd);
+        let default_sel = format!("color-mix(in srgb, {} 22%, transparent)", acc);
+        let sel = colors
+            .get("selection")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&default_sel);
+        let inp = colors
+            .get("input")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(pn);
+        let default_mt = format!("color-mix(in srgb, {} 58%, {})", fg, bg);
+        let mt = colors
+            .get("muted")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&default_mt);
 
-        let mut hub_overrides = Vec::new();
-        hub_overrides.push(format!("  color-scheme: {} !important;", color_scheme));
-
-        if let Some(bg) = bg_color {
-            for vv in [
-                "--agzh-bg",
-                "--background",
-                "--sw-bg",
-                "--color-background-primary",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, bg));
-            }
-        }
-
-        if let Some(fg) = fg_color {
-            for vv in [
-                "--agzh-fg",
-                "--foreground",
-                "--card-foreground",
-                "--popover-foreground",
-                "--code-foreground",
-                "--accent-foreground",
-                "--sidebar-foreground",
-                "--sidebar-accent-foreground",
-                "--sw-fg",
-                "--color-text-primary",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, fg));
-            }
-        }
-
-        if let Some(acc) = accent_color {
-            for vv in [
-                "--agzh-accent",
-                "--primary",
-                "--ring",
-                "--sidebar-primary",
-                "--sidebar-ring",
-                "--sw-primary",
-                "--sw-ring",
-                "--color-ring-primary",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, acc));
-            }
-        }
-
-        if let Some(acc_fg) = accent_fg_color {
-            for vv in [
-                "--agzh-accent-fg",
-                "--primary-foreground",
-                "--sidebar-primary-foreground",
-                "--sw-primary-fg",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, acc_fg));
-            }
-        }
-
-        if let Some(sb) = sidebar_color {
-            for vv in [
-                "--agzh-sidebar",
-                "--sidebar",
-                "--sidebar-background",
-                "--secondary",
-                "--sw-secondary",
-                "--color-background-secondary",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, sb));
-            }
-        }
-
-        if let Some(tb) = titlebar_color {
-            for vv in ["--agzh-titlebar", "--header-background"] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, tb));
-            }
-        }
-
-        if let Some(pn) = panel_color {
-            let effective_card = if let Some(op) = card_opacity {
-                if op < 0.99 {
-                    format!(
-                        "color-mix(in srgb, {} {:.0}%, transparent)",
-                        pn,
-                        (op * 100.0).clamp(20.0, 100.0)
-                    )
-                } else {
-                    pn.to_string()
-                }
+        // 阶梯式光学表面计算：防止暗色皮肤卡片与黑底糊成一团，并彻底消除浅色宿主残留纯白块
+        let elevated_card = if is_light {
+            pn.to_string()
+        } else {
+            format!("color-mix(in srgb, {} 93%, {} 7%)", pn, fg)
+        };
+        let glass_surface = if let Some(op) = card_opacity {
+            if op < 0.99 {
+                format!(
+                    "color-mix(in srgb, {} {:.0}%, transparent)",
+                    elevated_card,
+                    (op * 100.0).clamp(35.0, 100.0)
+                )
             } else {
-                pn.to_string()
-            };
-            hub_overrides.push(format!("  --agzh-panel: {} !important;", pn));
-            hub_overrides.push(format!("  --agzh-card-surface: {} !important;", effective_card));
-            for vv in [
-                "--card",
-                "--popover",
-                "--sw-card",
-                "--color-background-tertiary",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, effective_card));
+                elevated_card.clone()
             }
+        } else {
+            elevated_card.clone()
+        };
+
+        let secondary_surface = if is_light {
+            format!("color-mix(in srgb, {} 6.5%, {})", fg, bg)
+        } else {
+            format!("color-mix(in srgb, {} 10%, {})", fg, bg)
+        };
+        let secondary_fg = format!("color-mix(in srgb, {} 84%, {})", fg, mt);
+        let muted_surface = if is_light {
+            format!("color-mix(in srgb, {} 4%, {})", fg, bg)
+        } else {
+            format!("color-mix(in srgb, {} 5.6%, {})", fg, bg)
+        };
+        let placeholder_fg = format!("color-mix(in srgb, {} 82%, {})", mt, bg);
+        let sidebar_secondary = if is_light {
+            format!("color-mix(in srgb, {} 7%, {})", fg, sb)
+        } else {
+            format!("color-mix(in srgb, {} 10.5%, {})", fg, sb)
+        };
+        let sidebar_muted = if is_light {
+            format!("color-mix(in srgb, {} 4.5%, {})", fg, sb)
+        } else {
+            format!("color-mix(in srgb, {} 6.2%, {})", fg, sb)
+        };
+        let effective_border = if is_light {
+            bd.to_string()
+        } else {
+            format!("color-mix(in srgb, {} 78%, rgba(255, 255, 255, 0.15))", bd)
+        };
+        let effective_card_border = if is_light {
+            bd.to_string()
+        } else {
+            format!("color-mix(in srgb, {} 72%, rgba(255, 255, 255, 0.20))", bd)
+        };
+        let glass_highlight = border_glow_raw
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| {
+                if is_light {
+                    "rgba(255, 255, 255, 0.88)".to_string()
+                } else {
+                    "rgba(255, 255, 255, 0.12)".to_string()
+                }
+            });
+        let glass_shadow = shadow_elevation_raw
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| {
+                if is_light {
+                    "0 14px 34px -10px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.03)".to_string()
+                } else {
+                    "0 20px 46px -12px rgba(0, 0, 0, 0.62), 0 3px 10px -2px rgba(0, 0, 0, 0.36)".to_string()
+                }
+            });
+        let card_edge = if is_light {
+            format!("color-mix(in srgb, {} 75%, rgba(0, 0, 0, 0.08))", bd)
+        } else {
+            format!("color-mix(in srgb, {} 20%, rgba(255, 255, 255, 0.14))", acc)
+        };
+        let sash_line = if is_light {
+            "rgba(15, 23, 42, 0.12)".to_string()
+        } else {
+            format!("color-mix(in srgb, {} 42%, rgba(255, 255, 255, 0.24))", acc)
+        };
+        let onyx_frame = if is_light {
+            format!("color-mix(in srgb, {} 60%, {})", sb, bg)
+        } else {
+            format!("color-mix(in srgb, {} 72%, {})", sb, bg)
+        };
+        let onyx_well = if is_light {
+            format!("color-mix(in srgb, {} 5.5%, {})", fg, bg)
+        } else {
+            format!("color-mix(in srgb, #000000 34%, {})", bg)
+        };
+        let onyx_raised = if is_light {
+            inp.to_string()
+        } else {
+            format!("color-mix(in srgb, {} 92%, {} 8%)", inp, fg)
+        };
+        let onyx_key = if is_light {
+            "#ffffff".to_string()
+        } else {
+            format!("color-mix(in srgb, {} 80%, {} 15%)", inp, fg)
+        };
+        let code_fg = if is_light {
+            format!("color-mix(in srgb, {} 64%, {})", fg, acc)
+        } else {
+            format!("color-mix(in srgb, {} 72%, {})", fg, acc)
+        };
+        let code_block_bg = if is_light {
+            format!("color-mix(in srgb, {} 4.5%, {})", fg, bg)
+        } else {
+            format!("color-mix(in srgb, {} 80%, #000000)", pn)
+        };
+        let home_glow = format!("color-mix(in srgb, {} 13%, transparent)", acc);
+        let scrim = if is_light {
+            "rgb(15 23 42 / 0.28)"
+        } else {
+            "rgb(0 0 0 / 0.66)"
+        };
+
+        let token_pairs: Vec<(&str, String)> = vec![
+            ("--agzh-bg", bg.to_string()),
+            ("--background", bg.to_string()),
+            ("--content", bg.to_string()),
+            ("--sw-bg", bg.to_string()),
+            ("--color-background-primary", bg.to_string()),
+            ("--agzh-fg", fg.to_string()),
+            ("--foreground", fg.to_string()),
+            ("--card-foreground", fg.to_string()),
+            ("--popover-foreground", fg.to_string()),
+            ("--accent-foreground", fg.to_string()),
+            ("--sidebar-foreground", fg.to_string()),
+            ("--sidebar-accent-foreground", fg.to_string()),
+            ("--sw-fg", fg.to_string()),
+            ("--color-text-primary", fg.to_string()),
+            ("--agzh-accent", acc.to_string()),
+            ("--primary", acc.to_string()),
+            ("--cta", acc.to_string()),
+            ("--link", acc.to_string()),
+            ("--ring", acc.to_string()),
+            ("--sidebar-primary", acc.to_string()),
+            ("--sidebar-ring", acc.to_string()),
+            ("--sw-primary", acc.to_string()),
+            ("--sw-ring", acc.to_string()),
+            ("--color-ring-primary", acc.to_string()),
+            ("--agzh-accent-fg", acc_fg.to_string()),
+            ("--primary-foreground", acc_fg.to_string()),
+            ("--cta-foreground", acc_fg.to_string()),
+            ("--sidebar-primary-foreground", acc_fg.to_string()),
+            ("--sw-primary-fg", acc_fg.to_string()),
+            ("--agzh-sidebar", sb.to_string()),
+            ("--sidebar", sb.to_string()),
+            ("--sidebar-background", sb.to_string()),
+            ("--shell", sb.to_string()),
+            ("--shell-canvas", sb.to_string()),
+            ("--sidebar-secondary", sidebar_secondary),
+            ("--sidebar-muted", sidebar_muted),
+            ("--color-background-secondary", sb.to_string()),
+            ("--agzh-titlebar", tb.to_string()),
+            ("--header-background", tb.to_string()),
+            ("--agzh-panel", pn.to_string()),
+            ("--agzh-card-surface", glass_surface.clone()),
+            ("--card", elevated_card.clone()),
+            ("--popover", elevated_card.clone()),
+            ("--sw-card", elevated_card),
+            ("--glass", glass_surface.clone()),
+            ("--color-background-tertiary", glass_surface),
+            ("--secondary", secondary_surface.clone()),
+            ("--sw-secondary", secondary_surface),
+            ("--secondary-foreground", secondary_fg),
+            ("--muted", muted_surface.clone()),
+            ("--sw-muted", muted_surface),
+            ("--agzh-muted", mt.to_string()),
+            ("--muted-foreground", mt.to_string()),
+            ("--placeholder", placeholder_fg),
+            ("--sw-fg-muted", mt.to_string()),
+            ("--sw-fg-2", mt.to_string()),
+            ("--sw-fg-faint", mt.to_string()),
+            ("--color-text-secondary", mt.to_string()),
+            ("--color-text-tertiary", mt.to_string()),
+            ("--agzh-border", effective_border.clone()),
+            ("--border", effective_border.clone()),
+            ("--sidebar-border", effective_border.clone()),
+            ("--sw-border", effective_border.clone()),
+            ("--color-border-primary", effective_border),
+            ("--card-border", effective_card_border.clone()),
+            ("--sw-card-border", effective_card_border.clone()),
+            ("--glass-border", effective_card_border),
+            ("--glass-highlight", glass_highlight),
+            ("--glass-shadow", glass_shadow),
+            ("--card-edge", card_edge),
+            ("--sash-line", sash_line),
+            ("--agzh-selection", sel.to_string()),
+            ("--accent", sel.to_string()),
+            ("--sidebar-accent", sel.to_string()),
+            ("--sw-fill", sel.to_string()),
+            ("--onyx-selected", sel.to_string()),
+            ("--agzh-input", onyx_raised.clone()),
+            ("--input", onyx_raised.clone()),
+            ("--sw-field", onyx_raised.clone()),
+            ("--onyx-frame", onyx_frame),
+            ("--onyx-well", onyx_well),
+            ("--onyx-raised", onyx_raised),
+            ("--onyx-key", onyx_key),
+            ("--code-foreground", code_fg),
+            ("--editor-code-block-background", code_block_bg),
+            ("--editor-line-number-foreground", mt.to_string()),
+            ("--editor-selection-background", sel.to_string()),
+            ("--home-glow", home_glow),
+            ("--scrim", scrim.to_string()),
+        ];
+
+        let mut hub_overrides = Vec::with_capacity(token_pairs.len() + 1);
+        hub_overrides.push(format!("  color-scheme: {} !important;", color_scheme));
+        for (k, v) in token_pairs {
+            hub_overrides.push(format!("  {}: {} !important;", k, v));
         }
 
-        if let Some(bd) = border_color {
-            for vv in [
-                "--agzh-border",
-                "--border",
-                "--card-border",
-                "--sidebar-border",
-                "--sw-border",
-                "--sw-card-border",
-                "--color-border-primary",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, bd));
-            }
-        }
-
-        if let Some(sel) = sel_color {
-            for vv in ["--agzh-selection", "--accent", "--sidebar-accent", "--sw-fill"] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, sel));
-            }
-        }
-
-        if let Some(inp) = input_color {
-            for vv in ["--agzh-input", "--input", "--muted", "--sw-muted", "--sw-field"] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, inp));
-            }
-        }
-
-        if let Some(mt) = muted_color {
-            for vv in [
-                "--agzh-muted",
-                "--muted-foreground",
-                "--secondary-foreground",
-                "--placeholder",
-                "--sw-fg-muted",
-                "--sw-fg-2",
-                "--sw-fg-faint",
-                "--color-text-secondary",
-                "--color-text-tertiary",
-            ] {
-                hub_overrides.push(format!("  {}: {} !important;", vv, mt));
-            }
-        }
-
-        if !hub_overrides.is_empty() {
-            css_parts.push(format!(
-                ":root, :root[data-theme], :root[data-theme='dark'], :root[data-theme='light'], html, body, .dark, .light {{\n{}\n}}",
-                hub_overrides.join("\n")
-            ));
-        }
+        css_parts.push(format!(
+            ":root, :root[data-theme], :root[data-theme='dark'], :root[data-theme='light'], html, body, body[data-agy-theme], body[data-agy-theme].dark, .agy-inset-shell, .dark .agy-inset-shell, .dark, .light {{\n{}\n}}",
+            hub_overrides.join("\n")
+        ));
 
         let mut base_rules = Vec::new();
-        // 严格避让 [data-browser-hole]，确保内置浏览器 WebContentsView 透视视口不被背景色遮挡
-        if let (Some(bg), Some(fg)) = (bg_color, fg_color) {
-            base_rules.push(format!(
-                "html:not(:has([data-browser-hole])), body:not(:has([data-browser-hole])) {{\n  background-color: {} !important;\n  color: {};\n}}",
-                bg, fg
-            ));
-        } else if let Some(bg) = bg_color {
-            base_rules.push(format!(
-                "html:not(:has([data-browser-hole])), body:not(:has([data-browser-hole])) {{\n  background-color: {} !important;\n}}",
-                bg
-            ));
+        // 严格避让激活态浏览器透视孔，确保内置浏览器 WebContentsView 透视视口不被背景遮挡
+        base_rules.push(format!(
+            "{html_sel}, {body_sel} {{\n  background-color: {bg} !important;\n  color: {fg} !important;\n}}",
+            html_sel = no_hole_html,
+            body_sel = no_hole_body,
+            bg = bg,
+            fg = fg
+        ));
+
+        base_rules.push(format!(
+            "aside, [data-sidebar='sidebar'], [data-testid='in-tab-sidebar-overlay'] {{ background-color: {} !important; border-color: var(--border) !important; }}",
+            sb
+        ));
+        base_rules.push(format!(
+            "header[data-testid*='titlebar'], [data-agzh-region='titlebar'] {{ background-color: {} !important; }}",
+            tb
+        ));
+        base_rules.push(format!("::selection {{ background: {} !important; }}", sel));
+        base_rules.push(format!(
+            "::-webkit-scrollbar-thumb {{ background-color: color-mix(in srgb, {} 38%, transparent) !important; border-radius: 9999px; }}\n::-webkit-scrollbar-thumb:hover {{ background-color: color-mix(in srgb, {} 58%, transparent) !important; }}",
+            acc, acc
+        ));
+
+        // 暗色材质深度加固：即便官方宿主原处于浅色模式 (.theme-light)，也强制统一高可读暗色代码高亮与 Onyx 组件光影
+        if !is_light {
+            base_rules.push(
+                r#"body, .theme-light, .theme-dark {
+  --syntax-default-fg: #eef3fb !important;
+  --syntax-comment: #7f91ad !important;
+  --syntax-punctuation: #cbd5e1 !important;
+  --syntax-property: #fda4af !important;
+  --syntax-deleted: #fb7185 !important;
+  --syntax-inserted: #86efac !important;
+  --syntax-tag: #fda4af !important;
+  --syntax-constant: #f9a8d4 !important;
+  --syntax-number: #d8b4fe !important;
+  --syntax-string: #86efac !important;
+  --syntax-attr-name: #6ee7b7 !important;
+  --syntax-builtin: #67e8f9 !important;
+  --syntax-operator: #cbd5e1 !important;
+  --syntax-variable: #f1f5f9 !important;
+  --syntax-attr-value: #fde047 !important;
+  --syntax-keyword: #7dd3fc !important;
+  --syntax-function: #fde047 !important;
+  --syntax-class-name: #fcd34d !important;
+  --syntax-regex: #fdba74 !important;
+  --bg-selection: color-mix(in srgb, var(--primary) 32%, transparent) !important;
+  --bg-selection-overlay: color-mix(in srgb, var(--primary) 24%, transparent) !important;
+  --bg-cursor-line: rgba(255, 255, 255, 0.05) !important;
+  --fg-cursor: #e2e8f0 !important;
+}
+.theme-light code[class*='language-'],
+.theme-light pre[class*='language-'],
+.theme-dark code[class*='language-'],
+.theme-dark pre[class*='language-'] {
+  color: var(--syntax-default-fg) !important;
+  text-shadow: none !important;
+}
+.theme-light pre[class*='language-'],
+.theme-dark pre[class*='language-'] {
+  background: var(--editor-code-block-background) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 10px;
+}
+.theme-light :not(pre) > code[class*='language-'],
+.theme-dark :not(pre) > code[class*='language-'] {
+  background: var(--secondary) !important;
+  color: var(--code-foreground) !important;
+  text-shadow: none !important;
+}
+body[data-agy-theme] .surface-composer {
+  background-color: var(--onyx-frame) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 4px var(--onyx-frame), 0 0 0 5px color-mix(in srgb, var(--border) 75%, transparent), 0 18px 42px -12px rgba(0, 0, 0, 0.52) !important;
+}
+body[data-agy-theme] .surface-composer > .surface-composer-card {
+  background-color: var(--onyx-raised) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 0 0 1px var(--glass-border), 0 4px 14px -2px rgba(0, 0, 0, 0.36) !important;
+}
+body[data-agy-theme] .surface-composer:focus-within > .surface-composer-card {
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 0 0 1px color-mix(in srgb, var(--primary) 42%, var(--glass-border)), 0 8px 24px -4px rgba(0, 0, 0, 0.45) !important;
+}
+body[data-agy-theme] [data-slot='toggle-group'] {
+  background-color: var(--onyx-well) !important;
+  border-color: var(--border) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+body[data-agy-theme] [data-slot='toggle-group'] > button[data-pressed] {
+  background-color: var(--onyx-key) !important;
+  color: var(--foreground) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+}
+body[data-agy-theme] .agy-sidebar-row[data-selected='true'] {
+  background-color: var(--onyx-selected) !important;
+  --row-bg: var(--onyx-selected) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px color-mix(in srgb, var(--primary) 26%, transparent) !important;
+}
+body[data-agy-theme] .artifact-card,
+body[data-agy-theme] .agy-card,
+body[data-agy-theme] .agy-callout {
+  background-color: var(--glass) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 8px 24px -8px rgba(0, 0, 0, 0.36);
+}"#
+                .to_string(),
+            );
         }
 
-        if let Some(sb) = sidebar_color {
-            let bd_rule = border_color
-                .map(|b| format!(" border-color: {};", b))
-                .unwrap_or_default();
-            base_rules.push(format!(
-                "aside, [data-sidebar='sidebar'] {{ background-color: {} !important;{} }}",
-                sb, bd_rule
-            ));
-        }
-
-        if let Some(tb) = titlebar_color {
-            base_rules.push(format!(
-                "header[data-testid*='titlebar'], [data-agzh-region='titlebar'] {{ background-color: {} !important; }}",
-                tb
-            ));
-        }
-
-        if let Some(inp) = input_color {
-            let bd_rule = border_color
-                .map(|b| format!(" border-color: {};", b))
-                .unwrap_or_default();
-            base_rules.push(format!(
-                "form:has(textarea) {{ background-color: {};{} }}",
-                inp, bd_rule
-            ));
-        }
-
-        if let Some(sel) = sel_color {
-            base_rules.push(format!("::selection {{ background: {}; }}", sel));
-        }
-
-        if let Some(acc) = accent_color {
-            base_rules.push(format!(
-                "::-webkit-scrollbar-thumb {{ background-color: color-mix(in srgb, {} 42%, transparent) !important; border-radius: 9999px; }}",
-                acc
-            ));
-        }
-
-        if !base_rules.is_empty() {
-            css_parts.push(base_rules.join("\n"));
-        }
+        css_parts.push(base_rules.join("\n"));
     }
 
     // 2. 自定义 variables 对象
@@ -948,56 +1154,51 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
                 } else {
                     format!("--{}", k)
                 };
-                root_vars.push(format!("  {}: {};", var_name, val.trim()));
+                root_vars.push(format!("  {}: {} !important;", var_name, val.trim()));
             }
         }
     }
 
-    // 3. 物理表面质感 & 字体（针对 Antigravity 应用对话卡片、弹层与悬浮指令舱）
-    if let Some(surfaces) = manifest.get("surfaces").and_then(|v| v.as_object()) {
+    // 3. 物理表面质感 & 字体（精准绑定官方 Onyx 类名，绝不注入全屏顶层摩尔纹白雾遮罩）
+    if let Some(surfaces) = surfaces_obj {
         if let Some(radius) = surfaces.get("radius").and_then(|v| v.as_str()) {
-            root_vars.push(format!("  --agzh-radius: {};", radius));
-            root_vars.push(format!("  --radius: {};", radius));
-            root_vars.push(format!("  --r-lg: {};", radius));
+            root_vars.push(format!("  --agzh-radius: {} !important;", radius));
+            root_vars.push(format!("  --radius: {} !important;", radius));
+            root_vars.push(format!("  --card-radius: {} !important;", radius));
+            root_vars.push(format!("  --nux-radius-lg: {} !important;", radius));
             css_parts.push(format!(
-                "[role='dialog'], [role='menu'], [role='listbox'], form:has(textarea) {{ border-radius: {} !important; }}",
+                "[role='dialog'], [role='menu'], [role='listbox'], .surface-composer > .surface-composer-card, form:has(textarea) {{ border-radius: {}; }}",
                 radius
             ));
         }
         if let Some(blur) = surfaces.get("glass_blur").and_then(|v| v.as_u64()) {
-            root_vars.push(format!("  --agzh-glass-blur: {}px;", blur));
+            root_vars.push(format!("  --agzh-glass-blur: {}px !important;", blur));
             if blur > 0 {
                 css_parts.push(format!(
-                    "[role='dialog'], [role='menu'], [role='listbox'], [data-radix-popper-content-wrapper] > *, form:has(textarea) {{ backdrop-filter: blur({}px) saturate(1.35) !important; -webkit-backdrop-filter: blur({}px) saturate(1.35) !important; }}",
+                    ".surface-glass, .agy-user-bubble, .agy-takeover-card, .agy-fastpick, .surface-composer > .surface-composer-card, .artifact-card, [role='dialog'], [role='menu'], [role='listbox'] {{ backdrop-filter: blur({}px) saturate(1.4) !important; -webkit-backdrop-filter: blur({}px) saturate(1.4) !important; }}",
                     blur, blur
                 ));
             }
         }
         if let Some(opacity) = surfaces.get("card_opacity").and_then(|v| v.as_f64()) {
             root_vars.push(format!(
-                "  --agzh-card-opacity: {:.3};",
-                opacity.clamp(0.05, 1.0)
+                "  --agzh-card-opacity: {:.3} !important;",
+                opacity.clamp(0.25, 1.0)
             ));
         }
         if let Some(glow) = surfaces.get("border_glow").and_then(|v| v.as_str()) {
-            root_vars.push(format!("  --agzh-border-glow: {};", glow));
+            root_vars.push(format!("  --agzh-border-glow: {} !important;", glow));
             css_parts.push(format!(
-                "[role='dialog'], [role='menu'], [role='listbox'] {{ box-shadow: inset 0 1px 0 {}, var(--agzh-shadow-elevation, 0 20px 50px rgba(0,0,0,0.45)) !important; }}\nform:has(textarea):focus-within {{ box-shadow: inset 0 1px 0 {}, 0 12px 32px -8px rgba(0,0,0,0.28); }}",
-                glow, glow
+                "[role='dialog'], [role='menu'], [role='listbox'] {{ box-shadow: inset 0 1px 0 {}, var(--agzh-shadow-elevation, 0 20px 50px rgba(0,0,0,0.45)) !important; }}",
+                glow
             ));
         }
         if let Some(grain) = surfaces.get("noise_grain").and_then(|v| v.as_f64()) {
-            let clamped_grain = grain.clamp(0.0, 0.25);
-            root_vars.push(format!("  --agzh-noise-grain: {:.3};", clamped_grain));
-            if clamped_grain > 0.002 {
-                css_parts.push(format!(
-                    ":root:not(:has([data-browser-hole])) body::before {{\n  content: '';\n  position: fixed;\n  inset: 0;\n  pointer-events: none;\n  z-index: 9980;\n  opacity: {:.3};\n  background-image: radial-gradient(rgba(255,255,255,0.55) 0.55px, transparent 0.55px);\n  background-size: 3px 3px;\n}}",
-                    clamped_grain
-                ));
-            }
+            let clamped_grain = grain.clamp(0.0, 0.12);
+            root_vars.push(format!("  --agzh-noise-grain: {:.3} !important;", clamped_grain));
         }
         if let Some(shadow) = surfaces.get("shadow_elevation").and_then(|v| v.as_str()) {
-            root_vars.push(format!("  --agzh-shadow-elevation: {};", shadow));
+            root_vars.push(format!("  --agzh-shadow-elevation: {} !important;", shadow));
         }
     }
 
@@ -1011,12 +1212,12 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .or_else(|| typo.get("font_family"))
             .and_then(|v| v.as_str())
         {
-            root_vars.push(format!("  --agzh-font-sans: {};", font_family));
-            root_vars.push(format!("  --font-family: {};", font_family));
-            root_vars.push(format!("  --font-sans: {};", font_family));
-            root_vars.push(format!("  --sw-font: {};", font_family));
+            root_vars.push(format!("  --agzh-font-sans: {} !important;", font_family));
+            root_vars.push(format!("  --font-family: {} !important;", font_family));
+            root_vars.push(format!("  --font-sans: {} !important;", font_family));
+            root_vars.push(format!("  --default-font-family: {} !important;", font_family));
             css_parts.push(format!(
-                "body, #root {{ font-family: {}; }}",
+                "body, body[data-agy-font], #root {{ font-family: {} !important; }}",
                 font_family
             ));
         }
@@ -1025,19 +1226,26 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .or_else(|| typo.get("mono_family"))
             .and_then(|v| v.as_str())
         {
-            root_vars.push(format!("  --agzh-font-mono: {};", mono_family));
-            root_vars.push(format!("  --editor-font-family: {};", mono_family));
-            root_vars.push(format!("  --font-mono: {};", mono_family));
-            root_vars.push(format!("  --sw-mono: {};", mono_family));
+            root_vars.push(format!("  --agzh-font-mono: {} !important;", mono_family));
+            root_vars.push(format!("  --editor-font-family: {} !important;", mono_family));
+            root_vars.push(format!("  --font-mono: {} !important;", mono_family));
+            root_vars.push(format!(
+                "  --default-mono-font-family: {} !important;",
+                mono_family
+            ));
             css_parts.push(format!(
-                "code, pre, kbd, samp {{ font-family: {}; }}",
+                "code, pre, kbd, samp, .code-block {{ font-family: {} !important; }}",
                 mono_family
             ));
         }
         if let Some(size) = typo.get("size").and_then(|v| v.as_u64()) {
-            let clamped = size.clamp(10, 28);
-            root_vars.push(format!("  --agzh-font-size: {}px;", clamped));
-            root_vars.push(format!("  --text-sm: {}px;", clamped));
+            let clamped = size.clamp(11, 22);
+            root_vars.push(format!("  --agzh-font-size: {}px !important;", clamped));
+            // 仅当用户显式将字号调离默认 13/14px 时按比例微调全局字号倍率，不破坏 --text-sm 原生梯度
+            if clamped != 13 && clamped != 14 {
+                let scale = (clamped as f64 / 14.0).clamp(0.82, 1.35);
+                root_vars.push(format!("  --app-font-scale: {:.3} !important;", scale));
+            }
         }
         if let Some(font_file) = typo
             .get("file")
@@ -1056,11 +1264,11 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
                         custom_name, uri
                     ));
                     root_vars.push(format!(
-                        "  --agzh-font-sans: '{}', system-ui, sans-serif;",
+                        "  --agzh-font-sans: '{}', system-ui, sans-serif !important;",
                         custom_name
                     ));
                     root_vars.push(format!(
-                        "  --font-family: '{}', system-ui, sans-serif;",
+                        "  --font-family: '{}', system-ui, sans-serif !important;",
                         custom_name
                     ));
                 }
@@ -1072,7 +1280,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         css_parts.push(format!(":root {{\n{}\n}}", root_vars.join("\n")));
     }
 
-    // 4. 背景暗纹与插画层渲染（针对 Antigravity 应用对话主画布与会话侧边栏）
+    // 4. 底层画布背景插画与环境极光合成（严格置于容器 background 层，绝不盖在文字与卡片上方）
     let mut bg_items: Vec<(String, Map<String, Value>)> = Vec::new();
     if let Some(bg_val) = manifest.get("background").or_else(|| manifest.get("backgrounds")) {
         if let Some(arr) = bg_val.as_array() {
@@ -1105,7 +1313,12 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     }
 
     let mut resolved_backgrounds = Vec::new();
-    let mut used_body_after = false;
+    let mut has_main_canvas_bg = false;
+    let main_canvas_selector = format!(
+        "{body} .agy-sheet:not([data-split-panes] *) [data-main-content-body], {body}:not(:has([data-main-content-body]))",
+        body = no_hole_body
+    );
+
     for (idx, (target, cfg)) in bg_items.iter().enumerate() {
         if cfg.get("enabled").and_then(|v| v.as_bool()) == Some(false) {
             continue;
@@ -1127,12 +1340,8 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             );
 
         let selector = if is_viewport_layer {
-            if !used_body_after {
-                used_body_after = true;
-                ":root:not(:has([data-browser-hole])) body".to_string()
-            } else {
-                ":root:not(:has([data-browser-hole])) html".to_string()
-            }
+            has_main_canvas_bg = true;
+            main_canvas_selector.clone()
         } else {
             background_selector(target, custom_sel)
         };
@@ -1141,7 +1350,7 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .get("opacity")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.16)
-            .clamp(0.0, 1.0);
+            .clamp(0.0, 0.85);
         let blur = cfg.get("blur").and_then(|v| v.as_u64()).unwrap_or(0);
         let size = cfg
             .get("size")
@@ -1155,41 +1364,41 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             .get("repeat")
             .and_then(|v| v.as_str())
             .unwrap_or("no-repeat");
-        let blend = cfg
-            .get("blend_mode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("normal");
 
-        let pseudo_name = if is_viewport_layer { "after" } else { "before" };
-        let pseudo_selector = append_pseudo_to_selectors(&selector, pseudo_name);
-        let pos_mode = if is_viewport_layer { "fixed" } else { "absolute" };
-        let layer_z = if is_viewport_layer { 9985 } else { 0 };
-
-        let host_pos_rule = if is_viewport_layer {
-            String::new()
+        let base_var = if target == "sidebar" {
+            "var(--sidebar)"
         } else {
-            format!("{} {{ position: relative; }}\n", selector)
+            "var(--background)"
         };
+        let veil_pct = ((1.0 - opacity) * 100.0).clamp(15.0, 100.0);
 
-        css_parts.push(format!(
-            "{host_pos}{pseudo} /* bg-{idx} */ {{\n  content: '';\n  position: {pos_mode};\n  inset: 0;\n  pointer-events: none;\n  z-index: {layer_z};\n  background-image: url('{uri}');\n  background-size: {size};\n  background-position: {pos};\n  background-repeat: {repeat};\n  opacity: {op:.3};\n  mix-blend-mode: {blend};\n  {blur_rule}\n}}",
-            host_pos = host_pos_rule,
-            pseudo = pseudo_selector,
-            idx = idx,
-            pos_mode = pos_mode,
-            layer_z = layer_z,
-            uri = uri,
-            size = size,
-            pos = position,
-            repeat = repeat,
-            op = opacity,
-            blend = blend,
-            blur_rule = if blur > 0 {
-                format!("filter: blur({}px);", blur)
-            } else {
-                String::new()
-            }
-        ));
+        if is_viewport_layer {
+            let ambient_pct = if is_light { 7 } else { 9 };
+            css_parts.push(format!(
+                "{sel} /* bg-{idx} */ {{\n  background-color: {base} !important;\n  background-image: radial-gradient(82% 44% at 50% 0%, color-mix(in srgb, var(--agzh-accent, var(--primary)) {amb}%, transparent) 0%, transparent 74%), linear-gradient(color-mix(in srgb, {base} {veil:.1}%, transparent), color-mix(in srgb, {base} {veil:.1}%, transparent)), url('{uri}') !important;\n  background-size: 100% 100%, 100% 100%, {size} !important;\n  background-position: top center, center center, {pos} !important;\n  background-repeat: no-repeat, no-repeat, {repeat} !important;\n}}",
+                sel = selector,
+                idx = idx,
+                base = base_var,
+                amb = ambient_pct,
+                veil = veil_pct,
+                uri = uri,
+                size = size,
+                pos = position,
+                repeat = repeat
+            ));
+        } else {
+            css_parts.push(format!(
+                "{sel} /* bg-{idx} */ {{\n  background-color: {base} !important;\n  background-image: linear-gradient(color-mix(in srgb, {base} {veil:.1}%, transparent), color-mix(in srgb, {base} {veil:.1}%, transparent)), url('{uri}') !important;\n  background-size: 100% 100%, {size} !important;\n  background-position: center center, {pos} !important;\n  background-repeat: no-repeat, {repeat} !important;\n}}",
+                sel = selector,
+                idx = idx,
+                base = base_var,
+                veil = veil_pct,
+                uri = uri,
+                size = size,
+                pos = position,
+                repeat = repeat
+            ));
+        }
 
         resolved_backgrounds.push(json!({
             "target": target,
@@ -1201,6 +1410,14 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             "repeat": repeat,
             "data_uri": uri,
         }));
+    }
+
+    // 对于未携带插画贴图的暗色材质（如黑曜石、朱漆、北境极光），注入柔和双焦点环境天光，消除纯色死黑平板感
+    if !has_main_canvas_bg && !is_light {
+        css_parts.push(format!(
+            "{sel} {{\n  background-color: var(--background) !important;\n  background-image: radial-gradient(78% 42% at 50% 0%, color-mix(in srgb, var(--agzh-accent, var(--primary)) 9%, transparent) 0%, transparent 72%), radial-gradient(56% 40% at 88% 96%, color-mix(in srgb, var(--agzh-accent, var(--primary)) 5%, transparent) 0%, transparent 70%) !important;\n  background-repeat: no-repeat !important;\n}}",
+            sel = main_canvas_selector
+        ));
     }
 
     // 5. 应用内矢量图标色调与专属动漫角色/团子图标映射（支持 semantic、composer_charm 与 codicons）
@@ -1278,30 +1495,30 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     if !icon_root_vars.is_empty() && !external_css_loaded {
         css_parts.push(format!(":root {{\n{}\n}}", icon_root_vars.join("\n")));
         if has_semantic_icons {
-            css_parts.push(
-                r#":root:not(:has([data-browser-hole])) [data-testid="app-icon-new-conversation-button"] svg,
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-header-logo"] svg,
-:root:not(:has([data-browser-hole])) [data-testid="suggested-action-antigravity-icon"] svg {
+            css_parts.push(format!(
+                r#"{body} [data-testid="app-icon-new-conversation-button"] svg,
+{body} [data-testid="sidebar-header-logo"] svg,
+{body} [data-testid="suggested-action-antigravity-icon"] svg {{
   background: var(--agzh-icon-app-logo) center / contain no-repeat !important;
-}
-:root:not(:has([data-browser-hole])) [data-testid="app-icon-new-conversation-button"] svg > *,
-:root:not(:has([data-browser-hole])) [data-testid="sidebar-header-logo"] svg > *,
-:root:not(:has([data-browser-hole])) [data-testid="suggested-action-antigravity-icon"] svg > * {
+}}
+{body} [data-testid="app-icon-new-conversation-button"] svg > *,
+{body} [data-testid="sidebar-header-logo"] svg > *,
+{body} [data-testid="suggested-action-antigravity-icon"] svg > * {{
   opacity: 0 !important;
-}"#
-                .to_string(),
-            );
+}}"#,
+                body = no_hole_body
+            ));
         }
         if has_composer_charm {
-            css_parts.push(
-                r#":root:not(:has([data-browser-hole])) .surface-composer,
-:root:not(:has([data-browser-hole])) .surface-composer-card { overflow: visible !important; position: relative !important; }
-:root:not(:has([data-browser-hole])) .surface-composer-card::after {
+            css_parts.push(format!(
+                r#"{body} .surface-composer,
+{body} .surface-composer-card {{ overflow: visible !important; position: relative !important; }}
+{body} .surface-composer-card::after {{
   content: ''; position: absolute; right: 18px; top: -21px; width: 68px; height: 24px;
   pointer-events: none; z-index: 12; background: var(--agzh-composer-charm) right bottom / contain no-repeat; opacity: 0.9;
-}"#
-                .to_string(),
-            );
+}}"#,
+                body = no_hole_body
+            ));
         }
     }
     if let Some(custom_css) = manifest
@@ -1807,5 +2024,53 @@ mod tests {
             append_pseudo_to_selectors("aside, [data-sidebar='sidebar']", "before"),
             "aside::before, [data-sidebar='sidebar']::before"
         );
+    }
+
+    #[test]
+    fn test_dark_skins_compile_onyx_tokens_without_foreground_haze() {
+        let dark_ids = [
+            "obsidian-glass",
+            "midnight-dark",
+            "vermilion-lacquer",
+            "nordic-aurora",
+            "nezuko-bamboo",
+            "clannad-illusionary-orbs",
+            "clannad-starfish-library",
+        ];
+        for id in dark_ids {
+            let compiled = compile_skin(id).unwrap_or_else(|e| panic!("编译 {} 失败: {}", id, e));
+            let css = &compiled.css;
+            for required in [
+                "--onyx-frame:",
+                "--onyx-raised:",
+                "--onyx-well:",
+                "--onyx-selected:",
+                "--onyx-key:",
+                "--shell:",
+                "--shell-canvas:",
+                "--glass:",
+                "--glass-border:",
+                "--glass-highlight:",
+                "--editor-code-block-background:",
+                "--syntax-default-fg:",
+            ] {
+                assert!(
+                    css.contains(required),
+                    "暗色皮肤 {} 编译产物缺少关键令牌 {}",
+                    id,
+                    required
+                );
+            }
+            assert!(
+                !css.contains("z-index: 9980") && !css.contains("z-index: 9985"),
+                "暗色皮肤 {} 不应注入遮挡正文的顶层噪点或插画伪元素",
+                id
+            );
+            assert!(
+                !css.contains("--text-sm:"),
+                "皮肤 {} 不应强行覆盖 Tailwind --text-sm 字号梯度",
+                id
+            );
+        }
     }
 }

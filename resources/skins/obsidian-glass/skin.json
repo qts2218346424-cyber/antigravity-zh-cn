@@ -3,41 +3,36 @@
   "id": "obsidian-glass",
   "name": "黑曜石 · 液态光学",
   "author": "Antigravity Studio",
-  "version": "2.2.0",
-  "description": "深邃黑曜石液态亚克力光学主题，融入半透冰川琉璃小团子与微距星芒光玉信物，冷冽克制、夜间久看不疲。",
+  "version": "2.3.0",
+  "description": "深邃钛黑曜石液态亚克力光学主题，融入半透冰川琉璃小团子与微距星芒光玉信物，层次冷冽清晰、夜间久看不疲。",
   "base": "dark",
+  "preview": "preview.svg",
   "colors": {
-    "background": "#080a0f",
-    "foreground": "#e6edf7",
+    "background": "#0e131f",
+    "foreground": "#edf3fc",
     "accent": "#38bdf8",
     "accentForeground": "#04131e",
-    "sidebar": "#0c1018",
-    "titleBar": "#07090e",
-    "panel": "#0f141f",
-    "border": "#1f293b",
-    "selection": "#38bdf833",
-    "input": "#131a27",
-    "muted": "#7e8ca6"
+    "sidebar": "#090d16",
+    "titleBar": "#070a12",
+    "panel": "#172033",
+    "border": "#283752",
+    "selection": "#38bdf82e",
+    "input": "#1a253b",
+    "muted": "#8c9cb8"
   },
   "surfaces": {
     "radius": "14px",
     "glass_blur": 20,
-    "card_opacity": 0.72,
+    "card_opacity": 0.84,
     "border_glow": "rgba(186, 230, 253, 0.16)",
-    "noise_grain": 0.035,
-    "shadow_elevation": "0 20px 50px -12px rgba(0, 0, 0, 0.75)"
+    "noise_grain": 0.015,
+    "shadow_elevation": "0 20px 48px -12px rgba(2, 6, 16, 0.68), 0 3px 10px -2px rgba(2, 6, 16, 0.42)"
   },
   "font": {
     "family": "Inter, 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei UI', sans-serif",
     "monoFamily": "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
     "size": 13,
     "ligatures": true
-  },
-  "css": "aside, [data-sidebar='sidebar'] { backdrop-filter: blur(var(--agzh-glass-blur, 20px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 20px)); }\nform:has(textarea) { border: 1px solid rgba(56, 189, 248, 0.22) !important; }",
-  "pet": {
-    "character": "prince",
-    "accent": "#38bdf8",
-    "scale": 1
   },
   "icons": {
     "semantic": {
@@ -52,6 +47,12 @@
       "thinking": "icons/thinking.svg"
     },
     "composer_charm": "icons/charm.svg"
+  },
+  "css": "aside, [data-sidebar='sidebar'] { backdrop-filter: blur(var(--agzh-glass-blur, 20px)); -webkit-backdrop-filter: blur(var(--agzh-glass-blur, 20px)); }\n.surface-composer > .surface-composer-card, form:has(textarea) { border: 1px solid rgba(56, 189, 248, 0.24) !important; }",
+  "pet": {
+    "character": "prince",
+    "accent": "#38bdf8",
+    "scale": 1
   },
   "cssFile": "theme.css"
 }

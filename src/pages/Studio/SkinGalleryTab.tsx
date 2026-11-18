@@ -67,9 +67,12 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
       <div
         className="relative z-10 w-full h-full rounded-xl overflow-hidden flex flex-col transition-transform duration-500 group-hover:-translate-y-0.5"
         style={{
-          backgroundColor: bg,
+          backgroundColor: sidebar,
           border: `1px solid ${border}`,
-          boxShadow: '0 18px 36px -12px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.12)',
+          boxShadow:
+            skin.base === 'light'
+              ? '0 16px 32px -12px rgba(15,23,42,0.22), inset 0 1px 0 rgba(255,255,255,0.85)'
+              : `0 20px 40px -12px rgba(0,0,0,0.68), inset 0 1px 0 ${accent}2e`,
         }}
       >
         {/* 应用无边框顶栏（展示专属角色/团子主徽标） */}
@@ -155,7 +158,16 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
           </div>
 
           {/* 中央智能体对话流 + 深度思考卡片 + 底部悬浮指令输入舱 */}
-          <div className="flex-1 p-2 flex flex-col justify-between min-w-0 relative">
+          <div
+            className="flex-1 p-2 flex flex-col justify-between min-w-0 relative"
+            style={{
+              backgroundColor: bg,
+              backgroundImage:
+                skin.base === 'light'
+                  ? undefined
+                  : `radial-gradient(80% 48% at 50% 0%, ${accent}1f 0%, transparent 72%)`,
+            }}
+          >
             <div className="space-y-1.5">
               {/* 用户消息气泡（右对齐胶囊） */}
               <div className="flex justify-end">
