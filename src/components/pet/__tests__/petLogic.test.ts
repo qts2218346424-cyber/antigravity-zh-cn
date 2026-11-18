@@ -6,6 +6,9 @@ import {
   parseLrcTimeline,
   PET_CHARACTER_ORDER,
   PET_CHARACTER_PROFILES,
+  PET_HUD_AUTO_HIDE_MS,
+  PET_HUD_SUBPANEL_AUTO_HIDE_MS,
+  resolveHudAutoHideDelayMs,
   SCALE_PRESETS,
   shouldStartWindowDrag,
 } from '../petLogic.ts';
@@ -199,6 +202,61 @@ test('5. 全角色动漫原生语音键名与冈崎汐/米豆子经典金句矩�
   }
   // 加上 PetWindowView 休眠触发的 ushio_sleep / nezuko_apologize 已在 quotes 中注册，因此 referencedKeys 应正好等于 22
   assertEqual(referencedKeys.size, 22, '存在未被角色语录或动作引用的孤立内置语音');
+});
+
+test('6. 上下文字控制面板按需点击展开与自动隐藏倒计时判定准确', () => {
+  // 默认隐藏状态下不启动冗余定时器
+  assertEqual(
+    resolveHudAutoHideDelayMs({
+      hudVisible: false,
+      hudInteracting: false,
+      pickerOpen: false,
+      panelMode: 'none',
+    }),
+    null,
+  );
+
+  // 点击唤醒后、未悬停面板按钮时，4.5s 自动隐藏
+  assertEqual(
+    resolveHudAutoHideDelayMs({
+      hudVisible: true,
+      hudInteracting: false,
+      pickerOpen: false,
+      panelMode: 'none',
+    }),
+    PET_HUD_AUTO_HIDE_MS,
+  );
+
+  // 指针或焦点正在上下文字面板内操作时，暂停倒计时防误关
+  assertEqual(
+    resolveHudAutoHideDelayMs({
+      hudVisible: true,
+      hudInteracting: true,
+      pickerOpen: false,
+      panelMode: 'none',
+    }),
+    null,
+  );
+
+  // 展开角色抽屉或算力/歌词二级面板且移开指针后，延长至 8s 自动收起
+  assertEqual(
+    resolveHudAutoHideDelayMs({
+      hudVisible: true,
+      hudInteracting: false,
+      pickerOpen: true,
+      panelMode: 'none',
+    }),
+    PET_HUD_SUBPANEL_AUTO_HIDE_MS,
+  );
+  assertEqual(
+    resolveHudAutoHideDelayMs({
+      hudVisible: true,
+      hudInteracting: false,
+      pickerOpen: false,
+      panelMode: 'music',
+    }),
+    PET_HUD_SUBPANEL_AUTO_HIDE_MS,
+  );
 });
 
 console.log(`\n测试汇总: ${passed} 通过, ${failed} 失败`);

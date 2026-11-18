@@ -39,6 +39,7 @@ import {
   parseLrcTimeline,
   PET_CHARACTER_ORDER,
   PET_CHARACTER_PROFILES,
+  resolveHudAutoHideDelayMs,
   SCALE_PRESETS,
   shouldStartWindowDrag,
   type ParticleKind,
@@ -88,7 +89,7 @@ const ParticleSvg: React.FC<{ p: Particle; accentColor: string }> = ({ p, accent
       }
     >
       {p.kind === 'petal' && (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
           <path
             d="M12 2C15.5 6.5 20 10 18 16C16.2 20.8 7.8 20.8 6 16C4 10 8.5 6.5 12 2Z"
             fill={accentColor}
@@ -97,7 +98,7 @@ const ParticleSvg: React.FC<{ p: Particle; accentColor: string }> = ({ p, accent
         </svg>
       )}
       {p.kind === 'star' && (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
           <path
             d="M12 2L14.3 9.7L22 12L14.3 14.3L12 22L9.7 14.3L2 12L9.7 9.7L12 2Z"
             fill="#fde68a"
@@ -105,7 +106,7 @@ const ParticleSvg: React.FC<{ p: Particle; accentColor: string }> = ({ p, accent
         </svg>
       )}
       {p.kind === 'water' && (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none">
           <path
             d="M12 2.5C12 2.5 5 10.5 5 15.2C5 19 8.1 22 12 22C15.9 22 19 19 19 15.2C19 10.5 12 2.5 12 2.5Z"
             fill="#38bdf8"
@@ -114,12 +115,12 @@ const ParticleSvg: React.FC<{ p: Particle; accentColor: string }> = ({ p, accent
         </svg>
       )}
       {p.kind === 'lightning' && (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
           <path d="M13 2L4 14H11L9 22L20 10H13L13 2Z" fill="#facc15" />
         </svg>
       )}
       {p.kind === 'dango' && (
-        <svg width="17" height="15" viewBox="0 0 28 24" fill="none">
+        <svg aria-hidden="true" width="17" height="15" viewBox="0 0 28 24" fill="none">
           <ellipse
             cx="14"
             cy="13"
@@ -166,6 +167,9 @@ const PetWindowView: React.FC = () => {
   const [subBubble, setSubBubble] = useState<string>('');
   const [moodIcon, setMoodIcon] = useState<string>('');
   const [assets, setAssets] = useState<PetAssets>({});
+  const [hudVisible, setHudVisible] = useState<boolean>(false);
+  const [hudInteracting, setHudInteracting] = useState<boolean>(false);
+  const [hudActivityTick, setHudActivityTick] = useState<number>(0);
   const [panelMode, setPanelMode] = useState<'none' | 'quota' | 'music'>('none');
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
   const [alwaysOnTop, setAlwaysOnTop] = useState(true);
@@ -190,6 +194,7 @@ const PetWindowView: React.FC = () => {
   const boxStepTimerRef = useRef<number | null>(null);
   const roamLoopRef = useRef<number | null>(null);
   const dragMonitorTimerRef = useRef<number | null>(null);
+  const importingAvatarRef = useRef<boolean>(false);
   const quoteIdxRef = useRef<number>(0);
   const assetsRef = useRef<PetAssets>({});
   assetsRef.current = assets;
@@ -205,6 +210,18 @@ const PetWindowView: React.FC = () => {
   actionRef.current = action;
   const facingRef = useRef<1 | -1>(1);
   facingRef.current = facing;
+
+  const revealHud = useCallback(() => {
+    setHudVisible(true);
+    setHudActivityTick((t) => t + 1);
+  }, []);
+
+  const hideHud = useCallback(() => {
+    setHudVisible(false);
+    setHudInteracting(false);
+    setPickerOpen(false);
+    setPanelMode('none');
+  }, []);
 
   const {
     accounts,
@@ -524,6 +541,7 @@ const PetWindowView: React.FC = () => {
         'pet:remote-action',
         (ev) => {
           if (ev.payload?.action) {
+            revealHud();
             triggerAction(ev.payload.action, ev.payload.message, 3200, {
               sub: ev.payload.sub,
               voiceKey: ev.payload.voiceKey,
@@ -561,6 +579,7 @@ const PetWindowView: React.FC = () => {
             petAudio.playFootstep();
             setAction('land_squash');
             setBubble('稳稳弹性着陆 ✨');
+            setSubBubble('');
             window.setTimeout(() => setAction('idle'), 360);
           }, 180);
         })
@@ -613,13 +632,54 @@ const PetWindowView: React.FC = () => {
       document.body.classList.remove('pet-window');
       if (root) root.classList.remove('pet-root');
     };
-  }, [applyCharacterGreeting, clearActionTimers, fetchAccounts, fetchCurrentAccount, triggerAction]);
+  }, [
+    applyCharacterGreeting,
+    clearActionTimers,
+    fetchAccounts,
+    fetchCurrentAccount,
+    revealHud,
+    triggerAction,
+  ]);
+
+  // 上下文字控制面板按需显隐：无点击交互超时后自动平滑隐藏
+  useEffect(() => {
+    const delayMs = resolveHudAutoHideDelayMs({
+      hudVisible,
+      hudInteracting,
+      pickerOpen,
+      panelMode,
+    });
+    if (delayMs === null) return;
+    const timer = window.setTimeout(() => {
+      hideHud();
+    }, delayMs);
+    return () => window.clearTimeout(timer);
+  }, [hudVisible, hudInteracting, pickerOpen, panelMode, hudActivityTick, hideHud]);
+
+  // 窗口失去焦点（切回编辑器/聊天框）或按下 Esc 键时，立即收起上下文字面板
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      if (importingAvatarRef.current) return;
+      hideHud();
+    };
+    const handleKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        hideHud();
+      }
+    };
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hideHud]);
 
   useEffect(() => {
     if (!isTauri()) return;
-    const height = panelMode === 'none' && !pickerOpen ? 420 : 586;
+    const height = !hudVisible || (panelMode === 'none' && !pickerOpen) ? 420 : 586;
     studioService.setPetSize(386, height).catch(() => {});
-  }, [panelMode, pickerOpen]);
+  }, [hudVisible, panelMode, pickerOpen]);
 
   useEffect(() => {
     if (!currentAccount) return;
@@ -631,8 +691,9 @@ const PetWindowView: React.FC = () => {
       showMood('⚠️', 2800);
       setBubble(alert.alertMessage);
       setSubBubble('');
+      revealHud();
     }
-  }, [currentAccount, showMood]);
+  }, [currentAccount, revealHud, showMood]);
 
   useEffect(() => {
     const poll = () => {
@@ -679,7 +740,13 @@ const PetWindowView: React.FC = () => {
   useEffect(() => {
     if (!roaming) return;
     const timer = window.setInterval(() => {
-      if (isHoveredRef.current || panelMode !== 'none' || pickerOpen || actionRef.current !== 'idle') {
+      if (
+        isHoveredRef.current ||
+        hudVisible ||
+        panelMode !== 'none' ||
+        pickerOpen ||
+        actionRef.current !== 'idle'
+      ) {
         return;
       }
       const roll = Math.random();
@@ -710,7 +777,7 @@ const PetWindowView: React.FC = () => {
       }
     }, 9500);
     return () => window.clearInterval(timer);
-  }, [roaming, panelMode, pickerOpen, character, profile.shortName, triggerAction, showMood]);
+  }, [roaming, hudVisible, panelMode, pickerOpen, character, profile.shortName, triggerAction, showMood]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -718,7 +785,8 @@ const PetWindowView: React.FC = () => {
       target.closest('button') ||
       target.closest('input') ||
       target.closest('a') ||
-      target.closest('[data-no-drag]')
+      target.closest('[data-no-drag]') ||
+      !target.closest('#nezuko-pet-stage')
     ) {
       return;
     }
@@ -746,6 +814,7 @@ const PetWindowView: React.FC = () => {
       pointerDownRef.current.active = false;
       setAction('picked_up');
       setBubble(`${profile.shortName}被轻轻拎起啦，松手即弹性落地 ✨`);
+      setSubBubble('');
       getCurrentWindow()
         .startDragging()
         .catch(() => {
@@ -770,6 +839,7 @@ const PetWindowView: React.FC = () => {
 
   const handleImportCustomAvatar = async () => {
     if (!isTauri()) return;
+    importingAvatarRef.current = true;
     try {
       const picked = await open({
         multiple: false,
@@ -781,8 +851,12 @@ const PetWindowView: React.FC = () => {
       setAssets((prev) => ({ ...prev, custom_avatar: dataUri }));
       selectCharacter('custom');
       setBubble('专属自定义立绘已成功载入 ✨');
+      setSubBubble('');
+      revealHud();
     } catch (err) {
       setBubble(`导入立绘失败: ${String(err)}`);
+    } finally {
+      importingAvatarRef.current = false;
     }
   };
 
@@ -963,11 +1037,34 @@ const PetWindowView: React.FC = () => {
     return assets.nezuko_chibi || null;
   }, [character, action, blinking, assets]);
 
+  const hudInteractionProps = {
+    onMouseEnter: () => setHudInteracting(true),
+    onMouseLeave: () => {
+      setHudInteracting(false);
+      setHudActivityTick((t) => t + 1);
+    },
+    onFocusCapture: () => setHudInteracting(true),
+    onBlurCapture: (e: React.FocusEvent<HTMLElement>) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+        setHudInteracting(false);
+        setHudActivityTick((t) => t + 1);
+      }
+    },
+    onClickCapture: () => setHudActivityTick((t) => t + 1),
+  };
+
   return (
     <div
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onClick={(e) => {
+        if (pointerDownRef.current.dragged) return;
+        const target = e.target as HTMLElement;
+        if (!target.closest('#nezuko-pet-stage') && !target.closest('[data-no-drag]')) {
+          hideHud();
+        }
+      }}
       onMouseEnter={() => {
         isHoveredRef.current = true;
       }}
@@ -976,14 +1073,22 @@ const PetWindowView: React.FC = () => {
         pointerDownRef.current.active = false;
         setTilt({ x: 0, y: 0 });
       }}
-      className="relative flex h-screen w-screen flex-col items-center justify-end select-none p-2.5 bg-transparent overflow-hidden"
+      className="relative flex h-screen w-screen flex-col items-center justify-end select-none px-2.5 pt-2.5 pb-4 bg-transparent overflow-hidden"
     >
-      {/* 顶部高对比实心黑曜石灵动岛控制坞（防桌面透底发虚） */}
+      {/* 顶部高对比实心黑曜石灵动岛控制坞（未点击时自动静默隐藏，防遮挡桌面文字） */}
       <div
         data-no-drag
-        className="relative z-30 mb-1.5 flex items-center gap-0.5 rounded-full bg-[#0b1120]/[0.97] px-2.5 py-1 text-white border border-slate-500/70"
+        inert={!hudVisible}
+        {...hudInteractionProps}
+        className={`relative z-30 mb-1.5 flex items-center gap-0.5 rounded-full bg-[#0b1120]/[0.97] px-2.5 py-1 text-white border border-slate-500/70 transition-all duration-200 ease-out ${
+          hudVisible
+            ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+            : 'opacity-0 -translate-y-1.5 scale-95 pointer-events-none'
+        }`}
         style={{
-          boxShadow: '0 14px 32px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.22)',
+          boxShadow: hudVisible
+            ? '0 10px 24px rgba(0,0,0,0.78), inset 0 1px 0 rgba(255,255,255,0.22)'
+            : 'none',
         }}
       >
         <button
@@ -1087,9 +1192,10 @@ const PetWindowView: React.FC = () => {
       </div>
 
       {/* 角色矩阵弹出抽屉（实心深曜石高对比装甲 + 3D 角色头像预览） */}
-      {pickerOpen && (
+      {hudVisible && pickerOpen && (
         <div
           data-no-drag
+          {...hudInteractionProps}
           className="z-30 mb-2 w-full max-w-[354px] rounded-2xl bg-[#0b1120]/[0.98] p-2.5 text-xs text-white border border-slate-500/75 space-y-2"
           style={{ boxShadow: '0 20px 44px rgba(0,0,0,0.88), inset 0 1px 0 rgba(255,255,255,0.18)' }}
         >
@@ -1153,15 +1259,23 @@ const PetWindowView: React.FC = () => {
         </div>
       )}
 
-      {/* 高对比实心对白气泡（点击可循环聆听当前角色动漫原生经典金句） */}
+      {/* 高对比实心对白气泡（未点击时自动静默隐藏，点击可循环聆听当前角色动漫原生经典金句） */}
       <button
         type="button"
         data-no-drag
+        inert={!hudVisible}
+        {...hudInteractionProps}
         onClick={handleCycleAnimeQuote}
         title="点击切换并播放下一句动漫原生金句语音"
-        className="group mb-1.5 max-w-[354px] rounded-2xl bg-[#0b1120]/[0.97] hover:bg-[#131d36] px-3.5 py-1.5 text-center text-[12px] font-semibold text-white border border-slate-500/75 hover:border-sky-400/80 transition-all cursor-pointer"
+        className={`group mb-1.5 max-w-[354px] rounded-2xl bg-[#0b1120]/[0.97] hover:bg-[#131d36] px-3.5 py-1.5 text-center text-[12px] font-semibold text-white border border-slate-500/75 hover:border-sky-400/80 transition-all duration-200 ease-out cursor-pointer ${
+          hudVisible
+            ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+            : 'opacity-0 -translate-y-1.5 scale-95 pointer-events-none'
+        }`}
         style={{
-          boxShadow: '0 12px 30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.2)',
+          boxShadow: hudVisible
+            ? '0 10px 24px rgba(0,0,0,0.78), inset 0 1px 0 rgba(255,255,255,0.2)'
+            : 'none',
         }}
       >
         <div className="inline-flex items-center justify-center gap-1.5 leading-snug">
@@ -1270,6 +1384,7 @@ const PetWindowView: React.FC = () => {
         {character === 'prince' && (
           <>
             <svg
+              aria-hidden="true"
               viewBox="0 0 240 200"
               className="pointer-events-none absolute inset-0 h-full w-full opacity-85"
               style={{
@@ -1314,6 +1429,7 @@ const PetWindowView: React.FC = () => {
             {action === 'volcano' && (
               <>
                 <svg
+                  aria-hidden="true"
                   width="38"
                   height="28"
                   viewBox="0 0 40 30"
@@ -1376,6 +1492,13 @@ const PetWindowView: React.FC = () => {
           id="pet-character-viewport"
           onClick={() => {
             if (pointerDownRef.current.dragged) return;
+            if (!hudVisible) {
+              revealHud();
+              showMood('✨', 1200);
+              spawnBatch(profile.particleKind, 6);
+              return;
+            }
+            revealHud();
             const firstAct = profile.actions[0];
             triggerAction('pat', firstAct?.bubble, 3200, {
               sub: firstAct?.sub,
@@ -1384,6 +1507,7 @@ const PetWindowView: React.FC = () => {
           }}
           onDoubleClick={() => {
             if (pointerDownRef.current.dragged) return;
+            revealHud();
             triggerAction(profile.doubleClickAction, profile.doubleClickBubble, 3200, {
               sub: profile.doubleClickSub,
               voiceKey: profile.doubleClickVoiceKey,
@@ -1451,13 +1575,21 @@ const PetWindowView: React.FC = () => {
         </div>
       </div>
 
-      {/* 底部高对比实心互动控制胶囊（自适应当前角色专属动作组，清晰不透底） */}
+      {/* 底部高对比实心互动控制胶囊（未点击时自动静默隐藏，点击宠物按需唤出） */}
       <div
         id="nezuko-action-capsule"
         data-no-drag
-        className="mt-1.5 flex flex-wrap items-center justify-center gap-1 rounded-full bg-[#0b1120]/[0.97] px-2.5 py-1 text-[11.5px] font-semibold text-white border border-slate-500/75"
+        inert={!hudVisible}
+        {...hudInteractionProps}
+        className={`mt-1.5 flex flex-wrap items-center justify-center gap-1 rounded-full bg-[#0b1120]/[0.97] px-2.5 py-1 text-[11.5px] font-semibold text-white border border-slate-500/75 transition-all duration-200 ease-out ${
+          hudVisible
+            ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+            : 'opacity-0 translate-y-1.5 scale-95 pointer-events-none'
+        }`}
         style={{
-          boxShadow: '0 12px 28px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.2)',
+          boxShadow: hudVisible
+            ? '0 6px 16px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.2)'
+            : 'none',
         }}
       >
         {profile.actions.map((act) => (
@@ -1570,10 +1702,11 @@ const PetWindowView: React.FC = () => {
       </div>
 
       {/* 扩展遥测 HUD：算力配额一键切号舱 / 声学黑胶时间轴歌词舱 */}
-      {panelMode !== 'none' && (
+      {hudVisible && panelMode !== 'none' && (
         <div
           id="nezuko-main-card"
           data-no-drag
+          {...hudInteractionProps}
           className="mt-2 w-full max-w-[354px] rounded-2xl bg-[#0b1120]/[0.98] p-3.5 text-xs text-slate-100 border border-slate-500/75"
           style={{
             boxShadow: '0 22px 48px rgba(0,0,0,0.88), inset 0 1px 0 rgba(255,255,255,0.2)',

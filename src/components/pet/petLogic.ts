@@ -741,3 +741,32 @@ export function evaluateLowQuotaAlert(
     alertMessage: '',
   };
 }
+
+/** 桌面伴侣上下文字控制栏默认无操作自动隐藏延时（毫秒） */
+export const PET_HUD_AUTO_HIDE_MS = 4500;
+/** 展开角色选择抽屉或配额/歌词扩展舱时的无操作自动隐藏延时（毫秒） */
+export const PET_HUD_SUBPANEL_AUTO_HIDE_MS = 8000;
+
+export interface HudAutoHideState {
+  hudVisible: boolean;
+  hudInteracting: boolean;
+  pickerOpen: boolean;
+  panelMode: 'none' | 'quota' | 'music';
+}
+
+/**
+ * 计算当前状态下桌面伴侣上下文字面板的自动隐藏倒计时毫秒数：
+ * - 面板未展示或指针/键盘焦点正停留在上下文字面板内操作时，返回 `null`（暂停计时）
+ * - 展开了二级抽屉/遥测舱且指针已移开时，延长至 8000ms
+ * - 常规展开态无点击交互时，4500ms 后自动淡出隐藏
+ */
+export function resolveHudAutoHideDelayMs(state: HudAutoHideState): number | null {
+  if (!state.hudVisible || state.hudInteracting) {
+    return null;
+  }
+  if (state.pickerOpen || state.panelMode !== 'none') {
+    return PET_HUD_SUBPANEL_AUTO_HIDE_MS;
+  }
+  return PET_HUD_AUTO_HIDE_MS;
+}
+
