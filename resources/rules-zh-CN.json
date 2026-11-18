@@ -3560,18 +3560,6 @@
     "项目外部会话的设置。"
   ],
   [
-    "^Connected to SSH(?:\\s+host)?:?\\s+(.+)$",
-    "已连接到 SSH 主机: $1"
-  ],
-  [
-    "^Connecting to SSH(?:\\s+host)?:?\\s+(.+?)(?:\\.\\.\\.|…)?$",
-    "正在连接 SSH 主机 $1..."
-  ],
-  [
-    "^Disconnected from SSH(?:\\s+host)?:?\\s+(.+)$",
-    "已断开与 SSH 主机 $1 的连接"
-  ],
-  [
     "^Teamwork Graph CLI is Atlassian['’]s agent-first interface to your entire work context:[\\s\\S]*$",
     "Teamwork Graph CLI 是 Atlassian 面向智能体打造的全局工作上下文接口，涵盖 Jira 议题、Confluence 页面、Bitbucket PR 及已连接的第三方数据源，专为 Antigravity 等编程智能体量身构建。"
   ],
@@ -3778,5 +3766,57 @@
   [
     "^An?\\s+(automation|scheduled\\s+task)\\s+with\\s+this\\s+name\\s+already\\s+exists\\s+on\\s+this\\s+computer\\.\\s*Run\\s+it\\s+remotely,\\s*or\\s+go\\s+back\\s+and\\s+rename\\s+it\\.?$",
     "此电脑上已存在同名的自动化任务。请改为远程运行，或返回并重命名。"
+  ],
+  [
+    "^Google does not control the availability or functionality of third[- ]party developer tools\\.\\s*Your data from third[- ]party developer tools connected to your Antigravity instance may be shared with Google\\.\\s*Google will protect any such data in accordance with the Google Privacy Policy,\\s*found here:\\s*(https?://\\S+)$",
+    "Google 不控制第三方开发者工具的可用性或功能。连接到您的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将根据 Google 隐私权政策保护任何此类数据，详见：$1"
+  ],
+  [
+    "^Google does not control the availability or functionality of third[- ]party developer tools\\.\\s*Your data from third[- ]party developer tools connected to your Antigravity instance may be shared with Google\\.\\s*Google will protect any such data in accordance with the Google Privacy Policy,\\s*found here:?$",
+    "Google 不控制第三方开发者工具的可用性或功能。连接到您的 Antigravity 实例的第三方开发者工具中的数据可能会与 Google 共享。Google 将根据 Google 隐私权政策保护任何此类数据，详见："
+  ],
+  [
+    "^Prepares CodeRabbit autofix\\.\\s*Collects unresolved CodeRabbit review threads[\\s\\S]*$",
+    "准备 CodeRabbit 自动修复。收集当前拉取请求中未解决的 CodeRabbit 评审讨论串，对照本地代码进行核验，并返回附带建议差异 (diff) 的修复方案。绝不直接编辑、提交、推送或发布评论。"
+  ],
+  [
+    "^Runs a CodeRabbit CLI review of the current code changes in its own context[\\s\\S]*$",
+    "在独立上下文中对当前代码变更运行 CodeRabbit CLI 审查，并按严重程度返回问题发现与修复建议。适用于提交或发起拉取请求前的全面审查。"
+  ],
+  [
+    "^Reviews local code through the installed CodeRabbit CLI[\\s\\S]*$",
+    "通过已安装的 CodeRabbit CLI 审查本地代码，返回原始问题严重程度与修复建议。适用于提交或发起拉取请求前的全面审查。"
+  ],
+  [
+    "^Runs a CodeRabbit MCP review of local code changes[\\s\\S]*$",
+    "对本地代码变更运行 CodeRabbit MCP 审查，并返回保留原始严重程度的问题发现与修复指导。适用于提交或发起拉取请求前的代码审查。"
+  ],
+  [
+    "^MANDATORY specialist subagent for Cloud Firestore Security Rules \\(firestore\\.rules\\)\\.[\\s\\S]*$",
+    "Cloud Firestore 安全规则 (firestore.rules) 的强制专属专家子智能体。每当任务需要创建、编写或修改 Firestore 安全规则 (firestore.rules) 时，必须将规则编写工作委派给此子智能体，而不要在主智能体中直接编写。"
+  ],
+  [
+    "^Access and clone GitHub repositories in remote conversations\\.?$",
+    "在远程会话中访问并克隆 GitHub 仓库。"
+  ],
+  [
+    "^Access and clone GitHub repositories in remote workspaces\\.?$",
+    "在远程工作区中访问并克隆 GitHub 仓库。"
+  ],
+  [
+    "^Access and clone GitHub repositories in remot[\\s\\S]*$",
+    "在远程环境中访问并克隆 GitHub 仓库。"
+  ],
+  [
+    "^Stream and control\\s+(.+?)\\s+directly in the side pane\\.?$",
+    "直接在侧边栏中流式查看并控制 $1。"
+  ],
+  [
+    "^No apps found for\\s+\"(.+)\"\\.?$",
+    "未找到与“$1”匹配的应用。"
+  ],
+  [
+    "^(\\d+)\\s+MCP servers? failed to start$",
+    "$1 个 MCP 服务器启动失败"
   ]
 ]
