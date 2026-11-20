@@ -1,6 +1,7 @@
 pub mod asar;
 pub mod auto_reapply;
 pub mod l10n;
+pub mod optimizer;
 pub mod pet;
 pub mod skin_injector;
 pub mod skin_manager;

@@ -751,7 +751,7 @@ export interface HudAutoHideState {
   hudVisible: boolean;
   hudInteracting: boolean;
   pickerOpen: boolean;
-  panelMode: 'none' | 'quota' | 'music';
+  panelMode: 'none' | 'quota' | 'music' | 'boost';
 }
 
 /**

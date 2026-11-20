@@ -84,14 +84,12 @@ jobs:
           releaseBody: |
             ## Antigravity Studio ${{ inputs.tag || github.ref_name }} 更新说明
 
-            ### ✨ 核心亮点与视觉升级
-            - **重构暗色光学皮肤引擎（7 款深色材质全面焕新）**：全量对接官方客户端 `Onyx` + Tailwind v4 原生设计令牌（`--onyx-*`、`--shell`、`--glass` 等），彻底消除浅色宿主下开启黑色材质出现的惨白方块与代码高亮撕裂；移除顶层前景噪点与水印雾化层，改为底层画布光学合成与柔和天光晕染，重调五阶明度梯度并升级超清无损 SVG 矢量星轨与无缝麻叶晶格。
-            - **全套 10 款材质包融入《CLANNAD》水彩角色与团子图标体系**：全系内置专属团子主徽标、功能语义图标与输入舱伴读微章挂件。
-            - **修复 Studio 材质预览器渲染细节**：解决「光学精调」实验室中卡片通透度导致内部文字一并发虚的问题，优化画廊微缩视窗层次。
-
-            ### 🐛 问题修复
-            - **修复老宠物残留检测自指误报**：修正客户端哨兵在扫描 `preload.js` 时误匹配新版自身清理列表字面量，消除顶栏反复弹出「检测到客户端旧版老宠物残留」横幅的问题。
-            - **自动更新体验加固**：构建期采用预发布隔离，待 Windows / macOS / Linux 全平台安装包与 `updater.json` 签名索引全部就绪后原子切换为正式最新版。
+            ### ⚡ 极客性能压榨与系统治理套件（深度集成）
+            - **桌宠灵动岛第 3 悬浮舱 (`PetOptimizerHud`)**：在桌面伴侣灵动岛中深度嵌入极客压榨舱，悬浮直观监控物理内存与 Commit 压力、前台 VIP 进程，支持一键切换「极客霸权模式」、一键清除 Standby 内存与后台瘦身、TOP 进程一键冻结与全部解冻。
+            - **Studio 完整治理控制台 (`OptimizerTab`)**：新增第 8 选项卡，提供内存与进程组聚合治理、Windows / 华硕高耗服务一键启停（MSSQLSERVER、SysMain、WSearch、DiagTrack、ArmouryCrate 等）、缓存清理与大文件回收站安全治理。
+            - **原生四重核隔离与自私调度引擎**：开启极客霸权模式后，非白名单后台进程自动驱逐至末位逻辑核心（如 16 线程机型的 CPU 14-15，腾空 CPU 0-13 主算力），降为 IDLE 优先级、开启 EcoQoS 节能限频并压制内存与 I/O 优先级；前台焦点窗口自动拉升为全核高优先级 VIP。
+            - **严格白名单与 6 层子进程树免疫**：内置代理网络全家桶（FlClash、Clash、Mihomo、V2Ray、Xray、Sing-box、Tailscale 等）、Antigravity 全家桶与 Windows 内核级进程免杀；最高 6 层祖先树追踪使得 Antigravity 自主派生的子进程自动继承免疫，杜绝代理断连与开发卡顿。
+            - **系统级时钟与安全护栏**：支持 0.5ms 系统高精度时钟、菜单响应零延迟（MenuShowDelay = 0）与 Core Parking 禁用；支持基于 ntdll 动态解析的进程挂起（CPU 归零）与解冻，退出时全量自动恢复；大文件清理支持 Windows 安全回收站与系统目录防删护栏。
           releaseDraft: false
           prerelease: true
           updaterJsonPreferNsis: true

@@ -22,6 +22,9 @@ pub use patch::*;
 // 导出 studio 命令 (中文汉化 / 材质皮肤 / 桌宠 / 自动维护)
 pub mod studio;
 pub use studio::*;
+// 导出系统性能压榨与治理命令
+pub mod optimizer;
+pub use optimizer::*;
 
 /// 列出所有账号
 #[tauri::command]

@@ -26,8 +26,11 @@ import {
   Volume2,
   VolumeX,
   X,
+  Zap,
 } from 'lucide-react';
 import { studioService } from '../../services/studioService';
+import { PetOptimizerHud } from './PetOptimizerHud';
+import { resolvePetHudHeight, type PetHudPanelMode } from './optimizerLogic';
 import { useAccountStore } from '../../stores/useAccountStore';
 import type { MediaStatus, PetAssets, PetCharacterId } from '../../types/studio';
 import { isTauri } from '../../utils/env';
@@ -170,7 +173,7 @@ const PetWindowView: React.FC = () => {
   const [hudVisible, setHudVisible] = useState<boolean>(false);
   const [hudInteracting, setHudInteracting] = useState<boolean>(false);
   const [hudActivityTick, setHudActivityTick] = useState<number>(0);
-  const [panelMode, setPanelMode] = useState<'none' | 'quota' | 'music'>('none');
+  const [panelMode, setPanelMode] = useState<PetHudPanelMode>('none');
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
   const [alwaysOnTop, setAlwaysOnTop] = useState(true);
   const [sunsetMode, setSunsetMode] = useState(false);
@@ -677,7 +680,7 @@ const PetWindowView: React.FC = () => {
 
   useEffect(() => {
     if (!isTauri()) return;
-    const height = !hudVisible || (panelMode === 'none' && !pickerOpen) ? 420 : 586;
+    const height = resolvePetHudHeight(hudVisible, panelMode, pickerOpen);
     studioService.setPetSize(386, height).catch(() => {});
   }, [hudVisible, panelMode, pickerOpen]);
 
@@ -1168,6 +1171,21 @@ const PetWindowView: React.FC = () => {
           title="声学黑胶歌词舱"
         >
           <Music className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setPickerOpen(false);
+            setPanelMode((m) => (m === 'boost' ? 'none' : 'boost'));
+          }}
+          className={`p-1.5 rounded-full transition-colors ${
+            panelMode === 'boost'
+              ? 'bg-sky-500/30 text-sky-300'
+              : 'hover:bg-white/10 text-amber-300'
+          }`}
+          title="极客压榨与治理舱"
+        >
+          <Zap className="w-3.5 h-3.5" />
         </button>
         <button
           type="button"
@@ -1887,6 +1905,17 @@ const PetWindowView: React.FC = () => {
                 )}
               </div>
             </div>
+          )}
+
+          {panelMode === 'boost' && (
+            <PetOptimizerHud
+              onBoostFeedback={(msg, mood) => {
+                setBubble(msg);
+                setSubBubble('');
+                showMood(mood || '⚡', 2200);
+                spawnBatch('lightning', 10);
+              }}
+            />
           )}
         </div>
       )}

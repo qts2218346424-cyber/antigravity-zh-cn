@@ -268,6 +268,14 @@ function App() {
       })
     );
 
+    // 监听从桌宠 HUD 直达 Studio 指定子选项卡（如极客压榨控制台）
+    unlistenPromises.push(
+      listen<string>('studio:open-tab', (event) => {
+        const targetTab = event.payload || 'optimizer';
+        router.navigate(`/studio?tab=${encodeURIComponent(targetTab)}`);
+      })
+    );
+
     // Cleanup
     return () => {
       Promise.all(unlistenPromises).then(unlisteners => {
@@ -275,6 +283,15 @@ function App() {
       });
     };
   }, [fetchCurrentAccount, fetchAccounts, i18n]);
+
+  useEffect(() => {
+    const handleBrowserOpenTab = (ev: Event) => {
+      const targetTab = (ev as CustomEvent<string>).detail || 'optimizer';
+      router.navigate(`/studio?tab=${encodeURIComponent(targetTab)}`);
+    };
+    window.addEventListener('studio:open-tab', handleBrowserOpenTab);
+    return () => window.removeEventListener('studio:open-tab', handleBrowserOpenTab);
+  }, []);
 
   // Update notification state
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);

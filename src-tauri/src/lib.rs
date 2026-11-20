@@ -1016,12 +1016,32 @@ pub fn run() {
             commands::studio_clear_pet_avatar,
             commands::studio_update_pet_prefs,
             commands::studio_run_diagnostics,
+            // 系统极客压榨与治理命令
+            commands::optimizer_get_overview,
+            commands::optimizer_toggle_ruthless,
+            commands::optimizer_boost_memory,
+            commands::optimizer_list_processes,
+            commands::optimizer_process_action,
+            commands::optimizer_unfreeze_all,
+            commands::optimizer_list_services,
+            commands::optimizer_service_action,
+            commands::optimizer_scan_junk,
+            commands::optimizer_clean_junk,
+            commands::optimizer_scan_large_files,
+            commands::optimizer_file_action,
+            commands::optimizer_get_whitelist,
+            commands::optimizer_update_whitelist,
+            commands::optimizer_relaunch_as_admin,
+            commands::optimizer_open_full_panel,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
             match event {
                 tauri::RunEvent::Ready => {
+                    std::thread::spawn(|| {
+                        modules::studio::optimizer::init_optimizer_on_startup();
+                    });
                     if modules::startup_quiet::take_lightweight_on_ready() {
                         info!("Entering lightweight mode for quiet login launch");
                         let _ = modules::lightweight::enter_lightweight_mode_without_saving(app_handle);
@@ -1041,6 +1061,7 @@ pub fn run() {
                 // Handle app exit - cleanup background tasks and release ports
                 tauri::RunEvent::Exit => {
                     tracing::info!("Application exiting, cleaning up background tasks and releasing ports...");
+                    modules::studio::optimizer::shutdown_and_restore();
                     // 尽力把签名缓存队列刷入 SQLite，避免直接退出丢失最近写入。
                     crate::proxy::signature_cache::flush_on_exit();
                     if let Some(state) =

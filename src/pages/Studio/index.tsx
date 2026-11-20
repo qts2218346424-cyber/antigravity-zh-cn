@@ -9,6 +9,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
 import { studioService } from '../../services/studioService';
@@ -17,11 +18,20 @@ import { isTauri } from '../../utils/env';
 import { CustomizerTab } from './CustomizerTab';
 import { DiagnosticsTab } from './DiagnosticsTab';
 import { L10nTab } from './L10nTab';
+import { OptimizerTab } from './OptimizerTab';
 import { PetCenterTab, WatchdogTab } from './PetAndWatchdogTab';
 import { SkinGalleryTab } from './SkinGalleryTab';
 import { SplashTab } from './SplashTab';
 
-type StudioTabKey = 'skins' | 'splash' | 'customizer' | 'l10n' | 'pet' | 'watchdog' | 'diagnostics';
+type StudioTabKey =
+  | 'skins'
+  | 'splash'
+  | 'customizer'
+  | 'l10n'
+  | 'pet'
+  | 'optimizer'
+  | 'watchdog'
+  | 'diagnostics';
 
 const EMPTY_STATUS: StudioStatus = {
   install_dir: null,
@@ -80,6 +90,23 @@ const Studio: React.FC = () => {
   useEffect(() => {
     refreshAll();
     const unlisteners: Array<() => void> = [];
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const initialTab = params?.get('tab') as StudioTabKey | null;
+    if (
+      initialTab &&
+      ['skins', 'splash', 'customizer', 'l10n', 'pet', 'optimizer', 'watchdog', 'diagnostics'].includes(
+        initialTab,
+      )
+    ) {
+      setActiveTab(initialTab);
+    }
+
+    const handleBrowserTabEvent = (ev: Event) => {
+      const target = (ev as CustomEvent<string>).detail as StudioTabKey | undefined;
+      if (target) setActiveTab(target);
+    };
+    window.addEventListener('studio:open-tab', handleBrowserTabEvent);
+
     if (isTauri()) {
       listen<ReapplyCheckResult>('studio:reapplied', (ev) => {
         if (ev.payload?.actions?.length) {
@@ -95,8 +122,17 @@ const Studio: React.FC = () => {
       })
         .then((fn) => unlisteners.push(fn))
         .catch(() => {});
+
+      listen<string>('studio:open-tab', (ev) => {
+        if (ev.payload) {
+          setActiveTab(ev.payload as StudioTabKey);
+        }
+      })
+        .then((fn) => unlisteners.push(fn))
+        .catch(() => {});
     }
     return () => {
+      window.removeEventListener('studio:open-tab', handleBrowserTabEvent);
       unlisteners.forEach((fn) => fn());
     };
   }, [refreshAll]);
@@ -111,6 +147,7 @@ const Studio: React.FC = () => {
     { key: 'customizer', label: '色彩与材质实验室', icon: Palette },
     { key: 'l10n', label: '全量汉化引擎', icon: Languages },
     { key: 'pet', label: '全明星桌面伴侣', icon: Heart },
+    { key: 'optimizer', label: '极速压榨与治理', icon: Zap },
     { key: 'watchdog', label: '自动维护哨兵', icon: ShieldCheck },
     { key: 'diagnostics', label: '全链路测试台', icon: FlaskConical },
   ];
@@ -293,6 +330,7 @@ const Studio: React.FC = () => {
         )}
         {activeTab === 'l10n' && <L10nTab status={status} onRefresh={refreshAll} />}
         {activeTab === 'pet' && <PetCenterTab status={status} onRefresh={refreshAll} />}
+        {activeTab === 'optimizer' && <OptimizerTab />}
         {activeTab === 'watchdog' && <WatchdogTab status={status} onRefresh={refreshAll} />}
         {activeTab === 'diagnostics' && <DiagnosticsTab status={status} onRefresh={refreshAll} />}
       </div>
