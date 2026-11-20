@@ -99,6 +99,15 @@ const Studio: React.FC = () => {
       )
     ) {
       setActiveTab(initialTab);
+    } else {
+      const resumeTab = typeof window !== 'undefined' ? (localStorage.getItem('studio:resume-tab') as StudioTabKey | null) : null;
+      if (
+        resumeTab &&
+        ['skins', 'splash', 'customizer', 'l10n', 'pet', 'optimizer', 'watchdog', 'diagnostics'].includes(resumeTab)
+      ) {
+        setActiveTab(resumeTab);
+        localStorage.removeItem('studio:resume-tab');
+      }
     }
 
     const handleBrowserTabEvent = (ev: Event) => {

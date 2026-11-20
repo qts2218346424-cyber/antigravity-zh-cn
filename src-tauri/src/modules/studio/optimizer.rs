@@ -760,6 +760,7 @@ mod win_native {
         fn GlobalMemoryStatusEx(lp_buffer: *mut MemoryStatusEx) -> i32;
         fn GetModuleHandleW(lp_module_name: *const u16) -> isize;
         fn GetProcAddress(h_module: isize, lp_proc_name: *const u8) -> *const c_void;
+        fn WaitForSingleObject(h_handle: isize, dw_milliseconds: u32) -> u32;
     }
 
     #[link(name = "user32")]
@@ -1472,11 +1473,25 @@ mod win_native {
         Ok(())
     }
 
+    pub fn wait_for_pid_exit(pid: u32, timeout_ms: u32) {
+        const SYNCHRONIZE: u32 = 0x0010_0000;
+        unsafe {
+            let h = OpenProcess(SYNCHRONIZE, 0, pid);
+            if h != 0 {
+                let _ = WaitForSingleObject(h, timeout_ms);
+                CloseHandle(h);
+            }
+        }
+    }
+
     pub fn relaunch_as_admin() -> Result<bool, String> {
         let exe = std::env::current_exe()
             .map_err(|e| format!("获取当前程序路径失败: {}", e))?;
+        let self_pid = std::process::id();
         let verb = to_wide_null("runas");
         let file = to_wide_null(&exe.to_string_lossy());
+        let params_str = format!("--wait-pid {}", self_pid);
+        let params = to_wide_null(&params_str);
         let dir = exe
             .parent()
             .map(|p| to_wide_null(&p.to_string_lossy()));
@@ -1485,7 +1500,7 @@ mod win_native {
                 0,
                 verb.as_ptr(),
                 file.as_ptr(),
-                std::ptr::null(),
+                params.as_ptr(),
                 dir.as_ref().map(|d| d.as_ptr()).unwrap_or(std::ptr::null()),
                 1, // SW_SHOWNORMAL
             )
@@ -1567,6 +1582,7 @@ mod win_native {
     pub fn relaunch_as_admin() -> Result<bool, String> {
         Err("当前操作系统不支持 Windows UAC 提权".to_string())
     }
+    pub fn wait_for_pid_exit(_pid: u32, _timeout_ms: u32) {}
 }
 
 // -------------------------------------------------------------
@@ -2663,6 +2679,10 @@ pub fn update_custom_whitelist(items: Vec<String>) -> Result<WhitelistSnapshot, 
 
 pub fn relaunch_as_admin() -> Result<bool, String> {
     win_native::relaunch_as_admin()
+}
+
+pub fn wait_for_pid_exit(pid: u32, timeout_ms: u32) {
+    win_native::wait_for_pid_exit(pid, timeout_ms);
 }
 
 #[cfg(test)]

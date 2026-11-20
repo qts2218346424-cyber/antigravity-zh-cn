@@ -332,6 +332,20 @@ pub fn run() {
     // Check for headless mode
     let args: Vec<String> = std::env::args().collect();
 
+    // 处理 UAC 提权重启交接：在新实例构建单实例锁前等待旧进程彻底终止
+    #[cfg(target_os = "windows")]
+    {
+        for i in 0..args.len() {
+            if args[i] == "--wait-pid" {
+                if let Some(pid_str) = args.get(i + 1) {
+                    if let Ok(pid) = pid_str.parse::<u32>() {
+                        modules::studio::optimizer::wait_for_pid_exit(pid, 5000);
+                    }
+                }
+            }
+        }
+    }
+
     // Check for CLI subcommands (switch, list, current, etc.)
     if let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
         .enable_all()

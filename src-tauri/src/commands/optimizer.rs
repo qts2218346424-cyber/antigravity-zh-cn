@@ -92,11 +92,13 @@ pub async fn optimizer_update_whitelist(items: Vec<String>) -> Result<WhitelistS
 }
 
 #[tauri::command]
-pub async fn optimizer_relaunch_as_admin(app: AppHandle) -> Result<bool, String> {
+pub async fn optimizer_relaunch_as_admin(_app: AppHandle) -> Result<bool, String> {
     let launched = run_blocking(optimizer::relaunch_as_admin).await?;
     if launched {
         optimizer::shutdown_and_restore();
-        app.exit(0);
+        // 彻底退出旧进程，释放 Named Pipe 与单实例 Mutex 锁（绕过 ExitRequested 中的 api.prevent_exit）
+        crate::proxy::signature_cache::flush_on_exit();
+        std::process::exit(0);
     }
     Ok(launched)
 }

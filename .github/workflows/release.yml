@@ -84,12 +84,10 @@ jobs:
           releaseBody: |
             ## Antigravity Studio ${{ inputs.tag || github.ref_name }} 更新说明
 
-            ### ⚡ 极客性能压榨与系统治理套件（深度集成）
-            - **桌宠灵动岛第 3 悬浮舱 (`PetOptimizerHud`)**：在桌面伴侣灵动岛中深度嵌入极客压榨舱，悬浮直观监控物理内存与 Commit 压力、前台 VIP 进程，支持一键切换「极客霸权模式」、一键清除 Standby 内存与后台瘦身、TOP 进程一键冻结与全部解冻。
-            - **Studio 完整治理控制台 (`OptimizerTab`)**：新增第 8 选项卡，提供内存与进程组聚合治理、Windows / 华硕高耗服务一键启停（MSSQLSERVER、SysMain、WSearch、DiagTrack、ArmouryCrate 等）、缓存清理与大文件回收站安全治理。
-            - **原生四重核隔离与自私调度引擎**：开启极客霸权模式后，非白名单后台进程自动驱逐至末位逻辑核心（如 16 线程机型的 CPU 14-15，腾空 CPU 0-13 主算力），降为 IDLE 优先级、开启 EcoQoS 节能限频并压制内存与 I/O 优先级；前台焦点窗口自动拉升为全核高优先级 VIP。
-            - **严格白名单与 6 层子进程树免疫**：内置代理网络全家桶（FlClash、Clash、Mihomo、V2Ray、Xray、Sing-box、Tailscale 等）、Antigravity 全家桶与 Windows 内核级进程免杀；最高 6 层祖先树追踪使得 Antigravity 自主派生的子进程自动继承免疫，杜绝代理断连与开发卡顿。
-            - **系统级时钟与安全护栏**：支持 0.5ms 系统高精度时钟、菜单响应零延迟（MenuShowDelay = 0）与 Core Parking 禁用；支持基于 ntdll 动态解析的进程挂起（CPU 归零）与解冻，退出时全量自动恢复；大文件清理支持 Windows 安全回收站与系统目录防删护栏。
+            ### 🛡️ 核心修复：彻底解决管理员 UAC 提权交接失败
+            - **根治单实例插件互斥锁冲突**：重构提权重启交接流程，引入 `--wait-pid <old_pid>` 跨进程同步等待机制，确保提权新实例启动前等待旧实例彻底注销并释放 Named Pipe 与全局 Mutex 锁，彻底消除新实例被单实例插件判定为重复运行而意外退出的问题。
+            - **绕过托盘事件退出拦截**：修复原先调用 `app.exit(0)` 时被 `RunEvent::ExitRequested` 托盘守护拦截导致旧实例无法退出的缺陷，重构为原子刷新并退出，实现真正的秒级平滑提权交接。
+            - **提权后状态自动恢复**：提权重启完成后自动无缝切回「极速压榨与治理」选项卡，立即呈现全绿提权就绪状态，Standby 备用内存清理与系统服务启停全面生效。
           releaseDraft: false
           prerelease: true
           updaterJsonPreferNsis: true

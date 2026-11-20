@@ -297,8 +297,14 @@ export const OptimizerTab: React.FC = () => {
   const handleElevate = async () => {
     setBusyKey('elevate');
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('studio:resume-tab', 'optimizer');
+      }
       await optimizerService.relaunchAsAdmin();
     } catch (err) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('studio:resume-tab');
+      }
       showToast(String(err), 'error');
     } finally {
       setBusyKey(null);
