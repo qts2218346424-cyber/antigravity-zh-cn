@@ -2,7 +2,7 @@
 
 # Antigravity Studio
 
-**基于 Tauri v2 + React 19 + Rust 构建的新一代 Antigravity 全能中文控制中心与美学引擎**
+**基于 Tauri v2 + React 19 + Rust 构建的新一代 Antigravity 全能中文控制中心与光学美学引擎**
 
 [![构建与 OTA 发布](https://github.com/qts2218346424-cyber/antigravity-zh-cn/actions/workflows/release.yml/badge.svg)](https://github.com/qts2218346424-cyber/antigravity-zh-cn/actions/workflows/release.yml)
 [![最新版本](https://img.shields.io/github/v/release/qts2218346424-cyber/antigravity-zh-cn?label=Latest%20Release&color=6366f1)](https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases)
@@ -10,38 +10,112 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 ![支持平台](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-64748b)
 
-**多账号额度调度 · 本地 API 反代 · 客户端双层汉化 · 高定光学材质引擎 · 独立灵动桌面伴侣 · Minisign OTA 自动推送**
+**多账号配额调度 · 本地 API 反代 · 客户端双层无损汉化 · 高定光学材质引擎 · 极速系统治理 · 独立透明桌面伴侣 · OTA 签名推送**
 
-[核心能力矩阵](#-核心能力矩阵) · [高定光学材质包](#-高定光学材质包系统) · [汉化与系统增强](#-全量无损汉化与哨兵守护) · [独立桌面伴侣](#-独立灵动桌面伴侣) · [OTA 发布流水线](#-ota-自动更新与发布流水线) · [本地构建与开发](#-本地开发与编译)
+[📥 下载与快速上手](#-下载与三步快速上手) · [✨ 九大工作台矩阵](#-九大工作台与核心能力矩阵) · [🏗️ 系统架构](#️-系统架构全景) · [🎨 高定光学材质](#-高定光学材质包系统) · [🈶 汉化与哨兵](#-全量无损汉化与哨兵守护) · [🪐 桌面伴侣](#-独立灵动桌面伴侣) · [🛠️ 开发与发布](#️-本地开发与编译) · [❓ 常见问题](#-常见问题与排查-faq)
 
 </div>
 
 ---
 
 > [!NOTE]
-> **原生架构全面重构**：`Antigravity Studio` 彻底告别早期零散批处理与内置脚本注入方式，以高性能原生桌面内核统一集成「多账号配额管理」、「本地反代网关」、「Antigravity 全量汉化注入」、「双端光学材质热重载引擎」与「独立透明桌面伴侣」，并通过 GitHub Releases 签名 OTA 流水线向全平台持续推送更新。
+> **原生桌面内核全面架构**：`Antigravity Studio` 彻底告别早期零散批处理与内置脚本注入方案，以高性能 Rust 原生内核统一集成「多账号配额管理」、「本地 HTTP API 反代」、「Antigravity 全量无损汉化」、「双端光学材质热重载引擎」、「系统进程压榨治理」与「独立透明桌面伴侣」，并通过 GitHub Actions 自动构建、Minisign 数字签名与 OTA 流水线向全平台持续分发更新。
 
 ---
 
-## ✨ 核心能力矩阵
+## 📥 下载与三步快速上手
 
-| 功能板块 | 架构设计与关键特性 |
-| :--- | :--- |
-| 🎨 **高定光学材质引擎** | 内置 10 款专为 **Google Antigravity 独立桌面应用** 定制的精选主题（含《CLANNAD》四重奏皮肤）与 `surfaces` 物理表面参数编译器（圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`），支持画廊 1:1 微缩 Antigravity 应用实时预览与 **Color DNA** 在线调色实验室。 |
-| ⚡ **客户端原生热重载注入** | 对接官方 `Antigravity` 桌面应用（AGY Hub）三层 `WebContentsView` 架构（`getHubWindows` / `setHubCurtainColor`），精准同步原生宿主设计令牌（`--background` / `--card` / `--primary`）与底层幕布色，避让内置浏览器视口且彻底免除 `FSWatcher EPERM` 崩溃。 |
-| 🈶 **全量双层汉化系统** | 原生 Rust 实现 `app.asar` 无损解包与 SHA-256 Integrity 重建，支持 `zh-CN` / `zh-TW` / `zh-HK`（内置 **4,840+ 词条**与长描述省略号截断容错引擎），全覆盖菜单/托盘、插件市场全目录、思考等级与音频设备、自动化计划、自定义智能体、SSH 远程主机与第三方工具声明；保留官方原版极速启动流程，精确避让代码区与终端，并内置 **老版本内置宠物代码 (`__AGY_NEZUKO_PET_INITIALIZED__`) 自动侦测与剥离清理**。 |
-| 🎬 **《CLANNAD》原版名场面与真曲开机剧场** | 内置京都动画四大催泪名场面剧照与双语台词，同步内嵌 **《だんご大家族》《小さな手のひら》《渚·坂の下の別れ》《汐·潮鳴り》4 首原动画真曲音源**，支持黄金副歌乐段一键快跳、自定义本地音乐/截图导入及可选同步注入官方客户端启动遮罩。 |
-| 🪐 **独立灵动桌面伴侣** | 从客户端进程完全剥离，运行于独立透明置顶窗口（`index.html?pet=1`），搭载高精零白边多姿态透明原画、**22 条离线零延迟动漫原生语音包与双语经典金句系统**、2.5D 弹性动力学与 3D 视差效果、灵动岛状态玻璃坞、毫秒级 LRC 二分时间轴黑胶歌词舱、低配额预警及配额舱内一键刷新/切号；内置 **祢豆子（米豆子）、小王子、冈崎汐（团子大家族）、炭治郎、善逸、伊之助** 6 大动漫角色及 **自定义本地 PNG/WebP/GIF/SVG 立绘热导入**（共 7 角色生态）。 |
-| 🧪 **全链路自检与测试台** | 内置可视化 **全链路测试台 (`DiagnosticsTab`)** 一键巡检后端词典、光学材质编译器、伴侣骨骼缓存、客户端路径探测与本地 API 反代连通性，同时提供伴侣动作/合成音效沙盒演练；工程侧配备零外部依赖 `npm test` 自动化单元测试引擎。 |
-| 🛡️ **Tokio 自动维护哨兵** | 后台异步守护线程定时检查官方版本更新及哈希变更，一旦官方更新覆盖了 `app.asar` 或 IDE 样式，待客户端空闲后自动静默重注汉化、Skill 描述与当前激活材质。 |
-| 🔑 **账号调度与反代网关** | 原生管理多账号 OAuth / Token 刷新、额度监控、“蹬额度”智能切换调度、Token 用量统计、请求调用监控与本地 HTTP API 代理服务。 |
-| 🚀 **OTA 签名自动更新** | 集成 `@tauri-apps/plugin-updater` 与后台更新检测器，基于 `updater.json` 与 Minisign 公私钥数字签名校验，支持应用内一键下载并平滑重启升级。 |
+### 1. 下载对应平台安装包
+
+前往 [**GitHub Releases 发布页**](https://github.com/qts2218346424-cyber/antigravity-zh-cn/releases) 下载适合您系统的最新版安装包：
+
+| 操作系统 | 推荐安装包格式 | 说明 |
+| :--- | :--- | :--- |
+| **Windows (x64)** | `*_x64-setup.exe` / `*_x64_en-US.msi` | NSIS 一键安装版（推荐）或 MSI 安装包；支持应用内 OTA 自动更新 |
+| **macOS (Apple Silicon / Intel)** | `*.dmg` / Universal `.app` | 通用架构包，原生适配 M 系列与 Intel 芯片 |
+| **Linux (x64)** | `*.deb` / `*.rpm` / `*.AppImage` | 覆盖 Debian/Ubuntu、Fedora/RHEL 与便携 AppImage |
+
+### 2. 三步开启完整体验
+
+1. **① 一键客户端汉化**：打开顶栏 **「汉化与美化 → 全量汉化引擎」**，工具将自动探测官方 `Antigravity` 安装路径，备份原始 `app.asar` 后执行无损汉化，并可一键汉化本地扩展与全局规则。
+2. **② 切换高定光学材质**：进入 **「光学材质画廊」** 预览 10 款 1:1 微缩主题（含《CLANNAD》四重奏典藏皮肤），点击即可即时热重载同步至已打开的客户端窗口。
+3. **③ 配置调度、提速与桌面伴侣**：在 **「账号管理 / API 反代」** 统一调度多账号额度；按需使用 **「极速压榨与治理」** 一键 UAC 提权释放内存与缓存；或点击顶部右侧 **小猫按钮** 呼出独立透明桌面伴侣。
+
+---
+
+## ✨ 九大工作台与核心能力矩阵
+
+顶部导航采用**智能阶梯响应式架构**：在标准桌面窗口（`640px - 1239px`）自动启用**智能聚焦胶囊**（激活模块展开图文标识、其余呈现精致图标，杜绝内容截断与图标遮挡），在 `≥ 1240px` 宽屏下自动舒展展示全文字导航；另提供一键切换 **迷你悬浮窗（Mini View）** 方便常驻角落盯防额度。
+
+### 核心工作台模块
+
+| 导航板块 | 源码位置 | 核心职责与关键能力 |
+| :--- | :--- | :--- |
+| 📊 **仪表盘** | [`Dashboard.tsx`](src/pages/Dashboard.tsx) | 全局配额健康度总览、账号配额实时监控、快捷反代状态与关键指标聚合卡片 |
+| 👥 **账号管理** | [`Accounts.tsx`](src/pages/Accounts.tsx) | 多账号 OAuth 授权登录 / Token 导入导出、刷新校验与智能“蹬额度”自动切换策略 |
+| 🌐 **API 反代** | [`ApiProxy.tsx`](src/pages/ApiProxy.tsx) | 高性能本地 HTTP API 代理网关、模型路由映射、请求并发调度与多客户端接入支持 |
+| 📈 **流量日志** | [`Monitor.tsx`](src/pages/Monitor.tsx) | 实时请求调用流水监控、延迟/状态码追踪、请求/响应负载详情排查 |
+| 📉 **Token 统计** | [`TokenStats.tsx`](src/pages/TokenStats.tsx) | 多维度 Token 消耗走势图、分模型/分账号成本与吞吐量统计报表 |
+| 🔑 **访问令牌** | [`UserToken.tsx`](src/pages/UserToken.tsx) | 多租户/多客户端独立访问 Key 签发、额度限制与细粒度用量监控 |
+| 🔒 **IP 安全管理** | [`Security.tsx`](src/pages/Security.tsx) | 本地代理访问控制、IP 黑白名单策略配置与异常请求拦截审计 |
+| ✨ **汉化与美化** | [`Studio/index.tsx`](src/pages/Studio/index.tsx) | 集成 **8 大专属子工坊** 的桌面体验改造与系统治理中枢（详见下表） |
+| ⚙️ **全局设置** | [`Settings.tsx`](src/pages/Settings.tsx) | 深浅主题切换（View Transition 圆形扩散动画）、多语言切换、导航定制与 OTA 检查更新 |
+
+### 「汉化与美化」8 大子工坊
+
+| 子工坊名称 | 源码模块 | 核心功能亮点 |
+| :--- | :--- | :--- |
+| 🎨 **光学材质画廊** | [`SkinGalleryTab.tsx`](src/pages/Studio/SkinGalleryTab.tsx) | 10 款高定主题 1:1 微缩客户端实时预览、一键应用与 `.zip` 皮肤包导入/导出 |
+| 🎬 **启动动画剧场** | [`SplashTab.tsx`](src/pages/Studio/SplashTab.tsx) | 《CLANNAD》四大名场面剧照与 4 首原动画真曲音源、黄金副歌快跳及本地媒体导入 |
+| 🧪 **色彩与材质实验室** | [`CustomizerTab.tsx`](src/pages/Studio/CustomizerTab.tsx) | **Color DNA** 实时调色与 6 项物理光学表面滑块编辑、主题派生与实时预览 |
+| 🈶 **全量汉化引擎** | [`L10nTab.tsx`](src/pages/Studio/L10nTab.tsx) | `app.asar` 原生解包与 SHA-256 Integrity 重建、扩展与智能体描述翻译、防官方静默更新与旧宠物残余清理 |
+| 🪐 **全明星桌面伴侣** | [`PetAndWatchdogTab.tsx`](src/pages/Studio/PetAndWatchdogTab.tsx) | 7 角色生态管理、22 条离线原生动漫语音试听点播台与伴侣物理/静音行为控制 |
+| ⚡ **极速压榨与治理** | [`OptimizerTab.tsx`](src/pages/Studio/OptimizerTab.tsx) | 一键 UAC 提权执行进程优先级调度、内存工作集瘦身、临时缓存清理与硬件/网络环境压榨优化 |
+| 🛡️ **自动维护哨兵** | [`PetAndWatchdogTab.tsx`](src/pages/Studio/PetAndWatchdogTab.tsx) | 后台 Tokio 守护线程实时巡检客户端哈希变动，官方更新后在空闲时自动静默重注汉化与材质 |
+| 🔬 **全链路测试台** | [`DiagnosticsTab.tsx`](src/pages/Studio/DiagnosticsTab.tsx) | 一键巡检词典完整性、材质编译器、骨骼缓存、路径探测与反代连通性，内置伴侣动作与音效沙盒 |
+
+---
+
+## 🏗️ 系统架构全景
+
+```mermaid
+flowchart LR
+    subgraph Studio["Antigravity Studio (Tauri v2 宿主)"]
+        direction TB
+        MainWin["主控工作台窗口\n(React 19 + Tailwind)"]
+        MiniWin["迷你配额悬浮窗\n(index.html?mini=1)"]
+        PetWin["独立透明桌面伴侣窗\n(index.html?pet=1)"]
+        RustCore["Rust 原生引擎\n(ASAR/皮肤编译/反代/哨兵/系统治理)"]
+        MainWin --> RustCore
+        MiniWin --> RustCore
+        PetWin --> RustCore
+    end
+
+    subgraph Client["官方 Google Antigravity 客户端"]
+        direction TB
+        Asar["app.asar 双层无损汉化\n(简/繁体 + 正则映射 + 哈希重建)"]
+        Skin["三层 WebContentsView 热重载\n(Color DNA + 物理表面 CSS 注入)"]
+    end
+
+    subgraph External["外部生态与基础设施"]
+        direction TB
+        AIApps["外部 IDE / CLI / AI 客户端\n(接入本地 HTTP API 反代)"]
+        OTA["GitHub Releases\n(Minisign 签名 + OTA 自动更新)"]
+    end
+
+    RustCore -->|"备份还原 / 汉化补丁"| Asar
+    RustCore -->|"实时设计令牌同步"| Skin
+    AIApps <-->|"OpenAI/Anthropic 兼容协议"| RustCore
+    RustCore <-->|"版本检查与签名升级"| OTA
+```
 
 ---
 
 ## 🎨 高定光学材质包系统
 
-全新的材质系统以「**Color DNA 配色变量 + 物理表面光学参数**」双轮驱动，所有内置主题清单位于 [`resources/skins/`](resources/skins)：
+材质系统以「**Color DNA 配色变量 + `surfaces` 物理表面光学参数**」双轮驱动，编译器支持圆角 `radius`、磨玻璃模糊 `glass_blur`、卡片通透度 `card_opacity`、边缘辉光 `border_glow`、胶片噪点 `noise_grain` 与阴影景深 `shadow_elevation`，精准对接官方 `Antigravity` 应用三层 `WebContentsView` 架构（避让内置浏览器视口且彻底免除 `FSWatcher EPERM` 崩溃）。
+
+所有内置主题清单位于 [`resources/skins/`](resources/skins)：
 
 | 主题 ID | 风格定位 | 视觉与光学特征 |
 | :--- | :--- | :--- |
@@ -56,62 +130,35 @@
 | **`clannad-after-sunflower`** | CLANNAD · 汐与晴空花田 | 盛夏麦穗米白护眼画布、向日葵琥珀金高光与澄澈晴空蓝微光点缀 |
 | **`clannad-starfish-library`** | CLANNAD · 图书室海星与提琴 | 暮色紫檀深空对话底色、薰衣草提琴弦光与风子纪念木雕海星纹理 |
 
-在工作台 **「汉化与美化 → 光学材质画廊 / 色彩与材质实验室」** 中支持：
-- **画廊 1:1 微缩应用实时渲染**：直观对比各主题在 Antigravity 桌面应用中的会话侧栏、思考卡片与指令输入舱效果，一键热重载应用至客户端；
-- **Color DNA 物理调色**：实时调节主题背景/强调色/边框与 6 项表面光学滑块，支持导出/导入 `.zip` 自定义皮肤包。
-
 ---
 
 ## 🈶 全量无损汉化与哨兵守护
 
-- **客户端一键汉化与备份还原**：自动探测 Antigravity 桌面应用安装目录，首次注入前将原始未修补的 `app.asar` 安全保存为 `app.asar.bak`，随时支持无损一键还原官方原版。
-- **纯净极速启动**：注入补丁严格聚焦菜单栏、托盘、报错弹窗、DOM 文本正则映射与皮肤热重载钩子，**完全保留官方原生 `dist/loadingOverlay.js` 秒开启动流程**，避免额外遮罩干扰主界面进入。
-- **生态附属一键增强**：
-  - 批量翻译 `~/.gemini` 下内置及插件 `SKILL.md` 与自定义智能体 `agents/*.md` 英文描述（支持多行 YAML 块标量无损解析），自动跳过已有中文项；
-  - 一键向 `~/.gemini/GEMINI.md` 写入全中文呈现与深度思考协议；
-  - 一键修改或还原官方 `app-update.yml` 自动更新开关，防止汉化补丁被官方静默覆盖。
-- **旧版脚本自动清理**：自动扫描客户端 `app.asar` 是否仍残留早期旧脚本嵌入的内置宠物，在状态栏提供一键清扫与重置入口。
+- **全量词典与安全边界**：内置 **4,840+ 词条**与长描述省略号截断容错引擎，覆盖 `zh-CN` / `zh-TW` / `zh-HK`，完整覆盖菜单/托盘、插件市场、思考等级与音频设备、自动化计划、自定义智能体、SSH 远程主机与第三方声明，同时精确避让代码块与终端交互区，并完整保留官方原版 `dist/loadingOverlay.js` 秒开启动体验。
+- **备份保障与一键还原**：首次汉化前自动将原版 `app.asar` 备份为 `app.asar.bak`，随时支持 100% 无损恢复官方原版；同时内置早期旧脚本残留宠物代码（`__AGY_NEZUKO_PET_INITIALIZED__`）的自动侦测与一键清扫。
+- **生态规则与防覆盖**：支持批量翻译 `~/.gemini` 下插件技能 `SKILL.md` 及智能体描述（保留多行 YAML 无损结构）、写入全中文深度思考协议至 `~/.gemini/GEMINI.md`，并可管理官方 `app-update.yml` 自动更新状态。
 
 ---
 
 ## 🪐 独立灵动桌面伴侣
 
-桌面伴侣（[`PetWindowView.tsx`](src/components/pet/PetWindowView.tsx)、[`petLogic.ts`](src/components/pet/petLogic.ts) 与 [`PetAndWatchdogTab.tsx`](src/pages/Studio/PetAndWatchdogTab.tsx)）作为完全独立的透明无边框悬浮窗运行，顶栏右侧与系统托盘均内置快捷呼出开关：
-- **7 大角色生态与自由立绘定制**：内置 **灶门祢豆子（8 态高精原画与 3D 大正木箱）**、**B612 小王子（初代经典绘本原画与星海玫瑰六姿态）**、**冈崎汐 & 团子大家族（八音盒旋律、三色团子叠叠乐与向日葵花田光玉）**、**灶门炭治郎（水之呼吸流体刀纹）**、**我妻善逸（霹雳一闪金雷残影）**、**嘴平伊之助（猪突猛进兽之呼吸）**，并支持一键热导入本地透明 PNG / WebP / GIF / SVG 自定义形象；
-- **22 条离线动漫原生语音与经典金句点播**：离线打包《CLANNAD》冈崎汐 6 句催泪治愈名台词（「能哭的地方，只有厕所，和爸爸的怀里…」「团子大家族」等）、灶门祢豆子/米豆子 6 句克服阳光与竹筒撒娇原声、B612 小王子纯正法语童声原著独白及鬼杀队日语原声，支持悬浮窗对白气泡循环点播、动作联动触发与主界面点播台试听（自主漫步全程静默免打扰）；
-- **物理弹簧缓动与防抖解耦拖拽**：采用现代 CSS `linear()` 弹簧曲线（自动适配系统 `prefers-reduced-motion` 无障碍减弱动态设置）与 `5px` 指针位移物理阈值解耦，完美兼顾单击摸头、双击绝技、拖拽拎起与窗口底边任务栏安全锚定；
-- **灵动岛、无交互自动隐藏与一键切号**：上下文字面板（状态玻璃坞与配额/歌词舱）支持未点击交互时自动平滑隐藏、点击即刻唤醒；实时监控当前账号主模型算力健康度，低于阈值自动弹出预警气泡，支持在悬浮配额舱内直接刷新额度或一键切换备用账号；
-- **声学黑胶与毫秒级 LRC 歌词舱**：搭载 12 组 WebAudio 程序化合成音色，联动本机媒体播放状态，基于二分查找实现多时间标签与 `offset` 校准的毫秒级歌词滚动同步。
+桌面伴侣（[`PetWindowView.tsx`](src/components/pet/PetWindowView.tsx)、[`petLogic.ts`](src/components/pet/petLogic.ts)）运行在独立透明无边框窗口，与官方客户端进程彻底解耦：
 
----
-
-## 🚀 OTA 自动更新与发布流水线
-
-本仓库通过 GitHub Actions（[`.github/workflows/release.yml`](.github/workflows/release.yml)）全自动完成三端编译、Minisign 签名与 GitHub Releases 分发：
-
-```bash
-# 1. 统一递增 package.json / src-tauri/tauri.conf.json / src-tauri/Cargo.toml 版本号
-node scripts/bump-version.mjs 5.8.4
-
-# 2. 执行全量自动化单元测试与 TypeScript + Vite 生产打包校验
-npm test
-npm run build
-
-# 3. 提交并推送版本标签以触发全平台构建与 OTA 制品发布
-git add -A
-git commit -m "chore: 发布 v5.8.4"
-git tag v5.8.4
-git push origin main v5.8.4
-```
+- **7 角色生态与自定义热导入**：内置 **灶门祢豆子（8 态原画与 3D 大正木箱）**、**B612 小王子（经典绘本星海玫瑰六姿态）**、**冈崎汐 & 团子大家族**、**灶门炭治郎**、**我妻善逸**、**嘴平伊之助** 6 大角色，并支持一键导入本地透明 PNG / WebP / GIF / SVG 自定义形象。
+- **22 条离线动漫原生语音与点播台**：内嵌《CLANNAD》冈崎汐、鬼杀队日语原声与 B612 小王子纯正法语独白，支持动作交互联动、对白气泡循环及主界面试听（自主漫步期间默认静默免打扰）。
+- **物理弹簧曲线与灵动交互坞**：采用 CSS `linear()` 弹簧动力学（遵循系统 `prefers-reduced-motion` 设置）与 `5px` 位移物理防抖，兼顾单击摸头、双击绝技与任务栏安全拖拽；内置上下自动隐藏灵动面板、低配额预警气泡与悬浮舱内一键切号、12 组 WebAudio 合成音效及二分查找毫秒级 LRC 歌词同步舱。
 
 ---
 
 ## 🛠️ 本地开发与编译
 
 ### 环境要求
-- **Node.js** `>= 20`
+- **Node.js** `>= 20`（推荐 `22`）
 - **Rust** `>= 1.77`（`rustup` / `cargo`）
-- **Tauri v2 系统依赖**：Windows 需安装 Visual Studio C++ 构建工具与 WebView2；macOS 需 Xcode Command Line Tools；Linux 需 `libwebkit2gtk-4.1-dev`、`libappindicator3-dev`、`librsvg2-dev`、`patchelf`。
+- **系统构建依赖**：
+  - Windows：Visual Studio C++ 构建工具 + WebView2
+  - macOS：Xcode Command Line Tools
+  - Linux：`libwebkit2gtk-4.1-dev`、`libappindicator3-dev`、`librsvg2-dev`、`patchelf`
 
 ### 常用开发命令
 
@@ -119,13 +166,16 @@ git push origin main v5.8.4
 # 安装前端依赖
 npm ci
 
-# 启动 Web 前端纯预览模式（默认 http://localhost:1420）
+# 启动 Web 前端预览模式（默认 http://localhost:1420）
 npm run dev
 
-# 运行全套自动化单元测试（伴侣物理/LRC引擎、路由映射、国际化、配额调度等）
+# 执行 TypeScript 静态类型检查
+npm run typecheck
+
+# 运行全套自动化单元测试（共 11 个测试套件）
 npm test
 
-# 执行 TypeScript 类型校验与 Vite 生产构建
+# 构建前端生产包 (tsc && vite build)
 npm run build
 
 # 启动完整 Tauri v2 桌面端开发调试
@@ -135,6 +185,26 @@ npm run tauri dev
 npm run tauri build
 ```
 
+### OTA 版本同步与发布流水线
+
+仓库通过 [`.github/workflows/release.yml`](.github/workflows/release.yml) 在推送 `v*` 标签后自动执行前端测试校验、三端原生打包与 Minisign 签名分发，并在全平台产物就绪后自动由 `Pre-release` 切换为正式 `Latest` 版本：
+
+```bash
+# 1. 统一递增 package.json / package-lock.json / Cargo.toml / Cargo.lock / tauri.conf.json / README.md 版本号
+node scripts/bump-version.mjs 5.8.4
+
+# 2. 执行单元测试、类型校验与生产打包
+npm test
+npm run typecheck
+npm run build
+
+# 3. 提交并推送版本标签以触发全平台构建与 OTA 发布
+git add -A
+git commit -m "chore: 发布 v5.8.4"
+git tag v5.8.4
+git push origin main v5.8.4
+```
+
 ---
 
 ## 📂 工程目录结构
@@ -142,25 +212,73 @@ npm run tauri build
 ```text
 antigravity-zh-cn/
 ├── .github/workflows/
-│   └── release.yml                # 多平台 Tauri 自动构建与 OTA 发布流水线
+│   └── release.yml                # 多平台 Tauri 自动构建、Minisign 签名与 OTA 发布流水线
 ├── resources/
 │   ├── skins/                     # 10 款内置高定光学材质主题包（含 CLANNAD 四重奏）
-│   ├── media/                     # 桌面伴侣高清多姿态透明原画与 voices/ 离线动漫原生语音库
-│   ├── antigravity-zh-*.json      # 简/繁体双语界面词典
+│   ├── media/                     # 伴侣多姿态透明原画、启动剧照/音频与 voices/ 离线原生语音库
+│   ├── antigravity-zh-*.json      # 简/繁体双语全量词典 (4,840+ 词条)
 │   ├── rules-zh-CN.json           # 动态正则汉化规则库
 │   ├── desktop-zh-CN.json         # 客户端主进程菜单与托盘汉化字典
 │   ├── runtime-zh.js              # 渲染层高性能 DOM 汉化运行时
-│   └── skin-runtime.js            # 客户端与全子视图光学皮肤动态注入脚本
+│   └── skin-runtime.js            # 客户端与三层 WebContentsView 光学皮肤热重载脚本
 ├── scripts/
-│   └── bump-version.mjs           # 多端版本号一键同步工具
-├── src/                           # React 19 + TypeScript + Tailwind 前端源码
-│   ├── components/pet/            # 独立透明桌面伴侣窗口视图
-│   ├── pages/Studio/              # 汉化与美化控制中心（画廊 / Color DNA / 汉化 / 伴侣与守护）
+│   ├── bump-version.mjs           # 多端版本号与 README 示例一键同步工具
+│   └── run-tests.mjs              # 零外部依赖自动化单元测试执行器
+├── src/                           # React 19 + TypeScript + Tailwind v4 前端源码
+│   ├── components/
+│   │   ├── navbar/                # 智能阶梯聚焦胶囊顶部导航栏 (Navbar / NavMenu / NavLogo / NavSettings)
+│   │   ├── pet/                   # 独立透明桌面伴侣窗口视图与物理/歌词逻辑
+│   │   ├── proxy/                 # API 反代管理与监控卡片组件
+│   │   └── common/                # 通用高质感 UI 组件与弹窗
+│   ├── pages/
+│   │   ├── Dashboard.tsx          # 仪表盘
+│   │   ├── Accounts.tsx           # 账号管理与配额调度
+│   │   ├── ApiProxy.tsx           # 本地 API 反代网关
+│   │   ├── Monitor.tsx            # 流量日志监控
+│   │   ├── TokenStats.tsx         # Token 用量统计
+│   │   ├── UserToken.tsx          # 访问令牌管理
+│   │   ├── Security.tsx           # IP 安全与访问控制
+│   │   ├── Settings.tsx           # 全局设置与主题切换
+│   │   └── Studio/                # 汉化与美化控制中心（8 大专属子工坊）
 │   └── services/studioService.ts  # Tauri IPC 调用封装
 └── src-tauri/                     # Rust 后端与 Tauri v2 宿主核心
-    ├── tauri.conf.json            # 窗口策略、资源映射与 OTA Updater 端点配置
-    └── src/modules/studio/        # ASAR 原生解包重封、汉化修补、材质编译与守护哨兵
+    ├── tauri.conf.json            # 主窗/迷你窗/伴侣窗策略、资源映射与 OTA Updater 配置
+    └── src/modules/
+        ├── studio/                # ASAR 解包重建、汉化引擎、皮肤编译器、伴侣状态、系统压榨治理与哨兵
+        └── ...                    # 账号调度、OAuth、HTTP 反代网关、安全与统计持久化模块
 ```
+
+---
+
+## ❓ 常见问题与排查 (FAQ)
+
+<details>
+<summary><b>1. 官方 Antigravity 更新后，汉化或主题失效了怎么办？</b></summary>
+
+- 开启 **「汉化与美化 → 自动维护哨兵」** 后，后台守护线程会在官方更新覆盖文件且客户端空闲时自动静默重新注入；也可直接在 **「全量汉化引擎」** 点击一键重新注入，或在右上角开启禁止官方静默覆盖（修改 `app-update.yml`）。
+
+</details>
+
+<details>
+<summary><b>2. Windows 安装在系统目录（如 Program Files）时提示写入权限不足？</b></summary>
+
+- 请在弹窗提示时允许 **UAC 管理员提权**，或在 **「汉化与美化 → 极速压榨与治理」** 中使用内置的一键 UAC 提权功能以管理员权限完成写入与进程优化。
+
+</details>
+
+<details>
+<summary><b>3. 如何完整、无损地还原到官方原版 Antigravity？</b></summary>
+
+- 在 **「汉化与美化 → 全量汉化引擎」** 中点击 **「还原官方原版」**，程序会自动将首次备份的 `app.asar.bak` 完整恢复并清理附加样式脚本。
+
+</details>
+
+<details>
+<summary><b>4. 为什么刚发布新版本时 GitHub Releases 页面暂时显示为 Pre-release（预发布）？</b></summary>
+
+- 因为云端流水线需要并发编译 Windows、Linux 与 macOS（双架构约 25-30 分钟）安装包。为避免客户机在 macOS 尚未上传完毕时拉取到残缺清单，流水线在构建过程中会先标记为 `Pre-release`；待三端文件全部就绪后会自动切换为正式 `Latest`。Windows / Linux 安装包只要显示已上传即可直接下载使用，与最终正式版完全一致。
+
+</details>
 
 ---
 
