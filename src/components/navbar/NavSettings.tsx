@@ -46,7 +46,7 @@ export function NavSettings({
     return (
         <>
             {/* 独立按钮 (≥ 480px) */}
-            <div className="hidden min-[480px]:flex items-center gap-1.5 xl:gap-2">
+            <div className="hidden min-[480px]:flex items-center gap-1 xl:gap-1.5">
                 {/* 灵动桌面伴侣一键开关 */}
                 {onTogglePet && (
                     <button
@@ -55,13 +55,13 @@ export function NavSettings({
                         aria-pressed={petOpen}
                         aria-label={petLabel}
                         title={petLabel}
-                        className={`relative w-9 h-9 xl:w-10 xl:h-10 rounded-full flex items-center justify-center transition-all ${
+                        className={`relative w-8 h-8 xl:w-9 xl:h-9 rounded-full flex items-center justify-center transition-all ${
                             petOpen
                                 ? 'bg-pink-50 text-pink-600 ring-1 ring-pink-200 hover:bg-pink-100 dark:bg-pink-500/15 dark:text-pink-300 dark:ring-pink-400/30 dark:hover:bg-pink-500/25'
                                 : 'bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 text-gray-700 dark:text-gray-300'
                         }`}
                     >
-                        <Cat className="w-4 h-4 xl:w-5 xl:h-5" />
+                        <Cat className="w-4 h-4 xl:w-4.5 xl:h-4.5" />
                         {petOpen && (
                             <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-base-300" />
                         )}
@@ -78,25 +78,25 @@ export function NavSettings({
                             setMiniView(true);
                         }
                     }}
-                    className="w-9 h-9 xl:w-10 xl:h-10 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
+                    className="w-8 h-8 xl:w-9 xl:h-9 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
                     title={t('nav.mini_view', '迷你悬浮窗')}
                     aria-label={t('nav.mini_view', '迷你悬浮窗')}
                 >
-                    <Minimize2 className="w-4 h-4 xl:w-5 xl:h-5 text-gray-700 dark:text-gray-300" />
+                    <Minimize2 className="w-4 h-4 xl:w-4.5 xl:h-4.5 text-gray-700 dark:text-gray-300" />
                 </button>
 
                 {/* 主题切换按钮 */}
                 <button
                     type="button"
                     onClick={onThemeToggle}
-                    className="w-9 h-9 xl:w-10 xl:h-10 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
+                    className="w-8 h-8 xl:w-9 xl:h-9 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
                     title={theme === 'light' ? t('nav.theme_to_dark') : t('nav.theme_to_light')}
                     aria-label={theme === 'light' ? t('nav.theme_to_dark') : t('nav.theme_to_light')}
                 >
                     {theme === 'light' ? (
-                        <Moon className="w-4 h-4 xl:w-5 xl:h-5 text-gray-700 dark:text-gray-300" />
+                        <Moon className="w-4 h-4 xl:w-4.5 xl:h-4.5 text-gray-700 dark:text-gray-300" />
                     ) : (
-                        <Sun className="w-4 h-4 xl:w-5 xl:h-5 text-gray-700 dark:text-gray-300" />
+                        <Sun className="w-4 h-4 xl:w-4.5 xl:h-4.5 text-gray-700 dark:text-gray-300" />
                     )}
                 </button>
 
@@ -112,11 +112,11 @@ export function NavSettings({
                     <button
                         type="button"
                         onClick={handleLogout}
-                        className="w-9 h-9 xl:w-10 xl:h-10 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 xl:w-9 xl:h-9 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 flex items-center justify-center transition-colors"
                         title={t('nav.logout', '退出登录')}
                         aria-label={t('nav.logout', '退出登录')}
                     >
-                        <LogOut className="w-4 h-4 xl:w-5 xl:h-5 text-red-600 dark:text-red-400" />
+                        <LogOut className="w-4 h-4 xl:w-4.5 xl:h-4.5 text-red-600 dark:text-red-400" />
                     </button>
                 )}
             </div>

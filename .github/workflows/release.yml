@@ -84,10 +84,10 @@ jobs:
           releaseBody: |
             ## Antigravity Studio ${{ inputs.tag || github.ref_name }} 更新说明
 
-            ### 🎨 UI 布局修复：根治长文本导致的图标覆盖与溢出屏幕
-            - **全局导航栏与多语言容错**：为顶部图文/图标胶囊导航补充 `min-w-0`、横向容错滚动与右侧设置区 `shrink-0` 锁定，彻底杜绝宽屏/窄屏及英文、俄文等长文案下导航项向两侧冲出覆盖图标或将右侧按钮挤出窗口的问题。
-            - **核心页面工具栏与卡片防挤压**：全面加固仪表盘、账号管理、API 反代、流量日志、Token 统计、设置、Studio 工作台、极速压榨与治理面板及迷你悬浮窗的 `flex-wrap`、文本截断 (`truncate` + `title` 悬浮完整文案) 与图标/徽章 `shrink-0` 防护。
-            - **清理历史废弃旧代码**：移除已不再使用的旧组件文件（`AccountRow.tsx`、`NetworkMonitor.tsx`、`PinnedQuotaModels.tsx`），保持代码库整洁。
+            ### 🎨 顶部导航栏与 UI 响应式彻底重构
+            - **重构顶部导航栏阶梯响应式架构**：在 `640px - 1239px`（覆盖 1120px 默认主窗口及各类系统 DPI 缩放）采用**智能聚焦胶囊**（当前激活模块完整展开图文标识，其余模块呈现精致图标与悬停 Tooltip，总宽控制在 ~400px）；在 `≥ 1240px` 宽屏下自动舒展展示全文字胶囊。
+            - **稳固品牌 Logo 呈现**：移除脆弱的 `@container/logo` 容器断点与挤压收缩逻辑，确保桌面端 `Antigravity Studio` 品牌标题稳固显示，绝不异常消失。
+            - **精简右侧快捷控制区**：优化伴侣、迷你悬浮窗、明暗主题与语言切换按钮尺寸与间距，为中间导航菜单释放充裕呼吸留白，彻底根治菜单「汉化与美化 / 设置」被截断、遮挡与图标贴边挤压的问题。
           releaseDraft: false
           prerelease: true
           updaterJsonPreferNsis: true

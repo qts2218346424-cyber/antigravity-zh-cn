@@ -8,12 +8,13 @@ interface NavMenuProps {
 }
 
 /**
- * 导航菜单组件 - 精简响应式层级（零重复 DOM）
+ * 导航菜单组件 - 智能自适应阶梯响应式架构
  *
- * 响应式策略:
- * - ≥ 1080px: 紧凑文字胶囊（适配 1120px 默认窗口宽度；≥ 1380px 自动展示前置微图标）
- * - 480px - 1079px: 单套图标胶囊（悬停展示完整模块名）
- * - < 480px: 折叠下拉导航菜单（≥ 375px 展示当前模块名）
+ * 响应式分级策略:
+ * - ≥ 1240px: 舒展全文字胶囊（≥ 1380px 展开前置微图标）
+ * - 640px - 1239px: 智能聚焦胶囊（当前选中国民级图文展开，未选中国民级图标 + 悬停 Tooltip，
+ *   总宽度控制在 ~400px 内，彻底杜绝 1120px 默认主窗口与 Windows DPI 缩放下的挤压截断问题）
+ * - < 640px: 折叠式下拉导航菜单（移动端/超窄视口体验）
  */
 export function NavMenu({ navItems }: NavMenuProps) {
     const location = useLocation();
@@ -24,10 +25,10 @@ export function NavMenu({ navItems }: NavMenuProps) {
 
     return (
         <>
-            {/* 紧凑图文胶囊 (≥ 1080px，完美兼容 1120px 默认主窗口) */}
+            {/* 舒展全文字胶囊 (≥ 1240px 大屏模式) */}
             <nav
                 aria-label="主导航"
-                className="max-[1079px]:hidden flex items-center gap-0.5 xl:gap-1 max-w-full min-w-0 overflow-x-auto scrollbar-none bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1 shadow-xs"
+                className="hidden min-[1240px]:flex items-center gap-0.5 xl:gap-1 max-w-full min-w-0 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1 shadow-xs"
             >
                 {visibleNavItems.map((item) => {
                     const active = isActive(location.pathname, item.path);
@@ -44,7 +45,7 @@ export function NavMenu({ navItems }: NavMenuProps) {
                                 rounded-full
                                 text-xs xl:text-sm
                                 font-medium
-                                transition-all
+                                transition-all duration-200
                                 whitespace-nowrap
                                 inline-flex
                                 items-center
@@ -62,10 +63,10 @@ export function NavMenu({ navItems }: NavMenuProps) {
                 })}
             </nav>
 
-            {/* 图标胶囊 (480px - 1079px，合并消除原先 3 套重复 DOM) */}
+            {/* 智能聚焦胶囊 (640px - 1239px，完美适配 1120px 默认窗口与各类 DPI 缩放) */}
             <nav
                 aria-label="主导航"
-                className="max-[479px]:hidden min-[1080px]:hidden flex items-center gap-1 max-w-full min-w-0 overflow-x-auto scrollbar-none bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1"
+                className="hidden min-[640px]:flex max-[1239px]:flex items-center gap-1 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1 shadow-xs"
             >
                 {visibleNavItems.map((item) => {
                     const active = isActive(location.pathname, item.path);
@@ -76,26 +77,29 @@ export function NavMenu({ navItems }: NavMenuProps) {
                             draggable="false"
                             aria-current={active ? 'page' : undefined}
                             aria-label={item.label}
+                            title={item.label}
                             className={`
                                 shrink-0
-                                p-2
                                 rounded-full
-                                transition-all
+                                transition-all duration-200
+                                inline-flex items-center gap-1.5
                                 ${active
-                                    ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
-                                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100'
+                                    ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900 px-3 py-1.5 text-xs font-medium'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/80 dark:text-gray-400 dark:hover:text-base-content dark:hover:bg-base-100 p-2'
                                 }
                             `}
-                            title={item.label}
                         >
-                            <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <item.icon className="w-4 h-4 shrink-0" />
+                            {active && (
+                                <span className="whitespace-nowrap tracking-wide">{item.label}</span>
+                            )}
                         </Link>
                     );
                 })}
             </nav>
 
-            {/* 折叠下拉菜单 (< 480px) */}
-            <div className="max-[374px]:hidden min-[480px]:hidden block">
+            {/* 折叠下拉菜单 (380px - 639px 显示带文字模块名) */}
+            <div className="max-[379px]:hidden min-[640px]:hidden block">
                 <NavigationDropdown
                     navItems={visibleNavItems}
                     isActive={(path) => isActive(location.pathname, path)}
@@ -105,7 +109,8 @@ export function NavMenu({ navItems }: NavMenuProps) {
                 />
             </div>
 
-            <div className="min-[375px]:hidden">
+            {/* 超窄屏下拉菜单 (< 380px 仅图标) */}
+            <div className="min-[380px]:hidden block">
                 <NavigationDropdown
                     navItems={visibleNavItems}
                     isActive={(path) => isActive(location.pathname, path)}

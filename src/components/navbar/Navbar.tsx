@@ -171,15 +171,15 @@ function Navbar() {
                 />
             )}
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8 relative" style={{ zIndex: 10 }}>
-                <div className="flex items-center h-16 gap-3 xl:gap-4">
-                    {/* Logo - 使用父容器宽度做响应式 */}
-                    <div className="@container/logo basis-[175px] xl:basis-[200px] shrink min-w-0">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 xl:px-8 relative" style={{ zIndex: 10 }}>
+                <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
+                    {/* Logo - 稳固呈现，绝不压缩隐匿 */}
+                    <div className="shrink-0 flex items-center">
                         <NavLogo />
                     </div>
 
-                    {/* 导航菜单 - 响应式自适应 */}
-                    <div className="flex-1 flex justify-center min-w-0">
+                    {/* 导航菜单 - 智能响应式自适应居中 */}
+                    <div className="flex-1 flex justify-center min-w-0 px-1 sm:px-2">
                         <NavMenu navItems={navItems} />
                     </div>
 

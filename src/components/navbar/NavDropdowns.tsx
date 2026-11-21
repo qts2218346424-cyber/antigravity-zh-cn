@@ -63,10 +63,10 @@ export function LanguageDropdown({
         <div className={`relative ${className}`} ref={menuRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
+                className="w-8 h-8 xl:w-9 xl:h-9 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
                 title={t('settings.general.language')}
             >
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
                     {activeLang.short}
                 </span>
             </button>
@@ -226,10 +226,10 @@ export function MoreDropdown({
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
+                className="w-8 h-8 xl:w-9 xl:h-9 rounded-full bg-gray-100 dark:bg-base-200 hover:bg-gray-200 dark:hover:bg-base-100 flex items-center justify-center transition-colors"
                 title={t('nav.more', '更多')}
             >
-                <MoreVertical className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <MoreVertical className="w-4 h-4 xl:w-5 xl:h-5 text-gray-700 dark:text-gray-300" />
             </button>
 
             {/* 下拉菜单 (强制右对齐防遮蔽 + 高度自适应滚动) */}

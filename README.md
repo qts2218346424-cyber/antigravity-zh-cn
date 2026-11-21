@@ -91,7 +91,7 @@
 
 ```bash
 # 1. 统一递增 package.json / src-tauri/tauri.conf.json / src-tauri/Cargo.toml 版本号
-node scripts/bump-version.mjs 5.8.3
+node scripts/bump-version.mjs 5.8.4
 
 # 2. 执行全量自动化单元测试与 TypeScript + Vite 生产打包校验
 npm test
@@ -99,9 +99,9 @@ npm run build
 
 # 3. 提交并推送版本标签以触发全平台构建与 OTA 制品发布
 git add -A
-git commit -m "chore: 发布 v5.8.3"
-git tag v5.8.3
-git push origin main v5.8.3
+git commit -m "chore: 发布 v5.8.4"
+git tag v5.8.4
+git push origin main v5.8.4
 ```
 
 ---
