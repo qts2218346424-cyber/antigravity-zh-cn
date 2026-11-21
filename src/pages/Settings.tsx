@@ -543,7 +543,7 @@ function Settings() {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="h-full w-full overflow-y-auto"
         >
-            <div className="p-5 space-y-4 max-w-7xl mx-auto">
+            <div className="p-4 sm:p-5 space-y-4 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto">
                 {/* 顶部工具栏：Tab 导航和保存按钮 */}
                 <div className="flex flex-wrap justify-between items-center gap-3">
                     {/* Tab 导航 - 采用顶部导航栏样式：外层灰色容器 */}

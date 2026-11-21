@@ -2007,7 +2007,7 @@ print(response.choices[0].message.content)`;
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="h-full w-full overflow-y-auto overflow-x-hidden"
         >
-            <div className="p-5 space-y-4 max-w-7xl mx-auto">
+            <div className="p-4 sm:p-5 space-y-4 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto">
 
                 {/* Loading State */}
                 {configLoading && (

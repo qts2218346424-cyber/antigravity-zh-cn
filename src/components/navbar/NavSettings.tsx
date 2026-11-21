@@ -45,8 +45,8 @@ export function NavSettings({
 
     return (
         <>
-            {/* 独立按钮 (≥ 480px) */}
-            <div className="hidden min-[480px]:flex items-center gap-1 xl:gap-1.5">
+            {/* 独立快捷按钮 (≥ 840px 宽裕视口展开) */}
+            <div className="hidden min-[840px]:flex items-center gap-1 xl:gap-1.5">
                 {/* 灵动桌面伴侣一键开关 */}
                 {onTogglePet && (
                     <button
@@ -121,8 +121,8 @@ export function NavSettings({
                 )}
             </div>
 
-            {/* 更多菜单 (< 480px) */}
-            <div className="min-[480px]:hidden">
+            {/* 更多功能收纳菜单 (< 840px 或放大缩放时自动收拢，为中间菜单彻底释放空间) */}
+            <div className="min-[840px]:hidden">
                 <MoreDropdown
                     theme={theme}
                     currentLanguage={currentLanguage}

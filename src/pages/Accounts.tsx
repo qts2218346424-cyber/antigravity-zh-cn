@@ -818,7 +818,7 @@ function Accounts() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="h-full flex flex-col p-5 gap-4 max-w-7xl mx-auto w-full"
+      className="h-full flex flex-col p-4 sm:p-5 gap-4 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full"
     >
       {/* 测试按钮 - 在最顶部 */}
       <input

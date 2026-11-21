@@ -171,7 +171,7 @@ function Navbar() {
                 />
             )}
 
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 xl:px-8 relative" style={{ zIndex: 10 }}>
+            <div className="w-full px-4 sm:px-6 xl:px-8 relative" style={{ zIndex: 10 }}>
                 <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
                     {/* Logo - 稳固呈现，绝不压缩隐匿 */}
                     <div className="shrink-0 flex items-center">

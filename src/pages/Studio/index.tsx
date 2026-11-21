@@ -204,7 +204,7 @@ const Studio: React.FC = () => {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6 max-w-7xl mx-auto space-y-6">
+    <div className="h-full overflow-y-auto px-4 sm:px-6 py-6 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto space-y-6">
       {/* 顶部工作台横幅（黑曜石磨玻璃高定风格） */}
       <div className="relative overflow-hidden rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-[#0B0F17]/80 backdrop-blur-xl p-5 shadow-sm">
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl" />
@@ -275,12 +275,12 @@ const Studio: React.FC = () => {
         </div>
       </div>
 
-      {/* 六大功能区单行自适应无障碍导航栏（遵循 WAI-ARIA tablist 与不换行横向滚动规范） */}
+      {/* 六大功能区自适应无障碍导航栏（支持响应式换行排布，杜绝缩放截断丢失） */}
       <div
         role="tablist"
         aria-label="Studio 功能模块导航"
         onKeyDown={handleTabKeyDown}
-        className="flex flex-nowrap overflow-x-auto scrollbar-none gap-1.5 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-100/70 dark:bg-[#0B0F17]/60 p-1.5 backdrop-blur-md max-w-full"
+        className="flex flex-wrap gap-1.5 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-100/70 dark:bg-[#0B0F17]/60 p-1.5 backdrop-blur-md max-w-full"
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;

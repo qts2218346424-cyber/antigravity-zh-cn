@@ -802,7 +802,7 @@ const TokenStats: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                 style={{ willChange: 'opacity, transform' }}
-                className={`w-full max-w-7xl mx-auto p-4 sm:p-5 ${dashboardMode === 'cockpit'
+                className={`w-full max-w-7xl 2xl:max-w-[1600px] mx-auto p-4 sm:p-5 ${dashboardMode === 'cockpit'
                         ? 'h-full flex flex-col gap-3 overflow-hidden'
                         : 'space-y-4'
                     }`}
