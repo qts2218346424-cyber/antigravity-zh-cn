@@ -27,7 +27,7 @@ export function NavMenu({ navItems }: NavMenuProps) {
             {/* 紧凑图文胶囊 (≥ 1080px，完美兼容 1120px 默认主窗口) */}
             <nav
                 aria-label="主导航"
-                className="max-[1079px]:hidden flex items-center gap-0.5 xl:gap-1 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1 shadow-xs"
+                className="max-[1079px]:hidden flex items-center gap-0.5 xl:gap-1 max-w-full min-w-0 overflow-x-auto scrollbar-none bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1 shadow-xs"
             >
                 {visibleNavItems.map((item) => {
                     const active = isActive(location.pathname, item.path);
@@ -38,6 +38,7 @@ export function NavMenu({ navItems }: NavMenuProps) {
                             draggable="false"
                             aria-current={active ? 'page' : undefined}
                             className={`
+                                shrink-0
                                 px-2.5 xl:px-3.5
                                 py-1.5
                                 rounded-full
@@ -64,7 +65,7 @@ export function NavMenu({ navItems }: NavMenuProps) {
             {/* 图标胶囊 (480px - 1079px，合并消除原先 3 套重复 DOM) */}
             <nav
                 aria-label="主导航"
-                className="max-[479px]:hidden min-[1080px]:hidden flex items-center gap-1 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1"
+                className="max-[479px]:hidden min-[1080px]:hidden flex items-center gap-1 max-w-full min-w-0 overflow-x-auto scrollbar-none bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/60 dark:border-white/5 rounded-full p-1"
             >
                 {visibleNavItems.map((item) => {
                     const active = isActive(location.pathname, item.path);
@@ -76,6 +77,7 @@ export function NavMenu({ navItems }: NavMenuProps) {
                             aria-current={active ? 'page' : undefined}
                             aria-label={item.label}
                             className={`
+                                shrink-0
                                 p-2
                                 rounded-full
                                 transition-all

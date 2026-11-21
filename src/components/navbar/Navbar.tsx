@@ -184,14 +184,16 @@ function Navbar() {
                     </div>
 
                     {/* 快捷开关与设置按钮 */}
-                    <NavSettings
-                        theme={effectiveTheme}
-                        currentLanguage={config?.language || 'zh'}
-                        petOpen={petOpen}
-                        onTogglePet={handleTogglePet}
-                        onThemeToggle={toggleTheme}
-                        onLanguageChange={handleLanguageChange}
-                    />
+                    <div className="shrink-0 flex items-center">
+                        <NavSettings
+                            theme={effectiveTheme}
+                            currentLanguage={config?.language || 'zh'}
+                            petOpen={petOpen}
+                            onTogglePet={handleTogglePet}
+                            onThemeToggle={toggleTheme}
+                            onLanguageChange={handleLanguageChange}
+                        />
+                    </div>
                 </div>
             </div>
         </header>

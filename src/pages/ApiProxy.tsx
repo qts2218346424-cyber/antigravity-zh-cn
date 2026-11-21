@@ -95,28 +95,28 @@ function CollapsibleCard({
     return (
         <div className="bg-white dark:bg-base-100 rounded-xl shadow-xs border border-gray-200/80 dark:border-base-200 overflow-hidden transition-all duration-200 hover:shadow-sm">
             <div
-                className="px-5 py-3.5 flex items-center justify-between cursor-pointer bg-gray-50/70 dark:bg-base-200 hover:bg-gray-100/70 dark:hover:bg-base-300/70 transition-colors"
+                className="px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer bg-gray-50/70 dark:bg-base-200 hover:bg-gray-100/70 dark:hover:bg-base-300/70 transition-colors"
                 onClick={(e) => {
                     // Prevent toggle when clicking the switch or right element
                     if ((e.target as HTMLElement).closest('.no-expand')) return;
                     setIsExpanded(!isExpanded);
                 }}
             >
-                <div className="flex items-center gap-3">
-                    <div className="text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="text-gray-500 dark:text-gray-400 shrink-0">
                         {icon}
                     </div>
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                    <span className="font-semibold text-sm text-gray-900 dark:text-white truncate" title={title}>
                         {title}
                     </span>
                     {enabled !== undefined && (
-                        <div className={cn('text-xs px-2.5 py-0.5 rounded-full font-medium border', enabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60' : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-base-200 dark:text-gray-400 dark:border-base-300')}>
+                        <div className={cn('text-xs px-2.5 py-0.5 rounded-full font-medium border shrink-0 whitespace-nowrap', enabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60' : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-base-200 dark:text-gray-400 dark:border-base-300')}>
                             {enabled ? t('common.enabled') : t('common.disabled')}
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-center gap-4 no-expand">
+                <div className="flex items-center gap-4 no-expand shrink-0">
                     {rightElement}
 
                     {enabled !== undefined && onToggle && (
@@ -2052,53 +2052,53 @@ print(response.choices[0].message.content)`;
                     <div className="bg-white dark:bg-base-100 rounded-xl shadow-xs border border-gray-200/80 dark:border-base-200">
                         <div className="px-4 sm:px-5 py-2.5 border-b border-gray-100 dark:border-base-200 bg-gray-50/60 dark:bg-base-200/80 flex flex-wrap items-center justify-between gap-3">
                             {/* 菜单栏：服务配置、模型配置、模型大全与协议、CLI 一键配置 */}
-                            <div className="flex items-center gap-1.5 bg-gray-200/70 dark:bg-base-300/60 p-1 rounded-xl">
+                            <div className="flex flex-wrap items-center gap-1.5 max-w-full bg-gray-200/70 dark:bg-base-300/60 p-1 rounded-xl">
                                 <button
                                     type="button"
                                     onClick={() => setActiveMenuTab('settings')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
                                         activeMenuTab === 'settings'
                                             ? 'bg-white dark:bg-base-100 text-blue-600 dark:text-blue-400 shadow-xs'
                                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                                 >
-                                    <Settings size={14} className={activeMenuTab === 'settings' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'} />
+                                    <Settings size={14} className={`shrink-0 ${activeMenuTab === 'settings' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
                                     {t('proxy.config.title')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setActiveMenuTab('models')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
                                         activeMenuTab === 'models'
                                             ? 'bg-white dark:bg-base-100 text-blue-600 dark:text-blue-400 shadow-xs'
                                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                                 >
-                                    <BrainCircuit size={14} className={activeMenuTab === 'models' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'} />
+                                    <BrainCircuit size={14} className={`shrink-0 ${activeMenuTab === 'models' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
                                     {t('proxy.model_config.title', { defaultValue: '模型配置' })}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setActiveMenuTab('cli')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
                                         activeMenuTab === 'cli'
                                             ? 'bg-white dark:bg-base-100 text-blue-600 dark:text-blue-400 shadow-xs'
                                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                                 >
-                                    <Terminal size={14} className={activeMenuTab === 'cli' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'} />
+                                    <Terminal size={14} className={`shrink-0 ${activeMenuTab === 'cli' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
                                     {t('proxy.cli_sync.title', { defaultValue: 'Agent工具一键配置' })}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setActiveMenuTab('protocols')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
                                         activeMenuTab === 'protocols'
                                             ? 'bg-white dark:bg-base-100 text-blue-600 dark:text-blue-400 shadow-xs'
                                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                                 >
-                                    <Share2 size={14} className={activeMenuTab === 'protocols' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'} />
+                                    <Share2 size={14} className={`shrink-0 ${activeMenuTab === 'protocols' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
                                     {t('proxy.multi_protocol.title')}
                                 </button>
                             </div>

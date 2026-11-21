@@ -201,7 +201,7 @@ function BestAccounts({ accounts, currentAccountId, activeClients, onSwitch }: B
                 </h2>
 
                 {/* 目标客户端药丸选择器 */}
-                <div className="flex items-center bg-gray-100 dark:bg-base-200/90 p-1 rounded-xl border border-gray-200/70 dark:border-white/10 gap-1">
+                <div className="flex flex-wrap items-center bg-gray-100 dark:bg-base-200/90 p-1 rounded-xl border border-gray-200/70 dark:border-white/10 gap-1 max-w-full">
                     {clientTargets.map(target => {
                         const Icon = target.icon;
                         const isSelected = targetIde === target.key;
@@ -209,13 +209,13 @@ function BestAccounts({ accounts, currentAccountId, activeClients, onSwitch }: B
                             <button
                                 key={target.key}
                                 onClick={() => setTargetIde(target.key)}
-                                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                                     isSelected
                                         ? target.activeBg
                                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-white/5'
                                 }`}
                             >
-                                <Icon className="w-3.5 h-3.5" />
+                                <Icon className="w-3.5 h-3.5 shrink-0" />
                                 <span>{target.label}</span>
                             </button>
                         );
@@ -233,7 +233,7 @@ function BestAccounts({ accounts, currentAccountId, activeClients, onSwitch }: B
                                 {bestGeminiRender.email}
                             </div>
                         </div>
-                        <div className="ml-2 flex items-center gap-2">
+                        <div className="ml-2 flex items-center gap-2 shrink-0">
                             <div className="px-2.5 py-0.5 bg-green-500 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border dark:border-emerald-500/40 text-white text-xs font-bold font-mono rounded-full shadow-xs">
                                 {bestGeminiRender.geminiQuota}%
                             </div>
@@ -259,7 +259,7 @@ function BestAccounts({ accounts, currentAccountId, activeClients, onSwitch }: B
                                 {bestClaudeRender.email}
                             </div>
                         </div>
-                        <div className="ml-2 flex items-center gap-2">
+                        <div className="ml-2 flex items-center gap-2 shrink-0">
                             <div className="px-2.5 py-0.5 bg-cyan-500 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border dark:border-cyan-500/40 text-white text-xs font-bold font-mono rounded-full shadow-xs">
                                 {bestClaudeRender.claudeQuota}%
                             </div>

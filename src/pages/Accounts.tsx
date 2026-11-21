@@ -830,7 +830,7 @@ function Accounts() {
       />
 
       {/* 顶部工具栏:搜索、过滤和操作按钮 */}
-      <div className="flex-none flex items-center gap-2">
+      <div className="flex-none flex flex-wrap items-center gap-2">
         {/* 搜索框 - 响应式:大屏显示输入框,小屏显示图标 */}
         <div className="hidden lg:block flex-none w-40 relative transition-all focus-within:w-48">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />

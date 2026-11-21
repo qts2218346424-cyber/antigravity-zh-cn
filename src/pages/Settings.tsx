@@ -545,11 +545,11 @@ function Settings() {
         >
             <div className="p-5 space-y-4 max-w-7xl mx-auto">
                 {/* 顶部工具栏：Tab 导航和保存按钮 */}
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center gap-3">
                     {/* Tab 导航 - 采用顶部导航栏样式：外层灰色容器 */}
-                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-base-200 rounded-full p-1 w-fit">
+                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-base-200 rounded-full p-1 max-w-full overflow-x-auto scrollbar-none">
                         <button
-                            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'general'
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ${activeTab === 'general'
                                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
@@ -558,7 +558,7 @@ function Settings() {
                             {t('settings.tabs.general')}
                         </button>
                         <button
-                            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'account'
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ${activeTab === 'account'
                                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
@@ -567,7 +567,7 @@ function Settings() {
                             {t('settings.tabs.account')}
                         </button>
                         <button
-                            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'proxy'
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ${activeTab === 'proxy'
                                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
@@ -576,7 +576,7 @@ function Settings() {
                             {t('settings.tabs.proxy')}
                         </button>
                         <button
-                            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'advanced'
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ${activeTab === 'advanced'
                                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
@@ -585,7 +585,7 @@ function Settings() {
                             {t('settings.tabs.advanced')}
                         </button>
                         <button
-                            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'debug'
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ${activeTab === 'debug'
                                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
@@ -594,7 +594,7 @@ function Settings() {
                             {t('settings.tabs.debug')}
                         </button>
                         <button
-                            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'about'
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ${activeTab === 'about'
                                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                 }`}
@@ -605,10 +605,10 @@ function Settings() {
                     </div>
 
                     <button
-                        className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm"
+                        className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-sm shrink-0 whitespace-nowrap"
                         onClick={handleSave}
                     >
-                        <Save className="w-4 h-4" />
+                        <Save className="w-4 h-4 shrink-0" />
                         {t('settings.save')}
                     </button>
                 </div>

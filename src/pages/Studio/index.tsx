@@ -210,65 +210,65 @@ const Studio: React.FC = () => {
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl" />
         <div className="pointer-events-none absolute left-1/3 -bottom-20 h-44 w-44 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 via-indigo-900 to-indigo-600 text-white shadow-md ring-1 ring-white/15">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 via-indigo-900 to-indigo-600 text-white shadow-md ring-1 ring-white/15">
                 <Sparkles className="h-4 w-4" />
               </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-base-content">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-base-content break-words">
                     Antigravity Studio · 光学美化与伴侣工坊
                   </h1>
                   {status.active_skin && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-300">
+                    <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-300">
                       <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
                       当前材质：{status.active_skin}
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 break-words">
                   融合高定光学材质引擎、色彩表面实验室、客户端全量中文化、7 角色动漫原声伴侣、防更新哨兵与全链路交互测试台。
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {status.has_legacy_pet && (
               <button
                 type="button"
                 onClick={() => handleSelectTab('l10n')}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/60 bg-amber-500/15 px-3.5 py-2 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/25 transition-colors"
+                className="inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl border border-amber-400/60 bg-amber-500/15 px-3.5 py-2 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/25 transition-colors"
               >
-                <Languages className="h-3.5 w-3.5" />
+                <Languages className="h-3.5 w-3.5 shrink-0" />
                 检测到客户端旧版老宠物残留 · 点此清理
               </button>
             )}
             {!isTauri() && (
-              <span className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              <span className="shrink-0 whitespace-nowrap rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
                 Web 预览态（系统级注入需运行桌面端）
               </span>
             )}
             <button
               type="button"
               onClick={quickTogglePet}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium border backdrop-blur-md transition-all ${
+              className={`inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-medium border backdrop-blur-md transition-all ${
                 status.pet_window_open
                   ? 'border-pink-400/50 bg-pink-500/15 text-pink-600 dark:text-pink-300 shadow-sm shadow-pink-500/10'
                   : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10'
               }`}
             >
-              <Heart className={`h-3.5 w-3.5 ${status.pet_window_open ? 'fill-pink-500 text-pink-500' : ''}`} />
+              <Heart className={`h-3.5 w-3.5 shrink-0 ${status.pet_window_open ? 'fill-pink-500 text-pink-500' : ''}`} />
               {status.pet_window_open ? '伴侣视窗运行中' : '召出灵动伴侣'}
             </button>
             <button
               type="button"
               onClick={refreshAll}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+              className="inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
               title="刷新全部探测状态"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`} />
               刷新探测
             </button>
           </div>

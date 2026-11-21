@@ -878,27 +878,27 @@ const TokenStats: React.FC = () => {
                     </div>
 
                     {/* 右侧组：时间段选择药丸 + 单价配置与刷新操作组 */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 max-w-full">
                         {/* 时间段选择药丸（内联分钟细分） */}
-                        <div className="flex items-center bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/80 dark:border-base-300/80 rounded-xl p-0.5 shadow-xs">
+                        <div className="flex items-center max-w-full overflow-x-auto scrollbar-none bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/80 dark:border-base-300/80 rounded-xl p-0.5 shadow-xs">
                             <button
                                 onClick={() => switchTimeRange('minute')}
-                                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                                className={`shrink-0 whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                                     timeRange === 'minute'
                                         ? 'bg-white dark:bg-base-100 text-gray-900 dark:text-base-content shadow-sm font-semibold'
                                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-base-content'
                                 }`}
                             >
-                                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                                 <span>{t('token_stats.minute', '分钟')}</span>
                             </button>
 
                             {/* 分钟选中时直接内联无缝嵌入 1h/24h 细分子切项 */}
                             {timeRange === 'minute' && (
-                                <div className="flex items-center mx-0.5 bg-gray-200/80 dark:bg-base-300 rounded-md p-0.5 animate-in fade-in duration-150">
+                                <div className="flex items-center shrink-0 mx-0.5 bg-gray-200/80 dark:bg-base-300 rounded-md p-0.5 animate-in fade-in duration-150">
                                     <button
                                         onClick={() => switchMinuteSpan('1h')}
-                                        className={`px-1.5 py-0.5 rounded text-[11px] font-mono font-medium transition-all ${
+                                        className={`shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded text-[11px] font-mono font-medium transition-all ${
                                             minuteSpan === '1h'
                                                 ? 'bg-white dark:bg-base-100 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
                                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -909,7 +909,7 @@ const TokenStats: React.FC = () => {
                                     </button>
                                     <button
                                         onClick={() => switchMinuteSpan('24h')}
-                                        className={`px-1.5 py-0.5 rounded text-[11px] font-mono font-medium transition-all ${
+                                        className={`shrink-0 whitespace-nowrap px-1.5 py-0.5 rounded text-[11px] font-mono font-medium transition-all ${
                                             minuteSpan === '24h'
                                                 ? 'bg-white dark:bg-base-100 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
                                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -923,56 +923,56 @@ const TokenStats: React.FC = () => {
 
                             <button
                                 onClick={() => switchTimeRange('hourly')}
-                                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                                className={`shrink-0 whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                                     timeRange === 'hourly'
                                         ? 'bg-white dark:bg-base-100 text-gray-900 dark:text-base-content shadow-sm font-semibold'
                                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-base-content'
                                 }`}
                                 title={t('token_stats.hourly_tip', '按小时汇总 (近 24 小时)')}
                             >
-                                <Clock className="w-3.5 h-3.5 text-blue-500" />
+                                <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                 <span>{t('token_stats.hourly', '小时')}</span>
                             </button>
                             <button
                                 onClick={() => switchTimeRange('daily')}
-                                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                                className={`shrink-0 whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                                     timeRange === 'daily'
                                         ? 'bg-white dark:bg-base-100 text-gray-900 dark:text-base-content shadow-sm font-semibold'
                                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-base-content'
                                 }`}
                                 title={t('token_stats.daily_tip', '按日汇总 (近 24 小时 / 今日)')}
                             >
-                                <Calendar className="w-3.5 h-3.5 text-emerald-500" />
+                                <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                 <span>{t('token_stats.daily', '日')}</span>
                             </button>
                             <button
                                 onClick={() => switchTimeRange('weekly')}
-                                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                                className={`shrink-0 whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                                     timeRange === 'weekly'
                                         ? 'bg-white dark:bg-base-100 text-gray-900 dark:text-base-content shadow-sm font-semibold'
                                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-base-content'
                                 }`}
                                 title={t('token_stats.weekly_tip', '按周汇总 (近 12 周)')}
                             >
-                                <CalendarDays className="w-3.5 h-3.5 text-purple-500" />
+                                <CalendarDays className="w-3.5 h-3.5 text-purple-500 shrink-0" />
                                 <span>{t('token_stats.weekly', '周')}</span>
                             </button>
                             <button
                                 onClick={() => switchTimeRange('all')}
-                                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                                className={`shrink-0 whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                                     timeRange === 'all'
                                         ? 'bg-white dark:bg-base-100 text-gray-900 dark:text-base-content shadow-sm font-semibold'
                                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-base-content'
                                 }`}
                                 title={t('token_stats.all_time_tip', '历史所有记录统计')}
                             >
-                                <History className="w-3.5 h-3.5 text-cyan-500" />
+                                <History className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
                                 <span>{t('token_stats.all_time', '全部历史')}</span>
                             </button>
                         </div>
 
                         {/* 单价配置与刷新操作组 */}
-                        <div className="flex items-center gap-1 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/80 dark:border-base-300/80 rounded-xl p-0.5 shadow-xs">
+                        <div className="flex items-center gap-1 shrink-0 bg-gray-100/90 dark:bg-base-200/90 border border-gray-200/80 dark:border-base-300/80 rounded-xl p-0.5 shadow-xs">
                             <button
                                 onClick={() => setShowPricingModal(true)}
                                 title={t('token_stats.custom_pricing', '自定义单价')}

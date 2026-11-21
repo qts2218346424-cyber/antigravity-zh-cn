@@ -134,7 +134,7 @@ function CurrentAccount({
                 </h2>
 
                 {/* 客户端 Tab 药丸切换器 */}
-                <div className="flex items-center bg-gray-100 dark:bg-base-200/90 p-1 rounded-xl border border-gray-200/70 dark:border-white/10 gap-1">
+                <div className="flex flex-wrap items-center bg-gray-100 dark:bg-base-200/90 p-1 rounded-xl border border-gray-200/70 dark:border-white/10 gap-1 max-w-full">
                     {clientTabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.key;
@@ -144,17 +144,17 @@ function CurrentAccount({
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
                                 title={tab.tooltip}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                                     isActive
                                         ? tab.activeBg
                                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-white/5'
                                 }`}
                             >
-                                <Icon className="w-3.5 h-3.5" />
+                                <Icon className="w-3.5 h-3.5 shrink-0" />
                                 <span>{tab.label}</span>
                                 {hasAccount && (
                                     <span
-                                        className={`w-1.5 h-1.5 rounded-full ${
+                                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                                             isActive ? 'bg-white' : 'bg-emerald-500'
                                         }`}
                                     />
@@ -183,15 +183,15 @@ function CurrentAccount({
                             className="mt-4 px-4 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                         >
                             <span>{t('dashboard.go_switch_account', '前往切换账号')}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
+                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                         </button>
                     )}
                 </div>
             ) : (
                 <div className="space-y-4 flex-1 flex flex-col justify-between">
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center gap-3 mb-1 min-w-0">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <Mail className="w-3.5 h-3.5 text-gray-400" />
+                            <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                             <span
                                 className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate"
                                 title={displayedAccount.email}

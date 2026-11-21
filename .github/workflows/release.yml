@@ -84,10 +84,10 @@ jobs:
           releaseBody: |
             ## Antigravity Studio ${{ inputs.tag || github.ref_name }} 更新说明
 
-            ### 🛡️ 核心修复：彻底解决管理员 UAC 提权交接失败
-            - **根治单实例插件互斥锁冲突**：重构提权重启交接流程，引入 `--wait-pid <old_pid>` 跨进程同步等待机制，确保提权新实例启动前等待旧实例彻底注销并释放 Named Pipe 与全局 Mutex 锁，彻底消除新实例被单实例插件判定为重复运行而意外退出的问题。
-            - **绕过托盘事件退出拦截**：修复原先调用 `app.exit(0)` 时被 `RunEvent::ExitRequested` 托盘守护拦截导致旧实例无法退出的缺陷，重构为原子刷新并退出，实现真正的秒级平滑提权交接。
-            - **提权后状态自动恢复**：提权重启完成后自动无缝切回「极速压榨与治理」选项卡，立即呈现全绿提权就绪状态，Standby 备用内存清理与系统服务启停全面生效。
+            ### 🎨 UI 布局修复：根治长文本导致的图标覆盖与溢出屏幕
+            - **全局导航栏与多语言容错**：为顶部图文/图标胶囊导航补充 `min-w-0`、横向容错滚动与右侧设置区 `shrink-0` 锁定，彻底杜绝宽屏/窄屏及英文、俄文等长文案下导航项向两侧冲出覆盖图标或将右侧按钮挤出窗口的问题。
+            - **核心页面工具栏与卡片防挤压**：全面加固仪表盘、账号管理、API 反代、流量日志、Token 统计、设置、Studio 工作台、极速压榨与治理面板及迷你悬浮窗的 `flex-wrap`、文本截断 (`truncate` + `title` 悬浮完整文案) 与图标/徽章 `shrink-0` 防护。
+            - **清理历史废弃旧代码**：移除已不再使用的旧组件文件（`AccountRow.tsx`、`NetworkMonitor.tsx`、`PinnedQuotaModels.tsx`），保持代码库整洁。
           releaseDraft: false
           prerelease: true
           updaterJsonPreferNsis: true

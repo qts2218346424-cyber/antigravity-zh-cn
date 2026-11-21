@@ -1074,19 +1074,19 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({ className }) => {
     return (
         <div className={`flex flex-col bg-white dark:bg-base-100 rounded-xl shadow-xs border border-gray-200/80 dark:border-base-200 overflow-hidden ${className || 'flex-1'}`}>
             <div className="p-3.5 border-b border-gray-200/80 dark:border-base-200 space-y-3 bg-gray-50/80 dark:bg-base-200">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={toggleLogging}
-                        className={`btn btn-sm gap-2 px-3 border font-semibold rounded-lg transition-all ${isLoggingEnabled
+                        className={`btn btn-sm gap-2 px-3 border font-semibold rounded-lg transition-all shrink-0 whitespace-nowrap ${isLoggingEnabled
                             ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 shadow-xs'
                             : 'bg-white dark:bg-base-200 border-gray-300 dark:border-base-300 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-base-300/80 shadow-2xs'
                             }`}
                     >
-                        <div className={`w-2 h-2 rounded-full ${isLoggingEnabled ? 'bg-rose-500 animate-pulse' : 'bg-gray-400'}`} />
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${isLoggingEnabled ? 'bg-rose-500 animate-pulse' : 'bg-gray-400'}`} />
                         {isLoggingEnabled ? t('monitor.logging_status.active') : t('monitor.logging_status.paused')}
                     </button>
 
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 min-w-[180px]">
                         <Search className="absolute left-2.5 top-2 text-gray-400" size={14} />
                         <input
                             ref={globalFilterInputRef}
@@ -1098,7 +1098,7 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({ className }) => {
                         />
                     </div>
 
-                    <div className="relative">
+                    <div className="relative shrink-0">
                         <User className="absolute left-2.5 top-2 text-gray-400 z-10" size={14} />
                         <select
                             className="select select-sm select-bordered pl-8 text-xs min-w-[140px] max-w-[220px] bg-white dark:bg-base-200 border-gray-300 dark:border-base-300 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
@@ -1115,7 +1115,7 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({ className }) => {
                         </select>
                     </div>
 
-                    <div className="hidden lg:flex items-center gap-3 text-xs font-bold font-mono">
+                    <div className="hidden lg:flex items-center gap-3 text-xs font-bold font-mono shrink-0">
                         <span className="text-blue-600 dark:text-blue-400">
                             {formatCompactNumber(stats.total_requests)} <span className="font-sans font-semibold text-[11px] text-gray-500 dark:text-gray-400">{t('monitor.stats.total')}</span>
                         </span>
@@ -1127,12 +1127,12 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({ className }) => {
                         </span>
                     </div>
 
-                    <button onClick={() => loadData(currentPage, filter)} className="btn btn-sm btn-ghost text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title={t('common.refresh')}>
+                    <button onClick={() => loadData(currentPage, filter)} className="btn btn-sm btn-ghost shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title={t('common.refresh')}>
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button
                         onClick={() => setShowLogSettings(!showLogSettings)}
-                        className={`btn btn-sm btn-ghost ${
+                        className={`btn btn-sm btn-ghost shrink-0 ${
                             showLogSettings
                                 ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
                                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
@@ -1142,7 +1142,7 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({ className }) => {
                     >
                         <Settings size={16} />
                     </button>
-                    <button onClick={clearLogs} className="btn btn-sm btn-ghost text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title={t('monitor.actions.clear_all_requests', { defaultValue: '清空请求日志' })}>
+                    <button onClick={clearLogs} className="btn btn-sm btn-ghost shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title={t('monitor.actions.clear_all_requests', { defaultValue: '清空请求日志' })}>
                         <Trash2 size={16} />
                     </button>
                 </div>
@@ -1197,17 +1197,17 @@ export const ProxyMonitor: React.FC<ProxyMonitorProps> = ({ className }) => {
             {showLogSettings && appConfig && (
                 <div className="bg-gray-50/90 dark:bg-base-200 border-b border-gray-200 dark:border-base-300 p-4 space-y-3.5 shadow-xs">
                     {/* Panel Header */}
-                    <div className="flex items-center justify-between border-b border-gray-200/80 dark:border-base-200 pb-2.5">
-                        <div className="flex items-center gap-2">
-                            <Database size={16} className="text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">
+                    <div className="flex items-center justify-between gap-2 border-b border-gray-200/80 dark:border-base-200 pb-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Database size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span className="text-sm font-bold text-gray-900 dark:text-white truncate">
                                 {t('monitor.settings.title', { defaultValue: '日志存储周期与维护设置' })}
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline truncate">
                                 {t('monitor.settings.subtitle', { defaultValue: '统一管理请求日志与内部报错日志的滑动窗口容量' })}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             <button
                                 onClick={handleSaveLogSettings}
                                 disabled={isSavingConfig}

@@ -422,56 +422,56 @@ function Dashboard() {
                 {/* 顶栏控制条：左侧快捷控制胶囊，右侧纯粹通透的 KPI 指标 */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-1 py-0.5">
                     {/* 左上角控制胶囊组 */}
-                    <div className="flex flex-wrap items-center gap-2 select-none">
+                    <div className="flex flex-wrap items-center gap-2 select-none min-w-0">
                         {/* 1. 配额视窗模式切换: 综合加权 / 5H滚动 / 7天周配额 */}
-                        <div className="flex items-center bg-gray-100 dark:bg-white/[0.04] p-1 rounded-xl text-xs dark:border dark:border-white/[0.08]">
+                        <div className="flex flex-wrap items-center bg-gray-100 dark:bg-white/[0.04] p-1 rounded-xl text-xs dark:border dark:border-white/[0.08] max-w-full">
                             <button
                                 type="button"
                                 onClick={() => setQuotaView('weighted')}
-                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                                     quotaView === 'weighted'
                                         ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-300 shadow-sm font-bold dark:border dark:border-white/[0.12]'
                                         : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200'
                                 }`}
                                 title={t('dashboard.view_mode_weighted_title', '综合加权可用 (5H滚动与周配额木桶短板)')}
                             >
-                                <Sparkles className="w-3.5 h-3.5" />
+                                <Sparkles className="w-3.5 h-3.5 shrink-0" />
                                 <span>{t('dashboard.view_mode_weighted', '综合加权')}</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setQuotaView('5h')}
-                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                                     quotaView === '5h'
                                         ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-300 shadow-sm font-bold dark:border dark:border-white/[0.12]'
                                         : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200'
                                 }`}
                                 title={t('dashboard.view_mode_title_5h', '5H 滚动：近 5 小时冲刺可用度 (受周配额硬顶约束)')}
                             >
-                                <Clock className="w-3.5 h-3.5" />
+                                <Clock className="w-3.5 h-3.5 shrink-0" />
                                 <span>{t('dashboard.view_mode_5h', '5H 滚动')}</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setQuotaView('weekly')}
-                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                                     quotaView === 'weekly'
                                         ? 'bg-white dark:bg-zinc-800 text-teal-600 dark:text-teal-300 shadow-sm font-bold dark:border dark:border-white/[0.12]'
                                         : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200'
                                 }`}
                                 title={t('dashboard.view_mode_title_weekly', '7天周配额：本周宏观总预算 (受 5H 瞬时冷却阀门约束)')}
                             >
-                                <Calendar className="w-3.5 h-3.5" />
+                                <Calendar className="w-3.5 h-3.5 shrink-0" />
                                 <span>{t('dashboard.view_mode_weekly', '7天周配额')}</span>
                             </button>
                         </div>
 
                         {/* 3. 账号池范围筛选: 反代账号 vs 可用账号 */}
-                        <div className="flex items-center bg-gray-100 dark:bg-white/[0.04] p-1 rounded-xl text-xs dark:border dark:border-white/[0.08]">
+                        <div className="flex flex-wrap items-center bg-gray-100 dark:bg-white/[0.04] p-1 rounded-xl text-xs dark:border dark:border-white/[0.08] max-w-full">
                             <button
                                 type="button"
                                 onClick={() => setOnlyProxyPool(true)}
-                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
                                     onlyProxyPool
                                         ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-300 shadow-sm font-bold dark:border dark:border-white/[0.12]'
                                         : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200'
@@ -483,7 +483,7 @@ function Dashboard() {
                             <button
                                 type="button"
                                 onClick={() => setOnlyProxyPool(false)}
-                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
                                     !onlyProxyPool
                                         ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-300 shadow-sm font-bold dark:border dark:border-white/[0.12]'
                                         : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200'
@@ -495,11 +495,11 @@ function Dashboard() {
                         </div>
 
                         {/* 4. 自动限流进小黑屋 (QoS 降速熔断) 开关 */}
-                        <div className="flex items-center bg-gray-100 dark:bg-white/[0.04] p-1 rounded-xl text-xs dark:border dark:border-white/[0.08]">
+                        <div className="flex items-center bg-gray-100 dark:bg-white/[0.04] p-1 rounded-xl text-xs dark:border dark:border-white/[0.08] max-w-full">
                             <button
                                 type="button"
                                 onClick={handleToggleQoSAutoJail}
-                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                                     qosAutoJail
                                         ? 'bg-white dark:bg-zinc-800 text-amber-600 dark:text-amber-300 shadow-sm font-bold dark:border dark:border-white/[0.12]'
                                         : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200'
@@ -510,9 +510,9 @@ function Dashboard() {
                                         : t('dashboard.qos_auto_jail_disabled_tip', '当前：已关闭自动小黑屋。直接忽略校验时长，不因首字延迟过长标记疑似限速或解绑会话（点击开启）')
                                 }
                             >
-                                <ShieldAlert className={`w-3.5 h-3.5 ${qosAutoJail ? 'text-amber-500 dark:text-amber-400' : 'text-gray-400 dark:text-zinc-500'}`} />
+                                <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${qosAutoJail ? 'text-amber-500 dark:text-amber-400' : 'text-gray-400 dark:text-zinc-500'}`} />
                                 <span>{t('dashboard.qos_auto_jail', '自动小黑屋')}</span>
-                                <span className={`text-[10px] px-1 py-0.5 rounded font-mono ${
+                                <span className={`text-[10px] px-1 py-0.5 rounded font-mono shrink-0 ${
                                     qosAutoJail
                                         ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold'
                                         : 'bg-gray-200 dark:bg-white/[0.08] text-gray-400 dark:text-zinc-500'
@@ -524,7 +524,7 @@ function Dashboard() {
                     </div>
 
                             {/* 右侧：纯粹通透的大字 KPI 矩阵 (Requests · Avg response · Spend 灵感) */}
-                            <div className="flex items-center gap-5 sm:gap-6 text-right">
+                            <div className="flex flex-wrap items-center gap-5 sm:gap-6 text-right shrink-0">
                                 <div>
                                     <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-gray-900 dark:text-white leading-none">
                                         {stats.total}
@@ -564,16 +564,16 @@ function Dashboard() {
                                 className="bg-white dark:bg-[#15161b] rounded-2xl p-5 shadow-sm dark:shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-white/[0.10] flex flex-col justify-between relative overflow-hidden"
                             >
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-transparent dark:border-emerald-500/20">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-transparent dark:border-emerald-500/20 shrink-0">
                                                 <Zap className="w-4 h-4" />
                                             </div>
-                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200">
+                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200 truncate" title={t('dashboard.accounts_health', '账号底座资产')}>
                                                 {t('dashboard.accounts_health', '账号底座资产')}
                                             </span>
                                         </div>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-500/30">
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-500/30 shrink-0 whitespace-nowrap">
                                             {stats.available}/{stats.total}
                                         </span>
                                     </div>
@@ -627,16 +627,16 @@ function Dashboard() {
                                 className="bg-white dark:bg-[#15161b] rounded-2xl p-5 shadow-sm dark:shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-white/[0.10] flex flex-col justify-between"
                             >
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-transparent dark:border-emerald-500/20">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-transparent dark:border-emerald-500/20 shrink-0">
                                                 <Sparkles className="w-4 h-4" />
                                             </div>
-                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200">
+                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200 truncate" title={t('accounts.quota_group_gemini', 'Gemini 模型')}>
                                                 {t('accounts.quota_group_gemini', 'Gemini 模型')}
                                             </span>
                                         </div>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 whitespace-nowrap ${
                                             geminiQuotaValue >= 50
                                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border dark:border-emerald-500/30'
                                                 : 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 dark:border dark:border-amber-500/30'
@@ -732,16 +732,16 @@ function Dashboard() {
                                 className="bg-white dark:bg-[#15161b] rounded-2xl p-5 shadow-sm dark:shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-white/[0.10] flex flex-col justify-between"
                             >
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-transparent dark:border-cyan-500/20">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="p-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-transparent dark:border-cyan-500/20 shrink-0">
                                                 <Bot className="w-4 h-4" />
                                             </div>
-                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200">
+                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200 truncate" title={t('accounts.quota_group_claude', 'Claude & GPT')}>
                                                 {t('accounts.quota_group_claude', 'Claude & GPT')}
                                             </span>
                                         </div>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 whitespace-nowrap ${
                                             claudeQuotaValue === null
                                                 ? 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-zinc-400'
                                                 : claudeQuotaValue >= 50
@@ -839,16 +839,16 @@ function Dashboard() {
                                 className="bg-white dark:bg-[#15161b] rounded-2xl p-5 shadow-sm dark:shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-white/[0.10] flex flex-col justify-between"
                             >
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-transparent dark:border-purple-500/20">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-transparent dark:border-purple-500/20 shrink-0">
                                                 <Activity className="w-4 h-4" />
                                             </div>
-                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200">
+                                            <span className="text-xs font-bold text-gray-800 dark:text-zinc-200 truncate" title={t('dashboard.health_and_risk', '健康度 & 风控')}>
                                                 {t('dashboard.health_and_risk', '健康度 & 风控')}
                                             </span>
                                         </div>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 whitespace-nowrap ${
                                             stats.abnormal === 0
                                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border dark:border-emerald-500/30'
                                                 : 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 dark:border dark:border-rose-500/40'

@@ -334,13 +334,13 @@ export const OptimizerTab: React.FC = () => {
       {/* UAC 提权引导横幅（仅在 Windows 非管理员态出现） */}
       {overview && overview.isWindows && !overview.isElevated && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-6 py-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <ShieldAlert className="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-slate-900 dark:text-zinc-100 break-words">
                 当前运行于普通用户权限，部分内核压榨与服务止血受限
               </div>
-              <p className="mt-0.5 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+              <p className="mt-0.5 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed break-words">
                 以管理员身份重启后将自动开启 SeDebugPrivilege 与 SeProfileSingleProcessPrivilege，可彻底解锁：清空系统 Standby 备用内存死锁、启停 SQL Server / SysMain / 奥创系统服务，以及压制高权限后台进程。
               </p>
             </div>
@@ -349,9 +349,9 @@ export const OptimizerTab: React.FC = () => {
             type="button"
             disabled={busyKey === 'elevate'}
             onClick={handleElevate}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 px-4 py-2 text-xs font-semibold transition-all active:scale-[0.98]"
+            className="inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 px-4 py-2 text-xs font-semibold transition-all active:scale-[0.98]"
           >
-            <Lock className="h-3.5 w-3.5" />
+            <Lock className="h-3.5 w-3.5 shrink-0" />
             {busyKey === 'elevate' ? '正在提权重启…' : '一键 UAC 管理员提权'}
           </button>
         </div>
@@ -360,10 +360,10 @@ export const OptimizerTab: React.FC = () => {
       {/* 顶部系统遥测与极客霸权主控台 */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-6 shadow-xs space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5 min-w-0">
               <span
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border ${
+                className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
                   overview?.ruthlessEnabled
                     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500 dark:text-emerald-400'
                     : 'bg-indigo-500/10 border-indigo-500/25 text-indigo-600 dark:text-indigo-400'
@@ -371,19 +371,19 @@ export const OptimizerTab: React.FC = () => {
               >
                 <Zap className="h-4 w-4" />
               </span>
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-zinc-50">
                     极客霸权压榨与资源治理台
                   </h2>
                   {overview?.isElevated && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-medium">
-                      <ShieldCheck className="h-3 w-3" />
+                    <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-medium">
+                      <ShieldCheck className="h-3 w-3 shrink-0" />
                       管理员内核权限已就绪
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400 break-words">
                   {overview?.logicalCpus ?? 16} 逻辑核心 · 孤立围栏：{overview?.exileCoresLabel || 'CPU 14-15'} · 代理与 Antigravity 进程树 100% 免杀保护
                 </p>
               </div>
@@ -395,9 +395,9 @@ export const OptimizerTab: React.FC = () => {
               type="button"
               disabled={Boolean(busyKey)}
               onClick={handleBoostMemory}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-zinc-800/70 hover:bg-slate-100 dark:hover:bg-zinc-800 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-zinc-200 transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-zinc-800/70 hover:bg-slate-100 dark:hover:bg-zinc-800 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-zinc-200 transition-all active:scale-[0.98]"
             >
-              <Activity className="h-3.5 w-3.5 text-sky-500" />
+              <Activity className="h-3.5 w-3.5 text-sky-500 shrink-0" />
               {busyKey === 'memory' ? '释放中…' : '释放 Standby 与后台内存'}
             </button>
 
@@ -406,9 +406,9 @@ export const OptimizerTab: React.FC = () => {
                 type="button"
                 disabled={Boolean(busyKey)}
                 onClick={handleUnfreezeAll}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 px-3.5 py-2 text-xs font-medium text-sky-600 dark:text-sky-300 transition-all active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 px-3.5 py-2 text-xs font-medium text-sky-600 dark:text-sky-300 transition-all active:scale-[0.98]"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <RotateCcw className="h-3.5 w-3.5 shrink-0" />
                 解冻全部 ({overview?.frozenCount})
               </button>
             )}
@@ -417,13 +417,13 @@ export const OptimizerTab: React.FC = () => {
               type="button"
               disabled={busyKey === 'ruthless'}
               onClick={handleToggleRuthless}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all active:scale-[0.98] ${
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold transition-all active:scale-[0.98] ${
                 overview?.ruthlessEnabled
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                   : 'bg-indigo-600 hover:bg-indigo-500 text-white'
               }`}
             >
-              <Flame className="h-3.5 w-3.5" />
+              <Flame className="h-3.5 w-3.5 shrink-0" />
               {busyKey === 'ruthless'
                 ? '正在调度…'
                 : overview?.ruthlessEnabled
@@ -435,10 +435,10 @@ export const OptimizerTab: React.FC = () => {
 
         {/* 四大 KPI 等宽数值卡 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-              <span>物理内存可用</span>
-              <span className="font-mono tabular-nums font-medium">
+          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4 min-w-0">
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-zinc-400">
+              <span className="truncate min-w-0" title="物理内存可用">物理内存可用</span>
+              <span className="font-mono tabular-nums font-medium shrink-0">
                 {(overview?.memPercent ?? 0).toFixed(1)}%
               </span>
             </div>
@@ -451,16 +451,16 @@ export const OptimizerTab: React.FC = () => {
                 style={{ width: `${Math.min(100, overview?.memPercent ?? 0)}%` }}
               />
             </div>
-            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums truncate">
               已用 {formatBytesMb(overview?.memUsedMb ?? 0)} / {formatBytesMb(overview?.memTotalMb ?? 0)}
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-              <span>虚拟提交 (Commit 换页压力)</span>
+          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4 min-w-0">
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-zinc-400">
+              <span className="truncate min-w-0" title="虚拟提交 (Commit 换页压力)">虚拟提交 (Commit 换页压力)</span>
               <span
-                className={`font-mono tabular-nums font-medium ${
+                className={`font-mono tabular-nums font-medium shrink-0 ${
                   pressure === 'critical'
                     ? 'text-rose-500 dark:text-rose-400'
                     : pressure === 'elevated'
@@ -486,22 +486,22 @@ export const OptimizerTab: React.FC = () => {
                 style={{ width: `${Math.min(100, overview?.commitPercent ?? 0)}%` }}
               />
             </div>
-            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums">
+            <div className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums truncate">
               提交上限 {formatBytesMb(overview?.commitTotalMb ?? 0)}
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-              <span>系统时钟精度 & 菜单延迟</span>
-              <Cpu className="h-3.5 w-3.5 text-zinc-500" />
+          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4 min-w-0">
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-zinc-400">
+              <span className="truncate min-w-0" title="系统时钟精度 & 菜单延迟">系统时钟精度 &amp; 菜单延迟</span>
+              <Cpu className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-zinc-50">
               {(overview?.timerResolutionMs ?? 15.625).toFixed(2)} ms
             </div>
-            <div className="mt-2 flex items-center gap-2 text-[11px]">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
               <span
-                className={`rounded-md px-1.5 py-0.5 border font-mono tabular-nums ${
+                className={`rounded-md px-1.5 py-0.5 border font-mono tabular-nums whitespace-nowrap ${
                   (overview?.menuShowDelayMs ?? 400) === 0
                     ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20'
                     : 'bg-zinc-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-transparent'
@@ -509,16 +509,16 @@ export const OptimizerTab: React.FC = () => {
               >
                 菜单延迟 {overview?.menuShowDelayMs ?? 400}ms
               </span>
-              <span className="text-slate-400 dark:text-zinc-500 tabular-nums">
+              <span className="text-slate-400 dark:text-zinc-500 tabular-nums whitespace-nowrap">
                 CPU {(overview?.cpuPercent ?? 0).toFixed(1)}%
               </span>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-              <span>压榨与白名单护盾统计</span>
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+          <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-zinc-950/60 p-4 min-w-0">
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-zinc-400">
+              <span className="truncate min-w-0" title="压榨与白名单护盾统计">压榨与白名单护盾统计</span>
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-slate-900 dark:text-zinc-50">
               {overview?.throttledCount ?? 0}{' '}
@@ -529,7 +529,7 @@ export const OptimizerTab: React.FC = () => {
             <div className="mt-2 text-[11px] text-slate-500 dark:text-zinc-400 truncate">
               VIP 前台：{overview?.foregroundProcess || '自动追踪'}
             </div>
-            <div className="mt-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 tabular-nums">
+            <div className="mt-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 tabular-nums truncate">
               已护盾 {overview?.protectedCount ?? 0} 个代理/核心实例
             </div>
           </div>
@@ -538,7 +538,7 @@ export const OptimizerTab: React.FC = () => {
 
       {/* 四大治理子区导航 */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-100/80 dark:bg-zinc-900/70 p-1 gap-1">
+        <div className="inline-flex flex-wrap max-w-full rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-100/80 dark:bg-zinc-900/70 p-1 gap-1">
           {(
             [
               ['processes', '进程霸权台', Activity],
@@ -553,13 +553,13 @@ export const OptimizerTab: React.FC = () => {
                 key={key}
                 type="button"
                 onClick={() => setSection(key)}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
                   active
                     ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-50 shadow-xs ring-1 ring-black/5 dark:ring-white/10'
                     : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span>{label}</span>
               </button>
             );
@@ -574,9 +574,9 @@ export const OptimizerTab: React.FC = () => {
             if (section === 'files') refreshJunk();
             if (section === 'whitelist') refreshWhitelist();
           }}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+          className="inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
         >
-          <RefreshCw className="h-3.5 w-3.5" />
+          <RefreshCw className="h-3.5 w-3.5 shrink-0" />
           刷新探测
         </button>
       </div>
@@ -656,32 +656,32 @@ export const OptimizerTab: React.FC = () => {
                       className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors"
                     >
                       <td className="py-2.5 pr-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-slate-900 dark:text-zinc-100">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium text-slate-900 dark:text-zinc-100 truncate max-w-[220px]" title={proc.name}>
                             {proc.name}
                           </span>
                           {proc.count > 1 && (
-                            <span className="rounded-md bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-slate-500 dark:text-zinc-400">
+                            <span className="shrink-0 rounded-md bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-slate-500 dark:text-zinc-400">
                               ×{proc.count}
                             </span>
                           )}
                         </div>
                         {proc.exePath && (
-                          <div className="mt-0.5 text-[11px] text-slate-400 dark:text-zinc-500 truncate max-w-md">
+                          <div className="mt-0.5 text-[11px] text-slate-400 dark:text-zinc-500 truncate max-w-md" title={proc.exePath}>
                             {proc.exePath}
                           </div>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 font-mono tabular-nums text-slate-700 dark:text-zinc-200">
+                      <td className="py-2.5 px-3 font-mono tabular-nums text-slate-700 dark:text-zinc-200 whitespace-nowrap">
                         {formatBytesMb(proc.workingSetMb)}
                       </td>
-                      <td className="py-2.5 px-3 font-mono tabular-nums text-slate-600 dark:text-zinc-300">
+                      <td className="py-2.5 px-3 font-mono tabular-nums text-slate-600 dark:text-zinc-300 whitespace-nowrap">
                         {proc.cpuPercent.toFixed(1)}%
                       </td>
                       <td className="py-2.5 px-3">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span
-                            className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium border ${
+                            className={`inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium border ${
                               proc.protection === 'proxy'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
                                 : proc.protection === 'antigravity' ||
@@ -697,13 +697,13 @@ export const OptimizerTab: React.FC = () => {
                             {proc.protectionLabel}
                           </span>
                           {proc.isFrozen && (
-                            <span className="inline-flex items-center gap-0.5 rounded-md bg-sky-500/15 border border-sky-500/25 px-1.5 py-0.5 text-[10px] font-medium text-sky-400">
-                              <Snowflake className="h-2.5 w-2.5" />
+                            <span className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-md bg-sky-500/15 border border-sky-500/25 px-1.5 py-0.5 text-[10px] font-medium text-sky-400">
+                              <Snowflake className="h-2.5 w-2.5 shrink-0" />
                               已冻结
                             </span>
                           )}
                           {!proc.isFrozen && proc.state === 'isolated' && (
-                            <span className="inline-flex items-center rounded-md bg-zinc-800 border border-white/10 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                            <span className="inline-flex items-center whitespace-nowrap rounded-md bg-zinc-800 border border-white/10 px-1.5 py-0.5 text-[10px] text-zinc-400">
                               已隔离末端核
                             </span>
                           )}
@@ -711,12 +711,12 @@ export const OptimizerTab: React.FC = () => {
                       </td>
                       <td className="py-2.5 pl-3 text-right">
                         {!proc.canControl ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
-                            <ShieldCheck className="h-3.5 w-3.5" />
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-emerald-600 dark:text-emerald-400">
+                            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
                             白名单免杀
                           </span>
                         ) : (
-                          <div className="inline-flex items-center justify-end gap-1.5">
+                          <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                             <button
                               type="button"
                               disabled={busyKey === `proc:${proc.name}`}
@@ -726,7 +726,7 @@ export const OptimizerTab: React.FC = () => {
                                   proc.isFrozen ? 'unfreeze' : 'freeze',
                                 )
                               }
-                              className={`rounded-md px-2 py-1 text-[11px] font-medium border transition-colors ${
+                              className={`whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium border transition-colors ${
                                 proc.isFrozen
                                   ? 'bg-sky-500/20 border-sky-500/30 text-sky-300 hover:bg-sky-500/30'
                                   : 'bg-zinc-800/80 border-white/10 text-zinc-200 hover:border-sky-500/40 hover:text-sky-300'
@@ -744,14 +744,14 @@ export const OptimizerTab: React.FC = () => {
                                   proc.state === 'isolated' ? 'restore' : 'isolate',
                                 )
                               }
-                              className="rounded-md border border-slate-200/80 dark:border-white/10 px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-zinc-300 hover:border-amber-500/40 hover:text-amber-300 transition-colors"
+                              className="whitespace-nowrap rounded-md border border-slate-200/80 dark:border-white/10 px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-zinc-300 hover:border-amber-500/40 hover:text-amber-300 transition-colors"
                             >
                               {proc.state === 'isolated' ? '还原' : '孤立'}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleAddCustomWhitelist(proc.name)}
-                              className="rounded-md border border-slate-200/80 dark:border-white/10 px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-300 transition-colors"
+                              className="whitespace-nowrap rounded-md border border-slate-200/80 dark:border-white/10 px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-300 transition-colors"
                               title="加入永久自定义白名单"
                             >
                               加白
@@ -760,7 +760,7 @@ export const OptimizerTab: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleProcessAction(proc.name, 'kill')}
-                                className="rounded-md bg-rose-600 hover:bg-rose-500 px-2 py-1 text-[11px] font-semibold text-white"
+                                className="whitespace-nowrap rounded-md bg-rose-600 hover:bg-rose-500 px-2 py-1 text-[11px] font-semibold text-white"
                               >
                                 确认结束
                               </button>
@@ -768,7 +768,7 @@ export const OptimizerTab: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => setConfirmKillName(proc.name)}
-                                className="rounded-md border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 text-[11px] font-medium text-rose-400 transition-colors"
+                                className="whitespace-nowrap rounded-md border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 text-[11px] font-medium text-rose-400 transition-colors"
                               >
                                 结束
                               </button>
@@ -803,27 +803,27 @@ export const OptimizerTab: React.FC = () => {
                 >
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
                           <span
-                            className={`h-2 w-2 rounded-full ${
+                            className={`h-2 w-2 rounded-full shrink-0 ${
                               isRunning ? 'bg-amber-400 animate-pulse' : 'bg-zinc-500'
                             }`}
                           />
-                          <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate" title={svc.displayName}>
                             {svc.displayName}
                           </h3>
                         </div>
-                        <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 font-mono tabular-nums">
-                          <span>{svc.name}</span>
-                          <span>·</span>
-                          <span>约占 {svc.estMemoryMb} MB</span>
+                        <div className="mt-1 flex items-center gap-2 min-w-0 text-[11px] text-slate-500 dark:text-zinc-400 font-mono tabular-nums">
+                          <span className="truncate" title={svc.name}>{svc.name}</span>
+                          <span className="shrink-0">·</span>
+                          <span className="shrink-0 whitespace-nowrap">约占 {svc.estMemoryMb} MB</span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium border ${
+                          className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium border whitespace-nowrap ${
                             isRunning
                               ? 'bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20'
                               : 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
@@ -831,13 +831,13 @@ export const OptimizerTab: React.FC = () => {
                         >
                           {isRunning ? '运行中' : '已停止'}
                         </span>
-                        <span className="rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 px-2 py-0.5 text-[10.5px] text-slate-600 dark:text-zinc-300">
+                        <span className="rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 px-2 py-0.5 text-[10.5px] text-slate-600 dark:text-zinc-300 whitespace-nowrap">
                           {isAuto ? '开机自启' : '手动触发'}
                         </span>
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed break-words">
                       {svc.riskNote}
                     </p>
                   </div>
@@ -853,12 +853,12 @@ export const OptimizerTab: React.FC = () => {
                       </span>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
                         disabled={Boolean(busyKey)}
                         onClick={() => handleServiceAction(svc.name, isAuto ? 'manual' : 'auto')}
-                        className="rounded-lg border border-slate-200/80 dark:border-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                        className="whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                       >
                         {isAuto ? '改设为手动' : '恢复自启'}
                       </button>
@@ -866,13 +866,13 @@ export const OptimizerTab: React.FC = () => {
                         type="button"
                         disabled={Boolean(busyKey)}
                         onClick={() => handleServiceAction(svc.name, isRunning ? 'stop' : 'start')}
-                        className={`inline-flex items-center gap-1 rounded-lg px-3 py-1 text-[11px] font-semibold transition-colors ${
+                        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-1 text-[11px] font-semibold transition-colors ${
                           isRunning
                             ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/25 hover:bg-rose-500/25'
                             : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/25'
                         }`}
                       >
-                        <Power className="h-3 w-3" />
+                        <Power className="h-3 w-3 shrink-0" />
                         {isRunning ? '立即停止' : '重新启动'}
                       </button>
                     </div>
@@ -891,11 +891,11 @@ export const OptimizerTab: React.FC = () => {
           <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-6 flex flex-col justify-between gap-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
                     安全垃圾与开发冗余缓存
                   </h3>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400 break-words">
                     默认仅勾选安全目录；浏览器清理仅删媒体 Cache，绝对保留账号登录态。
                   </p>
                 </div>
@@ -903,7 +903,7 @@ export const OptimizerTab: React.FC = () => {
                   type="button"
                   disabled={busyKey === 'scan_junk'}
                   onClick={refreshJunk}
-                  className="rounded-lg border border-slate-200/80 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                  className="shrink-0 whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
                 >
                   {busyKey === 'scan_junk' ? '扫描中…' : '重新扫描'}
                 </button>
@@ -929,16 +929,16 @@ export const OptimizerTab: React.FC = () => {
                               return next;
                             });
                           }}
-                          className="mt-0.5 rounded border-zinc-600 accent-indigo-600"
+                          className="mt-0.5 shrink-0 rounded border-zinc-600 accent-indigo-600"
                         />
                         <div className="min-w-0">
-                          <div className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
+                          <div className="text-xs font-semibold text-slate-900 dark:text-zinc-100 break-words">
                             {item.name}
                           </div>
-                          <div className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400">
+                          <div className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-400 break-words">
                             {item.description}
                           </div>
-                          <div className="mt-0.5 text-[10.5px] font-mono text-slate-400 dark:text-zinc-500 truncate">
+                          <div className="mt-0.5 text-[10.5px] font-mono text-slate-400 dark:text-zinc-500 truncate" title={item.path}>
                             {item.path}
                           </div>
                         </div>
@@ -957,7 +957,7 @@ export const OptimizerTab: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/[0.06]">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
               <span className="text-xs text-slate-500 dark:text-zinc-400 tabular-nums">
                 已选预计释放：<strong className="text-slate-900 dark:text-zinc-100">{formatBytesMb(selectedJunkTotalMb)}</strong>
               </span>
@@ -965,9 +965,9 @@ export const OptimizerTab: React.FC = () => {
                 type="button"
                 disabled={selectedJunkIds.size === 0 || Boolean(busyKey)}
                 onClick={handleCleanJunk}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 transition-colors"
+                className="inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-lg bg-rose-600 hover:bg-rose-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 transition-colors"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-3.5 w-3.5 shrink-0" />
                 {busyKey === 'clean_junk' ? '清理中…' : '一键安全清理'}
               </button>
             </div>
@@ -1168,12 +1168,12 @@ export const OptimizerTab: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 space-y-3 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate min-w-0" title="🛡️ 代理网络免杀（硬保护）">
                   🛡️ 代理网络免杀（硬保护）
                 </span>
-                <span className="text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums">
+                <span className="text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums shrink-0 whitespace-nowrap">
                   {whitelist?.proxy.length ?? 0} 项
                 </span>
               </div>
@@ -1189,16 +1189,16 @@ export const OptimizerTab: React.FC = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 space-y-3 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 truncate min-w-0" title="🤖 Antigravity 生态（含进程树）">
                   🤖 Antigravity 生态（含进程树）
                 </span>
-                <span className="text-[11px] text-indigo-400 tabular-nums">
+                <span className="text-[11px] text-indigo-400 tabular-nums shrink-0 whitespace-nowrap">
                   动态子树 {whitelist?.dynamicTreeCount ?? 0} 个
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 break-words">
                 仅由 Antigravity / Studio 拉起的子进程（如自身 msedgewebview2 / node）自动继承免杀；无关系统搜索拉起的 WebView2 正常压制。
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -1213,12 +1213,12 @@ export const OptimizerTab: React.FC = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 space-y-3 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate min-w-0" title="⚙️ Windows 内核护盾">
                   ⚙️ Windows 内核护盾
                 </span>
-                <span className="text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums">
+                <span className="text-[11px] text-slate-400 dark:text-zinc-500 tabular-nums shrink-0 whitespace-nowrap">
                   {whitelist?.system.length ?? 0} 项
                 </span>
               </div>
