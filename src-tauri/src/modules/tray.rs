@@ -574,7 +574,6 @@ pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
                                 let _ = crate::modules::lightweight::exit_lightweight_mode(app);
                                 let _ = app.emit("tray://show-window", ());
                             }
-                            }
                         } else {
                             handle_tray_click(app, Some(rect));
                         }

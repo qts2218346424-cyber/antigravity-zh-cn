@@ -2314,6 +2314,7 @@ async fn admin_test_model_connectivity(
         project_id: Some(pid),
         account_id: Some(acc.id),
         override_ua: req.override_ua,
+        probe_intent: true,
     };
     crate::proxy::handlers::warmup::handle_warmup(State(state), Json(warmup_req)).await
 }
