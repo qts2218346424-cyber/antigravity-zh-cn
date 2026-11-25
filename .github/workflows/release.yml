@@ -91,7 +91,8 @@ jobs:
             - **官方 Hub / IDE / WSL 生态升级**：官方 Hub 指纹基准升级至 `2.33.0` (CL `1023160026`) 并支持 Hub UA 平台切换；实现 Antigravity IDE 会话状态原子同步无感热切号与免条款弹窗；新增 **WSL 环境凭据同步**、403 一键解限与真实测活错误透出、手动预热弹窗确认。
             - **桌面体验与安全修复**：修复 Windows 轻量模式恢复防死锁、macOS Keychain 缓存冷却、多显示器坐标偏移及 360px 迷你悬浮窗顶栏溢出，同时封堵静态后缀鉴权绕过并强化凭据脱敏。
 
-            ### ✨ 完整保留 Antigravity Studio 定制特性
+            ### ✨ 完整保留 Antigravity Studio 定制特性与视觉焕新
+            - 🎨 **全新「A 字团子大家族」应用图标**：彻底重绘日系治愈 3D 软糯粘土风格图标（8 颗马卡龙配色团子叠成字母「A」），全平台（Windows `.ico` / macOS `.icns` / Linux / 托盘剪影 / Web）完整换新。
             - 完整保留 8 大 Studio 美化与治理工坊、6+1 角色独立透明桌面伴侣、`Optimizer` 一键 UAC 提权治理、全宽弹性智能聚焦导航栏以及 `latest.json` 专属正式 OTA 自动更新通道。
           releaseDraft: false
           prerelease: true
