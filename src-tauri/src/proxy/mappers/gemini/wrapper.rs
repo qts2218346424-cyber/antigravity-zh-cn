@@ -1,6 +1,5 @@
 // Gemini v1internal 包装/解包
 use serde_json::{json, Value};
-use tracing::{debug, info};
 
 /// 包装请求体为 v1internal 格式
 pub fn wrap_request_v2(
@@ -65,7 +64,7 @@ pub fn wrap_request_v2(
 
     let lower_model = final_model_name.to_lowercase();
 
-    let client_budget = inner_request
+    let _client_budget = inner_request
         .get("generationConfig")
         .and_then(|gc| gc.get("thinkingConfig"))
         .and_then(|tc| {
@@ -77,7 +76,7 @@ pub fn wrap_request_v2(
                 .or_else(|| tc.get("maxTokens"))
         })
         .and_then(|b| b.as_i64());
-    let client_level = inner_request
+    let _client_level = inner_request
         .get("generationConfig")
         .and_then(|gc| gc.get("thinkingConfig"))
         .and_then(|tc| {
@@ -87,7 +86,7 @@ pub fn wrap_request_v2(
                 .or_else(|| tc.get("reasoningEffort"))
                 .or_else(|| tc.get("effort"))
         })
-        .and_then(|v| v.as_str());
+        .and_then(crate::proxy::pipeline::extract_thinking_level_str);
 
     let is_under_v3 = crate::proxy::model_specs::is_gemini_under_v3(final_model_name)
         || crate::proxy::model_specs::is_gemini_under_v3(original_model);
@@ -106,9 +105,18 @@ pub fn wrap_request_v2(
     let has_explicit_thinking = inner_request
         .get("generationConfig")
         .and_then(|gc| gc.get("thinkingConfig"))
-        .and_then(|tc| tc.get("thinkingBudget"))
-        .and_then(|b| b.as_i64())
-        .map(|b| b > 0)
+        .map(|tc| {
+            let include_disabled = tc
+                .get("includeThoughts")
+                .or_else(|| tc.get("include_thoughts"))
+                .and_then(|v| v.as_bool())
+                == Some(false);
+            let budget = tc
+                .get("thinkingBudget")
+                .or_else(|| tc.get("thinking_budget"))
+                .and_then(|b| b.as_i64());
+            !include_disabled && budget.is_some_and(|b| b != 0)
+        })
         .unwrap_or(false);
     let is_thinking_active = should_inject || has_explicit_thinking;
 
@@ -349,7 +357,16 @@ pub fn wrap_request_v2(
             gen_config.remove("thinkingConfig");
         }
 
-        if force_server_thinking {
+        // 先读取客户端原始的 includeThoughts 开关，避免被下方的 force_server_thinking 覆盖（与 handlers/gemini.rs 对齐）
+        let client_include_thoughts = gen_config
+            .get("thinkingConfig")
+            .and_then(|t| {
+                t.get("includeThoughts")
+                    .or_else(|| t.get("include_thoughts"))
+            })
+            .and_then(|v| v.as_bool());
+
+        if force_server_thinking && client_include_thoughts != Some(false) {
             let thinking_config = gen_config
                 .entry("thinkingConfig".to_string())
                 .or_insert(json!({}))
@@ -374,8 +391,7 @@ pub fn wrap_request_v2(
                     .or_else(|| t.get("reasoningEffort"))
                     .or_else(|| t.get("effort"))
             })
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .and_then(crate::proxy::pipeline::extract_thinking_level_str);
         let client_budget = gen_config
             .get("thinkingConfig")
             .and_then(|t| {
@@ -388,9 +404,17 @@ pub fn wrap_request_v2(
             })
             .and_then(|v| v.as_i64());
 
+        // Gemini 协议中 thinkingBudget == -1 表示动态/自适应思考开启，只有 0 或 includeThoughts=false 才是显式关闭。
+        // 不能用 `b <= 0 => 0`，否则 `-1` 会被误判为 Disabled 并清空上游思考配置（Ref #4012）。
+        let client_thinking_type = match (client_include_thoughts, client_budget) {
+            (Some(false), _) => Some("disabled"),
+            (_, Some(b)) if b < 0 => Some("enabled"),
+            (Some(true), _) => Some("enabled"),
+            _ => None,
+        };
         let client_switch = crate::proxy::pipeline::extract_client_thinking_switch(
-            None,
-            client_budget.map(|b| if b <= 0 { 0 } else { b as u64 }),
+            client_thinking_type,
+            client_budget.and_then(|b| if b < 0 { None } else { Some(b as u64) }),
             client_level.as_deref(),
         );
 
@@ -733,6 +757,12 @@ pub fn wrap_request_v2(
         final_request_obj["requestType"] = json!("agent");
     }
 
+    if let Some(tok) = token {
+        if tok.is_paygo() {
+            final_request_obj["enabledCreditTypes"] = json!(["GOOGLE_ONE_AI"]);
+        }
+    }
+
     crate::proxy::pipeline::InboundThinkingPipeline::align_official_envelope(
         &mut final_request_obj,
     );
@@ -851,234 +881,6 @@ pub fn inject_ids_to_response(response: &mut Value, model_name: &str) {
     }
 }
 
-/// Layer-3 后台摘要请求的超时（秒）。
-///
-/// 上游客户端的默认超时是 600s，对"摘要整段对话"这种辅助任务过长 ——
-/// 一旦上游卡住，会长时间占住一个后台任务与连接。这里显式收紧到有界值。
-pub const SUMMARY_REQUEST_TIMEOUT_SECS: u64 = 180;
-const CONTEXT_SUMMARY_PROMPT: &str = r#"You are a context compression specialist. Your task is to create a structured XML snapshot of the conversation history.
-
-This snapshot will become the Agent's ONLY memory of the past. All key details, plans, errors, and user instructions MUST be preserved.
-
-First, think through the entire history in a private <scratchpad>. Review the user's overall goal, the agent's actions, tool outputs, file modifications, and any unresolved issues. Identify every piece of information critical for future actions.
-
-After reasoning, generate the final <state_snapshot> XML object. Information must be extremely dense. Omit any irrelevant conversational filler.
-
-The structure MUST be as follows:
-
-<state_snapshot>
-  <overall_goal>
-    <!-- Describe the user's high-level goal in one concise sentence -->
-  </overall_goal>
-
-  <technical_context>
-    <!-- Tech stack: frameworks, languages, toolchain, dependency versions -->
-  </technical_context>
-
-  <file_system_state>
-    <!-- List files that were created, read, modified, or deleted. Note their status -->
-  </file_system_state>
-
-  <code_changes>
-    <!-- Key code snippets (preserve function signatures and important logic) -->
-  </code_changes>
-
-  <debugging_history>
-    <!-- List all errors encountered, with stack traces, and how they were fixed -->
-  </debugging_history>
-
-  <current_plan>
-    <!-- Step-by-step plan. Mark completed steps -->
-  </current_plan>
-
-  <user_preferences>
-    <!-- User's work preferences for this project (test commands, code style, etc.) -->
-  </user_preferences>
-
-  <key_decisions>
-    <!-- Critical architectural decisions and design choices -->
-  </key_decisions>
-
-  <latest_thinking_signature>
-    <!-- [CRITICAL] Preserve the last valid thinking signature -->
-    <!-- Format: base64-encoded signature string -->
-    <!-- This MUST be copied exactly as-is, no modifications -->
-  </latest_thinking_signature>
-</state_snapshot>
-
-**IMPORTANT**:
-1. Code snippets must be complete, including function signatures and key logic
-2. Error messages must be preserved verbatim, including line numbers and stacks
-3. File paths must use absolute paths
-4. The thinking signature must be copied exactly, no modifications
-"#;
-
-async fn try_compress_gemini_with_summary(
-    original_request: &Value,
-    trace_id: &str,
-    token_manager: &std::sync::Arc<crate::proxy::TokenManager>,
-    upstream: &std::sync::Arc<crate::proxy::upstream::client::UpstreamClient>,
-    session_id_str: &str,
-    project_id: &str,
-    account_id: &str,
-) -> Result<Value, String> {
-    info!(
-        "[{}] [Layer-3] [Gemini] Starting context compression with XML summary",
-        trace_id
-    );
-
-    let last_signature =
-        crate::proxy::mappers::context_manager::ContextManager::extract_last_openai_valid_signature(
-            session_id_str,
-        );
-
-    let signature_instruction = if let Some(ref sig) = last_signature {
-        format!("\n\n**CRITICAL**: The last thinking signature is:\n```\n{}\n```\nYou MUST include this EXACTLY in the <latest_thinking_signature> section.", sig)
-    } else {
-        "\n\n**Note**: No thinking signature found in history. Leave <latest_thinking_signature> empty.".to_string()
-    };
-
-    let mut summary_messages = original_request
-        .get("contents")
-        .and_then(|c| c.as_array())
-        .cloned()
-        .unwrap_or_default();
-
-    summary_messages.push(json!({
-        "role": "user",
-        "parts": [{
-            "text": format!("{}{}", CONTEXT_SUMMARY_PROMPT, signature_instruction)
-        }]
-    }));
-
-    // 兜底简单任务模型完全由当前号池动态推导（优先最新 flash-low，其次无后缀 flash），绝不硬编码
-    let background_model =
-        crate::proxy::common::model_gate::pick_background_model_from_pool(token_manager.as_ref())
-            .ok_or_else(|| "No flash model available in the current quota pool".to_string())?;
-
-    let mut summary_request = original_request.clone();
-    if let Some(obj) = summary_request.as_object_mut() {
-        obj.insert("contents".to_string(), json!(summary_messages));
-        obj.insert("model".to_string(), json!(background_model));
-        obj.remove("stream");
-    }
-
-    debug!(
-        "[{}] [Layer-3] [Gemini] Calling {} for summary generation",
-        trace_id, background_model
-    );
-
-    let token_obj = token_manager.get_token_by_id(account_id);
-    let access_token = token_obj
-        .as_ref()
-        .map(|t| t.access_token.clone())
-        .ok_or_else(|| "No access token available".to_string())?;
-
-    let wrapped_summary_body = wrap_request(
-        &summary_request,
-        project_id,
-        &background_model,
-        Some(account_id),
-        Some(session_id_str),
-        token_obj.as_ref(),
-    );
-
-    // 走共享的辅助调用通道：复用主请求路径的客户端（含按账号代理池）、
-    // 端点顺序（Daily → Sandbox → Prod）、URL 形状与回退判定。
-    //
-    // 历史实现手写了
-    // `{host}/v1internal/projects/{p}/locations/global/models/{m}:generateContent`
-    // 并把 host 硬编码为 sandbox —— 该形状在 daily / sandbox / prod 三个 host 上
-    // 一律返回 HTML 404，因此本函数从未成功过（后台 spawn，失败只打日志，表现为静默空转）。
-    let gemini_response = upstream
-        .call_v1_internal_auxiliary(
-            "generateContent",
-            &access_token,
-            wrapped_summary_body,
-            Some(account_id),
-            SUMMARY_REQUEST_TIMEOUT_SECS,
-        )
-        .await?;
-
-    // 上游返回的是 `{"response": {...}}` 包装体，必须先解包才能取到 candidates。
-    let unwrapped_summary = unwrap_response(&gemini_response);
-
-    // 只拼接「非思考 part」的文本。
-    //
-    // 实测（gemini-3.1-flash-lite / gemini-2.5-flash-lite）响应形如：
-    //   parts[0] = { "thought": true, "text": "" }   ← 空思考块，排在最前
-    //   parts[1] = { "text": "```xml\n<summary>…" }  ← 真正的摘要
-    // 因此不能取 `parts[0].text`（会得到空串，把空摘要当成功静默写回），
-    // 也不能只用 `parts[0]` —— 必须按 `thought` 标志过滤后拼接全部可见文本。
-    let xml_summary = unwrapped_summary
-        .get("candidates")
-        .and_then(|c| c.get(0))
-        .and_then(|c| c.get("content"))
-        .and_then(|c| c.get("parts"))
-        .and_then(|parts| parts.as_array())
-        .map(|parts| {
-            parts
-                .iter()
-                .filter(|part| !crate::proxy::thinking_store::is_thought_part(part))
-                .filter_map(|part| part.get("text").and_then(|t| t.as_str()))
-                .collect::<String>()
-        })
-        .filter(|text| !text.trim().is_empty())
-        .ok_or_else(|| "Failed to extract text from response".to_string())?;
-
-    info!(
-        "[{}] [Layer-3] [Gemini] Generated XML summary (len: {} chars)",
-        trace_id,
-        xml_summary.len()
-    );
-
-    let forked_messages = vec![
-        json!({
-            "role": "user",
-            "parts": [{
-                "text": format!("Context has been compressed. Here is the structured summary of our conversation history:\n\n{}", xml_summary)
-            }]
-        }),
-        json!({
-            "role": "model",
-            "parts": [{
-                "text": "I have reviewed the compressed context summary. I understand the current state and will continue from here."
-            }]
-        }),
-    ];
-
-    let mut forked_request = original_request.clone();
-    if let Some(obj) = forked_request.as_object_mut() {
-        let mut final_msgs = forked_messages;
-        if let Some(last_msg) = original_request
-            .get("contents")
-            .and_then(|c| c.as_array())
-            .and_then(|a| a.last())
-        {
-            if last_msg.get("role").and_then(|r| r.as_str()) == Some("user") {
-                let has_summary_inst = last_msg
-                    .get("parts")
-                    .and_then(|p| p.as_array())
-                    .map(|arr| {
-                        arr.iter().any(|part| {
-                            part.get("text")
-                                .and_then(|t| t.as_str())
-                                .map(|t| t.contains(CONTEXT_SUMMARY_PROMPT))
-                                .unwrap_or(false)
-                        })
-                    })
-                    .unwrap_or(false);
-                if !has_summary_inst {
-                    final_msgs.push(last_msg.clone());
-                }
-            }
-        }
-        obj.insert("contents".to_string(), json!(final_msgs));
-    }
-
-    Ok(forked_request)
-}
-
 pub fn wrap_request(
     body: &Value,
     project_id: &str,
@@ -1100,6 +902,7 @@ pub fn wrap_request(
         false,
     )
 }
+#[cfg(test)]
 static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
@@ -1183,12 +986,12 @@ mod tests {
         );
         let req = result.get("request").unwrap();
         let gen_config = req.get("generationConfig").unwrap();
-        let budget = gen_config["thinkingConfig"]["thinkingBudget"]
-            .as_u64()
-            .unwrap();
 
-        // Should be capped at 24576
-        assert_eq!(budget, 24576);
+        // 新规则：在 Adaptive 模式下，未收录的 Flash exp 模型不再伪造数字预算，交服务端默认
+        assert!(
+            gen_config["thinkingConfig"].get("thinkingBudget").is_none(),
+            "Adaptive 模式下不显式下发 thinkingBudget"
+        );
 
         // Test with Pro model (should NOT cap)
         let body_pro = json!({
@@ -1412,18 +1215,11 @@ mod tests {
             );
 
             let body = json!({
-                "model": "claude-3-7-sonnet-thinking",
+                "model": "claude-sonnet-4-6",
                 "messages": [{"role": "user", "content": "hi"}]
             });
 
-            let result = wrap_request(
-                &body,
-                "proj",
-                "claude-3-7-sonnet-thinking",
-                None,
-                None,
-                None,
-            );
+            let result = wrap_request(&body, "proj", "claude-sonnet-4-6", None, None, None);
             let req = result.get("request").unwrap();
 
             // 1. 确保根目录没有 thinking
@@ -1460,7 +1256,7 @@ mod tests {
             crate::proxy::config::update_thinking_budget_config(
                 crate::proxy::config::ThinkingBudgetConfig::default(),
             );
-            // 验证 Gemini 模型注入默认预算 24576
+            // 验证 Gemini exp 模型在默认自适应模式下开启思考且不硬编码预算数字
             let body = json!({
                 "model": "gemini-2.0-flash-thinking-exp",
                 "contents": [{"role": "user", "parts": [{"text": "hi"}]}]
@@ -1478,10 +1274,10 @@ mod tests {
             let gen_config = req.get("generationConfig").unwrap();
             let thinking_config = gen_config.get("thinkingConfig").unwrap();
 
-            let budget = thinking_config["thinkingBudget"].as_u64().unwrap();
-            assert_eq!(
-                budget, 24576,
-                "Gemini default thinking budget should be 24576"
+            assert_eq!(thinking_config["includeThoughts"], true);
+            assert!(
+                thinking_config.get("thinkingBudget").is_none(),
+                "Adaptive 模式下不显式注入固定数字预算"
             );
         }
     }
@@ -1669,7 +1465,7 @@ mod tests {
         crate::proxy::config::update_thinking_budget_config(
             crate::proxy::config::ThinkingBudgetConfig::default(),
         );
-        // 1. 启发式模型忽略客户端 thinkingLevel
+        // 1. 启发式模型 gemini-3.7-flash-high（官方声明 thinkingBudget=-1，预算通道）：输出 thinkingBudget=-1
         let req_high = json!({
             "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
             "generationConfig": {
@@ -1704,8 +1500,8 @@ mod tests {
             None,
         );
         let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
-        assert_eq!(tc["thinkingBudget"], -1);
-        assert!(tc.get("thinkingLevel").is_none());
+        assert_eq!(tc["thinkingLevel"], "HIGH");
+        assert!(tc.get("thinkingBudget").is_none());
 
         let req_flash_low = json!({
             "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
@@ -1715,10 +1511,10 @@ mod tests {
         });
         let wrapped = wrap_request(&req_flash_low, "test-p", "gemini-3-flash", None, None, None);
         let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
-        assert_eq!(tc["thinkingBudget"], 1000);
-        assert!(tc.get("thinkingLevel").is_none());
+        assert_eq!(tc["thinkingLevel"], "LOW");
+        assert!(tc.get("thinkingBudget").is_none());
 
-        // 3. 裸模型 Flash 客户端传 NONE 或未传：绝不关闭思考，强制回填 -medium (4096)
+        // 3. 裸模型 Flash 客户端传 NONE：显式关闭思考，下发 includeThoughts=false, thinkingBudget=0
         let req_flash_none = json!({
             "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
             "generationConfig": {
@@ -1734,10 +1530,10 @@ mod tests {
             None,
         );
         let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
-        // 新行为：NONE 与 LOW 同档，回填 1000 预算
-        assert_eq!(tc["thinkingBudget"], 1000);
-        assert!(tc.get("thinkingLevel").is_none());
+        assert_eq!(tc["includeThoughts"], false);
+        assert_eq!(tc["thinkingBudget"], 0);
 
+        // 4. 裸模型 Flash 缺省 thinkingLevel：默认对齐官方 High 旗舰通道
         let req_flash_empty = json!({
             "contents": [{"role": "user", "parts": [{"text": "hi"}]}]
         });
@@ -1750,9 +1546,10 @@ mod tests {
             None,
         );
         let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
-        assert_eq!(tc["thinkingBudget"], 4000);
+        assert_eq!(tc["thinkingLevel"], "HIGH");
+        assert!(tc.get("thinkingBudget").is_none());
 
-        // 4. 裸模型 Flash 客户端传入自定义 thinkingBudget：彻底被忽略，由服务端权威等级回填
+        // 4. 裸模型 Flash 客户端传入自定义 thinkingBudget：彻底被忽略，由服务端权威等级接管
         let req_flash_custom_budget = json!({
             "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
             "generationConfig": {
@@ -1768,7 +1565,8 @@ mod tests {
             None,
         );
         let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
-        assert_eq!(tc["thinkingBudget"], 4000);
+        assert_eq!(tc["thinkingLevel"], "HIGH");
+        assert!(tc.get("thinkingBudget").is_none());
 
         let req_flash_high_custom_budget = json!({
             "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
@@ -1785,7 +1583,101 @@ mod tests {
             None,
         );
         let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
-        // 新行为：HIGH 档回填 -1（不限预算）
+        assert_eq!(tc["thinkingLevel"], "HIGH");
+        assert!(tc.get("thinkingBudget").is_none());
+    }
+
+    #[test]
+    fn test_gemini_negative_thinking_budget_preserves_thinking() {
+        let _lock = crate::proxy::config::TEST_CONFIG_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        crate::proxy::config::update_thinking_budget_config(
+            crate::proxy::config::ThinkingBudgetConfig::default(),
+        );
+
+        // 1. Gemini 动态思考哨兵 thinkingBudget=-1（如 agy_cli gemini-api:* 请求）：不得被误判为关闭思考
+        let req_dynamic = json!({
+            "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+            "generationConfig": {
+                "thinkingConfig": {
+                    "includeThoughts": true,
+                    "thinkingBudget": -1
+                }
+            }
+        });
+        let wrapped = wrap_request(&req_dynamic, "test-p", "gemini-3-flash", None, None, None);
+        let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
+        assert_eq!(tc["includeThoughts"], true);
+        assert_eq!(tc["thinkingLevel"], "HIGH");
+        assert!(
+            tc.get("thinkingBudget").is_none(),
+            "thinkingLevel 模型收到 -1 动态思考时不得被写为 thinkingBudget: 0"
+        );
+
+        // 2. 仅传 thinkingBudget=-1（未显式传 includeThoughts）：同样视为开启动态思考
+        let req_bare_neg1 = json!({
+            "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+            "generationConfig": {
+                "thinkingConfig": { "thinkingBudget": -1 }
+            }
+        });
+        let wrapped = wrap_request(&req_bare_neg1, "test-p", "gemini-3-flash", None, None, None);
+        let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
+        assert_eq!(tc["includeThoughts"], true);
+        assert_eq!(tc["thinkingLevel"], "HIGH");
+        assert!(tc.get("thinkingBudget").is_none());
+
+        // 3. 显式 thinkingBudget=0（无论是否带 includeThoughts=true）：严格关闭思考
+        for req_zero in [
+            json!({
+                "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+                "generationConfig": { "thinkingConfig": { "thinkingBudget": 0 } }
+            }),
+            json!({
+                "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+                "generationConfig": { "thinkingConfig": { "includeThoughts": true, "thinkingBudget": 0 } }
+            }),
+        ] {
+            let wrapped = wrap_request(&req_zero, "test-p", "gemini-3-flash", None, None, None);
+            let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
+            assert_eq!(tc["includeThoughts"], false);
+            assert_eq!(tc["thinkingBudget"], 0);
+        }
+
+        // 4. 预算通道模型（gemini-3.7-flash-high）收到 thinkingBudget=-1：保持思考开启（thinkingBudget=-1）
+        let wrapped_budget_model = wrap_request(
+            &req_dynamic,
+            "test-p",
+            "gemini-3.7-flash-high",
+            None,
+            None,
+            None,
+        );
+        let tc = &wrapped_budget_model["request"]["generationConfig"]["thinkingConfig"];
+        assert_eq!(tc["includeThoughts"], true);
         assert_eq!(tc["thinkingBudget"], -1);
+        assert!(tc.get("thinkingLevel").is_none());
+
+        // 5. 显式 includeThoughts=false（即使同时携带 thinkingBudget=-1）：严格关闭思考（与 handlers/gemini.rs 对齐）
+        for req_false in [
+            json!({
+                "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+                "generationConfig": {
+                    "thinkingConfig": { "includeThoughts": false }
+                }
+            }),
+            json!({
+                "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+                "generationConfig": {
+                    "thinkingConfig": { "includeThoughts": false, "thinkingBudget": -1 }
+                }
+            }),
+        ] {
+            let wrapped = wrap_request(&req_false, "test-p", "gemini-3-flash", None, None, None);
+            let tc = &wrapped["request"]["generationConfig"]["thinkingConfig"];
+            assert_eq!(tc["includeThoughts"], false);
+            assert_eq!(tc["thinkingBudget"], 0);
+        }
     }
 }

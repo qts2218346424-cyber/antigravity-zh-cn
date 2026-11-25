@@ -25,7 +25,7 @@ use crate::proxy::token_manager::ProxyToken;
 fn create_test_token(
     email: &str,
     tier: Option<&str>,
-    health_score: f32,
+    _health_score: f32,
     reset_time: Option<i64>,
     remaining_quota: Option<i32>,
     supported_models: Vec<&str>,
@@ -39,6 +39,7 @@ fn create_test_token(
     ProxyToken {
         account_id: email.to_string(),
         priority: crate::models::account::default_priority(),
+        model_priorities: HashMap::new(),
         access_token: "test_token".to_string(),
         refresh_token: "test_refresh".to_string(),
         expires_in: 3600,
@@ -49,7 +50,7 @@ fn create_test_token(
         subscription_tier: tier.map(|s| s.to_string()),
         remaining_quota,
         protected_models: HashSet::new(),
-        health_score,
+        forbidden_models: std::collections::HashSet::new(),
         reset_time,
         weekly_reset_time: None,
         validation_blocked: false,
@@ -59,6 +60,11 @@ fn create_test_token(
         model_limits: std::collections::HashMap::new(),
         available_models: supported_models.iter().map(|s| s.to_lowercase()).collect(),
         model_metadata: std::collections::HashMap::new(),
+        model_reset_times: HashMap::new(),
+        model_weekly_reset_times: HashMap::new(),
+        model_quota_windows: HashMap::new(),
+        is_gcp_tos: false,
+        raw_tier: None,
     }
 }
 
@@ -114,15 +120,6 @@ fn compare_tokens_for_model(a: &ProxyToken, b: &ProxyToken, _target_model: &str)
     let quota_cmp = quota_b.cmp(&quota_a);
     if quota_cmp != Ordering::Equal {
         return quota_cmp;
-    }
-
-    // Priority 2: Health score
-    let health_cmp = b
-        .health_score
-        .partial_cmp(&a.health_score)
-        .unwrap_or(Ordering::Equal);
-    if health_cmp != Ordering::Equal {
-        return health_cmp;
     }
 
     Ordering::Equal
@@ -258,7 +255,7 @@ fn test_ultra_accounts_sorted_by_quota() {
 /// 测试完整排序场景：混合账号池
 #[test]
 fn test_full_sorting_mixed_accounts() {
-    fn sort_tokens_for_model(tokens: &mut Vec<ProxyToken>, target_model: &str) {
+    fn sort_tokens_for_model(tokens: &mut [ProxyToken], target_model: &str) {
         tokens.sort_by(|a, b| compare_tokens_for_model(a, b, target_model));
     }
 

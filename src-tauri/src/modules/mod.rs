@@ -1,5 +1,6 @@
 pub mod account;
 pub mod account_service;
+pub mod auto_refresh;
 pub mod auto_switch;
 pub mod cache;
 pub mod cli_handler;
@@ -18,18 +19,21 @@ pub mod logger;
 pub mod migration;
 pub mod oauth;
 pub mod oauth_server;
+pub mod probe;
 pub mod process;
 pub mod proxy_db;
 pub mod quota;
 pub mod scheduler;
 pub mod security_db;
 pub mod startup_quiet;
+pub mod startup_refresh;
 pub mod studio;
 pub mod token_stats;
 pub mod tray;
 pub mod update_checker;
 pub mod user_token_db;
 pub mod version;
+pub mod wsl_sync;
 
 use crate::models;
 

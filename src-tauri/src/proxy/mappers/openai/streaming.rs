@@ -1,12 +1,13 @@
 // OpenAI 流式转换
 use bytes::Bytes;
 use chrono::Utc;
-use futures::{Stream, StreamExt};
+use futures::Stream;
 use rand::Rng;
 use serde_json::{json, Value};
 use std::pin::Pin;
 use uuid::Uuid;
 
+use super::split_namespace_tool_name;
 use crate::proxy::mappers::error_classifier::{
     preview_payload, report_stream_error, StreamErrorReport,
 };
@@ -73,6 +74,7 @@ where
         client_tool_names,
         include_usage,
         None,
+        false,
     )
 }
 
@@ -94,6 +96,109 @@ pub struct OpenAIChatStreamHandler {
     pub is_thinking_active: bool,
     pub has_emitted_finish_reason: bool,
     pub has_emitted_done: bool,
+    pub saw_max_tokens_finish: bool,
+    pub is_structured_output: bool,
+    pub fence_prefix_stripped: bool,
+    pub fence_tail_buffer: String,
+}
+
+impl OpenAIChatStreamHandler {
+    fn clean_structured_output_delta(&mut self, content: String, is_final: bool) -> String {
+        if !self.is_structured_output {
+            return content;
+        }
+
+        let mut working = if self.fence_tail_buffer.is_empty() {
+            content
+        } else {
+            let mut s = std::mem::take(&mut self.fence_tail_buffer);
+            s.push_str(&content);
+            s
+        };
+
+        // 1. 开头围栏自适应剥离（支持跨 chunk 组合前缀）
+        if !self.fence_prefix_stripped {
+            let trimmed = working.trim_start();
+            if trimmed.is_empty() {
+                if !is_final {
+                    self.fence_tail_buffer = working;
+                    return String::new();
+                } else {
+                    self.fence_prefix_stripped = true;
+                    return String::new();
+                }
+            }
+
+            if let Some(rest) = trimmed
+                .strip_prefix("```json")
+                .or_else(|| trimmed.strip_prefix("```JSON"))
+                .or_else(|| trimmed.strip_prefix("```"))
+            {
+                if let Some(nl_idx) = rest.find('\n') {
+                    working = rest[nl_idx + 1..].to_string();
+                    self.fence_prefix_stripped = true;
+                } else if is_final {
+                    self.fence_prefix_stripped = true;
+                    return String::new();
+                } else {
+                    self.fence_tail_buffer = working;
+                    return String::new();
+                }
+            } else if trimmed.starts_with('`') && !is_final {
+                self.fence_tail_buffer = working;
+                return String::new();
+            } else {
+                self.fence_prefix_stripped = true;
+            }
+        }
+
+        // 2. 尾随围栏剥离与滑动缓冲
+        if is_final {
+            let trimmed = working.trim_end();
+            if let Some(rest) = trimmed.strip_suffix("```") {
+                working = rest.trim_end().to_string();
+            }
+            working
+        } else if let Some(fence_pos) = find_trailing_fence_start(&working) {
+            let to_emit = working[..fence_pos].to_string();
+            self.fence_tail_buffer = working[fence_pos..].to_string();
+            to_emit
+        } else {
+            working
+        }
+    }
+}
+
+fn find_trailing_fence_start(text: &str) -> Option<usize> {
+    let trimmed = text.trim_end_matches(|c: char| c == ' ' || c == '\t' || c == '\r' || c == '\n');
+    if !trimmed.ends_with('`') {
+        return None;
+    }
+    let backticks_start = trimmed
+        .rfind(|c: char| c != '`')
+        .map(|idx| idx + 1)
+        .unwrap_or(0);
+    let backticks_count = trimmed.len() - backticks_start;
+    if backticks_count == 0 {
+        return None;
+    }
+    let candidate_start = if backticks_start > 0 {
+        let before = &text[..backticks_start];
+        if let Some(nl_pos) = before.rfind('\n') {
+            if before[nl_pos..].chars().all(|c| c.is_whitespace()) {
+                nl_pos
+            } else {
+                backticks_start
+            }
+        } else if before.chars().all(|c| c.is_whitespace()) {
+            0
+        } else {
+            backticks_start
+        }
+    } else {
+        0
+    };
+    Some(candidate_start)
 }
 
 impl ProtocolStreamHandler for OpenAIChatStreamHandler {
@@ -300,7 +405,12 @@ impl ProtocolStreamHandler for OpenAIChatStreamHandler {
 
                     let gemini_finish_reason = raw_finish_reason.map(|f| match f {
                         "STOP" => "stop",
-                        "MAX_TOKENS" => "length",
+                        "MAX_TOKENS" => {
+                            // [FIX #4019] 标记上游已合法下发 MAX_TOKENS 截断（thinking 耗尽预算），
+                            // 供生命周期守卫放行，避免将语义截断误报为流中断。
+                            self.saw_max_tokens_finish = true;
+                            "length"
+                        }
                         "SAFETY" => "content_filter",
                         "RECITATION" => "content_filter",
                         "MALFORMED_FUNCTION_CALL" => "stop",
@@ -337,6 +447,16 @@ impl ProtocolStreamHandler for OpenAIChatStreamHandler {
 
                     if !content_out.is_empty() || finish_reason.is_some() {
                         self.is_thinking_active = false;
+
+                        // [Issue #3951 / Issue #4019 BUG-03] 结构化 JSON 模式输出保底剥离：
+                        // 当客户端请求了 json_object 或 json_schema 时，若上游输出包裹了 Markdown 代码围栏（如 ```json ... ```），
+                        // 采用开场首字自适应与尾部滑动缓冲（Sliding Tail Window），
+                        // 彻底解决倒数第二帧反引号先行逃逸与跨 chunk 围栏残留问题，确保下游获取纯净合法的 JSON。
+                        if self.is_structured_output {
+                            let is_final = finish_reason.is_some();
+                            content_out = self.clean_structured_output_delta(content_out, is_final);
+                        }
+
                         if !content_out.is_empty() {
                             self.has_content = true;
                         }
@@ -404,8 +524,35 @@ impl ProtocolStreamHandler for OpenAIChatStreamHandler {
         self.has_emitted_done
     }
 
+    fn saw_max_tokens_finish(&self) -> bool {
+        self.saw_max_tokens_finish
+    }
+
     fn emit_finalize(&mut self) -> Vec<Bytes> {
         let mut chunks = Vec::new();
+
+        // [Issue #4019 BUG-03] 若存在结构化输出暂存尾随内容（如反引号前的非围栏正文），在终态前清理围栏并下发
+        if self.is_structured_output && !self.fence_tail_buffer.is_empty() {
+            let leftover = self.clean_structured_output_delta(String::new(), true);
+            if !leftover.is_empty() {
+                self.has_content = true;
+                let chunk = json!({
+                    "id": &self.stream_id,
+                    "object": "chat.completion.chunk",
+                    "created": self.created_ts,
+                    "model": &self.model,
+                    "choices": [{
+                        "index": 0,
+                        "delta": { "content": leftover },
+                        "finish_reason": serde_json::Value::Null
+                    }]
+                });
+                chunks.push(Bytes::from(format!(
+                    "data: {}\n\n",
+                    serde_json::to_string(&chunk).unwrap_or_default()
+                )));
+            }
+        }
 
         // [收尾保底防御 Fixes #3716]
         // 若流已产生正文或工具调用，但上游在未显式下发 finishReason 的情况下关闭了连接 (EOF) 或仅下发了 usageMetadata：
@@ -465,6 +612,29 @@ impl ProtocolStreamHandler for OpenAIChatStreamHandler {
 
     fn emit_abnormal_finalize(&mut self, _error_report: &StreamErrorReport) -> Vec<Bytes> {
         let mut chunks = Vec::new();
+
+        // [Issue #4019 BUG-03] 结构化输出异常终态下发剩余有效内容
+        if self.is_structured_output && !self.fence_tail_buffer.is_empty() {
+            let leftover = self.clean_structured_output_delta(String::new(), true);
+            if !leftover.is_empty() {
+                self.has_content = true;
+                let chunk = json!({
+                    "id": &self.stream_id,
+                    "object": "chat.completion.chunk",
+                    "created": self.created_ts,
+                    "model": &self.model,
+                    "choices": [{
+                        "index": 0,
+                        "delta": { "content": leftover },
+                        "finish_reason": serde_json::Value::Null
+                    }]
+                });
+                chunks.push(Bytes::from(format!(
+                    "data: {}\n\n",
+                    serde_json::to_string(&chunk).unwrap_or_default()
+                )));
+            }
+        }
 
         // 终态与未产生内容防护：若已经发射 [DONE]，或从未产生任何正文/工具调用，绝不可伪造收尾
         if self.has_emitted_done || (!self.has_content && self.emitted_tool_calls.is_empty()) {
@@ -552,6 +722,7 @@ pub fn create_openai_sse_stream_with_anchor<S, E>(
     client_tool_names: Option<std::collections::HashSet<String>>,
     include_usage: bool,
     causal_anchor: Option<String>,
+    is_structured_output: bool,
 ) -> Pin<Box<dyn Stream<Item = Result<Bytes, String>> + Send>>
 where
     S: Stream<Item = Result<Bytes, E>> + Send + ?Sized + 'static,
@@ -589,6 +760,10 @@ where
         is_thinking_active: false,
         has_emitted_finish_reason: false,
         has_emitted_done: false,
+        saw_max_tokens_finish: false,
+        is_structured_output,
+        fence_prefix_stripped: false,
+        fence_tail_buffer: String::new(),
     };
 
     let config =
@@ -796,6 +971,20 @@ where
     S: Stream<Item = Result<Bytes, E>> + Send + ?Sized + 'static,
     E: std::fmt::Display + Send + 'static,
 {
+    create_legacy_sse_stream_with_anchor(gemini_stream, model, session_id, message_count, None)
+}
+
+pub fn create_legacy_sse_stream_with_anchor<S, E>(
+    gemini_stream: Pin<Box<S>>,
+    model: String,
+    session_id: String,
+    message_count: usize,
+    causal_anchor: Option<String>,
+) -> Pin<Box<dyn Stream<Item = Result<Bytes, String>> + Send>>
+where
+    S: Stream<Item = Result<Bytes, E>> + Send + ?Sized + 'static,
+    E: std::fmt::Display + Send + 'static,
+{
     let charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let mut rng = rand::thread_rng();
     let random_str: String = (0..28)
@@ -804,6 +993,12 @@ where
             charset.chars().nth(idx).unwrap()
         })
         .collect();
+
+    let thinking_acc = if let Some(ref a) = causal_anchor {
+        crate::proxy::thinking_store::TurnAccumulator::with_anchor(a)
+    } else {
+        crate::proxy::thinking_store::TurnAccumulator::new()
+    };
 
     let trace_info = format!(
         "model={} session={} messages={}",
@@ -816,7 +1011,7 @@ where
         session_id,
         message_count,
         final_usage: None,
-        thinking_acc: crate::proxy::thinking_store::TurnAccumulator::new(),
+        thinking_acc,
         has_content: false,
         has_thinking: false,
         is_thinking_active: false,
@@ -848,21 +1043,6 @@ fn report_sse_json_parse(
             preview_payload(json_part)
         ),
     );
-}
-
-fn split_namespace_tool_name(qualified_name: &str) -> (String, Option<String>) {
-    let name = qualified_name.trim();
-    if name.starts_with("mcp__") {
-        return (name.to_string(), None);
-    }
-    if let Some(pos) = name.find("__") {
-        if pos > 0 {
-            let namespace = name[..pos].to_string();
-            let actual_name = name[pos + 2..].to_string();
-            return (actual_name, Some(namespace));
-        }
-    }
-    (name.to_string(), None)
 }
 
 fn openai_chat_error_frame(
@@ -965,6 +1145,7 @@ impl CodexResponsesStreamHandler {
             tokio::sync::oneshot::Sender<(Vec<Value>, tokio::sync::oneshot::Sender<()>)>,
         >,
         cache_tool_calls: bool,
+        causal_anchor: Option<String>,
     ) -> Self {
         let item_id_prefix = uuid::Uuid::new_v4().simple().to_string();
         let message_item_id = format!("msg_{}_0", &item_id_prefix[..16]);
@@ -992,7 +1173,11 @@ impl CodexResponsesStreamHandler {
             emitted_tool_calls: std::collections::HashSet::new(),
             accumulated_text: String::new(),
             accumulated_thinking: String::new(),
-            thinking_acc: crate::proxy::thinking_store::TurnAccumulator::new(),
+            thinking_acc: if let Some(ref a) = causal_anchor {
+                crate::proxy::thinking_store::TurnAccumulator::with_anchor(a)
+            } else {
+                crate::proxy::thinking_store::TurnAccumulator::new()
+            },
             has_thinking: false,
             has_seen_tool_calls: false,
             final_finish_reason: None,
@@ -1733,12 +1918,43 @@ pub fn create_codex_sse_stream<S, E>(
     model: String,
     session_id: String,
     message_count: usize,
+    assistant_turn_index: usize,
+    response_id: String,
+    completion_tx: Option<
+        tokio::sync::oneshot::Sender<(Vec<Value>, tokio::sync::oneshot::Sender<()>)>,
+    >,
+    cache_tool_calls: bool,
+) -> Pin<Box<dyn Stream<Item = Result<Bytes, String>> + Send>>
+where
+    S: Stream<Item = Result<Bytes, E>> + Send + ?Sized + 'static,
+    E: std::fmt::Display + Send + 'static,
+{
+    create_codex_sse_stream_with_anchor(
+        gemini_stream,
+        model,
+        session_id,
+        message_count,
+        assistant_turn_index,
+        response_id,
+        completion_tx,
+        cache_tool_calls,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn create_codex_sse_stream_with_anchor<S, E>(
+    gemini_stream: Pin<Box<S>>,
+    model: String,
+    session_id: String,
+    message_count: usize,
     _assistant_turn_index: usize,
     response_id: String,
     completion_tx: Option<
         tokio::sync::oneshot::Sender<(Vec<Value>, tokio::sync::oneshot::Sender<()>)>,
     >,
     cache_tool_calls: bool,
+    causal_anchor: Option<String>,
 ) -> Pin<Box<dyn Stream<Item = Result<Bytes, String>> + Send>>
 where
     S: Stream<Item = Result<Bytes, E>> + Send + ?Sized + 'static,
@@ -1755,6 +1971,7 @@ where
         response_id,
         completion_tx,
         cache_tool_calls,
+        causal_anchor,
     );
     let config = StreamLifecycleConfig::new("openai-codex", "create_codex_sse_stream", trace_info);
     run_stream_lifecycle(gemini_stream, handler, config)
@@ -1763,7 +1980,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::stream;
+    use futures::{stream, StreamExt};
     use serde_json::json;
 
     async fn collect_codex_stream(chunks: Vec<Value>) -> (String, Vec<Value>) {
@@ -1946,6 +2163,40 @@ mod tests {
             .iter()
             .any(|event| event["type"] == "response.output_item.done"
                 && event["item"]["call_id"] == call_id));
+    }
+
+    #[tokio::test]
+    async fn responses_mcp_tool_call_restores_namespace_fields() {
+        let (_, events) = collect_codex_stream_with_cache(
+            vec![json!({
+                "response": {"candidates": [{
+                    "finishReason": "STOP",
+                    "content": {"parts": [{
+                        "functionCall": {
+                            "name": "mcp__node_repl__js",
+                            "args": {"code": "1+1"}
+                        }
+                    }]}
+                }]}
+            })],
+            false,
+        )
+        .await;
+
+        let completed = events
+            .iter()
+            .find(|event| event["type"] == "response.completed")
+            .expect("completed response");
+        let call = completed["response"]["output"]
+            .as_array()
+            .expect("output")
+            .iter()
+            .find(|item| item["type"] == "function_call")
+            .expect("function call");
+
+        assert_eq!(call["name"], "js");
+        assert_eq!(call["namespace"], "mcp__node_repl");
+        assert!(!call.to_string().contains("mcp__node_repl__js"));
     }
 
     #[tokio::test]
@@ -3016,5 +3267,225 @@ mod tests {
             vec!["stop".to_string()],
             "Completed stream must not emit duplicate finish_reason"
         );
+    }
+
+    #[tokio::test]
+    async fn test_codex_stream_with_anchor_keeps_identical_plain_text_turns_distinct() {
+        let session_id = format!("test-codex-approval-{}", uuid::Uuid::new_v4());
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&session_id);
+
+        let user1 = json!({ "role": "user", "parts": [{ "text": "Approve request 1" }] });
+        let user2 = json!({ "role": "user", "parts": [{ "text": "Approve request 2" }] });
+        let anchor1 = crate::proxy::thinking_store::compute_causal_anchor(Some(&user1));
+        let anchor2 = crate::proxy::thinking_store::compute_causal_anchor(Some(&user2));
+        let sig1 = format!("EsID{}", "1".repeat(56));
+        let sig2 = format!("EtgD{}", "2".repeat(56));
+
+        for (resp_id, anchor, sig) in [
+            ("resp-1", anchor1, sig1.clone()),
+            ("resp-2", anchor2, sig2.clone()),
+        ] {
+            let sse_line = format!(
+                "data: {}
+
+",
+                json!({
+                    "candidates": [{
+                        "finishReason": "STOP",
+                        "content": {
+                            "parts": [{
+                                "text": r#"{"outcome":"allow"}"#,
+                                "thoughtSignature": sig
+                            }]
+                        }
+                    }]
+                })
+            );
+            let mock_stream = futures::stream::iter(vec![Ok::<_, String>(Bytes::from(sse_line))]);
+            let mut stream = create_codex_sse_stream_with_anchor(
+                Box::pin(mock_stream),
+                "gemini-4-hydrogen-low".to_string(),
+                session_id.clone(),
+                1,
+                0,
+                resp_id.to_string(),
+                None,
+                true,
+                Some(anchor),
+            );
+            while let Some(_item) = stream.next().await {}
+        }
+
+        let mut contents = vec![
+            user1,
+            json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+            user2,
+            json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+        ];
+        let restored = crate::proxy::thinking_store::ThinkingStore::global()
+            .restore_gemini_contents(&session_id, &mut contents);
+        assert_eq!(restored, 2);
+        assert_eq!(contents[1]["parts"][0]["thoughtSignature"], sig1);
+        assert_eq!(contents[3]["parts"][0]["thoughtSignature"], sig2);
+
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&session_id);
+        crate::proxy::thinking_store::ThinkingStore::global().end_session(&session_id);
+    }
+
+    #[tokio::test]
+    async fn test_openai_stream_structured_json_fence_stripping_issue_3951() {
+        let chunk1_json = json!({
+            "candidates": [{
+                "content": {
+                    "parts": [{ "text": "```json\n{\"status\": \"ok\", " }]
+                }
+            }]
+        });
+        let chunk2_json = json!({
+            "candidates": [{
+                "content": {
+                    "parts": [{ "text": "\"count\": 1}\n```" }]
+                },
+                "finishReason": "STOP"
+            }]
+        });
+
+        let items: Vec<Result<Bytes, String>> = vec![
+            Ok(Bytes::from(format!("data: {}\n\n", chunk1_json))),
+            Ok(Bytes::from(format!("data: {}\n\n", chunk2_json))),
+        ];
+
+        let gemini_stream = Box::pin(stream::iter(items));
+
+        // is_structured_output = true (开启 Issue #3951 JSON 围栏保底清洗)
+        let mut openai_stream = create_openai_sse_stream_with_anchor(
+            gemini_stream,
+            "gemini-3.8-flash-tiered".to_string(),
+            "session-json-strip".to_string(),
+            0,
+            None,
+            false,
+            None,
+            true,
+        );
+
+        let mut accumulated_content = String::new();
+        while let Some(result) = openai_stream.next().await {
+            if let Ok(bytes) = result {
+                let s = String::from_utf8_lossy(&bytes).to_string();
+                for line in s.lines() {
+                    if line.starts_with("data: ") && !line.contains("[DONE]") {
+                        let json_str = line.trim_start_matches("data: ").trim();
+                        if let Ok(json) = serde_json::from_str::<Value>(json_str) {
+                            if let Some(choices) = json.get("choices").and_then(|c| c.as_array()) {
+                                for choice in choices {
+                                    if let Some(delta_content) = choice
+                                        .get("delta")
+                                        .and_then(|d| d.get("content"))
+                                        .and_then(|c| c.as_str())
+                                    {
+                                        accumulated_content.push_str(delta_content);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 验证：首尾围栏被彻底剥离，输出可直接被 json.loads 解析的合法纯净 JSON
+        assert!(!accumulated_content.contains("```"));
+        let parsed: Result<Value, _> = serde_json::from_str(&accumulated_content);
+        assert!(
+            parsed.is_ok(),
+            "Accumulated content must be valid JSON: {}",
+            accumulated_content
+        );
+        assert_eq!(parsed.unwrap(), json!({ "status": "ok", "count": 1 }));
+    }
+
+    #[tokio::test]
+    async fn test_issue_4019_bug03_trailing_fence_split_across_chunks() {
+        // 复现 Issue #4019 BUG-03:
+        // Chunk 1: 开场围栏与部分正文
+        // Chunk 2: 剩余正文与尾部围栏 ``` （但无 finishReason！）
+        // Chunk 3: 仅包含 finishReason: "STOP" 的终态空帧
+        let chunk1_json = json!({
+            "candidates": [{
+                "content": {
+                    "parts": [{ "text": "```json\n{\"color\": \"red\", " }]
+                }
+            }]
+        });
+        let chunk2_json = json!({
+            "candidates": [{
+                "content": {
+                    "parts": [{ "text": "\"count\": 3}\n```" }]
+                }
+            }]
+        });
+        let chunk3_json = json!({
+            "candidates": [{
+                "finishReason": "STOP"
+            }]
+        });
+
+        let items: Vec<Result<Bytes, String>> = vec![
+            Ok(Bytes::from(format!("data: {}\n\n", chunk1_json))),
+            Ok(Bytes::from(format!("data: {}\n\n", chunk2_json))),
+            Ok(Bytes::from(format!("data: {}\n\n", chunk3_json))),
+        ];
+
+        let gemini_stream = Box::pin(stream::iter(items));
+
+        let mut openai_stream = create_openai_sse_stream_with_anchor(
+            gemini_stream,
+            "gemini-3.1-flash-image".to_string(),
+            "session-bug03".to_string(),
+            0,
+            None,
+            false,
+            None,
+            true, // is_structured_output = true
+        );
+
+        let mut accumulated_content = String::new();
+        while let Some(result) = openai_stream.next().await {
+            if let Ok(bytes) = result {
+                let s = String::from_utf8_lossy(&bytes).to_string();
+                for line in s.lines() {
+                    if line.starts_with("data: ") && !line.contains("[DONE]") {
+                        let json_str = line.trim_start_matches("data: ").trim();
+                        if let Ok(json) = serde_json::from_str::<Value>(json_str) {
+                            if let Some(choices) = json.get("choices").and_then(|c| c.as_array()) {
+                                for choice in choices {
+                                    if let Some(delta_content) = choice
+                                        .get("delta")
+                                        .and_then(|d| d.get("content"))
+                                        .and_then(|c| c.as_str())
+                                    {
+                                        accumulated_content.push_str(delta_content);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assert!(
+            !accumulated_content.contains("```"),
+            "Trailing fence must be stripped: {}",
+            accumulated_content
+        );
+        let parsed: Result<Value, _> = serde_json::from_str(&accumulated_content);
+        assert!(
+            parsed.is_ok(),
+            "Must be valid JSON: {}",
+            accumulated_content
+        );
+        assert_eq!(parsed.unwrap(), json!({ "color": "red", "count": 3 }));
     }
 }

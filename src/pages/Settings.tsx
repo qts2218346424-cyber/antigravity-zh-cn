@@ -1,5 +1,5 @@
 import { useState, useEffect, startTransition } from 'react';
-import { Save, Github, ExternalLink, RefreshCw, LayoutDashboard, Users, Network, Activity, BarChart3, Settings as SettingsIcon, Lock, CheckCircle2, Globe, Copy, Check, ShieldAlert, Sparkles, KeyRound } from 'lucide-react';
+import { Save, Github, ExternalLink, RefreshCw, LayoutDashboard, Users, Network, Activity, BarChart3, Settings as SettingsIcon, Lock, CheckCircle2, Globe, Copy, Check, ShieldAlert, Sparkles, KeyRound, Terminal } from 'lucide-react';
 import { request as invoke } from '../utils/request';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useConfigStore } from '../stores/useConfigStore';
@@ -46,12 +46,15 @@ function Settings() {
     const { config, loadConfig, saveConfig, updateLanguage, updateTheme } = useConfigStore();
     const { enable, disable, isEnabled } = useDebugConsole();
     const [activeTab, setActiveTab] = useState<'general' | 'account' | 'proxy' | 'advanced' | 'debug' | 'about'>('general');
-    const [appVersion, setAppVersion] = useState<string>(() => (globalThis as any).__APP_VERSION__ || '5.1.0');
+    const [appVersion, setAppVersion] = useState<string>(() => (globalThis as any).__APP_VERSION__ || '5.8.5');
     const [formData, setFormData] = useState<AppConfig>({
         language: 'zh',
         theme: 'system',
         auto_refresh: false,
         refresh_interval: 10,
+        startup_refresh: true,
+        refresh_concurrency: 5,
+        refresh_slide_delay_secs: 0.2,
         auto_sync: false,
         sync_interval: 5,
         auto_switch_classic_depleted: false,
@@ -107,6 +110,8 @@ function Settings() {
             backoff_steps: [60, 300, 1800, 7200]
         },
         hidden_menu_items: [],  // 菜单显示设置：默认不隐藏任何菜单项
+        wsl_sync_enabled: false,
+        wsl_custom_home: '',
 
     });
 
@@ -129,6 +134,7 @@ function Settings() {
         currentVersion: string;
         downloadUrl: string;
         source?: string;
+        channel?: 'stable' | 'beta';
     } | null>(null);
 
     // Homebrew Cask state
@@ -137,6 +143,7 @@ function Settings() {
     const [isBrewConfirmOpen, setIsBrewConfirmOpen] = useState(false);
     const [isBrewSuccessOpen, setIsBrewSuccessOpen] = useState(false);
     const [isUpdateConfirmOpen, setIsUpdateConfirmOpen] = useState(false);
+    const [preferNativeUpdate, setPreferNativeUpdate] = useState(false);
 
     // UI Zoom state
     const [uiZoom, setUiZoom] = useState<number>(() => getStoredZoom());
@@ -247,16 +254,49 @@ function Settings() {
             const fp = await invoke<HubFingerprint>('detect_remote_hub_fingerprint', {
                 customVersion: formData.proxy?.hub_version || null,
                 customCl: formData.proxy?.hub_cl || null,
+                hubPlatform: formData.proxy?.hub_platform || 'windows',
             });
             setHubFingerprint(fp);
-            showToast(
-                t('proxy.config.hub.detect_success', {
-                    version: fp.version,
-                    cl: fp.cl,
-                    defaultValue: `已成功探测并同步官方最新 Hub: v${fp.version} (CL: ${fp.cl})`
-                }),
-                'success'
-            );
+
+            if (fp.update_available && fp.latest_remote_version) {
+                showToast(
+                    t('proxy.config.hub.detect_success_newer_available', {
+                        version: fp.version,
+                        cl: fp.cl,
+                        latest: fp.latest_remote_version,
+                        defaultValue: `官方已发布新版 v${fp.latest_remote_version}（当前出站安全沿用 v${fp.version}，更新本地客户端后再次探测可同步最新 CL）`
+                    }),
+                    'info',
+                    7000
+                );
+            } else if (fp.source === 'local') {
+                showToast(
+                    t('proxy.config.hub.detect_success_local', {
+                        version: fp.version,
+                        cl: fp.cl,
+                        defaultValue: `已从本地已安装的官方客户端同步指纹: v${fp.version} (CL: ${fp.cl})`
+                    }),
+                    'success'
+                );
+            } else if (fp.source === 'baseline') {
+                showToast(
+                    t('proxy.config.hub.detect_success_baseline', {
+                        version: fp.version,
+                        cl: fp.cl,
+                        defaultValue: `当前出站指纹已对齐官方稳态基准: v${fp.version} (CL: ${fp.cl})`
+                    }),
+                    'success'
+                );
+            } else {
+                showToast(
+                    t('proxy.config.hub.detect_success', {
+                        version: fp.version,
+                        cl: fp.cl,
+                        defaultValue: `已成功探测并同步官方最新 Hub: v${fp.version} (CL: ${fp.cl})`
+                    }),
+                    'success'
+                );
+            }
         } catch (err) {
             console.error('探测 Hub 失败:', err);
             showToast(
@@ -426,7 +466,7 @@ function Settings() {
         }
     };
 
-    const handleCheckUpdate = async () => {
+    const handleCheckUpdate = async (explicitChannel?: 'stable' | 'beta') => {
         setIsCheckingUpdate(true);
         setUpdateInfo(null);
         try {
@@ -436,7 +476,8 @@ function Settings() {
                 current_version: string;
                 download_url: string;
                 source?: string;
-            }>('check_for_updates');
+                channel?: 'stable' | 'beta';
+            }>('check_for_updates', explicitChannel ? { channel: explicitChannel } : undefined);
 
             setUpdateInfo({
                 hasUpdate: result.has_update,
@@ -444,6 +485,7 @@ function Settings() {
                 currentVersion: result.current_version,
                 downloadUrl: result.download_url,
                 source: result.source,
+                channel: result.channel,
             });
 
             if (result.has_update) {
@@ -462,7 +504,10 @@ function Settings() {
 
     const handleConfirmUpdate = async () => {
         setIsUpdateConfirmOpen(false);
-        if (isBrewInstalled) {
+        // If installed via Homebrew, user didn't choose native update, and updating to a stable release, use Homebrew upgrade.
+        // For Beta updates or when user switches to native update, use native auto-updater because Homebrew Cask only tracks stable.
+        const shouldUseBrew = isBrewInstalled && !preferNativeUpdate && updateInfo?.channel !== 'beta';
+        if (shouldUseBrew) {
             handleBrewUpgrade();
             return;
         }
@@ -816,6 +861,69 @@ function Settings() {
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t('settings.general.update_check_interval_desc')}</p>
                                     </div>
                                 )}
+
+                                {/* 更新通道选择 */}
+                                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-base-200 rounded-lg border border-gray-100 dark:border-base-300">
+                                    <div>
+                                        <div className="font-medium text-gray-900 dark:text-base-content">{t('settings.about.update_channel')}</div>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {formData.update_channel === 'beta'
+                                                ? t('settings.about.channel_beta_hint')
+                                                : t('settings.about.channel_stable_desc', { defaultValue: '稳定版本，推荐日常生产使用' })}
+                                        </p>
+                                    </div>
+                                    <div className="inline-flex p-1 bg-gray-200/80 dark:bg-base-300 rounded-xl border border-gray-300/60 dark:border-base-100">
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                try {
+                                                    await invoke('save_update_settings', {
+                                                        settings: {
+                                                            update_channel: 'stable',
+                                                        }
+                                                    });
+                                                    setFormData(prev => ({ ...prev, update_channel: 'stable' }));
+                                                    showToast(`${t('settings.about.update_channel')}: ${t('settings.about.channel_stable')}`, 'info');
+                                                    handleCheckUpdate('stable');
+                                                } catch (err) {
+                                                    showToast(`${t('common.error')}: ${err}`, 'error');
+                                                }
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                (formData.update_channel || 'stable') === 'stable'
+                                                    ? 'bg-white dark:bg-base-100 text-blue-600 dark:text-blue-400 shadow-sm'
+                                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            {t('settings.about.channel_stable')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                try {
+                                                    await invoke('save_update_settings', {
+                                                        settings: {
+                                                            update_channel: 'beta',
+                                                        }
+                                                    });
+                                                    setFormData(prev => ({ ...prev, update_channel: 'beta' }));
+                                                    showToast(`${t('settings.about.update_channel')}: ${t('settings.about.channel_beta')}`, 'info');
+                                                    handleCheckUpdate('beta');
+                                                } catch (err) {
+                                                    showToast(`${t('common.error')}: ${err}`, 'error');
+                                                }
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                                                formData.update_channel === 'beta'
+                                                    ? 'bg-white dark:bg-base-100 text-amber-600 dark:text-amber-400 shadow-sm'
+                                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            <span>{t('settings.about.channel_beta')}</span>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                        </button>
+                                    </div>
+                                </div>
                             </>
 
                             {/* 轻量模式 (释放内存) */}
@@ -1015,6 +1123,52 @@ function Settings() {
                                     </label>
                                 </div>
 
+                                <div className="mt-5 pt-5 border-t border-gray-50 dark:border-base-300 flex items-center justify-between gap-4 animate-in slide-in-from-top-1 duration-200">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{t('settings.account.startup_refresh')}</div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.account.startup_refresh_desc')}</p>
+                                        {formData.startup_refresh !== false && (
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                <label className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('settings.account.refresh_concurrency')}</label>
+                                                <input
+                                                    type="number"
+                                                    className="w-16 px-2 py-1 bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-blue-600 dark:text-blue-400"
+                                                    min="1"
+                                                    max="20"
+                                                    value={formData.refresh_concurrency ?? 5}
+                                                    onChange={(e) => {
+                                                        const parsed = parseInt(e.target.value);
+                                                        setFormData({
+                                                            ...formData,
+                                                            refresh_concurrency: Number.isNaN(parsed) ? 5 : Math.min(Math.max(parsed, 1), 20),
+                                                        });
+                                                    }}
+                                                />
+                                                <span className="text-[11px] text-gray-500 dark:text-gray-400">{t('settings.account.refresh_concurrency_hint')}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={formData.startup_refresh !== false}
+                                            onChange={async (e) => {
+                                                const enabled = e.target.checked;
+                                                const newConfig = { ...formData, startup_refresh: enabled };
+                                                setFormData(newConfig);
+                                                // Hot Save
+                                                try {
+                                                    await saveConfig(newConfig);
+                                                } catch (error) {
+                                                    showToast(`${t('common.error')}: ${error}`, 'error');
+                                                }
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 dark:bg-base-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
+                                    </label>
+                                </div>
+
                                 <div className="mt-5 pt-5 border-t border-gray-50 dark:border-base-300 flex items-center gap-4 animate-in slide-in-from-top-1 duration-200">
                                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('settings.account.refresh_interval')}</label>
                                     <div className="relative">
@@ -1146,6 +1300,71 @@ function Settings() {
                                         }
                                     }}
                                 />
+                            </div>
+
+                            {/* WSL 远程环境账号同步 */}
+                            <div className="group bg-white dark:bg-base-100 rounded-xl p-5 border border-gray-100 dark:border-base-200 hover:border-teal-200 transition-all duration-300 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">
+                                            <Terminal size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-gray-900 dark:text-gray-100">{t('settings.account.wsl_sync_enabled', { defaultValue: '同步更新 WSL 远程环境账号' })}</div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.account.wsl_sync_enabled_desc', { defaultValue: '在 Windows 宿主机切换账号时，通过本地 UNC 共享路径自动将 Token 同步至 WSL2 环境，解决 Remote-WSL 双开时远程窗口账号脱节问题。' })}</p>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={formData.wsl_sync_enabled || false}
+                                            onChange={async (e) => {
+                                                const enabled = e.target.checked;
+                                                const newConfig = { ...formData, wsl_sync_enabled: enabled };
+                                                setFormData(newConfig);
+                                                try {
+                                                    await saveConfig(newConfig);
+                                                } catch (error) {
+                                                    showToast(`${t('common.error')}: ${error}`, 'error');
+                                                }
+                                            }}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 dark:bg-base-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500 shadow-inner"></div>
+                                    </label>
+                                </div>
+
+                                {formData.wsl_sync_enabled && (
+                                    <div className="mt-5 pt-5 border-t border-gray-50 dark:border-base-300 space-y-2 animate-in slide-in-from-top-1 duration-200">
+                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                            {t('settings.account.wsl_custom_home', { defaultValue: 'WSL 用户主目录路径（可选）' })}
+                                        </label>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            {t('settings.account.wsl_custom_home_desc', { defaultValue: '留空则自动探测运行中的 WSL 分发版。如需指定特定用户，请输入 UNC 路径，例如：\\\\wsl.localhost\\Ubuntu\\home\\username' })}
+                                        </p>
+                                        <div className="flex gap-2 mt-1">
+                                            <input
+                                                type="text"
+                                                className="flex-1 px-3 py-2 bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none text-xs font-mono text-gray-900 dark:text-gray-100"
+                                                placeholder="\\wsl.localhost\Ubuntu\home\username"
+                                                value={formData.wsl_custom_home || ''}
+                                                onChange={(e) => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        wsl_custom_home: e.target.value
+                                                    });
+                                                }}
+                                                onBlur={async () => {
+                                                    try {
+                                                        await saveConfig(formData);
+                                                    } catch (error) {
+                                                        showToast(`${t('common.error')}: ${error}`, 'error');
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -1471,6 +1690,36 @@ function Settings() {
                                         </button>
                                     </div>
 
+                                    {/* Upstream Hub UA platform: preserve Windows default, opt in to Linux. */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {t('proxy.config.hub.platform_label', { defaultValue: '客户端 User-Agent 平台' })}
+                                        </label>
+                                        <select
+                                            value={formData.proxy?.hub_platform || 'windows'}
+                                            onChange={(e) => {
+                                                setFormData({
+                                                    ...formData,
+                                                    proxy: {
+                                                        ...formData.proxy,
+                                                        hub_platform: e.target.value as 'windows' | 'linux',
+                                                    }
+                                                });
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-200 dark:border-base-300 rounded-lg bg-gray-50 dark:bg-base-200 text-sm text-gray-900 dark:text-base-content focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="windows">{t('proxy.config.hub.platform_windows', { defaultValue: 'Windows x64（默认，已校准）' })}</option>
+                                            <option value="linux">{t('proxy.config.hub.platform_linux', { defaultValue: 'Linux x64（可选）' })}</option>
+                                        </select>
+                                        {formData.proxy?.hub_platform === 'linux' && (
+                                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1.5">
+                                                {t('proxy.config.hub.platform_linux_warning', {
+                                                    defaultValue: 'Linux 从自己的更新清单检查最新版本；实际 User-Agent 的版本与 CL 仍按现有自定义/本地探测规则管理，不会拼接尚未匹配的最新版本。'
+                                                })}
+                                            </p>
+                                        )}
+                                    </div>
+
                                     {/* Hub Version & CL 自定义输入框 */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <div>
@@ -1516,6 +1765,18 @@ function Settings() {
                                             />
                                         </div>
                                     </div>
+                                    {/* 官方新版本可用提示 Banner */}
+                                    {hubFingerprint?.update_available && hubFingerprint.latest_remote_version && (
+                                        <div className="mt-3 bg-amber-50/60 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-800/30 rounded-lg p-2.5 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                                            <span className="leading-relaxed">
+                                                {t('proxy.config.hub.banner_newer_available', {
+                                                    latest: hubFingerprint.latest_remote_version,
+                                                    defaultValue: `💡 检测到官方 Hub 已发布新版本 v${hubFingerprint.latest_remote_version}。更新本地官方客户端后点击「动态探测」，可自动提取并同步最新 CL。`
+                                                })}
+                                            </span>
+                                        </div>
+                                    )}
+
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                         {t('proxy.config.hub.tooltip', { defaultValue: '出站流量对齐 Google 官方 Antigravity Hub 原生客户端特征，自动维护版本号与构建 CL 编号以规避 429 配额限制。' })}
                                     </p>
@@ -1887,7 +2148,7 @@ function Settings() {
                                 {/* Check for Updates */}
                                 <div className="flex flex-col items-center gap-3">
                                     <button
-                                        onClick={handleCheckUpdate}
+                                        onClick={() => handleCheckUpdate()}
                                         disabled={isCheckingUpdate}
                                         className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg transition-all flex items-center gap-2 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
                                     >
@@ -1904,7 +2165,7 @@ function Settings() {
                                                         <span>{t('settings.about.new_version_available', { version: updateInfo.latestVersion })}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 flex-wrap justify-center">
-                                                        {isBrewInstalled ? (
+                                                        {isBrewInstalled && !preferNativeUpdate && updateInfo.channel !== 'beta' ? (
                                                             <button
                                                                 onClick={() => setIsBrewConfirmOpen(true)}
                                                                 disabled={isBrewUpgrading}
@@ -1940,6 +2201,24 @@ function Settings() {
                                                             <ExternalLink className="w-3.5 h-3.5" />
                                                         </a>
                                                     </div>
+                                                    {isBrewInstalled && updateInfo.channel !== 'beta' && (
+                                                        <div className="flex items-center justify-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setPreferNativeUpdate(!preferNativeUpdate)}
+                                                                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                                            >
+                                                                {preferNativeUpdate ? t('settings.about.brew_switch_to_brew') : t('settings.about.brew_switch_to_native')}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {isBrewInstalled && updateInfo.channel === 'beta' && (
+                                                        <p className="text-[11px] text-amber-600/90 dark:text-amber-400/90 max-w-md text-center">
+                                                            {t('settings.about.brew_beta_notice', {
+                                                                defaultValue: 'Homebrew 仅支持稳定版更新，检测到测试版更新，已为您切换为原生自动更新。'
+                                                            })}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <div className="text-sm text-green-600 dark:text-green-400 font-medium">

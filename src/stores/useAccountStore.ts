@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Account, ActiveClientsStatus } from '../types/account';
+import { Account, ActiveClientsStatus, ModelPriorities } from '../types/account';
 import * as accountService from '../services/accountService';
 
 interface AccountState {
@@ -10,7 +10,7 @@ interface AccountState {
     error: string | null;
 
     // Actions
-    fetchAccounts: () => Promise<void>;
+    fetchAccounts: (silent?: boolean) => Promise<void>;
     fetchCurrentAccount: () => Promise<void>;
     fetchActiveClients: () => Promise<void>;
     addAccount: (email: string, refreshToken: string) => Promise<void>;
@@ -31,12 +31,14 @@ interface AccountState {
     importFromCustomDb: (path: string) => Promise<void>;
     syncAccountFromDb: () => Promise<void>;
     toggleProxyStatus: (accountId: string, enable: boolean, reason?: string) => Promise<void>;
+    clearAccountForbidden: (accountId: string) => Promise<void>;
     warmUpAccounts: () => Promise<string>;
     warmUpAccount: (accountId: string) => Promise<string>;
     updateAccountLabel: (accountId: string, label: string) => Promise<void>;
-    updateAccountPriority: (accountId: string, priority: number) => Promise<void>;
+    updateAccountPriority: (accountId: string, priority: number, modelPriorities?: ModelPriorities) => Promise<void>;
     updateAccountProjectId: (accountId: string, projectId: string) => Promise<void>;
     autoFetchAccountProjectId: (accountId: string) => Promise<string>;
+    removeForbiddenModel: (accountId: string, model?: string) => Promise<boolean>;
 }
 
 const ACCOUNTS_CACHE_KEY = 'antigravity_accounts_cache';
@@ -82,6 +84,21 @@ const getInitialActiveClients = (): ActiveClientsStatus => {
     return {};
 };
 
+// Coalesce concurrent getActiveClientsStatus IPC calls (e.g. parallel fetchAccounts +
+// fetchCurrentAccount + focus refresh) so macOS Keychain probes are never fanned out concurrently.
+let activeClientsInFlight: Promise<ActiveClientsStatus> | null = null;
+
+function getActiveClientsStatusDeduped(): Promise<ActiveClientsStatus> {
+    if (!activeClientsInFlight) {
+        activeClientsInFlight = accountService
+            .getActiveClientsStatus()
+            .finally(() => {
+                activeClientsInFlight = null;
+            });
+    }
+    return activeClientsInFlight;
+}
+
 export const useAccountStore = create<AccountState>((set, get) => ({
     accounts: getInitialAccounts(),
     currentAccount: getInitialCurrentAccount(),
@@ -89,22 +106,26 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     loading: false,
     error: null,
 
-    fetchAccounts: async () => {
-        set({ loading: true, error: null });
+    fetchAccounts: async (silent = false) => {
+        if (!silent) {
+            set({ loading: true, error: null });
+        }
         try {
             console.log('[Store] Fetching accounts...');
             const [accounts, activeClients] = await Promise.all([
                 accountService.listAccounts(),
-                accountService.getActiveClientsStatus().catch(() => ({} as ActiveClientsStatus))
+                getActiveClientsStatusDeduped().catch(() => ({} as ActiveClientsStatus))
             ]);
             try {
                 localStorage.setItem(ACCOUNTS_CACHE_KEY, JSON.stringify(accounts));
                 localStorage.setItem(ACTIVE_CLIENTS_CACHE_KEY, JSON.stringify(activeClients));
             } catch (_) {}
-            set({ accounts, activeClients, loading: false });
+            set({ accounts, activeClients, ...(silent ? {} : { loading: false }) });
         } catch (error) {
             console.error('[Store] Fetch accounts failed:', error);
-            set({ error: String(error), loading: false });
+            if (!silent) {
+                set({ error: String(error), loading: false });
+            }
         }
     },
 
@@ -113,7 +134,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         try {
             const [account, activeClients] = await Promise.all([
                 accountService.getCurrentAccount(),
-                accountService.getActiveClientsStatus().catch(() => ({} as ActiveClientsStatus))
+                getActiveClientsStatusDeduped().catch(() => ({} as ActiveClientsStatus))
             ]);
             try {
                 if (account) {
@@ -131,7 +152,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
 
     fetchActiveClients: async () => {
         try {
-            const activeClients = await accountService.getActiveClientsStatus();
+            const activeClients = await getActiveClientsStatusDeduped();
             set({ activeClients });
         } catch (error) {
             console.error('[Store] Fetch active clients failed:', error);
@@ -363,6 +384,16 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         }
     },
 
+    clearAccountForbidden: async (accountId: string) => {
+        try {
+            await accountService.clearAccountForbidden(accountId);
+            await get().fetchAccounts();
+        } catch (error) {
+            console.error('[AccountStore] Clear account forbidden failed:', error);
+            throw error;
+        }
+    },
+
     warmUpAccounts: async () => {
         set({ loading: true, error: null });
         try {
@@ -391,11 +422,55 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         }
     },
 
-    updateAccountPriority: async (accountId, priority) => {
-        await accountService.updateAccountPriority(accountId, priority);
+    updateAccountPriority: async (accountId, priority, modelPriorities) => {
+        await accountService.updateAccountPriority(accountId, priority, modelPriorities);
+        const cleanModelPriorities =
+            modelPriorities !== undefined
+                ? Object.fromEntries(
+                      Object.entries(modelPriorities)
+                          .filter(
+                              ([k, v]) =>
+                                  k.trim().length > 0 &&
+                                  typeof v === 'number' &&
+                                  Number.isInteger(v) &&
+                                  v >= 1 &&
+                                  v <= 100
+                          )
+                          .map(([k, v]) => [k.trim().toLowerCase(), v as number])
+                  )
+                : undefined;
         set(state => ({
-            accounts: state.accounts.map(account => account.id === accountId ? { ...account, priority } : account),
-            currentAccount: state.currentAccount?.id === accountId ? { ...state.currentAccount, priority } : state.currentAccount,
+            accounts: state.accounts.map(account =>
+                account.id === accountId
+                    ? {
+                          ...account,
+                          priority,
+                          ...(cleanModelPriorities !== undefined
+                              ? {
+                                    model_priorities:
+                                        Object.keys(cleanModelPriorities).length > 0
+                                            ? cleanModelPriorities
+                                            : undefined,
+                                }
+                              : {}),
+                      }
+                    : account
+            ),
+            currentAccount:
+                state.currentAccount?.id === accountId
+                    ? {
+                          ...state.currentAccount,
+                          priority,
+                          ...(cleanModelPriorities !== undefined
+                              ? {
+                                    model_priorities:
+                                        Object.keys(cleanModelPriorities).length > 0
+                                            ? cleanModelPriorities
+                                            : undefined,
+                                }
+                              : {}),
+                      }
+                    : state.currentAccount,
         }));
     },
 
@@ -441,6 +516,29 @@ export const useAccountStore = create<AccountState>((set, get) => ({
             set({ accounts: updatedAccounts });
         } catch (error) {
             console.error('[AccountStore] Update label failed:', error);
+            throw error;
+        }
+    },
+
+    removeForbiddenModel: async (accountId: string, model?: string) => {
+        try {
+            const res = await accountService.removeAccountForbiddenModel(accountId, model);
+            // 乐观更新前端状态
+            set(state => ({
+                accounts: state.accounts.map(acc => {
+                    if (acc.id !== accountId) return acc;
+                    if (!model) {
+                        return { ...acc, forbidden_models: [] };
+                    }
+                    const updated = (acc.forbidden_models || []).filter(
+                        m => m.toLowerCase() !== model.toLowerCase()
+                    );
+                    return { ...acc, forbidden_models: updated };
+                }),
+            }));
+            return res;
+        } catch (error) {
+            console.error('[AccountStore] Remove forbidden model failed:', error);
             throw error;
         }
     },

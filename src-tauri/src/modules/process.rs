@@ -202,6 +202,80 @@ pub fn is_process_running_by_name(target_name: &str) -> bool {
     false
 }
 
+/// Check if an Antigravity ACP server (`agy_acp_server`) process is currently running.
+pub fn is_acp_server_running() -> bool {
+    let mut system = System::new();
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All);
+    for (_pid, process) in system.processes() {
+        let name = process.name().to_string_lossy().to_lowercase();
+        if name.contains("agy_acp_server") {
+            return true;
+        }
+        let args_match = process.cmd().iter().any(|arg| {
+            arg.to_string_lossy()
+                .to_lowercase()
+                .contains("agy_acp_server")
+        });
+        if args_match {
+            return true;
+        }
+        if let Some(exe) = process.exe() {
+            if exe
+                .to_string_lossy()
+                .to_lowercase()
+                .contains("agy_acp_server")
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Terminate running `agy_acp_server` processes so the host IDE plugin respawns them with new credentials.
+pub fn kill_acp_server_processes() -> usize {
+    let mut system = System::new();
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All);
+    let current_pid = std::process::id();
+    let mut killed = 0;
+
+    for (pid, process) in system.processes() {
+        let pid_u32 = pid.as_u32();
+        if pid_u32 == current_pid {
+            continue;
+        }
+        let name = process.name().to_string_lossy().to_lowercase();
+        let args_str = process
+            .cmd()
+            .iter()
+            .map(|a| a.to_string_lossy().to_lowercase())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let exe_str = process
+            .exe()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+
+        if is_manager_or_tools_process(&name, &exe_str, &args_str) {
+            continue;
+        }
+
+        if name.contains("agy_acp_server")
+            || args_str.contains("agy_acp_server")
+            || exe_str.contains("agy_acp_server")
+        {
+            crate::modules::logger::log_info(&format!(
+                "[ACP] Terminating agy_acp_server process (PID: {}) to reload switched credentials",
+                pid_u32
+            ));
+            force_kill_pid(pid_u32);
+            killed += 1;
+        }
+    }
+
+    killed
+}
+
 /// Helper process discriminator to filter out sub-processes, audio/gpu/renderers, crashpads, and language servers
 pub(crate) fn is_helper_process(name: &str, args_str: &str, exe_path: &str) -> bool {
     let name_lower = name.to_lowercase();
@@ -750,17 +824,84 @@ fn language_server_subprocess_pids(system: &System, target_ide: Option<&str>) ->
         .collect()
 }
 
+/// 提取 target_ide 对应的 Antigravity 存活主进程 PID 列表（排除 helper 子进程）
+pub fn get_antigravity_root_pids(system: &System, target_ide: Option<&str>) -> Vec<u32> {
+    get_antigravity_pids(target_ide)
+        .into_iter()
+        .filter(|pid| {
+            system
+                .process(sysinfo::Pid::from_u32(*pid))
+                .map(|process| {
+                    let name = process.name().to_string_lossy().to_string();
+                    let args = process
+                        .cmd()
+                        .iter()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    let exe = process
+                        .exe()
+                        .map(|e| e.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    !is_helper_process(&name, &args, &exe)
+                })
+                .unwrap_or(false)
+        })
+        .collect()
+}
+
+/// 基于已知根进程直接向下遍历获取 language_server 子进程列表（免去重复查找根进程的高昂开销）
+pub fn language_server_subprocess_pids_from_roots(system: &System, roots: &[u32]) -> Vec<u32> {
+    if roots.is_empty() {
+        return Vec::new();
+    }
+
+    let mut descendants: Vec<u32> = Vec::new();
+    let mut frontier: Vec<u32> = roots.to_vec();
+    let mut visited: std::collections::HashSet<u32> = roots.iter().copied().collect();
+
+    while let Some(parent) = frontier.pop() {
+        for (pid, process) in system.processes() {
+            if process.parent().map(|p| p.as_u32()) != Some(parent) {
+                continue;
+            }
+            let pid_u32 = pid.as_u32();
+            if visited.insert(pid_u32) {
+                descendants.push(pid_u32);
+                frontier.push(pid_u32);
+            }
+        }
+    }
+
+    descendants
+        .into_iter()
+        .filter(|pid_u32| {
+            system
+                .process(sysinfo::Pid::from_u32(*pid_u32))
+                .map(|process| {
+                    let name = process.name().to_string_lossy().to_string();
+                    let exe = process
+                        .exe()
+                        .map(|e| e.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    is_language_server_process(&name, &exe)
+                })
+                .unwrap_or(false)
+        })
+        .collect()
+}
+
 /// 热切号：仅终止 `target_ide` 对应 Antigravity 主进程**后代**中的 `language_server` 子进程，
 /// 保留主窗口进程。
 ///
 /// 机理（issue #3503 方案 A）：VS Code/Electron 内核自带 supervisor，主窗口检测到语言服务断开后
-/// 会在约 2 秒内原地重新拉起子进程并重载 Webview，重新读取最新凭据 —— 因此切号时用户的
+/// 会在约 1~2 秒内原地重新拉起子进程并重载 Webview，重新读取最新凭据 —— 因此切号时用户的
 /// 未保存缓冲区、终端任务、断点、文件树全部保留，不再被强杀主进程打断。
 ///
-/// 返回实际终止的进程数。**`Ok(0)` 表示未定位到子进程，调用方必须回退到完整重启**
-/// （`close_antigravity`），否则会出现"凭据已写入、IDE 仍在使用旧账号"的不一致状态 ——
-/// 那比强制重启严重得多。
-pub fn kill_language_server_subprocesses(target_ide: Option<&str>) -> Result<usize, String> {
+/// 返回实际终止的子进程 PID 列表。
+pub fn kill_language_server_subprocesses_and_get_pids(
+    target_ide: Option<&str>,
+) -> Result<Vec<u32>, String> {
     let mut system = System::new();
     system.refresh_processes(sysinfo::ProcessesToUpdate::All);
 
@@ -773,22 +914,46 @@ pub fn kill_language_server_subprocesses(target_ide: Option<&str>) -> Result<usi
         force_kill_pid(*pid_u32);
     }
 
-    Ok(pids.len())
+    Ok(pids)
+}
+
+/// 热切号：仅终止 `target_ide` 对应 Antigravity 主进程**后代**中的 `language_server` 子进程，
+/// 保留主窗口进程。
+pub fn kill_language_server_subprocesses(target_ide: Option<&str>) -> Result<usize, String> {
+    kill_language_server_subprocesses_and_get_pids(target_ide).map(|pids| pids.len())
 }
 
 /// 等待 `target_ide` 的 `language_server` 子进程被 supervisor 重新拉起（有界轮询）。
-///
-/// 用于热切号后的确认：只有子进程确实回来了，才说明主窗口仍具备 AI 能力、可以跳过完整重启；
-/// 超时未恢复则调用方应降级为完整重启，避免留下"窗口活着但引擎已死"的残状态。
 pub fn wait_for_language_server_respawn(target_ide: Option<&str>, timeout_secs: u64) -> bool {
+    wait_for_language_server_respawn_excluding(target_ide, timeout_secs, &[])
+}
+
+/// 等待 `target_ide` 的 `language_server` 子进程被 supervisor 重新拉起（敏捷 100ms 快速轮询 + 排除旧 PID）。
+pub fn wait_for_language_server_respawn_excluding(
+    target_ide: Option<&str>,
+    timeout_secs: u64,
+    killed_pids: &[u32],
+) -> bool {
     let deadline = std::time::Instant::now() + Duration::from_secs(timeout_secs);
+    let mut system = System::new();
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All);
 
+    // 预先捕获主窗口 root PIDs，热切号保持主窗口存活，因此 roots 不变，避免循环中重复全系统探测
+    let roots = get_antigravity_root_pids(&system, target_ide);
+
+    // 敏捷 100ms 快速轮询：第一时间感知 supervisor 重新拉起的 language_server，大幅压缩切号等待延迟
     while std::time::Instant::now() < deadline {
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(100));
 
-        let mut system = System::new();
         system.refresh_processes(sysinfo::ProcessesToUpdate::All);
-        if !language_server_subprocess_pids(&system, target_ide).is_empty() {
+        let current_pids = if !roots.is_empty() {
+            language_server_subprocess_pids_from_roots(&system, &roots)
+        } else {
+            language_server_subprocess_pids(&system, target_ide)
+        };
+
+        // 只要检测到存活的、且不属于已杀死的旧 PID，立即判定重启完成！
+        if current_pids.iter().any(|pid| !killed_pids.contains(pid)) {
             return true;
         }
     }

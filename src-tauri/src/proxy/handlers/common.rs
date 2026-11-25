@@ -15,7 +15,8 @@ pub use crate::proxy::pipeline::rotation::{
     apply_retry_strategy, calculate_max_retry_attempts, clamp_retry_after_for_claude,
     determine_retry_strategy, determine_retry_strategy_adaptive,
     determine_retry_strategy_with_grace, extract_retry_after_seconds, is_model_not_found_error,
-    next_rotation_attempt, should_rotate_account, RequestRetryState, RetryStrategy,
+    next_rotation_attempt, record_attempted_account, should_rotate_account, RequestRetryState,
+    RetryStrategy,
 };
 
 /// 请求内「结构化失败状态」聚合器已下沉到 `pipeline::terminal`（协议无关）。
@@ -124,7 +125,8 @@ mod tests {
 /// 入站模型闸门（协议无关）。
 ///
 /// - 缺失 / 不存在的 model-id → 404 `model not exist`
-/// - 整池无配额 → 502 `no quota accounts`
+/// - 模型在目录/磁盘已知但活跃池无可用账号 → 503 `no available accounts`
+/// - 活跃池有支持该模型的账号但整池无配额 → 502 `no quota accounts`
 ///
 /// 拒绝时：响应头带上 `X-Account-Email` 哨兵文案（日志账号列直接展示），
 /// 并把英文排障说明写入 `upstream_recorder`，使「转出报文」面板可展开查看。
@@ -353,6 +355,16 @@ pub fn build_token_error_headers_for_protocol<'a>(
             headers.insert(axum::http::header::RETRY_AFTER, val);
         }
     }
+
+    // [Fixes #3908] 明确标识错误来源：网关账号池冷却 vs 上游拒绝。
+    if crate::proxy::pipeline::policy::UpstreamClassification::is_internal_gateway_exhaustion(
+        &error_text.to_lowercase(),
+    ) {
+        headers.insert(
+            HeaderName::from_static("x-gateway-error-source"),
+            HeaderValue::from_static("gateway_pool"),
+        );
+    }
     headers
 }
 
@@ -363,6 +375,44 @@ pub fn build_token_error_headers<'a>(
     error_text: &str,
 ) -> axum::http::HeaderMap {
     build_token_error_headers_for_protocol("common", mapped_model, account_email, error_text)
+}
+
+/// 首轮获取账号失败（网关账号池冷却 vs 无可用账号）的统一状态码裁决：
+/// - 网关账号池全员冷却（`is_internal_gateway_exhaustion`）返回 `429 TOO_MANY_REQUESTS`；
+/// - 其余无可用账号或刷新失败返回 `503 SERVICE_UNAVAILABLE`。
+pub fn resolve_token_error_status(error_text: &str) -> axum::http::StatusCode {
+    let lower = error_text.to_lowercase();
+    let is_exhausted =
+        crate::proxy::pipeline::policy::UpstreamClassification::is_internal_gateway_exhaustion(
+            &lower,
+        );
+    if is_exhausted
+        && !lower.contains("no accounts available")
+        && !lower.contains("no available accounts")
+    {
+        axum::http::StatusCode::TOO_MANY_REQUESTS
+    } else {
+        axum::http::StatusCode::SERVICE_UNAVAILABLE
+    }
+}
+
+/// 统一构造首轮获取账号失败（网关账号池冷却 / 无可用账号）的双轨制协议响应
+pub fn build_token_error_response(
+    protocol: &str,
+    mapped_model: &str,
+    account_email: Option<&str>,
+    error_text: &str,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let status = resolve_token_error_status(error_text);
+    let headers = build_token_error_headers_for_protocol(
+        protocol,
+        Some(mapped_model),
+        account_email,
+        error_text,
+    );
+    let dual_err = build_dual_track_error(protocol, status.as_u16(), mapped_model, error_text);
+    (status, headers, axum::Json(dual_err)).into_response()
 }
 
 fn map_status_code_to_gemini_status(status_code: u16) -> &'static str {
@@ -399,6 +449,21 @@ pub fn check_outdated_user_agent_issue(
         custom_ua,
         Some(&lang),
     )
+}
+
+/// 是否为可通过修正 UA 配置解决的 404/403（缺失 Hub 签名 / Hub 版本过低）。
+///
+/// 这类错误不是账号/模型故障：不应写入 900s 单模型熔断，也不应换号重放；
+/// 否则用户改好 UA 后仍会被旧熔断卡 15 分钟。
+pub fn is_outdated_user_agent_error(
+    model: &str,
+    status_code: u16,
+    error_text: &str,
+    custom_ua: Option<&str>,
+) -> bool {
+    check_outdated_user_agent_issue(model, status_code, error_text, custom_ua)
+        .map(|(_, _, _, _, code)| code == "outdated_user_agent")
+        .unwrap_or(false)
 }
 
 /// 支持指定语言环境的 User-Agent 门禁与熔断特征检测
@@ -504,6 +569,34 @@ pub fn check_outdated_user_agent_issue_with_lang(
     None
 }
 
+static TOKEN_LIMIT_MAX_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r"(?i)exceeds\s+the\s+maximum\s+number\s+of\s+tokens\s+allowed\s*\((\d+)\)")
+        .expect("valid regex for token limit max")
+});
+
+static TOKEN_LIMIT_INPUT_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r"(?i)input\s+token\s+count[:\s]+(\d+)")
+        .expect("valid regex for token limit input")
+});
+
+/// [Fixes #4024] 解析上游 1M 上下文硬超限报错：
+/// "The input token count exceeds the maximum number of tokens allowed (1048576); input token count: 1050377."
+/// 返回 (最大允许 token 数, 实际输入 token 数)。
+pub fn parse_token_limit_error(status_code: u16, error_text: &str) -> Option<(u64, u64)> {
+    if status_code != 400 {
+        return None;
+    }
+    let lower = error_text.to_lowercase();
+    if !lower.contains("exceeds the maximum number of tokens") {
+        return None;
+    }
+    let max_caps = TOKEN_LIMIT_MAX_RE.captures(error_text)?;
+    let input_caps = TOKEN_LIMIT_INPUT_RE.captures(error_text)?;
+    let max = max_caps.get(1)?.as_str().parse::<u64>().ok()?;
+    let input = input_caps.get(1)?.as_str().parse::<u64>().ok()?;
+    Some((max, input))
+}
+
 /// 格式化双轨制错误报文（四大标准协议原始字段散开 + 顶层/UI层不阉割双轨诊断）
 pub fn build_dual_track_error(
     protocol: &str, // "claude", "openai", "responses", or "gemini"
@@ -591,6 +684,11 @@ pub fn build_dual_track_error_with_ua_and_lang(
 
     let is_not_found = is_model_not_found_error(status_code, error_text);
 
+    // [Fixes #4024] 上游 1M 上下文硬超限（400 "input token count exceeds ..."）：
+    // 归一化为 Anthropic 标准的 invalid_request_error + "prompt is too long"，
+    // 让 Claude Code 客户端的 prompt_too_long 恢复机制（自动压缩/降配）可以识别。
+    let token_limit = parse_token_limit_error(status_code, error_text);
+
     // 账号被上游封禁 / 权限拒绝：与「容量耗尽」「模型不存在」严格区分，
     // 避免 403 被 Claude 协议映射为 503 后与真实容量问题混淆。
     let is_account_forbidden = lower.contains("tos_violation")
@@ -620,6 +718,26 @@ pub fn build_dual_track_error_with_ua_and_lang(
             "permission_error",
             "account_forbidden",
         )
+    } else if lower.contains(crate::proxy::common::model_gate::NO_AVAILABLE_ACCOUNTS) {
+        (
+            i18n_err
+                .no_available_accounts_title
+                .replace("{model}", model),
+            i18n_err
+                .no_available_accounts_diag
+                .replace("{model}", model),
+            i18n_err.no_available_accounts_sug.replace("{model}", model),
+            "api_error",
+            "no_available_accounts",
+        )
+    } else if lower.contains(crate::proxy::common::model_gate::NO_QUOTA_ACCOUNTS) {
+        (
+            i18n_err.no_quota_accounts_title.replace("{model}", model),
+            i18n_err.no_quota_accounts_diag.replace("{model}", model),
+            i18n_err.no_quota_accounts_sug.replace("{model}", model),
+            "rate_limit_error",
+            "no_quota_accounts",
+        )
     } else if is_internal_limited {
         (
             i18n_err.all_accounts_limited_title.to_string(),
@@ -647,6 +765,20 @@ pub fn build_dual_track_error_with_ua_and_lang(
             i18n_err.model_not_found_sug.to_string(),
             "invalid_request_error",
             "model_not_found",
+        )
+    } else if let Some((max_tokens, input_tokens)) = token_limit {
+        (
+            format!(
+                "prompt is too long: {} tokens > {} maximum",
+                input_tokens, max_tokens
+            ),
+            i18n_err
+                .upstream_error_diag
+                .replace("{model}", model)
+                .replace("{status}", &status_code.to_string()),
+            i18n_err.upstream_error_sug.to_string(),
+            "invalid_request_error",
+            "prompt_too_long",
         )
     } else if status_code == 429 || status_code == 529 {
         (
@@ -681,15 +813,28 @@ pub fn build_dual_track_error_with_ua_and_lang(
     // 2. 确定散开到各自协议标准 message 字段的内容：
     //    若是网关自身限制或网络异常（无有效上游业务报文参与），则使用网关诊断文本；
     //    若是上游发生的真实报错，100% 保持上游原始报错（raw_upstream_msg），绝不被网关硬编码覆盖！
-    let effective_message =
+    let mut effective_message =
         if is_internal_limited || is_network_error || raw_upstream_msg.trim().is_empty() {
             readable_message.clone()
         } else {
             raw_upstream_msg
         };
 
+    // [Fixes #4024] 对 Claude 协议，超限终态响应的 message 必须使用 Anthropic 标准格式，
+    // 而不是保留 Gemini 原文，否则 Claude Code 客户端无法识别 prompt_too_long 触发自动压缩；
+    // 其他原生协议（如 Gemini/OpenAI）保持上游原有格式，维护多协议保真度。
+    if protocol == "claude" {
+        if let Some((max_tokens, input_tokens)) = token_limit {
+            effective_message = format!(
+                "prompt is too long: {} tokens > {} maximum",
+                input_tokens, max_tokens
+            );
+        }
+    }
+
     let gateway_error_obj = serde_json::json!({
         "error_code": err_code,
+        "source": if is_internal_limited { "gateway_pool" } else { "upstream" },
         "model": model,
         "is_server_error": false,
         "diagnosis": diagnosis,
@@ -1070,19 +1215,82 @@ mod retry_after_tests {
     #[test]
     fn test_build_dual_track_error_internal_limited() {
         let raw_err = "All accounts limited. Wait 30s.";
-        let claude_res = build_dual_track_error("claude", 429, "gemini-2.5-flash", raw_err);
+        let claude_res = build_dual_track_error_with_ua_and_lang(
+            "claude",
+            429,
+            "gemini-2.5-flash",
+            raw_err,
+            None,
+            Some("zh"),
+        );
         assert_eq!(claude_res["error"]["code"], "all_accounts_limited");
+        assert_eq!(
+            claude_res["error"]["gateway_error"]["source"],
+            "gateway_pool"
+        );
         assert!(claude_res["error"]["message"]
             .as_str()
             .unwrap()
             .contains("网关调度受限"));
+
+        let en_res = build_dual_track_error_with_ua_and_lang(
+            "claude",
+            429,
+            "gemini-2.5-flash",
+            raw_err,
+            None,
+            Some("en"),
+        );
+        assert_eq!(en_res["error"]["code"], "all_accounts_limited");
+        assert!(en_res["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Gateway Scheduling Limited"));
+
+        let default_res = build_dual_track_error("claude", 429, "gemini-2.5-flash", raw_err);
+        assert_eq!(default_res["error"]["code"], "all_accounts_limited");
+        assert!(default_res["error"]["message"].is_string());
+    }
+
+    #[test]
+    fn test_build_dual_track_error_upstream_source() {
+        let raw_err = r#"{"error":{"code":429,"message":"Resource has been exhausted (e.g. check quota).","status":"RESOURCE_EXHAUSTED"}}"#;
+        let res = build_dual_track_error("claude", 429, "gemini-2.5-flash", raw_err);
+        assert_eq!(res["error"]["gateway_error"]["source"], "upstream");
+    }
+
+    #[test]
+    fn test_token_error_headers_mark_gateway_pool_source() {
+        let headers =
+            build_token_error_headers(None, None, "All accounts rate-limited. Cooldown wait 27s.");
+        assert_eq!(
+            headers
+                .get("x-gateway-error-source")
+                .and_then(|v| v.to_str().ok()),
+            Some("gateway_pool")
+        );
+        assert_eq!(
+            resolve_token_error_status("All accounts rate-limited. Cooldown wait 27s."),
+            axum::http::StatusCode::TOO_MANY_REQUESTS
+        );
+        assert_eq!(
+            resolve_token_error_status("No accounts available"),
+            axum::http::StatusCode::SERVICE_UNAVAILABLE
+        );
     }
 
     #[test]
     fn test_build_dual_track_error_network_error() {
         let raw_err =
             "HTTP request failed at https://alkalicognition.googleapis.com: failed to connect";
-        let res = build_dual_track_error("claude", 502, "claude-sonnet-4-6", raw_err);
+        let res = build_dual_track_error_with_ua_and_lang(
+            "claude",
+            502,
+            "claude-sonnet-4-6",
+            raw_err,
+            None,
+            Some("zh"),
+        );
         assert_eq!(res["error"]["code"], "upstream_network_error");
         assert_eq!(res["error"]["gateway_error"]["is_server_error"], false);
         assert_eq!(res["error"]["is_server_error"], false);
@@ -1090,6 +1298,26 @@ mod retry_after_tests {
             .as_str()
             .unwrap()
             .contains("非服务端故障"));
+
+        let en_res = build_dual_track_error_with_ua_and_lang(
+            "claude",
+            502,
+            "claude-sonnet-4-6",
+            raw_err,
+            None,
+            Some("en"),
+        );
+        assert_eq!(en_res["error"]["code"], "upstream_network_error");
+        assert_eq!(en_res["error"]["gateway_error"]["is_server_error"], false);
+        assert_eq!(en_res["error"]["is_server_error"], false);
+        assert!(en_res["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Non-Server Fault"));
+
+        let default_res = build_dual_track_error("claude", 502, "claude-sonnet-4-6", raw_err);
+        assert_eq!(default_res["error"]["code"], "upstream_network_error");
+        assert!(default_res["error"]["message"].is_string());
     }
 
     #[test]
@@ -1132,7 +1360,6 @@ mod retry_after_tests {
 
     #[test]
     fn test_determine_retry_strategy_adaptive_google_multi_day_quota_exhaustion() {
-        use reqwest::StatusCode;
         use std::time::Duration;
 
         let google_exhausted_body = r#"{
@@ -1225,13 +1452,29 @@ mod retry_after_tests {
             .as_str()
             .unwrap()
             .contains("【上游指纹门禁异常】"));
+
+        // 模型-not-found 分支使用这个纯判定：UA 风险时不得写 900s 熔断/换号。
+        assert!(is_outdated_user_agent_error(
+            "gemini-4-argon-high",
+            404,
+            raw_404,
+            Some(legacy_ua)
+        ));
+        assert!(!is_outdated_user_agent_error(
+            "gemini-4-argon-high",
+            404,
+            raw_404,
+            Some(
+                "antigravity/hub/2.32.1 (aidev_client; os_type=windows; arch=amd64; cl=1021296516)"
+            )
+        ));
     }
 
     #[test]
     fn test_check_outdated_user_agent_issue_detects_low_version_hub_ua() {
-        // 具有官方 Hub 签名，但版本号 (2.11.0) 低于当前推荐默认基准 (OFFICIAL_HUB_VERSION 2.28.0)
+        // 具有官方 Hub 签名，但版本号 (2.11.0) 低于当前推荐默认基准 (OFFICIAL_HUB_VERSION 2.32.1)
         let low_hub_ua =
-            "antigravity/hub/2.11.0 (aidev_client; os_type=windows; arch=amd64; cl=1008300195)";
+            "antigravity/hub/2.11.0 (aidev_client; os_type=windows; arch=amd64; cl=1021296516)";
         let raw_404 = r#"HTTP 404: {"error":{"code":404,"message":"Requested entity was not found.","status":"NOT_FOUND"}}"#;
 
         let res = build_dual_track_error_with_ua_and_lang(
@@ -1283,5 +1526,95 @@ mod retry_after_tests {
             .as_str()
             .unwrap()
             .contains("【模型全池临时熔断】"));
+    }
+
+    #[test]
+    fn test_dual_track_no_available_accounts_all_12_languages_and_protocols() {
+        let langs = [
+            ("zh", "【当前无可用配额账号】"),
+            ("zh-TW", "【目前無可用配額帳號】"),
+            ("en", "[No Available Quota Accounts]"),
+            ("ja", "【利用可能なクォータアカウントなし】"),
+            ("ko", "【사용 가능한 할당량 계정 없음】"),
+            ("es", "【Sin cuentas de cuota disponibles】"),
+            ("ru", "【Нет доступных аккаунтов с квотой】"),
+            ("pt", "【Sem contas de cota disponíveis】"),
+            ("tr", "【Kullanılabilir Kota Hesabı Yok】"),
+            ("vi", "【Hiện Không Có Tài Khoản Khả Dụng】"),
+            ("ar", "【لا توجد حسابات حصة متاحة حاليًا】"),
+            ("my", "【Tiada Akaun Kuota Tersedia】"),
+        ];
+
+        for (lang, expected_prefix) in langs {
+            let res = build_dual_track_error_with_ua_and_lang(
+                "openai",
+                503,
+                "gemini-4-hydrogen-high",
+                crate::proxy::common::model_gate::NO_AVAILABLE_ACCOUNTS,
+                None,
+                Some(lang),
+            );
+            assert_eq!(res["error"]["code"], "no_available_accounts");
+            assert_eq!(res["error"]["gateway_error"]["source"], "gateway_pool");
+            let msg = res["error"]["message"].as_str().unwrap();
+            assert!(
+                msg.contains(expected_prefix),
+                "lang={lang} expected '{expected_prefix}' in '{msg}'"
+            );
+            assert!(msg.contains("gemini-4-hydrogen-high"));
+        }
+
+        // Verify Gemini protocol also preserves HTTP 503 + gateway_error
+        let gemini_res = build_dual_track_error_with_ua_and_lang(
+            "gemini",
+            503,
+            "gemini-4-hydrogen-high",
+            crate::proxy::common::model_gate::NO_AVAILABLE_ACCOUNTS,
+            None,
+            Some("zh"),
+        );
+        assert_eq!(gemini_res["error"]["code"], 503);
+        assert_eq!(
+            gemini_res["error"]["gateway_error"]["error_code"],
+            "no_available_accounts"
+        );
+    }
+
+    #[test]
+    fn test_parse_token_limit_error_and_claude_normalization() {
+        let raw = "HTTP 400: {\"error\":{\"code\":400,\"message\":\"The input token count exceeds the maximum number of tokens allowed (1048576); input token count: 1050377.\",\"status\":\"INVALID_ARGUMENT\"}}";
+
+        assert_eq!(parse_token_limit_error(400, raw), Some((1048576, 1050377)));
+        assert_eq!(parse_token_limit_error(500, raw), None);
+        assert_eq!(parse_token_limit_error(400, "some other 400 error"), None);
+
+        // Claude 协议终态报文必须归一化为 Anthropic 标准 prompt is too long，
+        // 使 Claude Code 的 prompt_too_long 恢复机制（自动压缩）能够识别
+        let res = build_dual_track_error_with_ua_and_lang(
+            "claude",
+            400,
+            "gemini-4-hydrogen",
+            raw,
+            None,
+            Some("zh"),
+        );
+        assert_eq!(res["error"]["type"], "invalid_request_error");
+        assert_eq!(res["error"]["code"], "prompt_too_long");
+        let msg = res["error"]["message"].as_str().unwrap();
+        assert_eq!(msg, "prompt is too long: 1050377 tokens > 1048576 maximum");
+
+        // Gemini 协议保持原生上游错误报文，不被 Anthropic 格式覆盖
+        let gemini_res = build_dual_track_error_with_ua_and_lang(
+            "gemini",
+            400,
+            "gemini-4-hydrogen",
+            raw,
+            None,
+            Some("zh"),
+        );
+        assert!(gemini_res["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("The input token count exceeds the maximum number of tokens allowed"));
     }
 }

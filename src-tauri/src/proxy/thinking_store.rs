@@ -95,6 +95,24 @@ pub struct ThinkingRecord {
     #[allow(dead_code)]
     pub tool_names: Vec<String>,
     pub visible: String,
+    pub context_anchor: String,
+}
+
+impl ThinkingRecord {
+    pub fn has_tool_calls(&self) -> bool {
+        !self.tool_ids.is_empty() || !self.tool_names.is_empty()
+    }
+
+    pub fn is_capturable(&self) -> bool {
+        if self.thought.trim().is_empty() && self.signature.is_none() {
+            return false;
+        }
+        is_capturable_thought(
+            &self.thought,
+            self.signature.as_deref(),
+            self.has_tool_calls(),
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -195,13 +213,9 @@ impl ThinkingStore {
         if !crate::proxy::config::is_thinking_store_enabled() {
             return;
         }
-        if rec.thought.trim().is_empty() && rec.signature.is_none() {
-            return;
-        }
-        // Placeholder "..." / sentinel-only blocks are injected for Gemini protocol
-        // compliance. Recording them as new turns made every 300K-context request
-        // append N dummies, then prune rewrite the whole SQLite session.
-        if !is_capturable_thought(&rec.thought, rec.signature.as_deref()) {
+        // Placeholder "..." / sentinel-only blocks or degraded turns (0 thought with 188B placeholder sig)
+        // must never be recorded into the store, preventing pollution and degradation.
+        if !rec.is_capturable() {
             return;
         }
 
@@ -232,25 +246,39 @@ impl ThinkingStore {
             let merge_last = entry
                 .turns
                 .last()
-                .is_some_and(|last| last.fingerprint == rec.fingerprint);
+                .is_some_and(|last| can_merge_records(last, &rec));
 
             if merge_last {
-                let (stronger, old_text_bytes) = {
+                let (stronger, old_text_bytes, preserved_anchor) = {
                     let last = entry.turns.last().expect("merge_last");
+                    let preserved_anchor = if normalize_context_anchor(&rec.context_anchor)
+                        .is_none()
+                        && normalize_context_anchor(&last.context_anchor).is_some()
+                    {
+                        Some(last.context_anchor.clone())
+                    } else {
+                        None
+                    };
                     (
                         rec.thought.len() >= last.thought.len()
                             || rec.signature.as_ref().map(|s| s.len()).unwrap_or(0)
                                 > last.signature.as_ref().map(|s| s.len()).unwrap_or(0),
                         last.thought.len() + last.visible.len(),
+                        preserved_anchor,
                     )
                 };
                 if stronger {
+                    let mut merged_rec = rec;
+                    if let Some(anchor) = preserved_anchor {
+                        merged_rec.context_anchor = anchor;
+                    }
+                    let merged_bytes = record_bytes(&merged_rec);
                     entry.bytes = entry.bytes.saturating_sub(old_text_bytes);
                     {
                         let last_arc = entry.turns.last_mut().expect("merge_last");
-                        *Arc::make_mut(last_arc) = rec;
+                        *Arc::make_mut(last_arc) = merged_rec;
                     }
-                    entry.bytes = entry.bytes.saturating_add(rec_bytes);
+                    entry.bytes = entry.bytes.saturating_add(merged_bytes);
                     entry.turns.last().cloned()
                 } else {
                     None
@@ -277,7 +305,7 @@ impl ThinkingStore {
         };
 
         if let Some(saved) = persist {
-            if let Err(e) = crate::modules::proxy_db::save_thinking_record(
+            if let Err(e) = crate::modules::proxy_db::save_thinking_record_with_anchor(
                 store_key,
                 &saved.fingerprint,
                 &saved.thought,
@@ -285,6 +313,7 @@ impl ThinkingStore {
                 &saved.tool_ids,
                 &saved.tool_names,
                 &saved.visible,
+                Some(&saved.context_anchor),
             ) {
                 tracing::warn!(
                     "[ThinkingStore] Failed to persist record for {}: {}",
@@ -353,7 +382,11 @@ impl ThinkingStore {
                     tool_ids: p.tool_ids,
                     tool_names: p.tool_names,
                     visible: p.visible,
+                    context_anchor: p.context_anchor,
                 };
+                if !rec.is_capturable() {
+                    continue;
+                }
                 entry.bytes += record_bytes(&rec);
                 entry.turns.push(Arc::new(rec));
             }
@@ -447,7 +480,7 @@ impl ThinkingStore {
             }
             if let Some((idx, rec)) = to_upgrade.last() {
                 if *idx + 1 == existing.len() {
-                    let _ = crate::modules::proxy_db::save_thinking_record(
+                    let _ = crate::modules::proxy_db::save_thinking_record_with_anchor(
                         store_key,
                         &rec.fingerprint,
                         &rec.thought,
@@ -455,6 +488,7 @@ impl ThinkingStore {
                         &rec.tool_ids,
                         &rec.tool_names,
                         &rec.visible,
+                        Some(&rec.context_anchor),
                     );
                 }
             }
@@ -495,6 +529,7 @@ impl ThinkingStore {
             tool_names: Vec<String>,
             existing_thought: String,
             existing_sig: Option<String>,
+            context_anchor: String,
             fp: String,
             matched_record_idx: Option<usize>,
             already_complete: bool,
@@ -549,6 +584,7 @@ impl ThinkingStore {
                 tool_names,
                 existing_thought,
                 existing_sig,
+                context_anchor: anchor,
                 fp: String::new(),
                 matched_record_idx: None,
                 already_complete,
@@ -579,6 +615,80 @@ impl ThinkingStore {
                 .entry(rec.fingerprint.as_str())
                 .or_default()
                 .push(rec_idx);
+        }
+
+        // Pre-pass: 已被客户端完整回传的轮次先在 used[] 中认领自己的记录，避免后续相同文本的未完整轮次误抢早期记录
+        for turn in model_turns.iter_mut() {
+            if !turn.already_complete {
+                continue;
+            }
+            if let Some(ref sig) = turn.existing_sig {
+                let norm = normalize_signature_for_comparison(sig);
+                if let Some(&rec_idx) = by_sig.get(norm.as_ref()) {
+                    if !used[rec_idx] {
+                        used[rec_idx] = true;
+                        continue;
+                    }
+                }
+            }
+            if !turn.tool_ids.is_empty() {
+                let mut claimed = false;
+                for id in &turn.tool_ids {
+                    let norm = crate::proxy::common::utils::normalize_tool_id(id);
+                    if let Some(idxs) = by_tool
+                        .get(norm.as_ref())
+                        .or_else(|| by_tool.get(id.as_str()))
+                    {
+                        if let Some(&rec_idx) = idxs.iter().find(|&&i| {
+                            !used[i]
+                                && (turn.tool_names.is_empty()
+                                    || records[i].tool_names.is_empty()
+                                    || turn.tool_names == records[i].tool_names)
+                        }) {
+                            used[rec_idx] = true;
+                            claimed = true;
+                            break;
+                        }
+                    }
+                }
+                if claimed {
+                    continue;
+                }
+            }
+            if turn.fp.is_empty() {
+                turn.fp = fingerprint(&turn.visible, &turn.tool_ids, &turn.tool_names);
+            }
+            if let Some(idxs) = by_fp.get(turn.fp.as_str()) {
+                let turn_anchor = normalize_context_anchor(&turn.context_anchor);
+                let matched_idx = if let Some(anchor) = turn_anchor {
+                    idxs.iter().copied().find(|&i| {
+                        !used[i]
+                            && normalize_context_anchor(&records[i].context_anchor) == Some(anchor)
+                            && (turn.existing_thought.is_empty()
+                                || records[i].thought.is_empty()
+                                || records[i].thought == turn.existing_thought)
+                    })
+                } else {
+                    None
+                }
+                .or_else(|| {
+                    if turn.existing_thought.is_empty() {
+                        None
+                    } else {
+                        idxs.iter().copied().find(|&i| {
+                            !used[i]
+                                && !context_anchors_conflict(
+                                    &records[i].context_anchor,
+                                    &turn.context_anchor,
+                                )
+                                && records[i].thought == turn.existing_thought
+                        })
+                    }
+                });
+                if let Some(rec_idx) = matched_idx {
+                    used[rec_idx] = true;
+                }
+            }
         }
 
         // Phase 0: 真实签名直查（最高优先级：客户端历史若自带真实签名，直接精确反向匹配）
@@ -648,7 +758,7 @@ impl ThinkingStore {
             }
         }
 
-        // Phase 2: 完整指纹匹配（正向保序匹配，杜绝修剪后逆向滑窗相位错位）
+        // Phase 2: 完整指纹匹配（优先因果锚点精确对齐，仅回退未绑定锚点的旧记录，杜绝同文本多轮相位错位）
         for turn in model_turns.iter_mut() {
             if turn.already_complete || turn.matched_record_idx.is_some() {
                 continue;
@@ -660,7 +770,8 @@ impl ThinkingStore {
             let Some(idxs) = by_fp.get(turn.fp.as_str()) else {
                 continue;
             };
-            if let Some(&rec_idx) = idxs.iter().find(|&&i| {
+            let turn_anchor = normalize_context_anchor(&turn.context_anchor);
+            let base_match = |i: usize| -> bool {
                 if used[i] {
                     return false;
                 }
@@ -675,7 +786,30 @@ impl ThinkingStore {
                     }
                 }
                 true
-            }) {
+            };
+            let matched = if let Some(anchor) = turn_anchor {
+                idxs.iter()
+                    .copied()
+                    .find(|&i| {
+                        base_match(i)
+                            && normalize_context_anchor(&records[i].context_anchor) == Some(anchor)
+                    })
+                    .or_else(|| {
+                        idxs.iter().copied().find(|&i| {
+                            base_match(i)
+                                && normalize_context_anchor(&records[i].context_anchor).is_none()
+                        })
+                    })
+            } else {
+                idxs.iter()
+                    .copied()
+                    .find(|&i| {
+                        base_match(i)
+                            && normalize_context_anchor(&records[i].context_anchor).is_none()
+                    })
+                    .or_else(|| idxs.iter().copied().find(|&i| base_match(i)))
+            };
+            if let Some(rec_idx) = matched {
                 turn.matched_record_idx = Some(rec_idx);
                 used[rec_idx] = true;
             }
@@ -714,9 +848,15 @@ impl ThinkingStore {
                 if turn.norm_visible.is_empty() {
                     continue;
                 }
+                let turn_anchor = normalize_context_anchor(&turn.context_anchor);
+                let mut fallback_idx: Option<usize> = None;
                 for (rec_idx, rec) in records.iter().enumerate() {
                     let rec_has_tools = !rec.tool_ids.is_empty() || !rec.tool_names.is_empty();
-                    if used[rec_idx] || rec_has_tools || rec_norms[rec_idx].is_empty() {
+                    if used[rec_idx]
+                        || rec_has_tools
+                        || rec_norms[rec_idx].is_empty()
+                        || context_anchors_conflict(&rec.context_anchor, &turn.context_anchor)
+                    {
                         continue;
                     }
                     let norm_rec = &rec_norms[rec_idx];
@@ -730,9 +870,24 @@ impl ThinkingStore {
                         || (norm_rec.len() >= 10 && norm_vis.ends_with(norm_rec))
                         || (thought_matches_prefix && norm_vis.ends_with(norm_rec))
                     {
+                        let rec_anchor = normalize_context_anchor(&rec.context_anchor);
+                        if turn_anchor.is_some() && rec_anchor == turn_anchor {
+                            turn.matched_record_idx = Some(rec_idx);
+                            used[rec_idx] = true;
+                            fallback_idx = None;
+                            break;
+                        } else if fallback_idx.is_none() {
+                            fallback_idx = Some(rec_idx);
+                            if turn_anchor.is_none() && rec_anchor.is_none() {
+                                break;
+                            }
+                        }
+                    }
+                }
+                if turn.matched_record_idx.is_none() {
+                    if let Some(rec_idx) = fallback_idx {
                         turn.matched_record_idx = Some(rec_idx);
                         used[rec_idx] = true;
-                        break;
                     }
                 }
             }
@@ -772,6 +927,7 @@ impl ThinkingStore {
                             tool_ids: persisted.tool_ids,
                             tool_names: persisted.tool_names,
                             visible: persisted.visible,
+                            context_anchor: persisted.context_anchor,
                         });
                     }
                 }
@@ -797,18 +953,23 @@ impl ThinkingStore {
                                 tool_ids: persisted.tool_ids,
                                 tool_names: persisted.tool_names,
                                 visible: persisted.visible,
+                                context_anchor: persisted.context_anchor,
                             });
                             break;
                         }
                     }
                 }
             } else if fetched_rec.is_none() && !turn.visible.trim().is_empty() {
-                // 2. 纯文本轮次精准穿透点查 (利用 idx_thinking_rec_fp 索引)
+                // 2. 纯文本轮次精准穿透点查 (结合因果锚点防同文本多轮串台)
                 if turn.fp.is_empty() {
                     turn.fp = fingerprint(&turn.visible, &turn.tool_ids, &turn.tool_names);
                 }
                 if let Ok(Some(persisted)) =
-                    crate::modules::proxy_db::load_thinking_by_fingerprint(store_key, &turn.fp)
+                    crate::modules::proxy_db::load_thinking_by_fingerprint_with_anchor(
+                        store_key,
+                        &turn.fp,
+                        Some(&turn.context_anchor),
+                    )
                 {
                     fetched_rec = Some(ThinkingRecord {
                         fingerprint: persisted.fingerprint,
@@ -817,6 +978,7 @@ impl ThinkingStore {
                         tool_ids: persisted.tool_ids,
                         tool_names: persisted.tool_names,
                         visible: persisted.visible,
+                        context_anchor: persisted.context_anchor,
                     });
                 }
             }
@@ -848,6 +1010,10 @@ impl ThinkingStore {
                             }
                             let r_has_tools = !r.tool_ids.is_empty() || !r.tool_names.is_empty();
                             !r_has_tools
+                                && !context_anchors_conflict(
+                                    &r.context_anchor,
+                                    &last_turn.context_anchor,
+                                )
                         })
                     {
                         last_turn.matched_record_idx = Some(last_unused_rec_idx);
@@ -877,13 +1043,38 @@ impl ThinkingStore {
                 continue;
             };
 
+            let existing_is_meaningful = is_meaningful_thought(&turn.existing_thought);
+            let rec_is_meaningful = is_meaningful_thought(&rec.thought);
+
+            // 1. 若本地记录既无实质思考又无工具调用，该记录无任何可回填内容，直接跳过
+            if !rec_is_meaningful && !rec.has_tool_calls() {
+                continue;
+            }
+
+            // 2. 若历史轮次中已存在客户端发送的实质思考块，而本地记录并无实质思考（纯 FC 轮），绝不剥离现有实质思考块！
+            if existing_is_meaningful && !rec_is_meaningful {
+                let has_unvalidated_function_call = parts
+                    .iter()
+                    .any(|p| p.get("functionCall").is_some() && !part_has_signature(p));
+                if has_unvalidated_function_call && rec.has_tool_calls() {
+                    let fallback = rec
+                        .signature
+                        .as_deref()
+                        .filter(|s| is_real_signature(s) && is_likely_gemini_signature(s));
+                    place_turn_signature_scoped(&mut *parts, fallback, true, Some(store_key));
+                }
+                continue;
+            }
+
             let has_unvalidated_function_call = parts
                 .iter()
                 .any(|p| p.get("functionCall").is_some() && !part_has_signature(p));
 
             let should_replace = is_placeholder_thought(&turn.existing_thought)
-                || turn.existing_thought.len() < rec.thought.len()
-                || (rec.signature.is_some() && !parts.iter().any(|p| part_has_signature(p)))
+                || (rec_is_meaningful && turn.existing_thought.len() < rec.thought.len())
+                || (rec_is_meaningful
+                    && rec.signature.is_some()
+                    && !parts.iter().any(|p| part_has_signature(p)))
                 || has_unvalidated_function_call;
 
             if !should_replace {
@@ -892,8 +1083,7 @@ impl ThinkingStore {
 
             parts.retain(|p| p.get("thought").and_then(|t| t.as_bool()) != Some(true));
 
-            let has_meaningful_thought =
-                !is_placeholder_thought(&rec.thought) && !rec.thought.trim().is_empty();
+            let has_meaningful_thought = rec_is_meaningful;
 
             let is_claude_target = target_model
                 .map(|m| m.to_lowercase().contains("claude"))
@@ -999,10 +1189,8 @@ impl ThinkingStore {
                     parts.insert(0, thought_part);
                     restored += 1;
                 }
-            } else {
-                // 【2026-09-27】无实质思考内容（占位/空思考）：绝不注入 "..." 占位思考块！
-                // 官方标准形态为「无思考块 + 锚点带签名」（baogao.txt 9/24 轮）。
-                // 首个非思考 part 作为锚点正常承接该轮签名。
+            } else if rec.has_tool_calls() {
+                // 纯 FC 轮：无思考文本，仅工具调用锚点承接该轮签名，绝不计入 restored 思考块计数！
                 if is_claude_target {
                     let fallback = rec
                         .signature
@@ -1020,11 +1208,7 @@ impl ThinkingStore {
                         .signature
                         .as_deref()
                         .filter(|s| is_real_signature(s) && is_likely_gemini_signature(s));
-                    if place_turn_signature_scoped(&mut *parts, fallback, true, Some(store_key))
-                        .is_some()
-                    {
-                        restored += 1;
-                    }
+                    place_turn_signature_scoped(&mut *parts, fallback, true, Some(store_key));
                 }
             }
         }
@@ -1540,16 +1724,30 @@ impl TurnAccumulator {
         }
     }
 
+    pub fn has_tool_calls(&self) -> bool {
+        !self.tool_ids.is_empty() || !self.tool_names.is_empty()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.thought.trim().is_empty() && self.signature.is_none()
     }
 
     fn should_capture(&self) -> bool {
-        !self.is_empty() && is_capturable_thought(&self.thought, self.signature.as_deref())
+        !self.is_empty()
+            && is_capturable_thought(
+                &self.thought,
+                self.signature.as_deref(),
+                self.has_tool_calls(),
+            )
     }
 
     fn into_record(self) -> ThinkingRecord {
         let fp = fingerprint(&self.visible, &self.tool_ids, &self.tool_names);
+        let context_anchor = if self.context_anchor.trim().is_empty() {
+            "root".to_string()
+        } else {
+            self.context_anchor
+        };
         ThinkingRecord {
             fingerprint: fp,
             thought: self.thought,
@@ -1557,6 +1755,7 @@ impl TurnAccumulator {
             tool_ids: self.tool_ids,
             tool_names: self.tool_names,
             visible: self.visible,
+            context_anchor,
         }
     }
 
@@ -1641,20 +1840,22 @@ fn contents_have_capturable_thought(contents: &[Value]) -> bool {
         let Some(parts) = content.get("parts").and_then(|p| p.as_array()) else {
             continue;
         };
+        let has_tool_calls = parts.iter().any(|p| p.get("functionCall").is_some());
         for part in parts {
             let is_thought = part
                 .get("thought")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            if !is_thought {
-                continue;
-            }
-            let text = part.get("text").and_then(|t| t.as_str()).unwrap_or("");
-            let sig = part
-                .get("thoughtSignature")
-                .or_else(|| part.get("thought_signature"))
-                .and_then(|s| s.as_str());
-            if is_capturable_thought(text, sig) {
+            if is_thought {
+                let text = part.get("text").and_then(|t| t.as_str()).unwrap_or("");
+                let sig = part
+                    .get("thoughtSignature")
+                    .or_else(|| part.get("thought_signature"))
+                    .and_then(|s| s.as_str());
+                if is_capturable_thought(text, sig, has_tool_calls) {
+                    return true;
+                }
+            } else if has_tool_calls && part_has_signature(part) {
                 return true;
             }
         }
@@ -1700,8 +1901,20 @@ pub fn capture_gemini_response_with_preceding(
 /// 当会话在客户端成功生成 compact_boundary 或注入历史摘要后，该轮及其之前的历史属于压缩上下文。
 pub fn find_compaction_continuation_boundary(contents: &[Value]) -> Option<usize> {
     // [FIX #3697] 采用逆序扫描 contents，确保在长会话经历多次压缩时严格锚定到最新的第二次/后续压缩边界
+    // 仅检测客户端注入的纯文本用户接续轮次（排除模型回复正文及包含 tool_call/tool_response 的工具流，
+    // 防止技术讨论、进度汇报或代码检索里提及压缩关键字时误清空全部历史签名）。
     for (idx, content) in contents.iter().enumerate().rev() {
+        let role = content.get("role").and_then(Value::as_str).unwrap_or("");
+        if role == "model" || role == "assistant" {
+            continue;
+        }
         if let Some(parts) = content.get("parts").and_then(Value::as_array) {
+            let has_tool_part = parts
+                .iter()
+                .any(|p| p.get("functionCall").is_some() || p.get("functionResponse").is_some());
+            if has_tool_part {
+                continue;
+            }
             for part in parts {
                 if let Some(text) = part.get("text").and_then(Value::as_str) {
                     if crate::proxy::mappers::common_utils::is_post_compaction_continuation_text(
@@ -1761,21 +1974,28 @@ pub fn calculate_contents_metrics(contents: &[Value]) -> (usize, usize) {
 }
 
 /// 识别文本中是否包含各主流 AI 客户端（Cline, Roo-Code, Cursor, Aider 等）常见的输出就地修剪/折叠占位标记
+fn line_starts_with_folded_marker(trimmed_lower: &str) -> bool {
+    trimmed_lower.starts_with("[output truncated")
+        || trimmed_lower.starts_with("[result omitted")
+        || trimmed_lower.starts_with("[tool result truncated")
+        || trimmed_lower.starts_with("[output omitted")
+        || trimmed_lower.starts_with("[content truncated")
+        || trimmed_lower.starts_with("[image omitted")
+        || trimmed_lower.starts_with("[image removed")
+        || trimmed_lower.starts_with("[history truncated")
+        || trimmed_lower.starts_with("[context truncated")
+        || trimmed_lower.starts_with("... (truncated")
+        || trimmed_lower.starts_with("...[truncated")
+        || trimmed_lower.starts_with("<persisted-output>")
+}
+
+/// 识别文本中是否包含各主流 AI 客户端（Cline, Roo-Code, Cursor, Aider 等）常见的输出就地修剪/折叠占位标记
 pub fn is_truncated_or_folded_text(text: &str) -> bool {
     let lower = text.to_lowercase();
-    lower.contains("[output truncated")
-        || lower.contains("[result omitted")
-        || lower.contains("[tool result truncated")
-        || lower.contains("[output omitted")
-        || lower.contains("[content truncated")
-        || lower.contains("[image omitted")
-        || lower.contains("[image removed")
-        || lower.contains("truncated to save")
-        || lower.contains("... (truncated")
-        || lower.contains("...[truncated")
-        || lower.contains("[history truncated")
-        || lower.contains("[context truncated")
-        || lower.contains("<persisted-output>")
+    lower.lines().any(|line| {
+        let trimmed = line.trim_start();
+        line_starts_with_folded_marker(trimmed) || trimmed.ends_with("truncated to save]")
+    }) || lower.trim() == "truncated to save"
 }
 
 /// 检索 contents 中是否存在包含微观就地修剪、折叠或占位符的轮次最大索引
@@ -3147,24 +3367,76 @@ pub fn extract_think_tags(text: &str) -> Option<(String, String)> {
     None
 }
 
-fn is_capturable_thought(thought: &str, signature: Option<&str>) -> bool {
-    // 占位符或纯空白思考绝不可捕获为新的持久化思考记录！
-    if is_placeholder_thought(thought) || thought.trim().is_empty() {
-        // [DECOUPLE 2026-09-26] 官方新规：任何 model 轮都可能返回签名（正文轮 / 工具轮 / 纯思考轮）。
-        // 纯 fc 轮（无思考文本）只要携带真实签名，也必须入库——否则下一轮锚点回填时找不到签名。
-        return signature.is_some_and(is_real_signature);
-    }
-    if signature.is_some_and(is_real_signature) {
+fn is_capturable_thought(thought: &str, signature: Option<&str>, has_tool_calls: bool) -> bool {
+    if is_meaningful_thought(thought) {
         return true;
     }
-    is_meaningful_thought(thought)
+    // 纯 FC 轮（无实质思考文本）只要携带真实签名，可以入库承载工具调用签名；
+    // 非 FC 的纯文本降级轮（thought 为空且无工具调用），哪怕上游返回 188 字节的占位签名，也绝不入库！
+    has_tool_calls && signature.is_some_and(is_real_signature)
 }
 
 fn record_bytes(rec: &ThinkingRecord) -> usize {
     rec.thought.len() + rec.signature.as_ref().map(|s| s.len()).unwrap_or(0) + rec.visible.len()
 }
 
+fn normalize_context_anchor(anchor: &str) -> Option<&str> {
+    let trimmed = anchor.trim();
+    if trimmed.is_empty() || trimmed == "root" {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+fn context_anchors_conflict(a: &str, b: &str) -> bool {
+    match (normalize_context_anchor(a), normalize_context_anchor(b)) {
+        (Some(x), Some(y)) => x != y,
+        _ => false,
+    }
+}
+
+fn has_conflicting_real_signatures(a: &ThinkingRecord, b: &ThinkingRecord) -> bool {
+    match (
+        a.signature.as_deref().filter(|s| is_real_signature(s)),
+        b.signature.as_deref().filter(|s| is_real_signature(s)),
+    ) {
+        (Some(sa), Some(sb)) => !signatures_match(sa, sb),
+        _ => false,
+    }
+}
+
+fn can_merge_records(last: &ThinkingRecord, rec: &ThinkingRecord) -> bool {
+    if last.fingerprint != rec.fingerprint {
+        return false;
+    }
+    let last_has_tools = !last.tool_ids.is_empty() || !last.tool_names.is_empty();
+    let rec_has_tools = !rec.tool_ids.is_empty() || !rec.tool_names.is_empty();
+    if last_has_tools != rec_has_tools {
+        return false;
+    }
+    if context_anchors_conflict(&last.context_anchor, &rec.context_anchor) {
+        return false;
+    }
+    if has_conflicting_real_signatures(last, rec) {
+        let last_anchored = normalize_context_anchor(&last.context_anchor).is_some();
+        let rec_anchored = normalize_context_anchor(&rec.context_anchor).is_some();
+        if last_anchored || rec_anchored || rec.thought.len() <= last.thought.len() {
+            return false;
+        }
+    }
+    true
+}
+
 fn is_stronger_record(new: &ThinkingRecord, old: &ThinkingRecord) -> bool {
+    let new_meaningful = is_meaningful_thought(&new.thought);
+    let old_meaningful = is_meaningful_thought(&old.thought);
+    if old_meaningful && !new_meaningful {
+        return false;
+    }
+    if !old_meaningful && new_meaningful {
+        return true;
+    }
     new.thought.len() > old.thought.len()
         || new.signature.as_ref().map(|s| s.len()).unwrap_or(0)
             > old.signature.as_ref().map(|s| s.len()).unwrap_or(0)
@@ -3207,6 +3479,11 @@ fn match_existing_record(
             continue;
         }
         if ex.fingerprint != rec.fingerprint {
+            continue;
+        }
+        if context_anchors_conflict(&ex.context_anchor, &rec.context_anchor)
+            || has_conflicting_real_signatures(ex, rec)
+        {
             continue;
         }
         let ex_has_tools = !ex.tool_ids.is_empty() || !ex.tool_names.is_empty();
@@ -3341,7 +3618,20 @@ pub fn compute_causal_anchor(turn: Option<&Value>) -> String {
     };
 
     let mut hasher = Sha256::new();
-    let role = content.get("role").and_then(|r| r.as_str()).unwrap_or("");
+    let raw_role = content.get("role").and_then(|r| r.as_str()).unwrap_or("");
+    let parts_opt = content.get("parts").and_then(|p| p.as_array());
+    // normalize_function_response_roles() flips Gemini tool-response turns from "user" to "model"
+    // after hydrate/finalize. Canonicalize pure functionResponse turns to "user" so outbound
+    // capture and next-turn inbound restore compute identical causal anchors.
+    let is_fr_turn_without_fc = parts_opt.is_some_and(|parts| {
+        parts.iter().any(|p| p.get("functionResponse").is_some())
+            && !parts.iter().any(|p| p.get("functionCall").is_some())
+    });
+    let role = if is_fr_turn_without_fc {
+        "user"
+    } else {
+        raw_role
+    };
     hasher.update(role.as_bytes());
     hasher.update([0xff]);
 
@@ -3401,10 +3691,6 @@ pub fn synthesize_tool_id(
         "call_{}_{}_{}_{}",
         tool_name, anchor_clean, args_hash, call_index_in_turn
     )
-}
-
-fn inspect_parts(parts: &[Value]) -> (String, Vec<String>, Vec<String>, String) {
-    inspect_parts_with_anchor(parts, "root")
 }
 
 fn inspect_parts_with_anchor(
@@ -3502,6 +3788,7 @@ mod tests {
             tool_ids,
             tool_names,
             visible: visible.to_string(),
+            context_anchor: "root".to_string(),
         }
     }
 
@@ -3714,6 +4001,7 @@ mod tests {
                 tool_ids: tool_ids.clone(),
                 tool_names: tool_names.clone(),
                 visible: "I will read both files in parallel".to_string(),
+                context_anchor: "root".to_string(),
             },
         );
 
@@ -3771,6 +4059,7 @@ mod tests {
             tool_ids: vec!["call_persisted_999".to_string()],
             tool_names: vec!["bash".to_string()],
             visible: "Persisted visible text".to_string(),
+            context_anchor: "root".to_string(),
         };
 
         let db_res = crate::modules::proxy_db::save_thinking_record(
@@ -4214,6 +4503,7 @@ mod tests {
                 tool_ids: vec![],
                 tool_names: vec![],
                 visible: "visible answer".to_string(),
+                context_anchor: "root".to_string(),
             },
         );
         store.record(
@@ -4225,6 +4515,7 @@ mod tests {
                 tool_ids: vec![],
                 tool_names: vec![],
                 visible: "visible answer".to_string(),
+                context_anchor: "root".to_string(),
             },
         );
         assert!(
@@ -4989,6 +5280,7 @@ mod tests {
                 tool_ids: vec![],
                 tool_names: vec![],
                 visible: "Gemini visible text".to_string(),
+                context_anchor: "root".to_string(),
             },
         );
 
@@ -5437,6 +5729,134 @@ mod tests {
 
         let _ = crate::modules::proxy_db::delete_thinking_records_for_session(key);
     }
+
+    #[test]
+    fn test_issue_3997_reject_degraded_text_turn_with_placeholder_sig() {
+        // ~188 字节的占位签名 (Base64 protobuf 格式，非空但无实质思考)
+        let placeholder_sig = "EhcBFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAX";
+        assert!(placeholder_sig.len() >= 32);
+
+        // 1. 无工具调用的普通文本轮次，即便携带 >= 32 字节占位签名，也绝不可被捕获
+        assert!(!is_capturable_thought("", Some(placeholder_sig), false));
+        assert!(!is_capturable_thought("   ", Some(placeholder_sig), false));
+
+        let rec = ThinkingRecord {
+            fingerprint: "txt_only".to_string(),
+            thought: "".to_string(),
+            signature: Some(placeholder_sig.to_string()),
+            tool_ids: Vec::new(),
+            tool_names: Vec::new(),
+            visible: "Hello world".to_string(),
+            context_anchor: "".to_string(),
+        };
+        assert!(
+            !rec.is_capturable(),
+            "Degraded text turn must not be capturable"
+        );
+
+        let store = ThinkingStore::new();
+        let key = "test_issue_3997_reject";
+        store.record(key, rec);
+
+        // 内存中不应存在任何记录
+        let turn_count = store.sessions.get(key).map(|s| s.turns.len()).unwrap_or(0);
+        assert_eq!(turn_count, 0, "Store must reject degraded text record");
+    }
+
+    #[test]
+    fn test_issue_3997_allow_pure_tool_call_with_signature() {
+        let real_sig = "EhcBFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAX";
+
+        // 纯 FC 轮次携带有效签名允许捕获，用于承载 tool call 签名回填
+        assert!(is_capturable_thought("", Some(real_sig), true));
+
+        let rec = ThinkingRecord {
+            fingerprint: "fc_only".to_string(),
+            thought: "".to_string(),
+            signature: Some(real_sig.to_string()),
+            tool_ids: vec!["call_123".to_string()],
+            tool_names: vec!["bash".to_string()],
+            visible: "".to_string(),
+            context_anchor: "call_123".to_string(),
+        };
+        assert!(
+            rec.is_capturable(),
+            "Pure FC turn with signature must be capturable"
+        );
+
+        let store = ThinkingStore::new();
+        let key = "test_issue_3997_allow_fc";
+        store.record(key, rec);
+
+        let turn_count = store.sessions.get(key).map(|s| s.turns.len()).unwrap_or(0);
+        assert_eq!(turn_count, 1, "Store should retain pure FC record");
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(key);
+    }
+
+    #[test]
+    fn test_issue_3997_do_not_strip_client_meaningful_thought() {
+        let store = ThinkingStore::new();
+        let key = "test_issue_3997_no_strip";
+
+        // 假设历史上有一次被捕获的纯 FC 记录（无思考文本）
+        let fc_rec = ThinkingRecord {
+            fingerprint: "fc_rec".to_string(),
+            thought: "".to_string(),
+            signature: Some("EhcBFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAXABcAFwAX".to_string()),
+            tool_ids: vec!["call_abc".to_string()],
+            tool_names: vec!["read_file".to_string()],
+            visible: "".to_string(),
+            context_anchor: "call_abc".to_string(),
+        };
+        store.record(key, fc_rec);
+
+        // 客户端在当前请求历史中自带了实质思考块（例如来自 OpenAI/Claude Code 的推理内容）
+        let mut gemini_contents = vec![
+            json!({
+                "role": "user",
+                "parts": [{ "text": "Please read file" }]
+            }),
+            json!({
+                "role": "model",
+                "parts": [
+                    { "thought": true, "text": "Client reasoning: thinking about what file to read step by step..." },
+                    { "functionCall": { "name": "read_file", "id": "call_abc", "args": { "path": "test.txt" } } }
+                ]
+            }),
+            json!({
+                "role": "user",
+                "parts": [{ "functionResponse": { "name": "read_file", "response": { "content": "hello" } } }]
+            }),
+        ];
+
+        let restored = store.restore_gemini_contents_with_model(
+            key,
+            &mut gemini_contents,
+            Some("gemini-3.8-flash-tiered"),
+        );
+
+        // 因为客户端已有实质思考块，且 store 记录为无思考块的 FC 记录：
+        // 绝不能剥离客户端的思考块，且 restored 计数不应增加
+        assert_eq!(
+            restored, 0,
+            "Pure FC turn must not count as restored thinking block"
+        );
+
+        let model_parts = gemini_contents[1]["parts"].as_array().expect("parts");
+        let thought_part = model_parts
+            .iter()
+            .find(|p| p.get("thought").and_then(|t| t.as_bool()) == Some(true));
+        assert!(
+            thought_part.is_some(),
+            "Existing client thought MUST NOT be stripped!"
+        );
+        assert_eq!(
+            thought_part.unwrap()["text"],
+            "Client reasoning: thinking about what file to read step by step..."
+        );
+
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(key);
+    }
 }
 
 /// 官方报文对齐回归测试：五种 part 排列下签名锚点必须与真机一致。
@@ -5765,6 +6185,7 @@ mod signature_placement_tests {
                 tool_ids: vec!["call_573077".to_string()],
                 tool_names: vec!["default_api:read".to_string()],
                 visible: String::new(),
+                context_anchor: "root".to_string(),
             },
         );
 
@@ -6111,6 +6532,72 @@ mod signature_placement_tests {
         assert_eq!(
             find_compaction_continuation_boundary(&multi_compacted_contents),
             Some(4)
+        );
+    }
+
+    #[test]
+    fn test_compaction_and_micro_folding_ignore_code_and_discussion_false_positives() {
+        let sig_before = "EsIDaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let mut contents = vec![
+            json!({
+                "role": "user",
+                "parts": [{ "text": "Fix the compaction boundary bug" }]
+            }),
+            json!({
+                "role": "model",
+                "parts": [
+                    {
+                        "functionCall": {
+                            "id": "call_rg",
+                            "name": "exec_command",
+                            "args": { "cmd": r#"rg -n "compact_boundary|<persisted-output>" src-tauri/"# }
+                        },
+                        "thoughtSignature": sig_before
+                    }
+                ]
+            }),
+            json!({
+                "role": "user",
+                "parts": [
+                    {
+                        "functionResponse": {
+                            "id": "call_rg",
+                            "name": "exec_command",
+                            "response": { "output": "common_utils.rs:825: || text.contains(\"compact_boundary\")\nthinking_store.rs:1777: || lower.contains(\"<persisted-output>\")" }
+                        }
+                    }
+                ]
+            }),
+            json!({
+                "role": "model",
+                "parts": [{ "text": "已定位问题：common_utils.rs 里的 `compact_boundary` 与 `<persisted-output>` 触发了误判。" }]
+            }),
+            json!({
+                "role": "user",
+                "parts": [{ "text": "请修复 compact_boundary 和 <persisted-output> 的误判问题并提 PR" }]
+            }),
+        ];
+
+        assert_eq!(
+            find_compaction_continuation_boundary(&contents),
+            None,
+            "Prose, code discussion, and tool outputs mentioning compact_boundary must not trigger compaction boundary"
+        );
+        assert_eq!(
+            find_micro_folding_boundary(&contents),
+            None,
+            "Code/discussion mentioning <persisted-output> or [output truncated] inline must not trigger micro-folding boundary"
+        );
+
+        finalize_gemini_contents_thinking_with_session(
+            &mut contents,
+            true,
+            Some("gemini-4-hydrogen-high"),
+            Some("sess-no-false-compaction"),
+        );
+        assert_eq!(
+            contents[1]["parts"][0]["thoughtSignature"], sig_before,
+            "Valid historical thoughtSignature must be preserved instead of replaced by sentinel"
         );
     }
 
@@ -6519,5 +7006,165 @@ mod signature_placement_tests {
             "Store keys must remain isolated for each sub-session"
         );
         assert_ne!(scope1.client_id, scope2.client_id);
+    }
+
+    #[test]
+    fn test_consecutive_identical_plain_text_turns_preserve_own_signatures() {
+        let store_key = format!("t:approval-plain-{}", uuid::Uuid::new_v4());
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&store_key);
+        let store = ThinkingStore::new();
+
+        let user1 = json!({ "role": "user", "parts": [{ "text": "Approve tool exec #1" }] });
+        let user2 = json!({ "role": "user", "parts": [{ "text": "Approve tool exec #2" }] });
+        let user3 = json!({ "role": "user", "parts": [{ "text": "Approve tool exec #3" }] });
+
+        let anchor1 = compute_causal_anchor(Some(&user1));
+        let anchor2 = compute_causal_anchor(Some(&user2));
+        let anchor3 = compute_causal_anchor(Some(&user3));
+
+        let sig1 = format!("EsID{}", "1".repeat(56));
+        let sig2 = format!("EtgD{}", "2".repeat(56));
+        let sig3 = format!("EuID{}", "3".repeat(56));
+
+        for (anchor, sig) in [(&anchor1, &sig1), (&anchor2, &sig2), (&anchor3, &sig3)] {
+            let mut acc = TurnAccumulator::with_anchor(anchor);
+            acc.ingest_part(&json!({
+                "text": r#"{"outcome":"allow"}"#,
+                "thoughtSignature": sig
+            }));
+            store.record(&store_key, acc.into_record());
+        }
+
+        let stats = store.session_stats(&store_key).unwrap();
+        assert_eq!(
+            stats.0, 3,
+            "Three plain-text approval turns with identical text must not collide or overwrite"
+        );
+
+        let build_history = || {
+            vec![
+                user1.clone(),
+                json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+                user2.clone(),
+                json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+                user3.clone(),
+                json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+                json!({ "role": "user", "parts": [{ "text": "Approve tool exec #4" }] }),
+            ]
+        };
+
+        // 1. Warm RAM restore
+        let mut warm_contents = build_history();
+        let restored_warm = store.restore_gemini_contents(&store_key, &mut warm_contents);
+        assert_eq!(restored_warm, 3);
+        assert_eq!(warm_contents[1]["parts"][0]["thoughtSignature"], sig1);
+        assert_eq!(warm_contents[3]["parts"][0]["thoughtSignature"], sig2);
+        assert_eq!(warm_contents[5]["parts"][0]["thoughtSignature"], sig3);
+
+        // 2. Cold L2 SQLite restore (if DB is initialized in test env)
+        if crate::modules::proxy_db::load_thinking_records(&store_key)
+            .map(|r| r.len() == 3)
+            .unwrap_or(false)
+        {
+            store.clear();
+            let mut cold_contents = build_history();
+            let restored_cold = store.restore_gemini_contents(&store_key, &mut cold_contents);
+            assert_eq!(restored_cold, 3);
+            assert_eq!(cold_contents[1]["parts"][0]["thoughtSignature"], sig1);
+            assert_eq!(cold_contents[3]["parts"][0]["thoughtSignature"], sig2);
+            assert_eq!(cold_contents[5]["parts"][0]["thoughtSignature"], sig3);
+        }
+
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&store_key);
+    }
+
+    #[test]
+    fn test_missing_early_identical_plain_text_turn_does_not_phase_shift_later_turns() {
+        let store_key = format!("t:approval-no-shift-{}", uuid::Uuid::new_v4());
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&store_key);
+        let store = ThinkingStore::new();
+
+        let user1 = json!({ "role": "user", "parts": [{ "text": "Approve step 1" }] });
+        let user2 = json!({ "role": "user", "parts": [{ "text": "Approve step 2" }] });
+        let user3 = json!({ "role": "user", "parts": [{ "text": "Approve step 3" }] });
+
+        let anchor2 = compute_causal_anchor(Some(&user2));
+        let anchor3 = compute_causal_anchor(Some(&user3));
+        let sig2 = format!("EsID{}", "a".repeat(56));
+        let sig3 = format!("EtgD{}", "b".repeat(56));
+
+        // Turn 1 was never stored; only Turn 2 and Turn 3 exist.
+        for (anchor, sig) in [(&anchor2, &sig2), (&anchor3, &sig3)] {
+            let mut acc = TurnAccumulator::with_anchor(anchor);
+            acc.ingest_part(&json!({
+                "text": r#"{"outcome":"allow"}"#,
+                "thoughtSignature": sig
+            }));
+            store.record(&store_key, acc.into_record());
+        }
+
+        let mut contents = vec![
+            user1,
+            json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+            user2,
+            json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+            user3,
+            json!({ "role": "model", "parts": [{ "text": r#"{"outcome":"allow"}"# }] }),
+        ];
+
+        let restored = store.restore_gemini_contents(&store_key, &mut contents);
+        assert_eq!(restored, 2);
+        assert!(
+            contents[1]["parts"][0].get("thoughtSignature").is_none(),
+            "Turn 1 must not steal Turn 2's anchored signature"
+        );
+        assert_eq!(contents[3]["parts"][0]["thoughtSignature"], sig2);
+        assert_eq!(contents[5]["parts"][0]["thoughtSignature"], sig3);
+
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&store_key);
+    }
+
+    #[test]
+    fn test_identical_anchor_distinct_signatures_do_not_overwrite() {
+        let store_key = format!("t:same-anchor-diff-sig-{}", uuid::Uuid::new_v4());
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&store_key);
+        let store = ThinkingStore::new();
+
+        let repeated_user = json!({ "role": "user", "parts": [{ "text": "continue" }] });
+        let anchor = compute_causal_anchor(Some(&repeated_user));
+        let sig1 = format!("EsID{}", "x".repeat(56));
+        let sig2 = format!("EtgD{}", "y".repeat(56));
+
+        for (thought, sig) in [("short", &sig1), ("slightly longer thought", &sig2)] {
+            let mut acc = TurnAccumulator::with_anchor(&anchor);
+            acc.ingest_part(&json!({ "thought": true, "text": thought }));
+            acc.ingest_part(&json!({ "text": "ok", "thoughtSignature": sig }));
+            store.record(&store_key, acc.into_record());
+        }
+
+        let stats = store.session_stats(&store_key).unwrap();
+        assert_eq!(
+            stats.0, 2,
+            "Distinct real signatures with causal anchor must not overwrite each other"
+        );
+
+        let _ = crate::modules::proxy_db::delete_thinking_records_for_session(&store_key);
+    }
+
+    #[test]
+    fn test_compute_causal_anchor_is_invariant_to_function_response_role_normalization() {
+        let user_role_fr = json!({
+            "role": "user",
+            "parts": [{ "functionResponse": { "name": "bash", "response": { "output": "ok" } } }]
+        });
+        let model_role_fr = json!({
+            "role": "model",
+            "parts": [{ "functionResponse": { "name": "bash", "response": { "output": "ok" } } }]
+        });
+        assert_eq!(
+            compute_causal_anchor(Some(&user_role_fr)),
+            compute_causal_anchor(Some(&model_role_fr)),
+            "functionResponse turn causal anchor must match across user/model role normalization"
+        );
     }
 }

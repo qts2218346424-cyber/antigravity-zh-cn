@@ -41,15 +41,31 @@ pub struct StickySessionConfig {
     pub mode: SchedulingMode,
     /// 缓存优先模式下的最大等待时间 (秒)
     pub max_wait_seconds: u64,
+    /// 请求级 429（无 retryDelay）首轮原地 GraceRetry 等待时间（毫秒，默认 1500）
+    #[serde(default = "default_request_429_grace_ms")]
+    pub request_429_grace_ms: u64,
     /// 并发分流使用的账号上限 (0 表示不限制，>0 时最多分流至该数量的账号)
     #[serde(default = "default_max_spillover_accounts")]
     pub max_spillover_accounts: usize,
     /// 粘性路由绑定作用域（默认 Session 会话级）
     #[serde(default)]
     pub affinity_scope: AffinityScope,
+    /// 缓存优先模式下，当检测到巨型冷请求刚结束时的 KV 缓存就绪防竞争延迟（毫秒，默认 1000，设为 0 关闭）
+    #[serde(default = "default_cache_settling_delay_ms")]
+    pub cache_settling_delay_ms: u64,
 }
 
 impl StickySessionConfig {
+    /// 获取实际生效的 KV 缓存就绪防竞争平滑延迟（毫秒）。
+    /// 环境变量 `ANTIGRAVITY_CACHE_SETTLING_DELAY_MS` / `ABV_CACHE_SETTLING_DELAY_MS` 优先，范围 0–5000ms。
+    pub fn resolve_cache_settling_delay_ms(&self) -> u64 {
+        std::env::var("ANTIGRAVITY_CACHE_SETTLING_DELAY_MS")
+            .or_else(|_| std::env::var("ABV_CACHE_SETTLING_DELAY_MS"))
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+            .unwrap_or(self.cache_settling_delay_ms)
+            .clamp(0, 5000)
+    }
     /// 获取实际生效的粘性作用域（优先从环境变量读取覆盖，对齐 Headless & CLI 规范）
     pub fn resolve_affinity_scope(&self) -> AffinityScope {
         if let Ok(val) = std::env::var("ANTIGRAVITY_SCHEDULING_AFFINITY_SCOPE")
@@ -63,6 +79,16 @@ impl StickySessionConfig {
             }
         }
         self.affinity_scope
+    }
+
+    /// 获取实际生效的请求级 429 GraceRetry 等待时间（毫秒）。
+    /// 环境变量 `ABV_REQUEST_429_GRACE_MS` 优先，范围 200–10000ms。
+    pub fn resolve_request_429_grace_ms(&self) -> u64 {
+        std::env::var("ABV_REQUEST_429_GRACE_MS")
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+            .unwrap_or(self.request_429_grace_ms)
+            .clamp(200, 10_000)
     }
 }
 
@@ -84,8 +110,16 @@ pub fn get_affinity_scope() -> AffinityScope {
         .unwrap_or_default()
 }
 
+fn default_request_429_grace_ms() -> u64 {
+    1500
+}
+
 fn default_max_spillover_accounts() -> usize {
     0
+}
+
+fn default_cache_settling_delay_ms() -> u64 {
+    1000
 }
 
 impl Default for StickySessionConfig {
@@ -93,8 +127,10 @@ impl Default for StickySessionConfig {
         Self {
             mode: SchedulingMode::Balance,
             max_wait_seconds: 60,
+            request_429_grace_ms: 1500,
             max_spillover_accounts: 0,
             affinity_scope: AffinityScope::Session,
+            cache_settling_delay_ms: 1000,
         }
     }
 }
@@ -108,7 +144,10 @@ mod tests {
         let cfg = StickySessionConfig::default();
         assert_eq!(cfg.mode, SchedulingMode::Balance);
         assert_eq!(cfg.affinity_scope, AffinityScope::Session);
+        assert_eq!(cfg.request_429_grace_ms, 1500);
+        assert_eq!(cfg.cache_settling_delay_ms, 1000);
         assert_eq!(cfg.resolve_affinity_scope(), AffinityScope::Session);
+        assert_eq!(cfg.resolve_cache_settling_delay_ms(), 1000);
     }
 
     #[test]
@@ -117,6 +156,7 @@ mod tests {
         let cfg: StickySessionConfig = serde_json::from_str(json_str).unwrap();
         assert_eq!(cfg.mode, SchedulingMode::CacheFirst);
         assert_eq!(cfg.max_wait_seconds, 90);
+        assert_eq!(cfg.request_429_grace_ms, 1500);
         assert_eq!(cfg.affinity_scope, AffinityScope::Session);
     }
 

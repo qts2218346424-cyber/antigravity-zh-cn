@@ -291,6 +291,9 @@ pub fn get_upload_timeout_config() -> UploadTimeoutConfig {
         "ANTIGRAVITY_TIMEOUT_LARGE_BODY_ENDPOINT_ATTEMPTS",
         base.large_body_endpoint_attempts as u64,
     ) as usize;
+    let http2_keepalive_enabled = parse_env_bool("ABV_HTTP2_KEEPALIVE")
+        .or_else(|| parse_env_bool("ANTIGRAVITY_HTTP2_KEEPALIVE"))
+        .unwrap_or(base.http2_keepalive_enabled);
 
     UploadTimeoutConfig {
         connect_secs,
@@ -300,6 +303,7 @@ pub fn get_upload_timeout_config() -> UploadTimeoutConfig {
         header_wait_secs,
         large_body_threshold_mb,
         large_body_endpoint_attempts,
+        http2_keepalive_enabled,
     }
     .normalized()
 }
@@ -311,6 +315,15 @@ fn env_u64(key: &str, fallback: u64) -> u64 {
         .unwrap_or(fallback)
 }
 
+fn parse_env_bool(key: &str) -> Option<bool> {
+    let raw = std::env::var(key).ok()?;
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Some(true),
+        "0" | "false" | "no" | "off" => Some(false),
+        _ => None,
+    }
+}
+
 /// 更新全局上传阶段超时配置
 pub fn update_upload_timeout_config(config: UploadTimeoutConfig) {
     let config = config.normalized();
@@ -319,28 +332,30 @@ pub fn update_upload_timeout_config(config: UploadTimeoutConfig) {
             if *cfg != config {
                 *cfg = config.clone();
                 tracing::info!(
-                    "[Upstream-Timeouts] Global config updated: connect={}s, min_mbps={:.2}, extra_ratio={:.2}, stall={}s, header_wait={}s, large_body={}MB/{}",
+                    "[Upstream-Timeouts] Global config updated: connect={}s, min_mbps={:.2}, extra_ratio={:.2}, stall={}s, header_wait={}s, large_body={}MB/{}, http2_keepalive={}",
                     config.connect_secs,
                     config.min_upload_mbps,
                     config.extra_wait_ratio,
                     config.stall_secs,
                     config.header_wait_secs,
                     config.large_body_threshold_mb,
-                    config.large_body_endpoint_attempts
+                    config.large_body_endpoint_attempts,
+                    config.http2_keepalive_enabled
                 );
             }
         }
     } else {
         let _ = GLOBAL_UPLOAD_TIMEOUT_CONFIG.set(RwLock::new(config.clone()));
         tracing::info!(
-            "[Upstream-Timeouts] Global config initialized: connect={}s, min_mbps={:.2}, extra_ratio={:.2}, stall={}s, header_wait={}s, large_body={}MB/{}",
+            "[Upstream-Timeouts] Global config initialized: connect={}s, min_mbps={:.2}, extra_ratio={:.2}, stall={}s, header_wait={}s, large_body={}MB/{}, http2_keepalive={}",
             config.connect_secs,
             config.min_upload_mbps,
             config.extra_wait_ratio,
             config.stall_secs,
             config.header_wait_secs,
             config.large_body_threshold_mb,
-            config.large_body_endpoint_attempts
+            config.large_body_endpoint_attempts,
+            config.http2_keepalive_enabled
         );
     }
 }
@@ -471,6 +486,216 @@ impl Default for GlobalSystemPromptConfig {
         Self {
             enabled: false,
             content: String::new(),
+        }
+    }
+}
+
+/// 提示词与工具清洗规则的作用范围
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PromptRewriteScope {
+    /// 全域生效：同时作用于系统提示词与工具描述（默认）
+    All,
+    /// 仅系统提示词生效
+    Prompt,
+    /// 仅工具声明描述生效
+    Tools,
+}
+
+impl Default for PromptRewriteScope {
+    fn default() -> Self {
+        Self::All
+    }
+}
+
+/// 风控提示词清理规则（行式：匹配内容 → 替换为）
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PromptRewriteRule {
+    /// 稳定 ID（前端生成，便于排序/删除）
+    #[serde(default)]
+    pub id: String,
+    /// 匹配内容：支持 `*` 通配符（同一行内任意字符）与 `\n` / `\t` / `\\` 转义
+    #[serde(default)]
+    pub pattern: String,
+    /// 替换内容：留空表示删除匹配内容；支持 `\n` / `\t` / `\\` 转义
+    #[serde(default)]
+    pub replacement: String,
+    /// 规则作用范围：All (全部) | Prompt (仅提示词) | Tools (仅工具描述)
+    #[serde(default)]
+    pub scope: PromptRewriteScope,
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+}
+
+impl PromptRewriteRule {
+    pub fn new(
+        id: impl Into<String>,
+        pattern: impl Into<String>,
+        replacement: impl Into<String>,
+        enabled: bool,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            pattern: pattern.into(),
+            replacement: replacement.into(),
+            scope: PromptRewriteScope::All,
+            enabled,
+        }
+    }
+
+    pub fn with_scope(
+        id: impl Into<String>,
+        pattern: impl Into<String>,
+        replacement: impl Into<String>,
+        scope: PromptRewriteScope,
+        enabled: bool,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            pattern: pattern.into(),
+            replacement: replacement.into(),
+            scope,
+            enabled,
+        }
+    }
+}
+
+/// 系统提示词隐身侧载模式
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PromptSideloadMode {
+    /// 自动智能探测：包含第三方框架特征或超长指令时自动执行首轮侧载（默认且推荐）
+    Auto,
+    /// 始终开启：所有非空系统提示词一律通过首轮 User 权威上下文侧载
+    Always,
+    /// 关闭：直出传统 systemInstruction
+    Off,
+}
+
+impl Default for PromptSideloadMode {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
+/// 风控提示词清理方案
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PromptRewriteConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    /// 是否启用内置身份归一化（默认 true）。关闭后保留客户端原始身份句，只执行用户自定义规则。
+    #[serde(default = "default_true")]
+    pub normalize_identity: bool,
+    /// 系统提示词隐身侧载模式（默认 Auto）
+    #[serde(default)]
+    pub sideload_mode: PromptSideloadMode,
+    /// 是否对工具描述 (tools[].functionDeclarations[].description) 同步执行清洗与自定义规则替换 (默认 true)
+    #[serde(default = "default_true")]
+    pub sanitize_tools_description: bool,
+    #[serde(default = "PromptRewriteConfig::recommended_preset_rules")]
+    pub rules: Vec<PromptRewriteRule>,
+}
+
+impl PromptRewriteConfig {
+    /// 官方推荐的内置风控预设规则集（经过生产环境与 WAF 实测验证）
+    pub fn recommended_preset_rules() -> Vec<PromptRewriteRule> {
+        vec![
+            PromptRewriteRule::with_scope(
+                "preset-opencode",
+                "You are an AI agent running in OpenCode*",
+                "",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-claude-code-agent",
+                "You are an interactive agent that helps users with software engineering tasks*",
+                "",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-opencode-session-move",
+                "*tools.opencode.session*move*",
+                "tools.opencode.session_relocate",
+                PromptRewriteScope::All,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-dsh-identity",
+                "You are an AI agent powered by DeepSeek Harness*",
+                "",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-dsh-model",
+                "You are a coding agent powered by *gemini*",
+                "",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-dsh-browser-context",
+                "*The browser provides no implicit DOM, route, or screenshot context*",
+                "The browser exposes no DOM tree, route list, or page screenshot context",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-workbuddy",
+                "*WorkBuddy*",
+                "",
+                PromptRewriteScope::All,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-workbuddy-powered-by",
+                "*This conversation is powered by *",
+                "Selected model: ",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-codex-desktop-context",
+                "*# Codex desktop context*",
+                "# Desktop application context",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-codex-as-role",
+                "*as Codex:*",
+                "as an assistant:",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-codex-intro",
+                "*the codex cli is an open*source project*",
+                "",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+            PromptRewriteRule::with_scope(
+                "preset-anthropic-billing",
+                "*x-anthropic-billing-header:*",
+                "",
+                PromptRewriteScope::Prompt,
+                true,
+            ),
+        ]
+    }
+}
+
+impl Default for PromptRewriteConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            normalize_identity: true,
+            sideload_mode: PromptSideloadMode::default(),
+            sanitize_tools_description: true,
+            rules: Self::recommended_preset_rules(),
         }
     }
 }
@@ -653,6 +878,9 @@ pub struct ThinkingBudgetConfig {
     /// 旧默认值 16384 已迁移为官方 -1。置位后不再重复改写用户后来手选的 16384。
     #[serde(default)]
     pub flash_high_legacy_migrated: bool,
+    /// 旧默认值 32768 已迁移为官方 -1。置位后配置迁移不再重复落盘改写 gui_config.json。
+    #[serde(default)]
+    pub thinking_budget_32k_legacy_migrated: bool,
     #[serde(default = "default_flash_tiered")]
     pub flash_tiered: i32, // 默认 -1
 
@@ -747,6 +975,7 @@ impl Default for ThinkingBudgetConfig {
             flash_medium: default_flash_medium(),
             flash_high: default_flash_high(),
             flash_high_legacy_migrated: false,
+            thinking_budget_32k_legacy_migrated: false,
             flash_tiered: default_flash_tiered(),
 
             pro_mode: default_thinking_budget_mode(),
@@ -859,7 +1088,10 @@ pub struct UploadTimeoutConfig {
     #[serde(default = "default_connect_secs")]
     pub connect_secs: u64,
 
-    /// 上传带宽（Mbps，默认 2.0，推荐 1-5 Mbps）
+    /// 上传带宽下限（Mbps，默认 0.8，推荐 0.5-5 Mbps）
+    ///
+    /// 语义是「声明的最慢上行」：预算 = 请求体大小 ÷ 该值 × (1 + 额外等待系数)，
+    /// 因此**调大该值会缩短上传预算**；实测比声明值更慢时只会放宽、不会收紧。
     #[serde(default = "default_min_upload_mbps")]
     pub min_upload_mbps: f64,
 
@@ -887,6 +1119,10 @@ pub struct UploadTimeoutConfig {
     /// 大文件最多尝试次数（默认 1；默认只发一次，避免反复重传占满上行）
     #[serde(default = "default_large_body_endpoint_attempts")]
     pub large_body_endpoint_attempts: usize,
+
+    /// 是否启用上游 HTTP/2 自适应无自杀 PING 保活（默认 true；环境变量 ABV_HTTP2_KEEPALIVE=0 可强制关闭）
+    #[serde(default = "default_http2_keepalive_enabled")]
+    pub http2_keepalive_enabled: bool,
 }
 
 fn default_connect_secs() -> u64 {
@@ -917,6 +1153,10 @@ fn default_large_body_endpoint_attempts() -> usize {
     1
 }
 
+fn default_http2_keepalive_enabled() -> bool {
+    true
+}
+
 impl Default for UploadTimeoutConfig {
     fn default() -> Self {
         Self {
@@ -927,6 +1167,7 @@ impl Default for UploadTimeoutConfig {
             header_wait_secs: default_header_wait_secs(),
             large_body_threshold_mb: default_large_body_threshold_mb(),
             large_body_endpoint_attempts: default_large_body_endpoint_attempts(),
+            http2_keepalive_enabled: default_http2_keepalive_enabled(),
         }
     }
 }
@@ -1170,6 +1411,11 @@ pub struct ProxyConfig {
     #[serde(default)]
     pub hub_cl: Option<String>,
 
+    /// Hub User-Agent platform: "windows" (default) or "linux".
+    /// Both platforms use the same existing Hub version/CL selection logic.
+    #[serde(default)]
+    pub hub_platform: Option<String>,
+
     /// 账号调度配置 (粘性会话/限流重试)
     #[serde(default)]
     pub scheduling: crate::proxy::sticky_config::StickySessionConfig,
@@ -1201,6 +1447,10 @@ pub struct ProxyConfig {
     /// 自动注入到所有 API 请求的 systemInstruction 中
     #[serde(default)]
     pub global_system_prompt: GlobalSystemPromptConfig,
+
+    /// 风控提示词清理方案（作用于首个真实 user 提问前的提示词块）
+    #[serde(default)]
+    pub prompt_rewrite: PromptRewriteConfig,
 
     /// 图像思维模式配置
     /// - enabled: 保留思维链 (默认)
@@ -1392,9 +1642,11 @@ impl Default for ProxyConfig {
             user_agent_override: None,
             hub_version: None,
             hub_cl: None,
+            hub_platform: None,
             saved_user_agent: None,
             thinking_budget: ThinkingBudgetConfig::default(),
             global_system_prompt: GlobalSystemPromptConfig::default(),
+            prompt_rewrite: PromptRewriteConfig::default(),
             proxy_pool: ProxyPoolConfig::default(),
             multimodal: MultimodalConfig::default(),
             stream_timeouts: StreamTimeoutConfig::default(),
@@ -1532,5 +1784,76 @@ mod tests {
         // 测试边缘情况
         assert_eq!(normalize_proxy_url(""), "");
         assert_eq!(normalize_proxy_url("   "), "");
+    }
+
+    #[test]
+    fn upload_timeout_config_roundtrip_and_normalization() {
+        let cfg = UploadTimeoutConfig {
+            connect_secs: 0,
+            min_upload_mbps: 0.0,
+            extra_wait_ratio: 99.0,
+            stall_secs: 1,
+            header_wait_secs: 999,
+            large_body_threshold_mb: 0,
+            large_body_endpoint_attempts: 0,
+            http2_keepalive_enabled: false,
+        };
+        let normalized = cfg.clone().normalized();
+        assert_eq!(normalized.connect_secs, 3);
+        assert_eq!(normalized.min_upload_mbps, 0.1);
+        assert_eq!(normalized.extra_wait_ratio, 10.0);
+        assert_eq!(normalized.stall_secs, 5);
+        assert_eq!(normalized.header_wait_secs, 600);
+        assert_eq!(normalized.large_body_threshold_mb, 1);
+        assert_eq!(normalized.large_body_endpoint_attempts, 1);
+        assert!(!normalized.http2_keepalive_enabled);
+
+        // 配置必须完整 round-trip；缺失字段回退默认值，不得静默丢字段。
+        let json = serde_json::to_string(&cfg).unwrap();
+        let back: UploadTimeoutConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, cfg);
+        let partial: UploadTimeoutConfig = serde_json::from_str("{}").unwrap();
+        assert_eq!(partial, UploadTimeoutConfig::default());
+        assert!(partial.http2_keepalive_enabled);
+    }
+
+    #[test]
+    fn upload_timeout_config_http2_keepalive_env_override() {
+        let _guard = TEST_CONFIG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let prev_global = GLOBAL_UPLOAD_TIMEOUT_CONFIG
+            .get()
+            .and_then(|lock| lock.read().ok())
+            .map(|cfg| cfg.clone());
+        let prev_abv = std::env::var_os("ABV_HTTP2_KEEPALIVE");
+        let prev_antigravity = std::env::var_os("ANTIGRAVITY_HTTP2_KEEPALIVE");
+
+        std::env::remove_var("ABV_HTTP2_KEEPALIVE");
+        std::env::remove_var("ANTIGRAVITY_HTTP2_KEEPALIVE");
+
+        update_upload_timeout_config(UploadTimeoutConfig {
+            http2_keepalive_enabled: true,
+            ..UploadTimeoutConfig::default()
+        });
+        assert!(get_upload_timeout_config().http2_keepalive_enabled);
+
+        std::env::set_var("ANTIGRAVITY_HTTP2_KEEPALIVE", "0");
+        assert!(!get_upload_timeout_config().http2_keepalive_enabled);
+
+        // ABV_HTTP2_KEEPALIVE 优先级高于 ANTIGRAVITY_HTTP2_KEEPALIVE
+        std::env::set_var("ABV_HTTP2_KEEPALIVE", "true");
+        assert!(get_upload_timeout_config().http2_keepalive_enabled);
+
+        std::env::set_var("ABV_HTTP2_KEEPALIVE", "off");
+        assert!(!get_upload_timeout_config().http2_keepalive_enabled);
+
+        match prev_abv {
+            Some(v) => std::env::set_var("ABV_HTTP2_KEEPALIVE", v),
+            None => std::env::remove_var("ABV_HTTP2_KEEPALIVE"),
+        }
+        match prev_antigravity {
+            Some(v) => std::env::set_var("ANTIGRAVITY_HTTP2_KEEPALIVE", v),
+            None => std::env::remove_var("ANTIGRAVITY_HTTP2_KEEPALIVE"),
+        }
+        update_upload_timeout_config(prev_global.unwrap_or_default());
     }
 }

@@ -5,7 +5,6 @@ import {
   Download,
   LayoutGrid,
   List,
-  RefreshCw,
   Search,
   Sparkles,
   ToggleLeft,
@@ -18,6 +17,7 @@ import AccountDetailsDialog from "../components/accounts/AccountDetailsDialog";
 import AccountGrid from "../components/accounts/AccountGrid";
 import AccountTable from "../components/accounts/AccountTable";
 import AddAccountDialog from "../components/accounts/AddAccountDialog";
+import RefreshMenuControl from "../components/accounts/RefreshMenuControl";
 import DeviceFingerprintDialog from "../components/accounts/DeviceFingerprintDialog";
 import ModalDialog from "../components/common/ModalDialog";
 import Pagination from "../components/common/Pagination";
@@ -27,13 +27,15 @@ import { exportAccounts } from "../services/accountService";
 import { useAccountStore } from "../stores/useAccountStore";
 import { useConfigStore } from "../stores/useConfigStore";
 import { Account, getAccountTier, ImportAccountEntry } from "../types/account";
+import { isAccountAbnormal } from "../utils/accountStatus";
 import { cn } from "../utils/cn";
 import { isTauri } from "../utils/env";
 import { request as invoke } from "../utils/request";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
-type FilterType = "all" | "pro" | "ultra" | "enterprise" | "free";
+type FilterType = "all" | "pro" | "ultra" | "enterprise" | "free" | "abnormal";
 type ViewMode = "list" | "grid";
 
 
@@ -105,21 +107,29 @@ function Accounts() {
   useEffect(() => {
     localStorage.setItem('accounts_view_mode', viewMode);
   }, [viewMode]);
+
+  const location = useLocation();
+  useEffect(() => {
+    if (location.state && (location.state as any).filter) {
+      const targetFilter = (location.state as any).filter as FilterType;
+      if (['all', 'pro', 'ultra', 'enterprise', 'free', 'abnormal'].includes(targetFilter)) {
+        setFilter(targetFilter);
+      }
+    }
+  }, [location.state]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deviceAccount, setDeviceAccount] = useState<Account | null>(null);
   const [detailsAccount, setDetailsAccount] = useState<Account | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isBatchDelete, setIsBatchDelete] = useState(false);
-  const [toggleProxyConfirm, setToggleProxyConfirm] = useState<{
-    accountId: string;
-    enable: boolean;
-  } | null>(null);
+
   const [isWarmupConfirmOpen, setIsWarmupConfirmOpen] = useState(false);
+  const [warmupTargetAccountId, setWarmupTargetAccountId] = useState<string | null>(null);
   const [isWarmuping, setIsWarmuping] = useState(false);
   const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
   const [errorAccountId, setErrorAccountId] = useState<string | null>(null);
 
-  const handleWarmup = async (accountId: string) => {
+  const executeSingleWarmup = async (accountId: string) => {
     setRefreshingIds((prev) => {
       const next = new Set(prev);
       next.add(accountId);
@@ -137,6 +147,11 @@ function Accounts() {
         return next;
       });
     }
+  };
+
+  const handleWarmup = (accountId: string) => {
+    setWarmupTargetAccountId(accountId);
+    setIsWarmupConfirmOpen(true);
   };
 
   const handleUpdateLabel = async (accountId: string, label: string) => {
@@ -306,12 +321,14 @@ function Accounts() {
       ultra: searchedAccounts.filter((a) => getAccountTier(a) === "ultra").length,
       enterprise: searchedAccounts.filter((a) => getAccountTier(a) === "enterprise").length,
       free: searchedAccounts.filter((a) => getAccountTier(a) === "free").length,
+      abnormal: searchedAccounts.filter(isAccountAbnormal).length,
     };
   }, [searchedAccounts]);
 
   // 过滤和搜索最终结果
   const filteredAccounts = useMemo(() => {
     if (filter === "all") return searchedAccounts;
+    if (filter === "abnormal") return searchedAccounts.filter(isAccountAbnormal);
     return searchedAccounts.filter((a) => getAccountTier(a) === filter);
   }, [searchedAccounts, filter]);
 
@@ -458,27 +475,23 @@ function Accounts() {
     }
   };
 
-  const handleToggleProxy = (accountId: string, currentlyDisabled: boolean) => {
-    setToggleProxyConfirm({ accountId, enable: currentlyDisabled });
-  };
-
-  const executeToggleProxy = async () => {
-    if (!toggleProxyConfirm) return;
-
+  const handleToggleProxy = async (accountId: string, currentlyDisabled: boolean) => {
     try {
+      const nextEnable = currentlyDisabled;
       await toggleProxyStatus(
-        toggleProxyConfirm.accountId,
-        toggleProxyConfirm.enable,
-        toggleProxyConfirm.enable
-          ? undefined
-          : t("accounts.proxy_disabled_reason_manual"),
+        accountId,
+        nextEnable,
+        nextEnable ? undefined : t("accounts.proxy_disabled_reason_manual"),
       );
-      showToast(t("common.success"), "success");
+      showToast(
+        nextEnable
+          ? t("accounts.toast.proxy_enabled_single", { defaultValue: "已启用反代" })
+          : t("accounts.toast.proxy_disabled_single", { defaultValue: "已停用反代" }),
+        "success",
+      );
     } catch (error) {
       console.error("[Accounts] Toggle proxy status failed:", error);
       showToast(`${t("common.error")}: ${error}`, "error");
-    } finally {
-      setToggleProxyConfirm(null);
     }
   };
 
@@ -1013,9 +1026,35 @@ function Accounts() {
               {filterCounts.free}
             </span>
           </button>
+
+          {/* 异常 / 封禁 */}
+          <button
+            className={cn(
+              "flex px-2 lg:px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all items-center gap-1 lg:gap-1.5 whitespace-nowrap shrink-0",
+              filter === 'abnormal'
+                ? "bg-white dark:bg-base-100 text-rose-600 dark:text-rose-400 shadow-sm ring-1 ring-rose-500/20"
+                : filterCounts.abnormal > 0
+                  ? "text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50/50 dark:hover:bg-rose-950/20"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-base-content hover:bg-white/40"
+            )}
+            onClick={() => setFilter('abnormal')}
+            title={`${t('accounts.filter_abnormal', '异常/封禁')} (${filterCounts.abnormal})`}
+          >
+            <span className="hidden md:inline">{t('accounts.filter_abnormal', '异常')}</span>
+            <span className={cn(
+              "px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-colors",
+              filter === 'abnormal'
+                ? "bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400"
+                : filterCounts.abnormal > 0
+                  ? "bg-rose-100/80 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-extrabold"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+            )}>
+              {filterCounts.abnormal}
+            </span>
+          </button>
         </div>
 
-        <div className="flex-1 min-w-[8px]"></div>
+        <div className="flex-1 min-w-[8px]" />
 
         {/* 操作按钮组 */}
         <div className="flex items-center gap-1.5 shrink-0">
@@ -1084,31 +1123,18 @@ function Accounts() {
             </button>
           )}
 
-          <button
-            className={`px-2.5 py-2 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1.5 shadow-sm ${isRefreshing ? "opacity-70 cursor-not-allowed" : ""}`}
-            onClick={handleRefreshClick}
-            disabled={isRefreshing}
-            title={
-              selectedIds.size > 0
-                ? t("accounts.refresh_selected", { count: selectedIds.size })
-                : t("accounts.refresh_all")
-            }
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`}
-            />
-            <span className="hidden xl:inline">
-              {isRefreshing
-                ? t("common.loading")
-                : selectedIds.size > 0
-                  ? t("accounts.refresh_selected", { count: selectedIds.size })
-                  : t("accounts.refresh_all")}
-            </span>
-          </button>
+          <RefreshMenuControl
+            onRefresh={handleRefreshClick}
+            isRefreshing={isRefreshing}
+            selectedCount={selectedIds.size}
+          />
 
           <button
             className={`px-2.5 py-2 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1.5 shadow-sm ${isWarmuping ? "opacity-70 cursor-not-allowed" : ""}`}
-            onClick={() => setIsWarmupConfirmOpen(true)}
+            onClick={() => {
+              setWarmupTargetAccountId(null);
+              setIsWarmupConfirmOpen(true);
+            }}
             disabled={isWarmuping}
             title={
               selectedIds.size > 0
@@ -1296,48 +1322,51 @@ function Accounts() {
         onCancel={() => setIsRefreshConfirmOpen(false)}
       />
 
-      {toggleProxyConfirm && (
-        <ModalDialog
-          isOpen={!!toggleProxyConfirm}
-          onCancel={() => setToggleProxyConfirm(null)}
-          onConfirm={executeToggleProxy}
-          title={
-            toggleProxyConfirm.enable
-              ? t("accounts.dialog.enable_proxy_title")
-              : t("accounts.dialog.disable_proxy_title")
-          }
-          message={
-            toggleProxyConfirm.enable
-              ? t("accounts.dialog.enable_proxy_msg")
-              : t("accounts.dialog.disable_proxy_msg")
-          }
-        />
-      )}
+
 
       <ModalDialog
         isOpen={isWarmupConfirmOpen}
         title={
-          selectedIds.size > 0
-            ? t("accounts.dialog.batch_warmup_title", "批量手动预热")
-            : t("accounts.dialog.warmup_all_title", "全量手动预热")
+          warmupTargetAccountId
+            ? t("accounts.dialog.single_warmup_title", "账号手动预热")
+            : selectedIds.size > 0
+              ? t("accounts.dialog.batch_warmup_title", "批量手动预热")
+              : t("accounts.dialog.warmup_all_title", "全量手动预热")
         }
         message={
-          selectedIds.size > 0
+          warmupTargetAccountId
             ? t(
-              "accounts.dialog.batch_warmup_msg",
-              "确定要为选中的 {{count}} 个账号立即触发预热吗？",
-              { count: selectedIds.size },
+              "accounts.dialog.single_warmup_msg",
+              "确定要为该账号触发预热吗？使用预热功能将通过反向代理发起一次小额 Token 的请求以激活会话与周期。",
             )
-            : t(
-              "accounts.dialog.warmup_all_msg",
-              "确定要立即为所有符合条件的账号触发预热任务吗？这将向 Google 服务发送极小流量。",
-            )
+            : selectedIds.size > 0
+              ? t(
+                "accounts.dialog.batch_warmup_msg",
+                "确定要为选中的 {{count}} 个账号立即触发预热吗？使用预热功能将通过反向代理发起小额 Token 的请求以激活周期。",
+                { count: selectedIds.size },
+              )
+              : t(
+                "accounts.dialog.warmup_all_msg",
+                "确定要立即为所有符合条件的账号触发预热任务吗？使用预热功能将通过反向代理发起小额 Token 的请求以激活周期。",
+              )
         }
         type="confirm"
         confirmText={t("accounts.warmup_now", "立即预热")}
         isDestructive={false}
-        onConfirm={handleWarmupAll}
-        onCancel={() => setIsWarmupConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsWarmupConfirmOpen(false);
+          if (warmupTargetAccountId) {
+            const targetId = warmupTargetAccountId;
+            setWarmupTargetAccountId(null);
+            await executeSingleWarmup(targetId);
+          } else {
+            await handleWarmupAll();
+          }
+        }}
+        onCancel={() => {
+          setIsWarmupConfirmOpen(false);
+          setWarmupTargetAccountId(null);
+        }}
       />
 
       {/* 账号错误详情弹窗 */}

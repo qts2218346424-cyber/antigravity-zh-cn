@@ -17,13 +17,14 @@ export const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POS
   'refresh_all_quotas': { url: '/api/accounts/refresh', method: 'POST' },
   'reorder_accounts': { url: '/api/accounts/reorder', method: 'POST' },
   'toggle_proxy_status': { url: '/api/accounts/:accountId/toggle-proxy', method: 'POST' },
+  'clear_account_forbidden': { url: '/api/accounts/:accountId/clear-forbidden', method: 'POST' },
   'warm_up_accounts': { url: '/api/accounts/warmup', method: 'POST' },
   'warm_up_all_accounts': { url: '/api/accounts/warmup', method: 'POST' },
   'warm_up_account': { url: '/api/accounts/:accountId/warmup', method: 'POST' },
   'update_account_label': { url: '/api/accounts/:accountId/label', method: 'POST' },
   'update_account_priority': { url: '/api/accounts/:accountId/priority', method: 'POST' },
   'update_account_project_id': { url: '/api/accounts/:accountId/project-id', method: 'POST' },
-  'auto_fetch_account_project_id': { url: '/api/accounts/:accountId/auto-project-id', method: 'POST' },
+  'auto_fetch_account_project_id': { url: '/api/accounts/:accountId/auto-fetch-project-id', method: 'POST' },
   'get_active_clients_status': { url: '/api/accounts/active-clients', method: 'GET' },
   'export_accounts': { url: '/api/accounts/export', method: 'POST' },
   'bind_device_profile': { url: '/api/accounts/:accountId/bind-device', method: 'POST' },
@@ -156,6 +157,7 @@ export const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POS
   'get_hub_fingerprint': { url: '/api/system/hub/fingerprint', method: 'GET' },
   'detect_remote_hub_fingerprint': { url: '/api/system/hub/detect-fingerprint', method: 'POST' },
   'get_effective_first_byte_timeouts': { url: '/api/system/timeouts/effective-first-byte', method: 'GET' },
+  'get_effective_timeout_config': { url: '/api/system/timeouts/effective-upload', method: 'GET' },
 
   // OAuth
   'prepare_oauth_url': { url: '/api/auth/url', method: 'GET' },

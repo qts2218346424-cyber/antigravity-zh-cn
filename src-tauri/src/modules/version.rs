@@ -12,6 +12,7 @@ pub struct AntigravityVersion {
 }
 
 /// 从任意字符串中提取第一个语义化版本号 (X.Y.Z)
+#[allow(dead_code)]
 fn extract_semver(raw: &str) -> Option<String> {
     for token in raw.split(|c: char| c.is_whitespace() || c == ',' || c == ';') {
         let t = token.trim_matches(|c: char| c == '"' || c == '\'' || c == '(' || c == ')');
@@ -79,7 +80,7 @@ pub fn get_antigravity_version_with_path(
         .ok_or("Unable to locate Antigravity executable")?;
 
     // 2. 根据平台读取版本信息
-    let res = {
+    let res: Result<AntigravityVersion, String> = {
         #[cfg(target_os = "macos")]
         {
             get_version_macos(&exe_path)
@@ -251,6 +252,7 @@ fn get_version_windows(exe_path: &PathBuf) -> Result<AntigravityVersion, String>
 }
 
 /// 从 asar / json 头部字节缓冲区中提取 version 语义化版本号（跨平台安全函数）
+#[allow(dead_code)]
 fn extract_version_from_asar_bytes(bytes: &[u8]) -> Option<String> {
     let text = String::from_utf8_lossy(bytes);
     if let Some(pos) = text.find("\"version\"") {

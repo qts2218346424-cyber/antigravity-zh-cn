@@ -1,13 +1,36 @@
 import i18n from '../i18n';
-import { Account, ActiveClientsStatus, DeviceProfile, DeviceProfileVersion, QuotaData, ImportAccountEntry, BatchImportResult } from '../types/account';
+import { Account, ActiveClientsStatus, DeviceProfile, DeviceProfileVersion, QuotaData, ImportAccountEntry, BatchImportResult, ModelPriorities } from '../types/account';
 export type { ImportAccountEntry, BatchImportResult };
 import { request as invoke } from '../utils/request';
+import { normalizeModelPrioritiesPayload } from '../utils/modelPriority';
 
-export async function updateAccountPriority(accountId: string, priority: number): Promise<void> {
+export async function updateAccountPriority(
+    accountId: string,
+    priority: number,
+    modelPriorities?: ModelPriorities
+): Promise<void> {
     if (!Number.isInteger(priority) || priority < 1 || priority > 100) {
         throw new Error(i18n.t('accounts.priority_invalid'));
     }
-    await invoke('update_account_priority', { accountId, priority });
+    const normalizedModelPriorities: Record<string, number> | undefined =
+        modelPriorities !== undefined
+            ? normalizeModelPrioritiesPayload(
+                  modelPriorities,
+                  i18n.t('accounts.priority_invalid'),
+                  key =>
+                      i18n.t('accounts.priority_key_invalid', {
+                          defaultValue: 'Invalid model priority key: {{key}}',
+                          key,
+                      })
+              )
+            : undefined;
+    await invoke('update_account_priority', {
+        accountId,
+        priority,
+        ...(normalizedModelPriorities !== undefined
+            ? { modelPriorities: normalizedModelPriorities }
+            : {}),
+    });
 }
 
 // 检查环境 (可选)
@@ -147,6 +170,10 @@ export async function toggleProxyStatus(accountId: string, enable: boolean, reas
     return await invoke('toggle_proxy_status', { accountId, enable, reason });
 }
 
+export async function clearAccountForbidden(accountId: string): Promise<void> {
+    return await invoke('clear_account_forbidden', { accountId });
+}
+
 /**
  * 重新排序账号列表
  * @param accountIds 按新顺序排列的账号ID数组
@@ -225,4 +252,9 @@ export async function updateAccountProjectId(accountId: string, projectId: strin
 
 export async function autoFetchAccountProjectId(accountId: string): Promise<string> {
     return await invoke('auto_fetch_account_project_id', { accountId });
+}
+
+// 解除 403 模型冻结
+export async function removeAccountForbiddenModel(accountId: string, model?: string): Promise<boolean> {
+    return await invoke('remove_account_forbidden_model', { accountId, model: model || null });
 }

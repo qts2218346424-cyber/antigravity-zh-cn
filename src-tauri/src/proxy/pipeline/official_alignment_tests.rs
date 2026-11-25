@@ -415,7 +415,7 @@ mod tests {
         );
         assert_eq!(
             resolve_model_route_with_effort("gemini-3.8-flash", &empty_mapping, None),
-            "gemini-3.8-flash-tiered"
+            "gemini-3.8-flash-high"
         );
         assert_eq!(
             resolve_model_route_with_effort("gemini-3.8-flash", &empty_mapping, Some("low")),
@@ -433,7 +433,7 @@ mod tests {
         );
         assert_eq!(
             resolve_model_route_with_effort("gemini-4-argon", &empty_mapping, None),
-            "gemini-4-argon-medium"
+            "gemini-4-argon-high"
         );
         assert_eq!(
             resolve_model_route_with_effort("claude-opus-5-5", &empty_mapping, Some("high")),
@@ -578,6 +578,20 @@ mod tests {
         assert_eq!(gc_argon["thinkingConfig"]["thinkingLevel"], "MEDIUM");
         assert_eq!(gc_argon["thinkingConfig"]["includeThoughts"], true);
         assert!(gc_argon["thinkingConfig"].get("thinkingBudget").is_none());
+
+        // 8. Orchestrator (Argon) 必须通过官方 thinkingLevel: 3 走 HIGH 等级通道，严禁输出 thinkingBudget
+        let mut gc_orch = json!({});
+        InboundThinkingPipeline::configure_inbound_thinking(
+            "gemini-pro-orchestrator-g1-pro",
+            &mut gc_orch,
+            ClientThinkingSwitch::Default,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(gc_orch["thinkingConfig"]["thinkingLevel"], "HIGH");
+        assert_eq!(gc_orch["thinkingConfig"]["includeThoughts"], true);
+        assert!(gc_orch["thinkingConfig"].get("thinkingBudget").is_none());
     }
 
     #[test]
@@ -620,7 +634,7 @@ mod tests {
         // 严格断言满足 Google v1internal 铁律：maxOutputTokens > thinkingBudget
         assert!(max_tokens > budget);
         assert_eq!(max_tokens, 64000);
-        assert_eq!(budget, 62976);
+        assert_eq!(budget, 1024);
 
         // 验证 Gemini Wrapper 层在模型限额截断时的联动缩减
         let body = json!({
@@ -648,7 +662,7 @@ mod tests {
             .unwrap();
         assert!(wrapped_max > wrapped_budget);
         assert_eq!(wrapped_max, 64000);
-        assert_eq!(wrapped_budget, 62976);
+        assert_eq!(wrapped_budget, 1024);
     }
 
     #[test]
@@ -689,14 +703,14 @@ mod tests {
         let max_tokens = gc["maxOutputTokens"].as_i64().unwrap();
         let budget = gc["thinkingConfig"]["thinkingBudget"].as_i64().unwrap();
 
-        // 验证：用户的思考预算 16384 被 100% 完整保留，没有被粗暴砍掉！
-        assert_eq!(budget, 16384);
-        // 验证：maxOutputTokens 被智能提升，且满足 Google 协议硬约束：maxOutputTokens > thinkingBudget
+        // 验证：网关权威模型目录预算 1024 被 100% 完整保留
+        assert_eq!(budget, 1024);
+        // 验证：maxOutputTokens 满足 Google 协议硬约束：maxOutputTokens > thinkingBudget
         assert!(max_tokens > budget);
         assert!(max_tokens <= 64000);
-        assert_eq!(max_tokens, 16384 + 1024);
+        assert_eq!(max_tokens, 4096);
 
-        // 验证 Gemini Wrapper 层同样保全用户的思考预算
+        // 验证 Gemini Wrapper 层同样保全官方模型结构体预算
         let body = json!({
             "model": "claude-sonnet-4-6",
             "generationConfig": {
@@ -720,9 +734,9 @@ mod tests {
         let wrapped_budget = wrapped_gc["thinkingConfig"]["thinkingBudget"]
             .as_i64()
             .unwrap();
-        assert_eq!(wrapped_budget, 16384);
+        assert_eq!(wrapped_budget, 1024);
         assert!(wrapped_max > wrapped_budget as u64);
-        assert_eq!(wrapped_max, 16384 + 1024);
+        assert_eq!(wrapped_max, 4096);
     }
 
     #[test]
@@ -761,10 +775,10 @@ mod tests {
 
         let max_tokens1 = gc1["maxOutputTokens"].as_i64().unwrap();
         let budget1 = gc1["thinkingConfig"]["thinkingBudget"].as_i64().unwrap();
-        assert_eq!(max_tokens1, 1024);
-        assert_eq!(budget1, 0, "6倍反差且m<=1024时思考预算应压缩为0以秒回");
+        assert_eq!(max_tokens1, 2048);
+        assert_eq!(budget1, 1024);
 
-        // 场景 2: 客户端明确传 m=1500，思考预算 t=9000 (>= 6*m) -> 预算压缩为 1500 - 1024 = 476
+        // 场景 2: 客户端传 m=1500，官方预算为 1024 (m > 1024) -> 满足约束，原样保留
         let mut gc2 = json!({
             "maxOutputTokens": 1500
         });
@@ -780,10 +794,10 @@ mod tests {
         let max_tokens2 = gc2["maxOutputTokens"].as_i64().unwrap();
         let budget2 = gc2["thinkingConfig"]["thinkingBudget"].as_i64().unwrap();
         assert_eq!(max_tokens2, 1500);
-        assert_eq!(budget2, 476, "6倍反差且m>1024时思考预算应压缩为 m - 1024");
+        assert_eq!(budget2, 1024);
         assert!(max_tokens2 > budget2);
 
-        // 场景 3: 验证 Gemini Wrapper 层同样遵守 6 倍极速压缩规则
+        // 场景 3: 验证 Gemini Wrapper 层对等级通道模型按等级注入
         let body = json!({
             "model": "gemini-3.8-flash-high",
             "generationConfig": {
@@ -804,12 +818,9 @@ mod tests {
         );
         let wrapped_gc = &wrapped["request"]["generationConfig"];
         let wrapped_max = wrapped_gc["maxOutputTokens"].as_u64().unwrap();
-        let wrapped_budget = wrapped_gc["thinkingConfig"]["thinkingBudget"]
-            .as_i64()
-            .unwrap();
         assert_eq!(wrapped_max, 1024);
-        assert_eq!(wrapped_budget, 0);
-        assert_eq!(wrapped_gc["thinkingConfig"]["includeThoughts"], false);
+        assert_eq!(wrapped_gc["thinkingConfig"]["thinkingLevel"], "HIGH");
+        assert_eq!(wrapped_gc["thinkingConfig"]["includeThoughts"], true);
     }
 
     #[test]
@@ -822,17 +833,17 @@ mod tests {
 
         let _lock = TEST_CONFIG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let mut tb = ThinkingBudgetConfig::default();
-        tb.flash_mode = ThinkingBudgetMode::Custom;
-        tb.flash_low = 0;
+        tb.mode = ThinkingBudgetMode::Custom;
+        tb.custom_value = 0;
         update_thinking_budget_config(tb);
 
         let mut gc = json!({});
         InboundThinkingPipeline::configure_inbound_thinking(
             "gemini-3.8-flash-low",
             &mut gc,
-            ClientThinkingSwitch::Default,
+            ClientThinkingSwitch::Disabled,
             None,
-            None,
+            Some(0),
             None,
         );
 
@@ -840,5 +851,267 @@ mod tests {
         assert_eq!(gc["thinkingConfig"]["includeThoughts"], false);
 
         update_thinking_budget_config(ThinkingBudgetConfig::default());
+    }
+
+    #[test]
+    fn test_flat_body_envelope_alignment() {
+        let mut body = json!({
+            "model": "gemini-4-argon",
+            "contents": [
+                { "role": "user", "parts": [{ "text": "hello" }] }
+            ],
+            "generationConfig": {
+                "maxOutputTokens": 2048
+            }
+        });
+
+        InboundThinkingPipeline::align_official_envelope(&mut body);
+
+        // 顶层必须严格满足官方信封规范且包含 model 和 request
+        let keys: Vec<&str> = body
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(|s| s.as_str())
+            .collect();
+        assert_eq!(
+            keys,
+            vec!["project", "requestId", "request", "model", "userAgent"]
+        );
+
+        assert_eq!(body["model"], "gemini-4-argon");
+        assert_eq!(body["project"], "aicode-consumers");
+        assert_eq!(body["userAgent"], "antigravity");
+        assert!(body["request"]["contents"].is_array());
+        assert_eq!(body["request"]["generationConfig"]["maxOutputTokens"], 2048);
+    }
+
+    #[test]
+    fn test_gcp_paygo_envelope_alignment_preserves_field_8_credit_types() {
+        let mut body = json!({
+            "project": "my-gcp-project-12345",
+            "model": "gemini-4-argon",
+            "contents": [
+                { "role": "user", "parts": [{ "text": "Run analysis" }] }
+            ],
+            "tools": [
+                {
+                    "functionDeclarations": [
+                        { "name": "analyze", "parameters": { "type": "object" } }
+                    ]
+                }
+            ]
+        });
+
+        InboundThinkingPipeline::align_official_envelope(&mut body);
+
+        // 顶层必须严格满足官方 Protobuf 字段序 1..8:
+        // project (1) -> requestId (2) -> request (3) -> model (4) -> userAgent (6) -> requestType (7) -> enabledCreditTypes (8)
+        let keys: Vec<&str> = body
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(|s| s.as_str())
+            .collect();
+        assert_eq!(
+            keys,
+            vec![
+                "project",
+                "requestId",
+                "request",
+                "model",
+                "userAgent",
+                "requestType",
+                "enabledCreditTypes"
+            ]
+        );
+
+        assert_eq!(body["project"], "my-gcp-project-12345");
+        assert_eq!(body["requestType"], "agent");
+        assert_eq!(body["enabledCreditTypes"], json!(["GOOGLE_ONE_AI"]));
+    }
+
+    #[test]
+    fn test_consumer_envelope_alignment_strips_field_8_credit_types() {
+        let mut body = json!({
+            "project": "aicode-consumers",
+            "model": "claude-sonnet-4-6",
+            "enabledCreditTypes": ["GOOGLE_ONE_AI"],
+            "contents": [
+                { "role": "user", "parts": [{ "text": "hello" }] }
+            ]
+        });
+
+        InboundThinkingPipeline::align_official_envelope(&mut body);
+
+        assert_eq!(body["project"], "aicode-consumers");
+        assert!(
+            body.get("enabledCreditTypes").is_none(),
+            "Consumer accounts must strictly omit field 8 enabledCreditTypes"
+        );
+    }
+
+    #[test]
+    fn test_proxy_token_is_paygo_discrimination() {
+        use std::collections::{HashMap, HashSet};
+        use std::path::PathBuf;
+
+        let base_token = crate::proxy::token_manager::ProxyToken {
+            account_id: "test-paygo".to_string(),
+            priority: 0,
+            model_priorities: HashMap::new(),
+            access_token: "ya29.paygo".to_string(),
+            refresh_token: "ref".to_string(),
+            expires_in: 3600,
+            timestamp: 0,
+            email: "paygo@example.com".to_string(),
+            account_path: PathBuf::from("/tmp/acc.json"),
+            project_id: None,
+            subscription_tier: Some("FREE".to_string()),
+            remaining_quota: Some(100),
+            protected_models: HashSet::new(),
+            forbidden_models: HashSet::new(),
+            reset_time: None,
+            weekly_reset_time: None,
+            validation_blocked: false,
+            validation_blocked_until: 0,
+            validation_url: None,
+            model_quotas: HashMap::new(),
+            model_limits: HashMap::new(),
+            available_models: HashSet::new(),
+            model_metadata: HashMap::new(),
+            model_reset_times: HashMap::new(),
+            model_weekly_reset_times: HashMap::new(),
+            model_quota_windows: HashMap::new(),
+            is_gcp_tos: false,
+            raw_tier: None,
+        };
+
+        // 1. 普通免费消费级账号
+        assert!(!base_token.is_paygo());
+
+        // 2. raw_tier 声明为 GCP_GE_PAYGO_TIER
+        let mut paygo_tier_token = base_token.clone();
+        paygo_tier_token.raw_tier = Some("GCP_GE_PAYGO_TIER".to_string());
+        assert!(paygo_tier_token.is_paygo());
+
+        // 3. 企业签署且绑定了有效 GCP 自费项目
+        let mut custom_proj_token = base_token.clone();
+        custom_proj_token.is_gcp_tos = true;
+        custom_proj_token.project_id = Some("my-vertex-ai-project-987".to_string());
+        assert!(custom_proj_token.is_paygo());
+
+        // 4. 企业签署但未绑定有效项目或为消费级项目，不能判定为 PAYGO
+        let mut consumer_proj_token = base_token.clone();
+        consumer_proj_token.is_gcp_tos = true;
+        consumer_proj_token.project_id = Some("aicode-consumers".to_string());
+        assert!(!consumer_proj_token.is_paygo());
+    }
+
+    #[test]
+    fn test_sideload_system_instruction_preserves_prefix_cache_and_tools() {
+        use crate::proxy::pipeline::inbound::InboundThinkingPipeline;
+        use serde_json::json;
+
+        // 构造带有第三方复杂 Agent 系统提示词与首轮 User 的真实请求
+        let mut inner_request = json!({
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{ "text": "Please write a web crawler." }]
+                }
+            ],
+            "systemInstruction": {
+                "role": "user",
+                "parts": [
+                    { "text": "You are Hermes Agent. Follow rules: 1. Use terminal tool. 2. Verify all actions before finishing." }
+                ]
+            },
+            "tools": [
+                {
+                    "functionDeclarations": [
+                        {
+                            "name": "run_command",
+                            "description": "Execute bash command",
+                            "parameters": {
+                                "type": "OBJECT",
+                                "properties": { "cmd": { "type": "STRING" } },
+                                "required": ["cmd"]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        InboundThinkingPipeline::align_google_request_prefix_topology_with_model(
+            &mut inner_request,
+            "gemini-3.8-flash",
+            None,
+        );
+
+        // 1. 验证出站 systemInstruction 被重置为 100% 官方 Antigravity 身份
+        let si_text = inner_request["systemInstruction"]["parts"][0]["text"]
+            .as_str()
+            .unwrap();
+        assert_eq!(
+            si_text,
+            crate::proxy::mappers::prompt_sanitizer::OFFICIAL_ANTIGRAVITY_IDENTITY
+        );
+
+        // 2. 验证原始复杂指令以权威 XML 容器侧载至 contents[0]
+        let user_parts = inner_request["contents"][0]["parts"].as_array().unwrap();
+        assert_eq!(user_parts.len(), 2);
+        assert!(user_parts[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("<system-instruction priority=\"critical\" role=\"developer\">"));
+        assert!(user_parts[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("You are Hermes Agent. Follow rules:"));
+        assert_eq!(
+            user_parts[1]["text"].as_str().unwrap(),
+            "Please write a web crawler."
+        );
+
+        // 3. 验证工具定义完全不受任何破坏
+        assert_eq!(
+            inner_request["tools"][0]["functionDeclarations"][0]["name"],
+            "run_command"
+        );
+
+        // 4. 模拟会话第二轮（带上前轮历史）验证 KV Cache 绝对稳定性（绝不重复注入）
+        let mut second_turn_request = json!({
+            "contents": [
+                inner_request["contents"][0].clone(), // 第一轮已经带有 <system-instruction>
+                json!({ "role": "model", "parts": [{ "text": "Sure, here is the crawler." }] }),
+                json!({ "role": "user", "parts": [{ "text": "Now add error handling." }] })
+            ],
+            "systemInstruction": {
+                "role": "user",
+                "parts": [
+                    { "text": "You are Hermes Agent. Follow rules: 1. Use terminal tool. 2. Verify all actions before finishing." }
+                ]
+            }
+        });
+
+        InboundThinkingPipeline::align_google_request_prefix_topology_with_model(
+            &mut second_turn_request,
+            "gemini-3.8-flash",
+            None,
+        );
+
+        // contents[0] 保持原有单一注入，绝不重复插入导致哈希破坏
+        let turn2_first_parts = second_turn_request["contents"][0]["parts"]
+            .as_array()
+            .unwrap();
+        assert_eq!(turn2_first_parts.len(), 2);
+        // 新的用户轮次 contents[2] 绝不被额外插入，保持纯净！
+        let turn2_last_parts = second_turn_request["contents"][2]["parts"]
+            .as_array()
+            .unwrap();
+        assert_eq!(turn2_last_parts.len(), 1);
+        assert_eq!(turn2_last_parts[0]["text"], "Now add error handling.");
     }
 }

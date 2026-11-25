@@ -1,10 +1,199 @@
 use crate::models::Account;
 use crate::modules::{db, device, process, version};
+use std::collections::HashMap;
 use std::fs;
 // Command 仅用于 macos/Linux 分支（security / secret-tool / kill），Windows 裁剪不导入以免 unused
 #[cfg(not(windows))]
 use std::process::Command;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
+/// macOS Keychain passive read cache & denial-cooldown coordinator.
+///
+/// Kept cross-platform so its state-machine and failure-classification logic are unit-tested
+/// across Ubuntu/Windows/macOS CI while macOS uses it to serialize `security find-generic-password`
+/// calls, avoid concurrent Keychain password dialog storms, and back off when the user cancels
+/// or denies a prompt. Active writes still use `delete-generic-password` + `add-generic-password -A`
+/// and call `invalidate()` so ACL self-healing and post-switch verification stay authoritative.
+#[allow(dead_code)]
+const MACOS_KEYCHAIN_CACHE_TTL: Duration = Duration::from_secs(30);
+#[allow(dead_code)]
+const MACOS_KEYCHAIN_DENIED_COOLDOWN: Duration = Duration::from_secs(300);
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
+pub(crate) enum KeychainLookupOutcome {
+    Found(String),
+    NotFound,
+    Denied(String),
+}
+
+#[allow(dead_code)]
+struct KeychainCacheSlot {
+    outcome: Option<(KeychainLookupOutcome, Instant)>,
+}
+
+#[allow(dead_code)]
+type KeychainSlotMap = HashMap<(String, String), Arc<Mutex<KeychainCacheSlot>>>;
+
+#[allow(dead_code)]
+pub(crate) struct KeychainReadCoordinator {
+    slots: Mutex<KeychainSlotMap>,
+    success_ttl: Duration,
+    denied_cooldown: Duration,
+}
+
+#[allow(dead_code)]
+impl KeychainReadCoordinator {
+    fn new(success_ttl: Duration, denied_cooldown: Duration) -> Self {
+        Self {
+            slots: Mutex::new(HashMap::new()),
+            success_ttl,
+            denied_cooldown,
+        }
+    }
+
+    fn slot_for(&self, service: &str, account: &str) -> Arc<Mutex<KeychainCacheSlot>> {
+        let mut map = self.slots.lock().unwrap_or_else(|e| e.into_inner());
+        map.entry((service.to_string(), account.to_string()))
+            .or_insert_with(|| Arc::new(Mutex::new(KeychainCacheSlot { outcome: None })))
+            .clone()
+    }
+
+    /// Execute a single-flight Keychain lookup for `(service, account)`.
+    /// Concurrent readers for the same item serialize on the per-item mutex; when `bypass_cache`
+    /// is false, recent `Found`/`NotFound` results (30s) and `Denied` results (5m cooldown) are
+    /// served without re-invoking `/usr/bin/security`.
+    pub(crate) fn read_with<F>(
+        &self,
+        service: &str,
+        account: &str,
+        bypass_cache: bool,
+        fetch: F,
+    ) -> KeychainLookupOutcome
+    where
+        F: FnOnce() -> KeychainLookupOutcome,
+    {
+        let slot = self.slot_for(service, account);
+        let mut guard = slot.lock().unwrap_or_else(|e| e.into_inner());
+
+        if !bypass_cache {
+            if let Some((ref cached, at)) = guard.outcome {
+                let ttl = match cached {
+                    KeychainLookupOutcome::Denied(_) => self.denied_cooldown,
+                    KeychainLookupOutcome::Found(_) | KeychainLookupOutcome::NotFound => {
+                        self.success_ttl
+                    }
+                };
+                if at.elapsed() < ttl {
+                    return cached.clone();
+                }
+            }
+        }
+
+        let outcome = fetch();
+        guard.outcome = Some((outcome.clone(), Instant::now()));
+        outcome
+    }
+
+    pub(crate) fn invalidate(&self, service: &str, account: &str) {
+        let slot = self.slot_for(service, account);
+        let mut guard = slot.lock().unwrap_or_else(|e| e.into_inner());
+        guard.outcome = None;
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) fn classify_macos_security_failure(
+    exit_code: Option<i32>,
+    stderr: &str,
+) -> KeychainLookupOutcome {
+    let trimmed = stderr.trim();
+    let lower = trimmed.to_lowercase();
+
+    // errSecItemNotFound (44) means the entry genuinely does not exist (no user prompt shown).
+    if exit_code == Some(44) || lower.contains("could not be found") {
+        return KeychainLookupOutcome::NotFound;
+    }
+
+    // errSecInteractionNotAllowed (36), errSecAuthFailed (51), errSecUserCanceled (128),
+    // or explicit macOS Keychain denial/cancellation diagnostics -> back off via cooldown.
+    if matches!(exit_code, Some(36 | 51 | 128))
+        || lower.contains("user interaction is not allowed")
+        || lower.contains("user canceled")
+        || lower.contains("user cancelled")
+        || lower.contains("canceled")
+        || lower.contains("cancelled")
+        || lower.contains("denied")
+        || lower.contains("authentication failed")
+        || lower.contains("authfailed")
+        || lower.contains("errsecusercanceled")
+        || lower.contains("errsecinteractionnotallowed")
+    {
+        let reason = if trimmed.is_empty() {
+            format!("macOS Keychain access denied (exit {:?})", exit_code)
+        } else {
+            trimmed.to_string()
+        };
+        return KeychainLookupOutcome::Denied(reason);
+    }
+
+    KeychainLookupOutcome::NotFound
+}
+
+#[cfg(target_os = "macos")]
+fn macos_keychain_coordinator() -> &'static KeychainReadCoordinator {
+    static COORDINATOR: OnceLock<KeychainReadCoordinator> = OnceLock::new();
+    COORDINATOR.get_or_init(|| {
+        KeychainReadCoordinator::new(MACOS_KEYCHAIN_CACHE_TTL, MACOS_KEYCHAIN_DENIED_COOLDOWN)
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn invalidate_macos_keychain_cache(service: &str, account: &str) {
+    macos_keychain_coordinator().invalidate(service, account);
+}
+
+#[cfg(target_os = "macos")]
+fn read_macos_keychain_generic_password(
+    service: &str,
+    account: &str,
+    bypass_cache: bool,
+) -> KeychainLookupOutcome {
+    macos_keychain_coordinator().read_with(service, account, bypass_cache, || {
+        match Command::new("security")
+            .args(["find-generic-password", "-s", service, "-a", account, "-w"])
+            .output()
+        {
+            Ok(output) if output.status.success() => {
+                KeychainLookupOutcome::Found(String::from_utf8_lossy(&output.stdout).trim().to_string())
+            }
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let outcome = classify_macos_security_failure(output.status.code(), &stderr);
+                if let KeychainLookupOutcome::Denied(ref reason) = outcome {
+                    crate::modules::logger::log_warn(&format!(
+                        "[Keychain] macOS Keychain read denied/canceled for {}:{}; entering {}s cooldown ({})",
+                        service,
+                        account,
+                        MACOS_KEYCHAIN_DENIED_COOLDOWN.as_secs(),
+                        reason
+                    ));
+                }
+                outcome
+            }
+            Err(e) => {
+                crate::modules::logger::log_warn(&format!(
+                    "[Keychain] Failed to invoke /usr/bin/security for {}:{}: {}",
+                    service, account, e
+                ));
+                KeychainLookupOutcome::NotFound
+            }
+        }
+    })
+}
+
+#[allow(async_fn_in_trait)]
 pub trait SystemIntegration: Send + Sync {
     /// 当切换账号时执行的系统层操作（如杀进程、写入文件、注入数据库）
     async fn on_account_switch(
@@ -18,6 +207,11 @@ pub trait SystemIntegration: Send + Sync {
 
     /// 发送系统通知
     fn show_notification(&self, title: &str, body: &str);
+}
+
+/// Check if `target_ide` refers to the Antigravity ACP IDE Plugin (`antigravity-acp`).
+pub fn is_acp_target(target_ide: Option<&str>) -> bool {
+    matches!(target_ide, Some("acp" | "plugin" | "ide-plugin"))
 }
 
 /// 根据目标参数、进程运行态及可执行文件存在性决策最终切换环境
@@ -132,6 +326,14 @@ fn apply_account_credentials(
             let _ = db::write_service_machine_id(&db_path, &profile.mac_machine_id);
         }
 
+        // 1.2.1 同步 Electron 经典版/IDE 全局持久化配置 (app_storage.json) 中的条款与协议状态，
+        // 彻底消除切号后弹出“One last thing before getting started... / Terms of Service”二次确认卡片 (Fixes #4026)
+        device::sync_classic_app_storage_onboarding(
+            effective_target,
+            &account.email,
+            account.token.is_gcp_tos,
+        );
+
         // 1.3 同步写入系统 Keyring (针对 IDE 2.6.0+ agy 后台语言服务鉴权真理源)
         if let Err(keyring_err) = write_to_system_keyring(account) {
             crate::modules::logger::log_warn(&format!(
@@ -204,6 +406,14 @@ fn apply_account_credentials(
             let _ = device::write_profile(&storage_path, profile);
         }
     }
+
+    // 2.1.1 同步 Electron 经典版专属全局持久化配置 (app_storage.json) 中的条款与协议状态，
+    // 彻底消除切号后弹出“One last thing before getting started... / Terms of Service”二次确认卡片 (Fixes #4026)
+    device::sync_classic_app_storage_onboarding(
+        effective_target,
+        &account.email,
+        account.token.is_gcp_tos,
+    );
 
     // 2.2 双写同步：若经典版存储路径下存在 SQLite state.vscdb，执行数据库 Token 注入
     // 确保原生桌面端与扩展会话状态在所有 Antigravity 变体中保持严格一致 (Fixes #3829)
@@ -348,6 +558,25 @@ impl SystemIntegration for DesktopIntegration {
             return Ok(());
         }
 
+        if is_acp_target(target_ide) {
+            let killed = switch_acp_account(account)?;
+            let msg = if killed > 0 {
+                format!(
+                    "Credentials for {} saved and verified. Restarted {} running agy_acp_server process(es).",
+                    account.email, killed
+                )
+            } else {
+                format!(
+                    "Credentials for {} saved and verified for the Antigravity IDE Plugin (ACP).",
+                    account.email
+                )
+            };
+            self.show_notification("Antigravity IDE Plugin", &msg);
+            self.update_tray();
+
+            return Ok(());
+        }
+
         // 1. 智能决策：判断目标是 Antigravity IDE (VS Code 定制版) 还是 Antigravity 经典版 (原生桌面端)
         let classic_running = process::is_antigravity_running(None);
         let ide_running = process::is_antigravity_running(Some("ide"));
@@ -380,20 +609,21 @@ impl SystemIntegration for DesktopIntegration {
 
         // 2. 决定切换模式（热切号 / 完整重启）并处理进程与凭据
         //
-        //    · 热切号 —— 仅限原生经典版（Standalone >= 2.0.0，issue #3503 / issue #3637）：
-        //      经典款主窗口进程与后台 language_server 解耦，只终止子进程并更新 Keyring 后，
-        //      宿主内置 supervisor 会在约 2 秒内原地重建子进程重载新凭据，保留主窗口和未保存内容。
+        //    · 热切号（原生经典版与 Antigravity IDE 统一支持，issue #3503 / issue #3637）：
+        //      主窗口进程（无论是 Standalone 还是 VS Code 架构的 IDE）与后台 language_server/agy 解耦，
+        //      只要客户端运行中且能定位到语言服务子进程，先将凭据双写至 SQLite/Keyring/本地文件，
+        //      然后仅终止后台 language_server/agy 子进程。宿主内置的 supervisor 会在约 1.5~2 秒内原地
+        //      重建子进程并重新挂载新凭据，完美保留主窗口和未保存内容，无需重启 IDE。
         //      顺序是**先写凭据 → 再杀子进程 →（best-effort）再补写一次**。
-        //    · 完整重启 —— IDE 款（is_ide）、客户端未运行、未定位到语言服务子进程或杀死失败：
-        //      IDE 款深度依赖 Extension Host 内存上下文与 SQLite (state.vscdb) 单写者锁，单杀子进程
-        //      无法使 IDE 窗口界面与主会话感知新账号，且容易导致并发写冲突与回写覆盖；故 IDE 款坚决
-        //      保持「先杀主进程 → 干净写入 SQLite → 重新启动客户端」的权威原子流程。
+        //    · 完整重启 —— 客户端未运行、未定位到语言服务子进程或杀死/拉起失败：
+        //      兜底保持「终止主进程 → 干净写入凭据 → 重新启动客户端」的稳健流程。
         let running = process::is_antigravity_running(effective_target);
         let mut hot_switch = false;
         let mut credentials_applied = false;
+        let mut killed_subprocesses = Vec::new();
 
-        // 仅原生经典版（!is_ide）且运行中时尝试热切号
-        if !is_ide && running {
+        // 只要目标客户端正在运行，统一优先尝试无感热切号
+        if running {
             apply_account_credentials(
                 account,
                 effective_target,
@@ -402,13 +632,26 @@ impl SystemIntegration for DesktopIntegration {
             )?;
             credentials_applied = true;
 
-            match process::kill_language_server_subprocesses(effective_target) {
-                Ok(n) if n > 0 => {
+            // 热切号保障（Fixes #4026）：在终止 language_server 子进程前，
+            // 验证文件级凭据回退（~/.gemini/jetski-standalone-oauth-token）已持久化到磁盘。
+            // 背景：Linux D-Bus/Keyring 存在异步延迟（尤其是 Wayland/AppImage 沙箱），
+            // 当 Keyring 在 10s 窗口内返回 has_token=false 时，前端 authActor 会切换到
+            // signedOut 状态并将 URL 污染为 /onboarding?login=true，而 Electron 的
+            // buildLsRestartWindowUrl 会将此污染 URL 传播给新启动的 language_server。
+            // 通过确保文件凭据在杀死子进程前真实可读，supervisor 重建的 language_server
+            // 始终能从文件回退路径获取 has_token=true，彻底阻断 URL 污染链。
+            // 此验证不阻塞 macOS/Windows（它们的凭据路径始终同步可用）。
+            ensure_file_credentials_flushed(account);
+
+            match process::kill_language_server_subprocesses_and_get_pids(effective_target) {
+                Ok(pids) if !pids.is_empty() => {
                     hot_switch = true;
+                    let n = pids.len();
+                    killed_subprocesses = pids;
                     crate::modules::logger::log_info(&format!(
-                        "[Desktop] Hot switch: terminated {} language_server subprocess(es); \
+                        "[Desktop] Hot switch: terminated {} language_server/agy subprocess(es) for {:?}; \
                          main window kept alive, supervisor will respawn the child with the new credentials.",
-                        n
+                        n, effective_target
                     ));
 
                     // 补写一次凭据（best-effort）：子进程已被终止，此时数据库不存在竞争写者，
@@ -472,7 +715,11 @@ impl SystemIntegration for DesktopIntegration {
         //    热切号路径下主窗口仍然存活：只需等 supervisor 把 language_server 拉起即可，
         //    绝不能再去启动一次主窗口（否则会变成双实例）。
         if hot_switch {
-            if process::wait_for_language_server_respawn(effective_target, 15) {
+            if process::wait_for_language_server_respawn_excluding(
+                effective_target,
+                15,
+                &killed_subprocesses,
+            ) {
                 crate::modules::logger::log_info(&format!(
                     "[Desktop] Hot switch completed for {}: language_server respawned with the new credentials.",
                     account.email
@@ -617,6 +864,9 @@ pub(crate) fn write_to_system_keyring(account: &crate::models::Account) -> Resul
             let err_msg = String::from_utf8_lossy(&output.stderr);
             return Err(format!("macOS security command failed: {}", err_msg.trim()));
         }
+
+        // Clear any cached read or prior denial cooldown after active ACL-repaired write.
+        invalidate_macos_keychain_cache("gemini", "antigravity");
     }
 
     #[cfg(target_os = "windows")]
@@ -818,7 +1068,7 @@ pub(crate) fn write_to_system_keyring(account: &crate::models::Account) -> Resul
 }
 
 /// 辅助方法：向指定目录同步写入本地文件凭据
-fn write_to_file_credentials_to_dir(
+pub(crate) fn write_to_file_credentials_to_dir(
     gemini_dir: &std::path::Path,
     account: &crate::models::Account,
     sync_agy_cli: bool,
@@ -1013,6 +1263,70 @@ fn write_to_file_credentials_to_dir(
     Ok(())
 }
 
+/// 热切号文件凭据落盘保障（Fixes #4026）
+///
+/// 在热切号路径终止 language_server 子进程之前调用，确认
+/// `~/.gemini/jetski-standalone-oauth-token` 已被操作系统真实持久化并可读。
+///
+/// 策略：
+///   1. 读取文件并验证其非空、包含新账号 email，确认写入已生效。
+///   2. 若首次读取不符（极端情况：内核缓冲区未提交），重试一次写入，
+///      最多等待 100ms，然后继续（文件写入失败不应阻断整个热切号流程，
+///      Keyring 或 SQLite 仍可能提供有效凭据）。
+///   3. 此函数对 macOS / Windows 无额外开销：写入总是同步完成，
+///      读取验证在微秒级返回。
+fn ensure_file_credentials_flushed(account: &crate::models::Account) {
+    let gemini_dir = match dirs::home_dir() {
+        Some(h) => h.join(".gemini"),
+        None => return,
+    };
+    let token_path = gemini_dir.join("jetski-standalone-oauth-token");
+
+    // 读取并验证文件是否包含新账号凭据
+    let verified = std::fs::read_to_string(&token_path)
+        .ok()
+        .filter(|s| !s.is_empty() && s.contains(&account.email))
+        .is_some();
+
+    if !verified {
+        // 文件尚不可见或内容仍为旧账号数据：重试写入一次
+        crate::modules::logger::log_warn(
+            "[Desktop] Hot switch: jetski-standalone-oauth-token not yet flushed; retrying write before kill.",
+        );
+        if let Err(e) = write_to_file_credentials(account, false) {
+            crate::modules::logger::log_warn(&format!(
+                "[Desktop] Hot switch: file credential retry write failed ({}); \
+                 Keyring/SQLite paths will serve as fallback.",
+                e
+            ));
+            return;
+        }
+
+        // 短暂等待让内核提交写入（最多 100ms），然后做最终验证
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        let final_ok = std::fs::read_to_string(&token_path)
+            .ok()
+            .filter(|s| !s.is_empty() && s.contains(&account.email))
+            .is_some();
+        if final_ok {
+            crate::modules::logger::log_info(
+                "[Desktop] Hot switch: jetski-standalone-oauth-token confirmed flushed after retry.",
+            );
+        } else {
+            crate::modules::logger::log_warn(
+                "[Desktop] Hot switch: jetski-standalone-oauth-token still not confirmed after retry; \
+                 proceeding — Keyring/SQLite paths remain active.",
+            );
+        }
+    } else {
+        crate::modules::logger::log_info(&format!(
+            "[Desktop] Hot switch: jetski-standalone-oauth-token confirmed flushed for {}; \
+             safe to terminate language_server.",
+            account.email
+        ));
+    }
+}
+
 /// 辅助方法：同步写入本地文件凭据 (~/.gemini/antigravity-cli/antigravity-oauth-token 以及 ~/.gemini/oauth_creds.json)
 /// 用于在 SSH 会话、容器环境或无系统 Keyring / D-Bus 的场景下保障 CLI/工具的凭据兼容性
 fn write_to_file_credentials(
@@ -1117,13 +1431,22 @@ pub fn read_antigravity_cli_credentials() -> Vec<crate::modules::migration::Impo
 
 /// 辅助方法：从宿主操作系统的 Keychain/Credentials Manager 读取 Token
 pub fn read_from_system_keyring() -> Result<crate::modules::migration::ImportedOAuthState, String> {
-    read_system_credentials(true)
+    read_system_credentials(true, false)
 }
 
 /// Read only the system store: stale fallback files must not confirm an agy switch.
+/// Bypasses the passive read cache so post-switch verification and explicit imports are fresh.
 pub(crate) fn read_from_system_keyring_only(
 ) -> Result<crate::modules::migration::ImportedOAuthState, String> {
-    read_system_credentials(false)
+    read_system_credentials(false, true)
+}
+
+/// Passive status detection reader for system credentials:
+/// uses single-flight coordination, short TTL cache, and denial cooldown on macOS,
+/// falling back cleanly to passwordless local credential files when Keychain is denied or absent.
+pub(crate) fn read_from_system_keyring_passive(
+) -> Result<crate::modules::migration::ImportedOAuthState, String> {
+    read_system_credentials(true, false)
 }
 
 fn verify_agy_credentials(expected: &str, stored: &str) -> Result<(), String> {
@@ -1138,32 +1461,27 @@ fn verify_agy_credentials(expected: &str, stored: &str) -> Result<(), String> {
 
 fn read_system_credentials(
     allow_file_fallback: bool,
+    bypass_cache: bool,
 ) -> Result<crate::modules::migration::ImportedOAuthState, String> {
+    #[cfg(not(target_os = "macos"))]
+    let _ = bypass_cache;
+
     #[cfg(target_os = "macos")]
     {
         use base64::{engine::general_purpose::STANDARD, Engine as _};
-        let output = Command::new("security")
-            .args([
-                "find-generic-password",
-                "-s",
-                "gemini",
-                "-a",
-                "antigravity",
-                "-w",
-            ])
-            .output()
-            .map_err(|e| format!("Failed to execute security command: {}", e))?;
-
-        if !output.status.success() {
-            if allow_file_fallback {
-                if let Ok(file_state) = read_from_file_credentials() {
-                    return Ok(file_state);
+        let secret_str =
+            match read_macos_keychain_generic_password("gemini", "antigravity", bypass_cache) {
+                KeychainLookupOutcome::Found(secret) => secret,
+                KeychainLookupOutcome::NotFound | KeychainLookupOutcome::Denied(_) => {
+                    if allow_file_fallback {
+                        if let Ok(file_state) = read_from_file_credentials() {
+                            return Ok(file_state);
+                        }
+                    }
+                    return Err("No credential found in macOS Keychain".to_string());
                 }
-            }
-            return Err("No credential found in macOS Keychain".to_string());
-        }
+            };
 
-        let secret_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let payload_str = if secret_str.starts_with("go-keyring-base64:") {
             let b64_part = &secret_str["go-keyring-base64:".len()..];
             let decoded = STANDARD
@@ -1305,11 +1623,339 @@ fn parse_keyring_payload(
         .ok_or_else(|| "Refresh Token not found in keyring payload".to_string())?
         .to_string();
 
+    let project_id = json
+        .get("project_id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
     Ok(crate::modules::migration::ImportedOAuthState {
         refresh_token,
         is_gcp_tos: true,
-        project_id: None,
+        project_id,
     })
+}
+
+/// Resolve the Antigravity ACP IDE Plugin directory (`$GEMINI_HOME/antigravity-acp` or `~/.gemini/antigravity-acp`).
+fn resolve_acp_dir() -> Result<std::path::PathBuf, String> {
+    if let Ok(gemini_home) = std::env::var("GEMINI_HOME") {
+        let trimmed = gemini_home.trim();
+        if !trimmed.is_empty() {
+            let expanded = if let Some(rest) = trimmed.strip_prefix("~/") {
+                dirs::home_dir()
+                    .ok_or_else(|| "Failed to resolve user home directory".to_string())?
+                    .join(rest)
+            } else if trimmed == "~" {
+                dirs::home_dir()
+                    .ok_or_else(|| "Failed to resolve user home directory".to_string())?
+            } else {
+                std::path::PathBuf::from(trimmed)
+            };
+            return Ok(expanded.join("antigravity-acp"));
+        }
+    }
+
+    let home =
+        dirs::home_dir().ok_or_else(|| "Failed to resolve user home directory".to_string())?;
+    Ok(home.join(".gemini").join("antigravity-acp"))
+}
+
+/// Write Antigravity ACP IDE Plugin (`antigravity-acp`) credentials (`acp_token.json`, `settings.json`, and macOS Keychain).
+pub fn write_to_acp_credentials(account: &crate::models::Account) -> Result<(), String> {
+    let acp_dir = resolve_acp_dir()?;
+    if !acp_dir.exists() {
+        std::fs::create_dir_all(&acp_dir)
+            .map_err(|e| format!("Failed to create antigravity-acp directory: {}", e))?;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&acp_dir, std::fs::Permissions::from_mode(0o700));
+    }
+
+    let token_path = acp_dir.join("acp_token.json");
+
+    // Preserve existing project_id if the account does not carry one and the existing file belongs to the same refresh token
+    let existing_project_id = if token_path.exists() {
+        std::fs::read_to_string(&token_path)
+            .ok()
+            .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+            .and_then(|v| {
+                let same_rt = v
+                    .get("refresh_token")
+                    .and_then(|r| r.as_str())
+                    .map(|r| r == account.token.refresh_token)
+                    .unwrap_or(false);
+                if same_rt {
+                    v.get("project_id")
+                        .and_then(|p| p.as_str())
+                        .map(|p| p.trim().to_string())
+                        .filter(|p| !p.is_empty())
+                } else {
+                    None
+                }
+            })
+    } else {
+        None
+    };
+
+    let project_id = account
+        .token
+        .project_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToOwned::to_owned)
+        .or(existing_project_id)
+        .unwrap_or_default();
+
+    #[derive(serde::Serialize)]
+    struct AcpCredentialInfo {
+        client_id: String,
+        client_secret: String,
+        refresh_token: String,
+        token_uri: String,
+        scopes: Vec<String>,
+        project_id: String,
+    }
+
+    let (client_id, client_secret) = crate::modules::oauth::resolve_standard_oauth_credentials();
+
+    let acp_cred = AcpCredentialInfo {
+        client_id,
+        client_secret,
+        refresh_token: account.token.refresh_token.clone(),
+        token_uri: "https://oauth2.googleapis.com/token".to_string(),
+        scopes: vec![
+            "https://www.googleapis.com/auth/cloud-platform".to_string(),
+            "https://www.googleapis.com/auth/userinfo.email".to_string(),
+            "https://www.googleapis.com/auth/aicode".to_string(),
+        ],
+        project_id,
+    };
+
+    let acp_json = serde_json::to_string(&acp_cred)
+        .map_err(|e| format!("Failed to serialize acp_token.json: {}", e))?;
+
+    crate::utils::fs::write_atomic(&token_path, acp_json.as_bytes())
+        .map_err(|e| format!("Failed to write acp_token.json: {}", e))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&token_path, std::fs::Permissions::from_mode(0o600));
+    }
+
+    // Ensure settings.json has auth.type = "oauth-personal" while preserving existing keys (e.g. gcp)
+    let settings_path = acp_dir.join("settings.json");
+    let mut settings_obj = if settings_path.exists() {
+        std::fs::read_to_string(&settings_path)
+            .ok()
+            .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+            .filter(|v| v.is_object())
+            .unwrap_or_else(|| serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    if let Some(map) = settings_obj.as_object_mut() {
+        let auth_entry = map
+            .entry("auth".to_string())
+            .or_insert_with(|| serde_json::json!({}));
+        if !auth_entry.is_object() {
+            *auth_entry = serde_json::json!({});
+        }
+        if let Some(auth_map) = auth_entry.as_object_mut() {
+            auth_map.insert(
+                "type".to_string(),
+                serde_json::Value::String("oauth-personal".to_string()),
+            );
+        }
+    }
+
+    if let Ok(mut settings_str) = serde_json::to_string_pretty(&settings_obj) {
+        settings_str.push('\n');
+        let _ = crate::utils::fs::write_atomic(&settings_path, settings_str.as_bytes());
+    }
+
+    // On macOS, agy_acp_server uses the OS Keychain (service="gemini", account="antigravity-acp")
+    // storing the raw JSON string (via ctypes Security framework).
+    #[cfg(target_os = "macos")]
+    {
+        let _ = Command::new("security")
+            .args([
+                "delete-generic-password",
+                "-s",
+                "gemini",
+                "-a",
+                "antigravity-acp",
+            ])
+            .output();
+
+        let output = Command::new("security")
+            .args([
+                "add-generic-password",
+                "-s",
+                "gemini",
+                "-a",
+                "antigravity-acp",
+                "-w",
+                &acp_json,
+                "-A",
+            ])
+            .output();
+
+        if let Ok(out) = output {
+            if !out.status.success() {
+                let err_msg = String::from_utf8_lossy(&out.stderr);
+                crate::modules::logger::log_warn(&format!(
+                    "[ACP] macOS Keychain update for antigravity-acp returned non-zero ({}); file store at {:?} is updated.",
+                    err_msg.trim(),
+                    token_path
+                ));
+            }
+        }
+
+        // Clear cached read / denial cooldown after active ACL-repaired ACP write.
+        invalidate_macos_keychain_cache("gemini", "antigravity-acp");
+    }
+
+    crate::modules::logger::log_info(&format!(
+        "[ACP] Successfully synced IDE Plugin credentials to {:?} for: {}",
+        token_path, account.email
+    ));
+
+    Ok(())
+}
+
+/// Read the active Antigravity ACP IDE Plugin (`antigravity-acp`) OAuth state (authoritative).
+pub fn read_acp_credentials() -> Result<crate::modules::migration::ImportedOAuthState, String> {
+    read_acp_credentials_inner(true)
+}
+
+/// Passive status detection reader for `antigravity-acp`:
+/// skips macOS Keychain probing when the `~/.gemini/antigravity-acp` directory does not exist,
+/// prefers the passwordless `acp_token.json` file when present, and otherwise uses single-flight
+/// cached Keychain lookup with denial cooldown.
+pub(crate) fn read_acp_credentials_passive(
+    has_known_acp_account: bool,
+) -> Result<crate::modules::migration::ImportedOAuthState, String> {
+    let acp_dir = resolve_acp_dir()?;
+    let token_path = acp_dir.join("acp_token.json");
+    if token_path.exists() {
+        if let Ok(content) = fs::read_to_string(&token_path) {
+            if let Ok(state) = parse_keyring_payload(&content) {
+                if !state.refresh_token.is_empty() {
+                    return Ok(state);
+                }
+            }
+        }
+    }
+
+    if !acp_dir.exists() && !has_known_acp_account {
+        return Err(format!(
+            "Antigravity ACP directory does not exist at {:?}",
+            acp_dir
+        ));
+    }
+
+    read_acp_credentials_inner(false)
+}
+
+fn read_acp_credentials_inner(
+    bypass_cache: bool,
+) -> Result<crate::modules::migration::ImportedOAuthState, String> {
+    #[cfg(not(target_os = "macos"))]
+    let _ = bypass_cache;
+
+    #[cfg(target_os = "macos")]
+    {
+        if let KeychainLookupOutcome::Found(secret_str) =
+            read_macos_keychain_generic_password("gemini", "antigravity-acp", bypass_cache)
+        {
+            if let Ok(state) = parse_keyring_payload(&secret_str) {
+                if !state.refresh_token.is_empty() {
+                    return Ok(state);
+                }
+            }
+        }
+    }
+
+    let acp_dir = resolve_acp_dir()?;
+    let token_path = acp_dir.join("acp_token.json");
+    if !token_path.exists() {
+        return Err(format!(
+            "No Antigravity ACP credential file found at {:?}",
+            token_path
+        ));
+    }
+
+    let content = fs::read_to_string(&token_path)
+        .map_err(|e| format!("Failed to read acp_token.json: {}", e))?;
+    parse_keyring_payload(&content)
+}
+
+/// Scan all Antigravity ACP IDE Plugin credential files (`acp_token.json` and backups).
+pub fn read_antigravity_acp_credentials() -> Vec<crate::modules::migration::ImportedOAuthState> {
+    let mut states = Vec::new();
+    let mut seen_tokens = std::collections::HashSet::new();
+
+    if let Ok(primary) = read_acp_credentials() {
+        if !primary.refresh_token.is_empty() && seen_tokens.insert(primary.refresh_token.clone()) {
+            states.push(primary);
+        }
+    }
+
+    if let Ok(acp_dir) = resolve_acp_dir() {
+        let candidate_files = [
+            acp_dir.join("acp_token.json"),
+            acp_dir.join("acp_token.json.bak"),
+        ];
+        for path in &candidate_files {
+            if path.exists() {
+                if let Ok(content) = fs::read_to_string(path) {
+                    if let Ok(state) = parse_keyring_payload(&content) {
+                        if !state.refresh_token.is_empty()
+                            && seen_tokens.insert(state.refresh_token.clone())
+                        {
+                            crate::modules::logger::log_info(&format!(
+                                "[ACP-Scan] Discovered Antigravity ACP OAuth state in {:?}",
+                                path
+                            ));
+                            states.push(state);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    states
+}
+
+/// Switch the Antigravity ACP IDE Plugin account, verify persisted credentials, and restart running `agy_acp_server` processes.
+pub fn switch_acp_account(account: &crate::models::Account) -> Result<usize, String> {
+    // 1. Write credentials before killing any running agy_acp_server process
+    write_to_acp_credentials(account)?;
+
+    // 2. Terminate running agy_acp_server processes so the host IDE respawns them with new credentials
+    let killed = process::kill_acp_server_processes();
+    if killed > 0 {
+        // Re-assert credentials after terminating processes to prevent any in-flight refresh race from overwriting acp_token.json
+        let _ = write_to_acp_credentials(account);
+    }
+
+    // 3. Verify stored credentials match
+    let stored = read_acp_credentials()?;
+    if account.token.refresh_token.is_empty() || stored.refresh_token != account.token.refresh_token
+    {
+        return Err(
+            "Stored ACP IDE Plugin credentials do not match the selected account; the switch was not confirmed."
+                .to_string(),
+        );
+    }
+
+    Ok(killed)
 }
 
 /// Headless/Docker 实现：仅执行数据层操作，忽略 UI 和进程控制
@@ -1326,6 +1972,15 @@ impl SystemIntegration for HeadlessIntegration {
                 "Switching to the agy CLI is not supported in headless mode (no host keyring access)."
                     .to_string(),
             );
+        }
+
+        if is_acp_target(_target_ide) {
+            write_to_acp_credentials(account)?;
+            crate::modules::logger::log_info(&format!(
+                "[Headless] ACP IDE Plugin credentials updated for: {}",
+                account.email
+            ));
+            return Ok(());
         }
 
         crate::modules::logger::log_info(&format!(
@@ -1366,6 +2021,11 @@ impl SystemIntegration for CliIntegration {
                     let _ = device::write_profile(&storage_path, profile);
                 }
             }
+            return Ok(());
+        }
+
+        if is_acp_target(target_ide) {
+            let _ = switch_acp_account(account)?;
             return Ok(());
         }
 
@@ -1984,5 +2644,369 @@ mod tests {
             inject_res.is_err(),
             "Injecting token into corrupted DB must return Err gracefully"
         );
+    }
+
+    #[test]
+    fn test_is_acp_target_aliases() {
+        assert!(is_acp_target(Some("acp")));
+        assert!(is_acp_target(Some("plugin")));
+        assert!(is_acp_target(Some("ide-plugin")));
+        assert!(!is_acp_target(Some("ide")));
+        assert!(!is_acp_target(Some("agy")));
+        assert!(!is_acp_target(Some("classic")));
+        assert!(!is_acp_target(None));
+    }
+
+    struct KeychainBackupGuard {
+        #[cfg(target_os = "macos")]
+        service: &'static str,
+        #[cfg(target_os = "macos")]
+        account: &'static str,
+        #[cfg(target_os = "macos")]
+        original_val: Option<String>,
+    }
+
+    impl KeychainBackupGuard {
+        fn new(service: &'static str, account: &'static str) -> Self {
+            #[cfg(target_os = "macos")]
+            {
+                let original_val = Command::new("security")
+                    .args(["find-generic-password", "-s", service, "-a", account, "-w"])
+                    .output()
+                    .ok()
+                    .filter(|o| o.status.success())
+                    .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+                Self {
+                    service,
+                    account,
+                    original_val,
+                }
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = (service, account);
+                Self {}
+            }
+        }
+    }
+
+    impl Drop for KeychainBackupGuard {
+        fn drop(&mut self) {
+            #[cfg(target_os = "macos")]
+            {
+                let _ = Command::new("security")
+                    .args([
+                        "delete-generic-password",
+                        "-s",
+                        self.service,
+                        "-a",
+                        self.account,
+                    ])
+                    .output();
+                if let Some(val) = &self.original_val {
+                    let _ = Command::new("security")
+                        .args([
+                            "add-generic-password",
+                            "-s",
+                            self.service,
+                            "-a",
+                            self.account,
+                            "-w",
+                            val,
+                            "-A",
+                        ])
+                        .output();
+                }
+                invalidate_macos_keychain_cache(self.service, self.account);
+            }
+        }
+    }
+
+    #[test]
+    fn test_write_and_read_acp_credentials() {
+        let _env_guard = crate::modules::account::SHARED_TEST_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _keychain_guard = KeychainBackupGuard::new("gemini", "antigravity-acp");
+
+        let tmp_dir = std::env::temp_dir().join(format!("agy_acp_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&tmp_dir).expect("create temp dir");
+        std::env::set_var("GEMINI_HOME", &tmp_dir);
+
+        let token = crate::models::TokenData::new(
+            "ya29.test_access_token".to_string(),
+            "1//test_acp_refresh_token_999".to_string(),
+            3600,
+            Some("acp-user@example.com".to_string()),
+            Some("test-gcp-project-id".to_string()),
+            None,
+            true,
+            None,
+        );
+        let account = crate::models::Account::new(
+            "acc-acp-1".to_string(),
+            "acp-user@example.com".to_string(),
+            token,
+        );
+
+        write_to_acp_credentials(&account).expect("write_to_acp_credentials should succeed");
+
+        let acp_dir = tmp_dir.join("antigravity-acp");
+        let token_path = acp_dir.join("acp_token.json");
+        let settings_path = acp_dir.join("settings.json");
+        assert!(token_path.exists(), "acp_token.json should exist");
+        assert!(settings_path.exists(), "settings.json should exist");
+
+        let settings_json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(&settings_path).expect("read settings.json"),
+        )
+        .expect("parse settings.json");
+        assert_eq!(
+            settings_json
+                .get("auth")
+                .and_then(|a| a.get("type"))
+                .and_then(|t| t.as_str()),
+            Some("oauth-personal")
+        );
+
+        let state = read_acp_credentials().expect("read_acp_credentials should succeed");
+        assert_eq!(state.refresh_token, "1//test_acp_refresh_token_999");
+        assert_eq!(state.project_id.as_deref(), Some("test-gcp-project-id"));
+
+        let scanned = read_antigravity_acp_credentials();
+        assert_eq!(scanned.len(), 1);
+        assert_eq!(scanned[0].refresh_token, "1//test_acp_refresh_token_999");
+
+        std::env::remove_var("GEMINI_HOME");
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+    }
+
+    #[test]
+    fn test_resolve_account_summary_in_index_acp_round_robin() {
+        let index = crate::models::AccountIndex {
+            version: "2.0".to_string(),
+            accounts: vec![
+                crate::models::AccountSummary {
+                    id: "id-1".to_string(),
+                    email: "user1@example.com".to_string(),
+                    name: None,
+                    disabled: false,
+                    proxy_disabled: false,
+                    protected_models: std::collections::HashSet::new(),
+                    created_at: 0,
+                    last_used: 0,
+                },
+                crate::models::AccountSummary {
+                    id: "id-2".to_string(),
+                    email: "user2@example.com".to_string(),
+                    name: None,
+                    disabled: false,
+                    proxy_disabled: false,
+                    protected_models: std::collections::HashSet::new(),
+                    created_at: 0,
+                    last_used: 0,
+                },
+            ],
+            current_account_id: Some("id-1".to_string()),
+            current_target_ide: Some("acp".to_string()),
+            current_classic_account_id: Some("id-1".to_string()),
+            current_ide_account_id: None,
+            current_agy_account_id: None,
+            current_acp_account_id: Some("id-2".to_string()),
+        };
+
+        let next_for_acp =
+            crate::modules::account::resolve_account_summary_in_index(&index, None, Some("acp"))
+                .expect("resolve next for acp");
+        assert_eq!(next_for_acp.id, "id-1");
+
+        let next_for_plugin_alias = crate::modules::account::resolve_account_summary_in_index(
+            &index,
+            None,
+            Some("ide-plugin"),
+        )
+        .expect("resolve next for ide-plugin");
+        assert_eq!(next_for_plugin_alias.id, "id-1");
+    }
+
+    #[test]
+    fn test_classify_macos_security_failure_distinguishes_not_found_and_denied() {
+        assert_eq!(
+            classify_macos_security_failure(
+                Some(44),
+                "security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain."
+            ),
+            KeychainLookupOutcome::NotFound
+        );
+        assert!(matches!(
+            classify_macos_security_failure(
+                Some(128),
+                "security: SecKeychainSearchCopyNext: User canceled the operation."
+            ),
+            KeychainLookupOutcome::Denied(_)
+        ));
+        assert!(matches!(
+            classify_macos_security_failure(
+                Some(36),
+                "security: SecKeychainSearchCopyNext: User interaction is not allowed."
+            ),
+            KeychainLookupOutcome::Denied(_)
+        ));
+        assert!(matches!(
+            classify_macos_security_failure(Some(51), "Authentication failed."),
+            KeychainLookupOutcome::Denied(_)
+        ));
+    }
+
+    #[test]
+    fn test_keychain_read_coordinator_caches_coalesces_cooldowns_and_invalidates() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let coordinator =
+            KeychainReadCoordinator::new(Duration::from_secs(60), Duration::from_secs(300));
+        let calls = AtomicUsize::new(0);
+
+        // First call populates the cache
+        let first = coordinator.read_with("gemini", "antigravity", false, || {
+            calls.fetch_add(1, Ordering::SeqCst);
+            KeychainLookupOutcome::Found("token-v1".to_string())
+        });
+        assert_eq!(first, KeychainLookupOutcome::Found("token-v1".to_string()));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+        // Second passive read hits cache without re-invoking security
+        let second = coordinator.read_with("gemini", "antigravity", false, || {
+            calls.fetch_add(1, Ordering::SeqCst);
+            KeychainLookupOutcome::Found("token-v2".to_string())
+        });
+        assert_eq!(second, KeychainLookupOutcome::Found("token-v1".to_string()));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+        // Denial triggers cooldown so passive readers stop re-prompting
+        coordinator.invalidate("gemini", "antigravity");
+        let denied = coordinator.read_with("gemini", "antigravity", false, || {
+            calls.fetch_add(1, Ordering::SeqCst);
+            KeychainLookupOutcome::Denied("User canceled".to_string())
+        });
+        assert!(matches!(denied, KeychainLookupOutcome::Denied(_)));
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+
+        let during_cooldown = coordinator.read_with("gemini", "antigravity", false, || {
+            calls.fetch_add(1, Ordering::SeqCst);
+            KeychainLookupOutcome::Found("should-not-run".to_string())
+        });
+        assert!(matches!(during_cooldown, KeychainLookupOutcome::Denied(_)));
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+
+        // Active write invalidation clears cooldown and bypass_cache reads fresh state
+        coordinator.invalidate("gemini", "antigravity");
+        let refreshed = coordinator.read_with("gemini", "antigravity", true, || {
+            calls.fetch_add(1, Ordering::SeqCst);
+            KeychainLookupOutcome::Found("token-v3".to_string())
+        });
+        assert_eq!(
+            refreshed,
+            KeychainLookupOutcome::Found("token-v3".to_string())
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    fn test_switch_acp_account_e2e_flow_and_project_id_preservation() {
+        let _env_guard = crate::modules::account::SHARED_TEST_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _keychain_guard = KeychainBackupGuard::new("gemini", "antigravity-acp");
+
+        let tmp_dir = std::env::temp_dir().join(format!("agy_acp_e2e_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&tmp_dir).expect("create temp dir");
+        std::env::set_var("GEMINI_HOME", &tmp_dir);
+
+        let token1 = crate::models::TokenData::new(
+            "ya29.test_acp_token_1".to_string(),
+            "1//test_acp_rt_1".to_string(),
+            3600,
+            Some("user1@example.com".to_string()),
+            Some("project-alpha-123".to_string()),
+            None,
+            true,
+            None,
+        );
+        let account1 = crate::models::Account::new(
+            "acc-1".to_string(),
+            "user1@example.com".to_string(),
+            token1,
+        );
+
+        // 1. 切换到 account1
+        let switch_res1 = switch_acp_account(&account1);
+        assert!(switch_res1.is_ok(), "First switch must succeed");
+
+        let state1 = read_acp_credentials().expect("Must read account1 credentials");
+        assert_eq!(state1.refresh_token, "1//test_acp_rt_1");
+        assert_eq!(state1.project_id.as_deref(), Some("project-alpha-123"));
+
+        // 验证物理文件包含 aicode scope
+        let token_file = tmp_dir.join("antigravity-acp").join("acp_token.json");
+        assert!(token_file.exists());
+        let file_content = std::fs::read_to_string(&token_file).unwrap();
+        let json_val: serde_json::Value = serde_json::from_str(&file_content).unwrap();
+        let scopes = json_val["scopes"]
+            .as_array()
+            .expect("scopes must be an array");
+        assert!(
+            scopes.iter().any(|s| s.as_str() == Some("https://www.googleapis.com/auth/aicode")),
+            "acp_token.json must strictly contain https://www.googleapis.com/auth/aicode scope for agy_acp_server"
+        );
+
+        // 2. 模拟 account1 凭证更新（无显式 project_id 时，必须继承同 refresh_token 已有的 project_id）
+        let token1_no_proj = crate::models::TokenData::new(
+            "ya29.test_acp_token_1_refreshed".to_string(),
+            "1//test_acp_rt_1".to_string(),
+            3600,
+            Some("user1@example.com".to_string()),
+            None, // 没有显式 project_id
+            None,
+            true,
+            None,
+        );
+        let account1_refreshed = crate::models::Account::new(
+            "acc-1".to_string(),
+            "user1@example.com".to_string(),
+            token1_no_proj,
+        );
+        write_to_acp_credentials(&account1_refreshed).expect("credential re-write must succeed");
+        let state1_preserved = read_acp_credentials().expect("Must read refreshed credentials");
+        assert_eq!(
+            state1_preserved.project_id.as_deref(),
+            Some("project-alpha-123"),
+            "Project ID must be preserved when existing file has the same refresh token"
+        );
+
+        // 3. 切换到全新 account2（带不同 project_id）
+        let token2 = crate::models::TokenData::new(
+            "ya29.test_acp_token_2".to_string(),
+            "1//test_acp_rt_2".to_string(),
+            3600,
+            Some("user2@example.com".to_string()),
+            Some("project-beta-456".to_string()),
+            None,
+            true,
+            None,
+        );
+        let account2 = crate::models::Account::new(
+            "acc-2".to_string(),
+            "user2@example.com".to_string(),
+            token2,
+        );
+        let switch_res2 = switch_acp_account(&account2);
+        assert!(switch_res2.is_ok(), "Second switch must succeed");
+
+        let state2 = read_acp_credentials().expect("Must read account2 credentials");
+        assert_eq!(state2.refresh_token, "1//test_acp_rt_2");
+        assert_eq!(state2.project_id.as_deref(), Some("project-beta-456"));
+
+        std::env::remove_var("GEMINI_HOME");
+        let _ = std::fs::remove_dir_all(&tmp_dir);
     }
 }

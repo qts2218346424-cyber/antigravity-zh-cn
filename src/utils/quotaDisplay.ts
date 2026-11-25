@@ -1,16 +1,33 @@
 import { checkArgonEligibility, type ModelQuota, type QuotaGroup } from '../types/account';
+import { isArgonModel, extractGemini4Codename, isDedicatedG4Group } from './modelCategory';
 
 export type DashboardQuotaView = 'weighted' | '5h' | 'weekly';
+
+export interface ConstrainedQuotaResult {
+    effectivePercentage: number;
+    raw5h: number | null;
+    rawWeekly: number | null;
+    weighted: number;
+    resetTime?: string;
+    isWeeklyConstrained: boolean;
+    isWeeklyExhausted: boolean;
+    is5hCooling: boolean;
+    fiveHourResetTime?: string;
+    weeklyResetTime?: string;
+}
 
 // An exhausted weekly window takes precedence; protection still uses the backend quota.
 export function getModelQuotaDisplay(modelId: string, model: ModelQuota | undefined, groups: QuotaGroup[] = []) {
     const name = modelId.toLowerCase();
-    const isArgon = name.includes('argon');
+    const isArgon = isArgonModel(name);
     const thirdParty = !isArgon && (name.startsWith('claude') || name.startsWith('gpt'));
     const buckets = (groups || []).filter(group => {
         const groupName = (group?.display_name || '').toLowerCase();
-        const hasArgonBucket = (group?.buckets || []).some(bucket => bucket?.bucket_id?.toLowerCase().includes('argon'));
-        const groupIsArgon = groupName.includes('argon') || hasArgonBucket;
+        const hasFlagshipBucket = (group?.buckets || []).some(bucket => {
+            const bid = (bucket?.bucket_id || '').toLowerCase();
+            return bid.includes('argon') || bid.includes('neon') || bid.includes('carbon');
+        });
+        const groupIsArgon = isDedicatedG4Group(group) || /neon|argon|carbon/i.test(groupName) || hasFlagshipBucket;
         if (isArgon) return groupIsArgon;
         if (groupIsArgon) return false;
 
@@ -50,6 +67,133 @@ export function getModelQuotaDisplay(modelId: string, model: ModelQuota | undefi
     };
 }
 
+/**
+ * 计算模型在指定视角 (综合加权 / 5H滚动 / 7天周配额) 下的双向木桶效应约束配额
+ */
+export function getModelConstrainedQuota(
+    modelId: string,
+    model: ModelQuota | undefined,
+    groups: QuotaGroup[] = [],
+    view: DashboardQuotaView = 'weighted'
+): ConstrainedQuotaResult {
+    const name = modelId.toLowerCase();
+    const isArgon = isArgonModel(name);
+    const thirdParty = !isArgon && (name.startsWith('claude') || name.startsWith('gpt'));
+
+    const buckets = (groups || []).filter(group => {
+        const groupIsArgon = isDedicatedG4Group(group) || /neon|argon|carbon/i.test(group?.display_name || '');
+        if (isArgon) return groupIsArgon;
+        if (groupIsArgon) return false;
+
+        const groupName = (group?.display_name || '').toLowerCase();
+        const isThirdParty = /claude|gpt|3p/.test(groupName)
+            || (group?.buckets || []).some(bucket => bucket?.bucket_id?.toLowerCase().includes('3p'));
+        return thirdParty ? isThirdParty : name.startsWith('gemini') && !isThirdParty;
+    }).flatMap(group => group?.buckets || []);
+
+    const hasGroups = (groups || []).length > 0;
+    if (isArgon && hasGroups && buckets.length === 0) {
+        if (model && model.percentage > 0) {
+            return {
+                effectivePercentage: model.percentage,
+                raw5h: null,
+                rawWeekly: model.percentage,
+                weighted: model.percentage,
+                resetTime: model.reset_time,
+                isWeeklyConstrained: false,
+                isWeeklyExhausted: false,
+                is5hCooling: false,
+                fiveHourResetTime: undefined,
+                weeklyResetTime: model.reset_time,
+            };
+        }
+        return {
+            effectivePercentage: 0,
+            raw5h: null,
+            rawWeekly: null,
+            weighted: 0,
+            resetTime: undefined,
+            isWeeklyConstrained: false,
+            isWeeklyExhausted: false,
+            is5hCooling: false,
+            fiveHourResetTime: undefined,
+            weeklyResetTime: undefined,
+        };
+    }
+
+    const fiveHourBucket = buckets.filter(bucket => /5h|hour/i.test(`${bucket?.window || ''} ${bucket?.bucket_id || ''}`))
+        .reduce<(typeof buckets)[number] | undefined>((chosen, bucket) =>
+            !chosen || bucket.remaining_fraction < chosen.remaining_fraction ? bucket : chosen, undefined);
+
+    const weeklyBucket = buckets.filter(bucket => /week|7d/i.test(`${bucket?.window || ''} ${bucket?.bucket_id || ''}`))
+        .reduce<(typeof buckets)[number] | undefined>((chosen, bucket) =>
+            !chosen || bucket.remaining_fraction < chosen.remaining_fraction ? bucket : chosen, undefined);
+
+    // 1. 提取原始值
+    const raw5h = fiveHourBucket && typeof fiveHourBucket.remaining_fraction === 'number'
+        ? Math.round(fiveHourBucket.remaining_fraction * 100)
+        : (typeof model?.percentage === 'number' ? model.percentage : null);
+
+    const rawWeekly = weeklyBucket && typeof weeklyBucket.remaining_fraction === 'number'
+        ? Math.round(weeklyBucket.remaining_fraction * 100)
+        : null;
+
+    const fiveHourResetTime = fiveHourBucket?.reset_time || model?.reset_time;
+    const weeklyResetTime = weeklyBucket?.reset_time;
+
+    // 2. 状态判定 (周配额低于 1.5% 即实际见底，木桶短板生效)
+    const isWeeklyExhausted = rawWeekly !== null && rawWeekly <= 1;
+    const isWeeklyConstrained = isWeeklyExhausted || (rawWeekly !== null && raw5h !== null && rawWeekly < raw5h);
+    const is5hCooling = raw5h !== null && raw5h <= 0 && (rawWeekly === null || rawWeekly > 0);
+
+    // 3. 计算综合短板基准
+    let weighted = 0;
+    if (isWeeklyExhausted) {
+        weighted = 0;
+    } else if (raw5h !== null && rawWeekly !== null) {
+        weighted = Math.min(raw5h, rawWeekly);
+    } else if (rawWeekly !== null) {
+        weighted = rawWeekly;
+    } else if (raw5h !== null) {
+        weighted = raw5h;
+    }
+
+    // 4. 根据当前模式实施双向木桶约束
+    let effectivePercentage = weighted;
+    let resetTime = fiveHourResetTime || weeklyResetTime;
+
+    if (view === '5h') {
+        // 5H 模式：展示真实 5H 滚动配额；若周配额耗尽 (<=0) 则触发熔断归零，若周配额偏紧则通过 isWeeklyConstrained 标识提示
+        if (isWeeklyExhausted) {
+            effectivePercentage = 0;
+            resetTime = weeklyResetTime || fiveHourResetTime;
+        } else {
+            effectivePercentage = raw5h ?? rawWeekly ?? 0;
+            resetTime = fiveHourResetTime || weeklyResetTime;
+        }
+    } else if (view === 'weekly') {
+        // 周配额模式：展示宏观周配额，但如果 5H 耗尽进入冷却，提示即时受限
+        effectivePercentage = rawWeekly ?? raw5h ?? 0;
+        resetTime = weeklyResetTime || fiveHourResetTime;
+    } else {
+        // 综合模式：木桶短板有效值
+        effectivePercentage = weighted;
+        resetTime = isWeeklyExhausted ? weeklyResetTime : (fiveHourResetTime || weeklyResetTime);
+    }
+
+    return {
+        effectivePercentage,
+        raw5h,
+        rawWeekly,
+        weighted,
+        resetTime,
+        isWeeklyConstrained,
+        isWeeklyExhausted,
+        is5hCooling,
+        fiveHourResetTime,
+        weeklyResetTime,
+    };
+}
 export interface GroupQuotaItem {
     percentage: number;
     resetTime?: string;
@@ -68,7 +212,7 @@ export interface GroupQuotaSummary {
     isWeeklyExhausted: boolean;
 }
 
-function isSupportedDisplayModel(name: string): boolean {
+export function isSupportedDisplayModel(name: string): boolean {
     const m = name.trim().toLowerCase();
     if (
         m.includes('-disabled') ||
@@ -79,6 +223,7 @@ function isSupportedDisplayModel(name: string): boolean {
         m.includes('-exp') ||
         m.endsWith('-agent') ||
         m === 'gemini-3-flash' ||
+        m === 'gemini-flash-worker-agy' ||
         m.includes('2.5') ||
         m.includes('2-5') ||
         m.includes('3.5-flash-low') ||
@@ -99,16 +244,28 @@ function summarizeSupportedModels(models: ModelQuota[], key: 'gemini' | 'claude'
     if (active.length === 0) {
         if (key === 'argon') {
             return {
-                dynamicLabel: 'Gemini 4 Argon',
-                supportedModels: ['gemini-4-argon', 'gemini-4-argon-high', 'gemini-4-argon-medium', 'gemini-4-argon-low'],
+                dynamicLabel: 'Gemini 4 Carbon',
+                supportedModels: ['gemini-4-carbon', 'gemini-4-carbon-high', 'gemini-4-carbon-medium', 'gemini-4-carbon-low', 'gemini-4-carbon-xhigh'],
             };
         }
         return { supportedModels: [] };
     }
 
     if (key === 'argon') {
+        const codenames = new Set<string>();
+        for (const n of active) {
+            const code = extractGemini4Codename(n);
+            if (code) {
+                codenames.add(code.charAt(0).toUpperCase() + code.slice(1));
+            }
+        }
+        const codenameList = Array.from(codenames);
+        const dynamicLabel = codenameList.length > 0
+            ? `Gemini 4 ${codenameList.join(' / ')}`
+            : 'Gemini 4 Carbon';
+
         return {
-            dynamicLabel: 'Gemini 4 Argon',
+            dynamicLabel,
             supportedModels: active,
         };
     }
@@ -176,18 +333,17 @@ export function getGroupQuotaSummaries(
     const findGroupBuckets = (target: 'gemini' | 'claude' | 'argon') => {
         const directBuckets = (groups || []).filter(group => {
             const groupName = (group?.display_name || '').toLowerCase();
-            const hasArgonBucket = (group?.buckets || []).some(b => /argon/i.test(`${b?.bucket_id || ''} ${b?.display_name || ''}`));
-            const isArgon = /argon/i.test(groupName) || hasArgonBucket;
-            if (target === 'argon') return isArgon;
-            if (isArgon) return false;
+            const isFlagship = isDedicatedG4Group(group) || /neon|argon|carbon/i.test(groupName);
+            if (target === 'argon') return isFlagship;
+            if (isFlagship) return false;
 
             const isThirdParty = /claude|gpt|3p/.test(groupName)
                 || (group?.buckets || []).some(bucket => bucket?.bucket_id?.toLowerCase().includes('3p'));
             return target === 'claude' ? isThirdParty : !isThirdParty;
         }).flatMap(group => group?.buckets || []);
 
-        // Ultra 账号在官方架构下未拆分专属 Argon 分组，其 Argon 额度共享 Gemini 通用配额池
-        if (target === 'argon' && directBuckets.length === 0 && isUltraTier) {
+        // Ultra 以及拥有 Carbon 的 Pro 账号在官方架构下若未拆分专属旗舰分组，其旗舰额度共享 Gemini 通用配额池
+        if (target === 'argon' && directBuckets.length === 0 && (isUltraTier || tier === 'pro')) {
             return (groups || []).filter(group => {
                 const groupName = (group?.display_name || '').toLowerCase();
                 const isThirdParty = /claude|gpt|3p/.test(groupName)
@@ -217,8 +373,8 @@ export function getGroupQuotaSummaries(
         if (fallbackModels.length > 0) {
             const matched = fallbackModels.filter(m => {
                 const n = (m?.name || '').toLowerCase();
-                if (n.includes('-disabled') || n.endsWith('_disabled') || (m as any)?.disabled) return false;
-                const isArgon = n.includes('argon');
+                if (!isSupportedDisplayModel(n) || (m as any)?.disabled) return false;
+                const isArgon = isArgonModel(n);
                 if (key === 'argon') return isArgon;
                 if (isArgon) return false;
                 return key === 'claude' ? (n.startsWith('claude') || n.startsWith('gpt')) : n.startsWith('gemini');
@@ -296,13 +452,13 @@ export function getGroupQuotaSummaries(
             ? 'accounts.quota_group_argon'
             : (key === 'claude' ? 'accounts.quota_group_claude' : 'accounts.quota_group_gemini');
         const defaultLabel = key === 'argon'
-            ? 'Gemini 4 Argon'
+            ? 'Gemini 4 Carbon'
             : (key === 'claude' ? 'Claude & GPT Models' : 'Gemini Models');
 
         const matchedForSummary = fallbackModels.filter(m => {
             const n = (m?.name || '').toLowerCase();
-            if (n.includes('-disabled') || n.endsWith('_disabled') || (m as any)?.disabled) return false;
-            const isArgon = n.includes('argon');
+            if (!isSupportedDisplayModel(n) || (m as any)?.disabled) return false;
+            const isArgon = isArgonModel(n);
             if (key === 'argon') return isArgon;
             if (isArgon) return false;
             return key === 'claude' ? (n.startsWith('claude') || n.startsWith('gpt')) : n.startsWith('gemini');

@@ -74,6 +74,9 @@ pub fn is_bare_gemini_pro(model: &str) -> bool {
     if !lower.contains("gemini") || !lower.contains("pro") || lower.contains("flash") {
         return false;
     }
+    if lower.contains("orchestrator") {
+        return false;
+    }
     if !is_gemini_v3_or_above(model) {
         return false;
     }
@@ -170,7 +173,11 @@ pub fn is_gemini_v3_or_above(model: &str) -> bool {
     if !lower.contains("gemini") {
         return false;
     }
-    if lower.contains("agent") || lower == "gemini-pro" || lower == "gemini-flash" {
+    if lower.contains("agent")
+        || lower.contains("orchestrator")
+        || lower == "gemini-pro"
+        || lower == "gemini-flash"
+    {
         return true;
     }
     if let Some(idx) = lower.find("gemini-") {
@@ -247,6 +254,9 @@ pub fn is_gemini_v4_or_above(model: &str) -> bool {
     let lower = model.to_lowercase();
     if !lower.contains("gemini") {
         return false;
+    }
+    if lower.contains("orchestrator") {
+        return true;
     }
     if let Some(idx) = lower.find("gemini-") {
         let rest = &lower[idx + "gemini-".len()..];
@@ -435,8 +445,9 @@ impl DynamicTierRouter {
     pub fn resolve(model: &str, client_effort: Option<&str>) -> Option<String> {
         let clean = model.trim().to_lowercase();
 
-        // 1. 若当前模型名本身已经带有档位后缀（如 -high, -low, -tiered 等），说明已经是指向具名变体，不在此解析
-        if clean.ends_with("-high")
+        // 1. 若当前模型名本身已经带有档位后缀（如 -xhigh, -high, -low, -tiered 等），说明已经是指向具名变体，不在此解析
+        if clean.ends_with("-xhigh")
+            || clean.ends_with("-high")
             || clean.ends_with("-medium")
             || clean.ends_with("-low")
             || clean.ends_with("-extra-low")
@@ -496,14 +507,23 @@ impl DynamicTierRouter {
                 {
                     return Some(format!("{}-{}", base, matched));
                 }
-                // ② 语义等价映射后再命中（如 xhigh/max → high、minimal → low）
+                // ② 语义等价映射后再命中：支持数字档（1/2/3/100）与别名；
+                // 若结果为 XHIGH，优先匹配 -xhigh 变体，无 -xhigh 变体再回落到 -high
                 if let Some(level) = normalize_client_thinking_level(&raw) {
-                    let level_lower = level.to_lowercase();
-                    if let Some(matched) = available_tiers
-                        .iter()
-                        .find(|t| t.eq_ignore_ascii_case(&level_lower))
-                    {
-                        return Some(format!("{}-{}", base, matched));
+                    let candidates: &[&str] = match level {
+                        "XHIGH" => &["xhigh", "high"],
+                        "HIGH" => &["high"],
+                        "MEDIUM" => &["medium"],
+                        "LOW" => &["low"],
+                        _ => &[],
+                    };
+                    for target in candidates {
+                        if let Some(matched) = available_tiers
+                            .iter()
+                            .find(|t| t.eq_ignore_ascii_case(target))
+                        {
+                            return Some(format!("{}-{}", base, matched));
+                        }
                     }
                 }
                 // ③ 不属于官方实际后缀档位 → 不猜、不就近，直接走默认档位
@@ -529,7 +549,7 @@ pub fn available_efforts_for(model_id: &str) -> Vec<String> {
     let base = crate::proxy::common::model_mapping::strip_tier_suffix(model_id);
     let tiers = crate::models::OfficialModelCatalog::collect_tiers_for_base(&base);
     let mut out = Vec::new();
-    for want in ["extra-low", "low", "medium", "high"] {
+    for want in ["extra-low", "low", "medium", "high", "xhigh"] {
         if tiers.iter().any(|t| t.eq_ignore_ascii_case(want)) {
             out.push(want.to_string());
         }
@@ -554,15 +574,21 @@ pub fn resolve_bare_flash_route(model: &str, client_effort: Option<&str>) -> Opt
 
 /// 依据系统 Thinking Budget 配置以及当前模型与请求参数，在协议归一化后统一解析应当发送到上游的思考预算。
 /// 返回：
-/// 归一化客户端上送的思考等级字段（包括 max, xhigh, high, medium, low, min, extra-low, extra_low 等）
+/// 归一化客户端上送的思考等级字段（包括 max, high, medium, low, min, extra-low, extra_low, xhigh 以及数字等级 1/2/3/100 等）
+/// 注意：`xhigh / x-high` 及扩展数字等级（`> 4`，如 `100`）保留独立的 `"XHIGH"` 语义，不归并进 `"HIGH"`，以便与官方原生 `xhigh` / `100` 档位对齐。
 pub fn normalize_client_thinking_level(effort: &str) -> Option<&'static str> {
     let clean = effort.trim().to_lowercase().replace('_', "-");
     match clean.as_str() {
-        "low" | "extra-low" | "min" | "minimal" | "lite" | "flash-lite" | "disabled" | "off"
-        | "none" => Some("LOW"),
-        "medium" | "normal" | "standard" => Some("MEDIUM"),
-        "high" | "xhigh" | "x-high" | "max" | "extreme" => Some("HIGH"),
-        _ => None,
+        "1" | "low" | "extra-low" | "min" | "minimal" | "lite" | "flash-lite" | "disabled"
+        | "off" | "none" => Some("LOW"),
+        "2" | "medium" | "normal" | "standard" => Some("MEDIUM"),
+        "3" | "high" | "max" | "extreme" => Some("HIGH"),
+        "xhigh" | "x-high" => Some("XHIGH"),
+        _ => clean
+            .parse::<i64>()
+            .ok()
+            .filter(|&n| n > 4)
+            .map(|_| "XHIGH"),
     }
 }
 
@@ -582,9 +608,16 @@ pub fn resolve_custom_budget(
         return None;
     }
 
+    let is_claude = resolve_alias(model).to_lowercase().contains("claude");
+    let effective_mode = if is_claude {
+        &tb_config.claude_mode
+    } else {
+        &tb_config.mode
+    };
+
     // 官方目录未收录的模型：不再维护任何按系列 / 档位的硬编码预算表。
     // 仅当用户显式选择 Custom 模式时，才使用用户配置的数字；否则保持自适应（None）。
-    if tb_config.mode != ThinkingBudgetMode::Custom {
+    if *effective_mode != ThinkingBudgetMode::Custom {
         return None;
     }
 
@@ -595,7 +628,10 @@ pub fn resolve_custom_budget(
 
     let lower = resolve_alias(model).to_lowercase();
     // 档位优先级：模型名后缀（绝对优先）> 客户端 effort > 配置 effort
-    let level = if lower.ends_with("-high") || lower.ends_with("-max") || lower.ends_with("-agent")
+    let level = if lower.ends_with("-xhigh")
+        || lower.ends_with("-high")
+        || lower.ends_with("-max")
+        || lower.ends_with("-agent")
     {
         Some("HIGH")
     } else if lower.ends_with("-low") || lower.ends_with("-extra-low") || lower.ends_with("-lite") {
@@ -611,7 +647,7 @@ pub fn resolve_custom_budget(
     let configured = if lower.contains("claude") {
         match level {
             Some("LOW") => tb_config.claude_low,
-            Some("HIGH") => tb_config.claude_high,
+            Some("HIGH") | Some("XHIGH") => tb_config.claude_high,
             _ => tb_config.claude_medium,
         }
     } else if lower.contains("pro") {
@@ -622,7 +658,7 @@ pub fn resolve_custom_budget(
     } else {
         match level {
             Some("LOW") => tb_config.flash_low,
-            Some("HIGH") => tb_config.flash_high,
+            Some("HIGH") | Some("XHIGH") => tb_config.flash_high,
             _ => tb_config.flash_medium,
         }
     };
@@ -677,13 +713,17 @@ mod tests {
             pick_optimal_default_tier(&tiers(&["extra-low", "low", "high"])),
             Some("high".to_string())
         );
-        // 有 medium / tiered 时仍按优先级
+        // 默认档位翻转为 High 优先（彻底规避上游 Medium/Tiered 容量枯竭与超时风暴）
         assert_eq!(
             pick_optimal_default_tier(&tiers(&["low", "medium", "high"])),
-            Some("medium".to_string())
+            Some("high".to_string())
         );
         assert_eq!(
             pick_optimal_default_tier(&tiers(&["tiered", "high"])),
+            Some("high".to_string())
+        );
+        assert_eq!(
+            pick_optimal_default_tier(&tiers(&["tiered", "medium"])),
             Some("tiered".to_string())
         );
         assert_eq!(
@@ -764,8 +804,8 @@ mod tests {
         // 支持下划线形态（如 extra_low, x_high 等）与连字符形态等价解析
         assert_eq!(normalize_client_thinking_level("extra_low"), Some("LOW"));
         assert_eq!(normalize_client_thinking_level("extra-low"), Some("LOW"));
-        assert_eq!(normalize_client_thinking_level("x_high"), Some("HIGH"));
-        assert_eq!(normalize_client_thinking_level("x-high"), Some("HIGH"));
+        assert_eq!(normalize_client_thinking_level("x_high"), Some("XHIGH"));
+        assert_eq!(normalize_client_thinking_level("x-high"), Some("XHIGH"));
         assert_eq!(normalize_client_thinking_level("flash_lite"), Some("LOW"));
         assert_eq!(normalize_client_thinking_level("lite"), Some("LOW"));
         assert_eq!(normalize_client_thinking_level("disabled"), Some("LOW"));
@@ -794,6 +834,24 @@ mod tests {
         assert_eq!(
             resolve_bare_tiered_model_route("gemini-3.1-pro", Some("x_high")),
             Some("gemini-3.1-pro-high".to_string())
+        );
+
+        // 数字型 thinkingLevel 兼容：1/2/3/100 路由到对应变体（无 -xhigh 时回退 -high）
+        assert_eq!(normalize_client_thinking_level("1"), Some("LOW"));
+        assert_eq!(normalize_client_thinking_level("2"), Some("MEDIUM"));
+        assert_eq!(normalize_client_thinking_level("3"), Some("HIGH"));
+        assert_eq!(normalize_client_thinking_level("100"), Some("XHIGH"));
+        assert_eq!(
+            resolve_bare_tiered_model_route("gemini-4-hydrogen", Some("100")),
+            Some("gemini-4-hydrogen-xhigh".to_string())
+        );
+        assert_eq!(
+            resolve_bare_tiered_model_route("gemini-4-hydrogen", Some("1")),
+            Some("gemini-4-hydrogen-low".to_string())
+        );
+        assert_eq!(
+            resolve_bare_tiered_model_route("gemini-3.8-flash", Some("100")),
+            Some("gemini-3.8-flash-high".to_string())
         );
     }
 
@@ -839,5 +897,13 @@ mod tests {
             Some((3, 5))
         );
         assert_eq!(parse_claude_version_tuple("gemini-3.8-flash"), None);
+    }
+
+    #[test]
+    fn test_orchestrator_argon_g1_pro_specs() {
+        assert!(is_gemini_v3_or_above("gemini-pro-orchestrator-g1-pro"));
+        assert!(is_gemini_v4_or_above("gemini-pro-orchestrator-g1-pro"));
+        assert!(!is_gemini_under_v3("gemini-pro-orchestrator-g1-pro"));
+        assert!(!is_bare_gemini_pro("gemini-pro-orchestrator-g1-pro"));
     }
 }

@@ -146,12 +146,60 @@ pub fn create_auto_heal_continuation_body(
 pub struct AutoHealFlags {
     /// 已因 tool_choice/thinking 冲突剥离过 thinkingConfig
     pub retried_tool_choice_conflict: bool,
+    /// 已因 400 不支持的 forced tool_choice 降级过 responseSchema
+    pub retried_with_response_schema_demoted: bool,
     /// 已因 503/过载降级过思考预算
     pub retried_with_budget_degraded: bool,
     /// 已因 503 容量枯竭 (MODEL_CAPACITY_EXHAUSTED) 原地升档为 High
     pub retried_with_capacity_promoted: bool,
     /// 已因 400 图像解码失败剔除过损坏图片
     pub retried_with_image_omitted: bool,
+    /// 已因 400 "Thinking level is unsupported" 把扩展思考档钳制为 HIGH
+    pub retried_with_thinking_level_clamped: bool,
+}
+
+fn demote_response_schema_in_payload(body: &mut Value) -> bool {
+    let req = if body.get("request").is_some() {
+        body.get_mut("request").unwrap()
+    } else {
+        body
+    };
+    let Some(schema) = req
+        .get_mut("generationConfig")
+        .and_then(Value::as_object_mut)
+        .and_then(|gc| {
+            let schema = gc.remove("responseSchema")?;
+            gc.remove("responseMimeType");
+            Some(schema)
+        })
+    else {
+        return false;
+    };
+
+    let schema_text = format!(
+        "\n\n[OUTPUT INSTRUCTION: You MUST respond ONLY with a valid, raw JSON object conforming strictly to the following JSON Schema. Do NOT include markdown code blocks (```json), commentary, or any text other than the raw JSON object.]\n{}",
+        serde_json::to_string_pretty(&schema).unwrap_or_else(|_| schema.to_string())
+    );
+
+    if let Some(contents_arr) = req.get_mut("contents").and_then(Value::as_array_mut) {
+        let mut injected = false;
+        for content in contents_arr.iter_mut().rev() {
+            if content.get("role").and_then(|r| r.as_str()) == Some("user") {
+                if let Some(parts) = content.get_mut("parts").and_then(|p| p.as_array_mut()) {
+                    parts.push(json!({ "text": schema_text }));
+                    injected = true;
+                    break;
+                }
+            }
+        }
+        if !injected {
+            contents_arr.push(json!({
+                "role": "user",
+                "parts": [{ "text": schema_text }]
+            }));
+        }
+    }
+    true
 }
 
 /// 一次自愈的执行结果
@@ -168,9 +216,11 @@ pub struct AutoHealOutcome {
 /// 四个适配器过去各写一份同样的判断与改写：
 /// 1. 503/529 过载 → 降级思考预算（保住 prefix cache）；
 /// 2. 400 tool_choice/thinking 冲突 → 剥离 thinkingConfig；
-/// 3. 400 图像解码失败 → 剔除损坏图片并降级为文本占位。
+/// 2.5 400 不支持的 forced tool_choice → 将 responseSchema 降级至末轮 user 消息并保留 thinkingConfig；
+/// 3. 400 账号不支持扩展思考档（`THINKING_LEVEL_XHIGH`）→ 钳制为 HIGH；
+/// 4. 400 图像解码失败 → 剔除损坏图片并降级为文本占位。
 ///
-/// 三者的共同点：**都是对已转换完成的 Gemini 报文做原地修复，且必须在同账号重试**
+/// 共同点：**都是对已转换完成的 Gemini 报文做原地修复，且必须在同账号重试**
 /// （换号只会让同一份坏载荷再失败一次，并浪费轮换预算）。
 ///
 /// 返回 `Some` 表示已在同一账号上完成修复，调用方应 `continue` 重试；
@@ -184,12 +234,14 @@ pub fn try_auto_heal(
     flags: &mut AutoHealFlags,
 ) -> Option<AutoHealOutcome> {
     // 0. 上游容量枯竭 (MODEL_CAPACITY_EXHAUSTED / 503)：原地将 medium/low/tiered 升档为 high 算力通道
-    if crate::proxy::upstream::client::UpstreamClient::is_model_capacity_exhausted(
-        rquest::StatusCode::from_u16(status_code)
-            .unwrap_or(rquest::StatusCode::SERVICE_UNAVAILABLE),
-        error_text,
-    ) && !flags.retried_with_capacity_promoted
-    {
+    let is_capacity_exhausted =
+        crate::proxy::upstream::client::UpstreamClient::is_model_capacity_exhausted(
+            rquest::StatusCode::from_u16(status_code)
+                .unwrap_or(rquest::StatusCode::SERVICE_UNAVAILABLE),
+            error_text,
+        );
+
+    if is_capacity_exhausted && !flags.retried_with_capacity_promoted {
         if InboundThinkingPipeline::try_promote_to_high_capacity(body) {
             flags.retried_with_capacity_promoted = true;
             *degraded = Some(body.clone());
@@ -204,7 +256,15 @@ pub fn try_auto_heal(
     }
 
     // 1. 上游过载：降级思考预算，避免被调度到高算力集群继续排队
-    if crate::proxy::pipeline::UpstreamClassification::is_server_overloaded(status_code, error_text)
+    // 注意：若上游明确是 MODEL_CAPACITY_EXHAUSTED（容量枯竭），专属自愈策略是分支 0（升档或原地失败）；
+    // 严禁在此处将其视为普通过载执行降级，避免 high <-> medium 乒乓震荡 (Issue #4000)。
+    // 同时，若请求已升档至 high 算力通道 (retried_with_capacity_promoted)，也禁止再被降级回去。
+    if !is_capacity_exhausted
+        && !flags.retried_with_capacity_promoted
+        && crate::proxy::pipeline::UpstreamClassification::is_server_overloaded(
+            status_code,
+            error_text,
+        )
         && !flags.retried_with_budget_degraded
         && InboundThinkingPipeline::try_degrade_thinking_budget(body)
     {
@@ -221,24 +281,25 @@ pub fn try_auto_heal(
         });
     }
 
-    // 2. 强制工具调用与思考冲突：剥离 thinkingConfig 后重试
+    // 2. 强制工具调用与思考冲突：仅剥离 thinkingConfig 后重试 (Fixes #3721)
     if crate::proxy::pipeline::UpstreamClassification::is_thinking_tool_choice_conflict(
         status_code,
         error_text,
     ) && !flags.retried_tool_choice_conflict
     {
         flags.retried_tool_choice_conflict = true;
-        if let Some(gc) = body
-            .get_mut("request")
-            .and_then(|r| r.get_mut("generationConfig"))
-            .and_then(Value::as_object_mut)
         {
-            gc.remove("thinkingConfig");
-        } else if let Some(gc) = body
-            .get_mut("generationConfig")
-            .and_then(Value::as_object_mut)
-        {
-            gc.remove("thinkingConfig");
+            let req = if body.get("request").is_some() {
+                body.get_mut("request").unwrap()
+            } else {
+                &mut *body
+            };
+            if let Some(gc) = req
+                .get_mut("generationConfig")
+                .and_then(Value::as_object_mut)
+            {
+                gc.remove("thinkingConfig");
+            }
         }
         *degraded = Some(body.clone());
         tracing::warn!(
@@ -250,7 +311,49 @@ pub fn try_auto_heal(
         });
     }
 
-    // 3. 图像解码/处理失败：剔除损坏图片（降级为文本占位）后重试
+    // 2.5 不支持的 forced tool_choice（如上游将 responseSchema 转为 forced tool）：降级 responseSchema 至末轮 user 消息并保留 thinkingConfig (Ref #4033, PR #4042)
+    if crate::proxy::pipeline::UpstreamClassification::is_unsupported_forced_tool_choice(
+        status_code,
+        error_text,
+    ) && !flags.retried_with_response_schema_demoted
+    {
+        if demote_response_schema_in_payload(body) {
+            flags.retried_with_response_schema_demoted = true;
+            *degraded = Some(body.clone());
+            tracing::warn!(
+                "[AutoHeal] upstream 400 unsupported forced tool_choice: demoted responseSchema to user turn (preserving thinkingConfig) and retrying on same account (Ref #4033)"
+            );
+            return Some(AutoHealOutcome {
+                kind: "demote_response_schema_on_forced_tool_choice",
+                delay_ms: 50,
+            });
+        }
+        return None;
+    }
+
+    // 3. 账号不支持扩展思考档（400 "Thinking level is unsupported: THINKING_LEVEL_XHIGH"）：
+    //    官方目录对所有账号都把 -xhigh 声明为 thinkingLevel 100，但部分账号生成时拒绝。
+    //    同账号钳制为 HIGH（-xhigh 模型降为 -high）重试一次，避免整轮对话以 400 结束；
+    //    支持 XHIGH 的账号永远不会收到这个 400，因此不受影响。
+    if crate::proxy::pipeline::UpstreamClassification::is_unsupported_thinking_level(
+        status_code,
+        error_text,
+    ) && !flags.retried_with_thinking_level_clamped
+        && InboundThinkingPipeline::try_clamp_thinking_level(body)
+    {
+        flags.retried_with_thinking_level_clamped = true;
+        *degraded = Some(body.clone());
+        tracing::warn!(
+            "[AutoHeal] upstream 400 thinking level unsupported: clamped extended thinkingLevel to HIGH and retrying on same account err={}",
+            crate::proxy::upstream::client::strip_internal_markers(error_text)
+        );
+        return Some(AutoHealOutcome {
+            kind: "clamp_unsupported_thinking_level",
+            delay_ms: 50,
+        });
+    }
+
+    // 4. 图像解码/处理失败：剔除损坏图片（降级为文本占位）后重试
     if classification.is_image_processing_error() && !flags.retried_with_image_omitted {
         let purged =
             crate::proxy::mappers::common_utils::purge_corrupted_images_from_gemini_payload(body);
@@ -310,6 +413,23 @@ fn inspect_gemini_candidate_parts(
     }
 }
 
+/// 构造纯思考收尾无假正文的标准终止帧组（finishReason: STOP 与 [DONE]）
+pub fn make_clean_empty_thought_stop_chunks(last_usage: Option<&Value>) -> (Bytes, Bytes) {
+    let mut candidate_obj = serde_json::Map::new();
+    candidate_obj.insert("finishReason".to_string(), json!("STOP"));
+    let mut stop_resp = json!({
+        "candidates": [Value::Object(candidate_obj)]
+    });
+    if let Some(usage) = last_usage {
+        stop_resp["usageMetadata"] = usage.clone();
+    }
+    let stop_chunk = format!(
+        "data: {}\n\n",
+        serde_json::to_string(&stop_resp).unwrap_or_default()
+    );
+    (Bytes::from(stop_chunk), Bytes::from("data: [DONE]\n\n"))
+}
+
 /// 统一纯思考空回复自愈流式包装器（Pipeline First）
 ///
 /// 对上游原始 Gemini SSE 流进行透明包装：
@@ -332,6 +452,7 @@ where
         let mut saw_tool_call = false;
         let mut saw_finish_reason = false;
         let mut finish_reason_val: Option<String> = None;
+        let mut last_usage_val: Option<Value> = None;
 
         let mut stream1 = stream;
         while let Some(item) = stream1.next().await {
@@ -355,7 +476,12 @@ where
                         if line.starts_with("data: ") {
                             let json_part = line.trim_start_matches("data: ").trim();
                             if json_part == "[DONE]" {
-                                if saw_content || saw_tool_call {
+                                // 仅当确认属于思考空回复异常（无正文、无工具调用且以 STOP 结束）时才暂缓发射 [DONE] 以便进行自愈
+                                let is_empty_thought_stop_collapse = saw_thought
+                                    && !saw_content
+                                    && !saw_tool_call
+                                    && finish_reason_val.as_deref() == Some("STOP");
+                                if !is_empty_thought_stop_collapse {
                                     yield Ok(Bytes::from("data: [DONE]\n\n"));
                                 }
                                 continue;
@@ -369,7 +495,11 @@ where
                                     } else {
                                         &mut json
                                     };
+                                    if let Some(usage) = inner.get("usageMetadata").or_else(|| inner.get("usage")) {
+                                        last_usage_val = Some(usage.clone());
+                                    }
                                     let mut chunk_has_finish = false;
+                                    let mut chunk_finish_is_stop = false;
                                     let mut chunk_has_parts = false;
 
                                     if let Some(candidates) = inner.get_mut("candidates").and_then(|c| c.as_array_mut()) {
@@ -389,6 +519,9 @@ where
                                                 chunk_has_finish = true;
                                                 saw_finish_reason = true;
                                                 finish_reason_val = Some(fr.to_string());
+                                                if fr == "STOP" {
+                                                    chunk_finish_is_stop = true;
+                                                }
                                             }
                                         }
                                     }
@@ -396,8 +529,8 @@ where
                                     if saw_content || saw_tool_call {
                                         // 正常回复流程：已看到正文或工具调用，原样放行
                                         yield Ok(Bytes::from(format!("data: {}\n\n", json_part)));
-                                    } else if saw_thought && chunk_has_finish {
-                                        // 思考空回复异常候选帧：
+                                    } else if saw_thought && chunk_has_finish && chunk_finish_is_stop {
+                                        // 思考空回复异常候选帧（仅限 finishReason == "STOP"）：
                                         // 若当前帧还包含思考部件，清洗剥离 finishReason 与 usageMetadata 后放行思考，不发射终止信号
                                         if chunk_has_parts {
                                             if let Some(candidates) = inner.get_mut("candidates").and_then(|c| c.as_array_mut()) {
@@ -413,9 +546,9 @@ where
                                             let sanitized = serde_json::to_string(&json).unwrap_or_default();
                                             yield Ok(Bytes::from(format!("data: {}\n\n", sanitized)));
                                         }
-                                        // 若无有效部件仅有 finishReason，彻底拦截暂存，不往下游发送
+                                        // 若无有效部件仅有 finishReason: "STOP"，彻底拦截暂存，不往下游发送
                                     } else {
-                                        // 普通思考块或中间流帧：原样透传
+                                        // 普通思考块、中间流帧、以及非 STOP 终止帧（如 MAX_TOKENS、SAFETY 等）：原样透传
                                         yield Ok(Bytes::from(format!("data: {}\n\n", json_part)));
                                     }
                                 }
@@ -450,11 +583,18 @@ where
         // 1. 存在思考块 (saw_thought)
         // 2. 无任何正文 (saw_content == false)
         // 3. 无任何工具调用 (saw_tool_call == false)
-        // 4. 上游正常返回了结束符 (saw_finish_reason == true)
-        if saw_thought && !saw_content && !saw_tool_call && saw_finish_reason {
+        // 4. 上游返回了正常结束符 STOP (finish_reason == Some("STOP"))
+        // 注意：若因为 token 耗尽等导致截断（如 MAX_TOKENS、SAFETY），属于正常语义截断，严禁拦截自愈
+        let is_empty_thought_stop_collapse = saw_thought
+            && !saw_content
+            && !saw_tool_call
+            && saw_finish_reason
+            && finish_reason_val.as_deref() == Some("STOP");
+
+        if is_empty_thought_stop_collapse {
             tracing::warn!(
-                "[{}] [Stream-AutoHeal] 🚨 Detected empty thinking completion (thought present, 0 content, 0 tool_calls, finishReason={:?}). Triggering auto-heal continuation 1/1...",
-                ctx.trace_id, finish_reason_val
+                "[{}] [Stream-AutoHeal] 🚨 Detected empty thinking completion (thought present, 0 content, 0 tool_calls, finishReason=STOP). Triggering auto-heal continuation 1/1...",
+                ctx.trace_id
             );
 
             // 发射 SSE 心跳注释保持客户端下游连接存活
@@ -498,6 +638,9 @@ where
                                             let json_part = line.trim_start_matches("data: ").trim();
                                             if let Ok(json) = serde_json::from_str::<Value>(json_part) {
                                                 let inner = json.get("response").unwrap_or(&json);
+                                                if let Some(usage) = inner.get("usageMetadata").or_else(|| inner.get("usage")) {
+                                                    last_usage_val = Some(usage.clone());
+                                                }
                                                 if let Some(candidates) = inner.get("candidates").and_then(|c| c.as_array()) {
                                                     for cand in candidates {
                                                         let mut dummy_thought = false;
@@ -527,68 +670,38 @@ where
                         }
                     }
 
-                    // 兜底防御：若续跑流依然未产出任何可视正文或工具调用，注入微小兜底避免客户端崩溃
+                    // 若续跑流依然未产出任何可视正文或工具调用，遵循零正文篡改原则输出标准 STOP 与 [DONE]
                     if !stream2_saw_output {
                         tracing::warn!(
-                            "[{}] [Stream-AutoHeal] Continuation stream also returned 0 output. Injecting fallback message to prevent client disconnect.",
+                            "[{}] [Stream-AutoHeal] Continuation stream also returned 0 output. Emitting clean STOP and [DONE] without fake content.",
                             ctx.trace_id
                         );
-                        let fallback_text = "task ready";
-                        let fallback_chunk = format!(
-                            "data: {}\n\n",
-                            serde_json::to_string(&json!({
-                                "candidates": [{
-                                    "content": {
-                                        "parts": [{ "text": fallback_text }],
-                                        "role": "model"
-                                    },
-                                    "finishReason": "STOP"
-                                }]
-                            })).unwrap_or_default()
-                        );
-                        yield Ok(Bytes::from(fallback_chunk));
+                        let (stop_chunk, done_chunk) =
+                            make_clean_empty_thought_stop_chunks(last_usage_val.as_ref());
+                        yield Ok(stop_chunk);
+                        yield Ok(done_chunk);
                     }
                 }
                 Ok(call_fail) => {
                     let status = call_fail.response.status();
-                    tracing::error!(
-                        "[{}] [Stream-AutoHeal] Continuation request returned HTTP {}. Injecting fallback message.",
+                    tracing::warn!(
+                        "[{}] [Stream-AutoHeal] Continuation request returned HTTP {}. Emitting clean STOP and [DONE] without fake content.",
                         ctx.trace_id, status
                     );
-                    let fallback_text = "task ready";
-                    let fallback_chunk = format!(
-                        "data: {}\n\n",
-                        serde_json::to_string(&json!({
-                            "candidates": [{
-                                "content": {
-                                    "parts": [{ "text": fallback_text }],
-                                    "role": "model"
-                                },
-                                "finishReason": "STOP"
-                            }]
-                        })).unwrap_or_default()
-                    );
-                    yield Ok(Bytes::from(fallback_chunk));
+                    let (stop_chunk, done_chunk) =
+                        make_clean_empty_thought_stop_chunks(last_usage_val.as_ref());
+                    yield Ok(stop_chunk);
+                    yield Ok(done_chunk);
                 }
                 Err(e) => {
-                    tracing::error!(
-                        "[{}] [Stream-AutoHeal] Continuation request failed: {}. Injecting fallback message.",
+                    tracing::warn!(
+                        "[{}] [Stream-AutoHeal] Continuation request failed: {}. Emitting clean STOP and [DONE] without fake content.",
                         ctx.trace_id, e
                     );
-                    let fallback_text = "task ready";
-                    let fallback_chunk = format!(
-                        "data: {}\n\n",
-                        serde_json::to_string(&json!({
-                            "candidates": [{
-                                "content": {
-                                    "parts": [{ "text": fallback_text }],
-                                    "role": "model"
-                                },
-                                "finishReason": "STOP"
-                            }]
-                        })).unwrap_or_default()
-                    );
-                    yield Ok(Bytes::from(fallback_chunk));
+                    let (stop_chunk, done_chunk) =
+                        make_clean_empty_thought_stop_chunks(last_usage_val.as_ref());
+                    yield Ok(stop_chunk);
+                    yield Ok(done_chunk);
                 }
             }
         }
@@ -786,6 +899,48 @@ mod tests {
     }
 
     #[test]
+    fn test_make_clean_empty_thought_stop_chunks_with_usage() {
+        let usage = json!({
+            "promptTokenCount": 25,
+            "candidatesTokenCount": 512,
+            "totalTokenCount": 537
+        });
+        let (stop_chunk, done_chunk) = make_clean_empty_thought_stop_chunks(Some(&usage));
+        let stop_str = std::str::from_utf8(&stop_chunk).unwrap();
+        assert!(stop_str.starts_with("data: "));
+        assert!(stop_str.ends_with("\n\n"));
+        let json_str = stop_str.trim_start_matches("data: ").trim();
+        let parsed: Value = serde_json::from_str(json_str).unwrap();
+
+        // 关键断言：1. 严禁包含 parts 或任何伪造的 "task ready" 正文
+        assert!(parsed["candidates"][0].get("content").is_none());
+        assert!(!stop_str.contains("task ready"));
+
+        // 2. 正式输出 finishReason: "STOP"
+        assert_eq!(parsed["candidates"][0]["finishReason"], "STOP");
+
+        // 3. 完整保全思考产生的使用量元数据
+        assert_eq!(parsed["usageMetadata"]["candidatesTokenCount"], 512);
+
+        // 4. 正式输出 [DONE] 终结信号
+        assert_eq!(done_chunk.as_ref(), b"data: [DONE]\n\n");
+    }
+
+    #[test]
+    fn test_make_clean_empty_thought_stop_chunks_without_usage() {
+        let (stop_chunk, done_chunk) = make_clean_empty_thought_stop_chunks(None);
+        let stop_str = std::str::from_utf8(&stop_chunk).unwrap();
+        let json_str = stop_str.trim_start_matches("data: ").trim();
+        let parsed: Value = serde_json::from_str(json_str).unwrap();
+
+        assert!(parsed["candidates"][0].get("content").is_none());
+        assert!(!stop_str.contains("task ready"));
+        assert_eq!(parsed["candidates"][0]["finishReason"], "STOP");
+        assert!(parsed.get("usageMetadata").is_none());
+        assert_eq!(done_chunk.as_ref(), b"data: [DONE]\n\n");
+    }
+
+    #[test]
     fn test_auto_heal_strips_thinking_on_tool_choice_conflict() {
         let classification = crate::proxy::pipeline::UpstreamClassification::classify(
             400,
@@ -830,6 +985,70 @@ mod tests {
     }
 
     #[test]
+    fn test_auto_heal_clamps_unsupported_thinking_level_once() {
+        let err = r#"{"error":{"code":400,"message":"Thinking level is unsupported: THINKING_LEVEL_XHIGH","status":"INVALID_ARGUMENT"}}"#;
+        let classification =
+            crate::proxy::pipeline::UpstreamClassification::classify(400, err, None);
+        let mut body = json!({
+            "model": "gemini-4-hydrogen-xhigh",
+            "generationConfig": {
+                "thinkingConfig": { "includeThoughts": true, "thinkingLevel": 100 }
+            }
+        });
+        let mut degraded = None;
+        let mut flags = AutoHealFlags::default();
+        let out = try_auto_heal(
+            &classification,
+            400,
+            err,
+            &mut body,
+            &mut degraded,
+            &mut flags,
+        );
+        assert_eq!(
+            out.map(|o| o.kind),
+            Some("clamp_unsupported_thinking_level")
+        );
+        assert!(flags.retried_with_thinking_level_clamped);
+        let retried = degraded.as_ref().expect("same-account retry body");
+        assert_eq!(retried["model"], "gemini-4-hydrogen-high");
+        assert_eq!(
+            retried["generationConfig"]["thinkingConfig"]["thinkingLevel"],
+            "HIGH"
+        );
+
+        // 单次上限：同一请求第二次 400 交回原错误策略
+        let again = try_auto_heal(
+            &classification,
+            400,
+            err,
+            &mut body,
+            &mut degraded,
+            &mut flags,
+        );
+        assert!(again.is_none());
+
+        // 已是 HIGH 的请求收到同样的 400：没有可钳制的档位，不重试
+        let mut high = json!({
+            "model": "gemini-4-hydrogen-high",
+            "generationConfig": { "thinkingConfig": { "thinkingLevel": "HIGH" } }
+        });
+        let mut degraded_high = None;
+        let mut fresh = AutoHealFlags::default();
+        assert!(try_auto_heal(
+            &classification,
+            400,
+            err,
+            &mut high,
+            &mut degraded_high,
+            &mut fresh,
+        )
+        .is_none());
+        assert!(degraded_high.is_none());
+        assert!(!fresh.retried_with_thinking_level_clamped);
+    }
+
+    #[test]
     fn test_auto_heal_purges_corrupted_images_once() {
         let classification = crate::proxy::pipeline::UpstreamClassification::classify(
             400,
@@ -866,5 +1085,272 @@ mod tests {
             &mut flags,
         );
         assert!(again.is_none());
+    }
+
+    #[test]
+    fn test_auto_heal_capacity_exhausted_no_ping_pong_issue_4000() {
+        // Case 1: 客户端请求本身就是 high 档位，遇到 503 MODEL_CAPACITY_EXHAUSTED 时，
+        // 既不能被 promote（已是最高），也绝不能被判定为普通过载降级为 medium（避免拉长请求时间与篡改模型）。
+        let classification = crate::proxy::pipeline::UpstreamClassification::classify(
+            503,
+            "The model is overloaded. Please try again later. MODEL_CAPACITY_EXHAUSTED",
+            None,
+        );
+        let err_text = "The model is overloaded. Please try again later. MODEL_CAPACITY_EXHAUSTED";
+        let mut high_body = json!({
+            "model": "gemini-4-hydrogen-high",
+            "generationConfig": {
+                "thinkingConfig": {
+                    "thinkingLevel": "HIGH"
+                }
+            }
+        });
+        let mut degraded = None;
+        let mut flags = AutoHealFlags::default();
+
+        let out = try_auto_heal(
+            &classification,
+            503,
+            err_text,
+            &mut high_body,
+            &mut degraded,
+            &mut flags,
+        );
+        assert!(
+            out.is_none(),
+            "Initial -high request on capacity exhaustion should not be degraded or ping-ponged"
+        );
+        assert!(!flags.retried_with_budget_degraded);
+        assert!(!flags.retried_with_capacity_promoted);
+        assert_eq!(high_body["model"], "gemini-4-hydrogen-high");
+
+        // Case 2: 客户端请求为 medium 档位，遇到 503 MODEL_CAPACITY_EXHAUSTED 时，
+        // 第一次成功升档为 high；当第二次仍然遇到 503 时，绝不能被降级回 medium。
+        let mut medium_body = json!({
+            "model": "gemini-4-hydrogen-medium",
+            "generationConfig": {
+                "thinkingConfig": {
+                    "thinkingLevel": "MEDIUM"
+                }
+            }
+        });
+        let mut degraded2 = None;
+        let mut flags2 = AutoHealFlags::default();
+
+        let out2 = try_auto_heal(
+            &classification,
+            503,
+            err_text,
+            &mut medium_body,
+            &mut degraded2,
+            &mut flags2,
+        );
+        assert!(out2.is_some());
+        assert_eq!(out2.unwrap().kind, "promote_tier_to_high_capacity");
+        assert!(flags2.retried_with_capacity_promoted);
+        assert_eq!(medium_body["model"], "gemini-4-hydrogen-high");
+
+        // 第二次上游依旧 503 MODEL_CAPACITY_EXHAUSTED
+        let mut degraded3 = None;
+        let out3 = try_auto_heal(
+            &classification,
+            503,
+            err_text,
+            &mut medium_body,
+            &mut degraded3,
+            &mut flags2,
+        );
+        assert!(
+            out3.is_none(),
+            "Already promoted request must not fall back to degrade_thinking_budget"
+        );
+        assert!(!flags2.retried_with_budget_degraded);
+        assert_eq!(medium_body["model"], "gemini-4-hydrogen-high");
+    }
+
+    #[test]
+    fn test_auto_heal_capacity_exhausted_skips_lite_and_unsupported_models_issue_4006() {
+        let classification = crate::proxy::pipeline::UpstreamClassification::classify(
+            503,
+            "The model is overloaded. Please try again later. MODEL_CAPACITY_EXHAUSTED",
+            None,
+        );
+        let err_text = "The model is overloaded. Please try again later. MODEL_CAPACITY_EXHAUSTED";
+        let mut lite_body = json!({
+            "model": "gemini-3.5-flash-lite",
+            "generationConfig": {
+                "thinkingConfig": {
+                    "thinkingLevel": "LOW"
+                }
+            }
+        });
+        let mut degraded = None;
+        let mut flags = AutoHealFlags::default();
+
+        let out = try_auto_heal(
+            &classification,
+            503,
+            err_text,
+            &mut lite_body,
+            &mut degraded,
+            &mut flags,
+        );
+        assert!(
+            out.is_none(),
+            "flash-lite must not be promoted to -high or degraded"
+        );
+        assert!(!flags.retried_with_capacity_promoted);
+        assert!(!flags.retried_with_budget_degraded);
+        assert_eq!(lite_body["model"], "gemini-3.5-flash-lite");
+        assert_eq!(
+            lite_body["generationConfig"]["thinkingConfig"]["thinkingLevel"],
+            "LOW"
+        );
+    }
+
+    #[test]
+    fn test_auto_heal_demotes_response_schema_on_forced_tool_choice_400() {
+        let err_text = r#"{"error":{"code":400,"message":"tool_choice: type \"tool\" and \"any\" are not supported for this model.","status":"INVALID_ARGUMENT"}}"#;
+        let classification =
+            crate::proxy::pipeline::UpstreamClassification::classify(400, err_text, None);
+
+        // 1. Root payload with thinkingConfig + responseSchema + systemInstruction
+        let mut root_body = json!({
+            "systemInstruction": {
+                "parts": [{ "text": "You are a helpful assistant." }]
+            },
+            "contents": [
+                { "role": "user", "parts": [{ "text": "First question" }] },
+                { "role": "model", "parts": [{ "text": "First answer" }] },
+                { "role": "user", "parts": [{ "text": "Return JSON matching schema" }] }
+            ],
+            "generationConfig": {
+                "thinkingConfig": { "includeThoughts": true, "thinkingBudget": 1024 },
+                "responseMimeType": "application/json",
+                "responseSchema": {
+                    "type": "object",
+                    "properties": { "ok": { "type": "boolean" } },
+                    "required": ["ok"]
+                }
+            }
+        });
+        let mut degraded = None;
+        let mut flags = AutoHealFlags::default();
+
+        let out = try_auto_heal(
+            &classification,
+            400,
+            err_text,
+            &mut root_body,
+            &mut degraded,
+            &mut flags,
+        );
+        assert_eq!(
+            out.map(|o| o.kind),
+            Some("demote_response_schema_on_forced_tool_choice")
+        );
+        assert!(flags.retried_with_response_schema_demoted);
+        assert!(!flags.retried_tool_choice_conflict);
+        assert!(degraded.is_some());
+
+        // thinkingConfig & systemInstruction must remain untouched; responseSchema/responseMimeType removed
+        assert!(root_body["generationConfig"]
+            .get("thinkingConfig")
+            .is_some());
+        assert!(root_body["generationConfig"]
+            .get("responseSchema")
+            .is_none());
+        assert!(root_body["generationConfig"]
+            .get("responseMimeType")
+            .is_none());
+        assert_eq!(
+            root_body["systemInstruction"]["parts"][0]["text"],
+            "You are a helpful assistant."
+        );
+        // Schema prompt must be appended to the LAST user turn, not the first
+        assert_eq!(
+            root_body["contents"][0]["parts"].as_array().unwrap().len(),
+            1
+        );
+        let last_user_parts = root_body["contents"][2]["parts"].as_array().unwrap();
+        assert_eq!(last_user_parts.len(), 2);
+        let injected_text = last_user_parts[1]["text"].as_str().unwrap();
+        assert!(injected_text.contains("[OUTPUT INSTRUCTION:"));
+        assert!(injected_text.contains("\"ok\""));
+
+        // Second attempt must be blocked by retried_with_response_schema_demoted
+        let mut degraded_retry = None;
+        assert!(try_auto_heal(
+            &classification,
+            400,
+            err_text,
+            &mut root_body,
+            &mut degraded_retry,
+            &mut flags,
+        )
+        .is_none());
+        assert!(degraded_retry.is_none());
+
+        // 2. Wrapped {"request": {...}} payload
+        let mut wrapped_body = json!({
+            "project": "p1",
+            "request": {
+                "contents": [
+                    { "role": "model", "parts": [{ "text": "Only model turn" }] }
+                ],
+                "generationConfig": {
+                    "thinkingConfig": { "thinkingLevel": "HIGH" },
+                    "responseMimeType": "application/json",
+                    "responseSchema": { "type": "object" }
+                }
+            }
+        });
+        let mut wrapped_degraded = None;
+        let mut wrapped_flags = AutoHealFlags::default();
+        let wrapped_out = try_auto_heal(
+            &classification,
+            400,
+            err_text,
+            &mut wrapped_body,
+            &mut wrapped_degraded,
+            &mut wrapped_flags,
+        );
+        assert_eq!(
+            wrapped_out.map(|o| o.kind),
+            Some("demote_response_schema_on_forced_tool_choice")
+        );
+        assert!(wrapped_body["request"]["generationConfig"]
+            .get("thinkingConfig")
+            .is_some());
+        assert!(wrapped_body["request"]["generationConfig"]
+            .get("responseSchema")
+            .is_none());
+        let wrapped_contents = wrapped_body["request"]["contents"].as_array().unwrap();
+        assert_eq!(wrapped_contents.len(), 2);
+        assert_eq!(wrapped_contents[1]["role"], "user");
+
+        // 3. No responseSchema present -> skip futile retry
+        let mut no_schema_body = json!({
+            "contents": [{ "role": "user", "parts": [{ "text": "hi" }] }],
+            "generationConfig": {
+                "thinkingConfig": { "thinkingBudget": 1024 }
+            }
+        });
+        let mut no_schema_degraded = None;
+        let mut no_schema_flags = AutoHealFlags::default();
+        let no_schema_out = try_auto_heal(
+            &classification,
+            400,
+            err_text,
+            &mut no_schema_body,
+            &mut no_schema_degraded,
+            &mut no_schema_flags,
+        );
+        assert!(no_schema_out.is_none());
+        assert!(!no_schema_flags.retried_with_response_schema_demoted);
+        assert!(no_schema_degraded.is_none());
+        assert!(no_schema_body["generationConfig"]
+            .get("thinkingConfig")
+            .is_some());
     }
 }

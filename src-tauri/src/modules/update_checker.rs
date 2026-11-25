@@ -186,6 +186,11 @@ pub fn get_upstream_proxy_url() -> Option<String> {
 /// 2. Fallback to GitHub API (Release or Pre-release)
 pub async fn check_for_updates() -> Result<UpdateInfo, String> {
     // 统一仅检查正式版通道，避免历史配置残留 beta 导致无法切回正式版
+    check_for_updates_with_channel(UpdateChannel::Stable).await
+}
+
+/// 按指定通道检查更新（中文 Studio 版统一收敛至正式 OTA 通道）
+pub async fn check_for_updates_with_channel(_channel: UpdateChannel) -> Result<UpdateInfo, String> {
     let channel = UpdateChannel::Stable;
     let mut info = check_for_updates_internal(channel).await?;
     info.proxy_url = get_upstream_proxy_url();

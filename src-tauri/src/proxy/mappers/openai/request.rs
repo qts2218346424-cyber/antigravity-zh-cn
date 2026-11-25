@@ -5,18 +5,6 @@ use crate::proxy::token_manager::ProxyToken;
 
 use serde_json::{json, Value};
 
-pub(crate) fn is_tiered_flash_model(model: &str) -> bool {
-    let model_id = model
-        .rsplit('/')
-        .next()
-        .unwrap_or(model)
-        .to_ascii_lowercase();
-    model_id
-        .strip_prefix("gemini-")
-        .and_then(|rest| rest.strip_suffix("-flash-tiered"))
-        .is_some_and(|version| !version.is_empty())
-}
-
 /// Collect system/developer text without joining. A string content is one block;
 /// a content array contributes one block per text part.
 fn collect_system_instruction_blocks(request: &OpenAIRequest) -> Vec<String> {
@@ -997,7 +985,7 @@ pub fn transform_openai_request_with_session(
             let format = text.get("format")?;
             let fmt_type = format.get("type")?.as_str()?;
             if fmt_type == "json_schema" {
-                Some(ResponseFormat {
+                Some(ResponseFormat::TypeObject {
                     r#type: "json_schema".to_string(),
                     json_schema: Some(ResponseFormatJSONSchema {
                         name: format
@@ -1013,7 +1001,7 @@ pub fn transform_openai_request_with_session(
                     }),
                 })
             } else if fmt_type == "json_object" {
-                Some(ResponseFormat {
+                Some(ResponseFormat::TypeObject {
                     r#type: "json_object".to_string(),
                     json_schema: None,
                 })
@@ -1024,11 +1012,11 @@ pub fn transform_openai_request_with_session(
     });
 
     if let Some(fmt) = &effective_response_format {
-        if fmt.r#type == "json_object" {
+        if fmt.r#type() == "json_object" {
             gen_config["responseMimeType"] = json!("application/json");
-        } else if fmt.r#type == "json_schema" {
+        } else if fmt.r#type() == "json_schema" {
             gen_config["responseMimeType"] = json!("application/json");
-            if let Some(js) = &fmt.json_schema {
+            if let Some(js) = fmt.json_schema() {
                 if let Some(mut schema) = js.schema.clone() {
                     crate::proxy::common::json_schema::clean_response_schema(&mut schema);
                     gen_config["responseSchema"] = schema;
@@ -1061,11 +1049,6 @@ pub fn transform_openai_request_with_session(
         { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "OFF" },
         { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "OFF" },
     ]);
-
-    // [PIPELINE] 统一清洗提示词与风控伪 Header（含 [undefined] 深度清理，见 PromptSanitizer）
-    crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::sanitize_gemini_payload(
-        &mut inner_request,
-    );
 
     // 4. Handle Tools (Merged Cleaning)
     let _is_codex_style = request.model.contains("codex")
@@ -1266,6 +1249,12 @@ pub fn transform_openai_request_with_session(
         }
     }
 
+    // [PIPELINE] 统一清洗提示词、工具描述与风控伪 Header（含 [undefined] 深度清理，见 PromptSanitizer）
+    // 必须在 contents、tools、systemInstruction 全部装载进 inner_request 后执行，确保无一遗漏
+    crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::sanitize_gemini_payload(
+        &mut inner_request,
+    );
+
     // [ADDED v4.1.24] 注入稳定 sessionId 对齐官方规范
     // [FIX session-1M] sessionId 混入对话指纹与代数:
     //   - 同一对话内保持稳定(保留上游服务端会话缓存收益)
@@ -1327,6 +1316,12 @@ pub fn transform_openai_request_with_session(
         final_body["requestType"] = json!("agent");
     }
 
+    if let Some(tok) = token {
+        if tok.is_paygo() {
+            final_body["enabledCreditTypes"] = json!(["GOOGLE_ONE_AI"]);
+        }
+    }
+
     crate::proxy::pipeline::InboundThinkingPipeline::align_official_envelope(&mut final_body);
 
     // [CACHE:L3] 使用多层级缓存的 compute_prefix_hash 计算组合哈希
@@ -1351,12 +1346,6 @@ pub fn transform_openai_request_with_session(
         );
         hash
     };
-
-    // [CACHE:L3] 记录前缀哈希生命周期统计（Google v1internal 依赖 TPU 隐式前缀缓存，杜绝显式注入 cachedContent 造成 400）
-    let cache_manager = crate::proxy::cache_manager::global_cache_manager();
-    if cache_manager.lookup_prefix(&prefix_hash).is_some() {
-        cache_manager.record_explicit_hit(&prefix_hash);
-    }
 
     // [DEFENSE] 净化所有 contents 中的 inlineData，过滤或降级空数据/损坏数据
     if let Some(inner) = final_body.get_mut("request") {
@@ -1450,7 +1439,7 @@ mod tests {
             Some(10240)
         );
 
-        // 4. 客户端控制模式下从 reasoning.max_tokens 提取 client_budget
+        // 4. 网关模式下从官方模型目录结构体读取权威默认值 (-1)
         crate::proxy::config::update_thinking_budget_config(
             crate::proxy::config::ThinkingBudgetConfig {
                 control_source: crate::proxy::config::ThinkingControlSource::Client,
@@ -1463,12 +1452,29 @@ mod tests {
         );
         assert_eq!(
             body["request"]["generationConfig"]["thinkingConfig"]["thinkingBudget"],
-            8000
+            -1
         );
     }
 
     #[test]
     fn prompt_log_identity_cleanup_only_changes_system_instructions() {
+        let _lock = crate::proxy::config::TEST_CONFIG_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+
+        // 隔离测试 systemInstruction 字段本身的身份声明清洗与前后缀/XML 保留能力，
+        // 显式将 sideload_mode 置为 Off；其在 Auto 模式下的隐身侧载行为由专门的侧载单元测试覆盖。
+        let cfg = crate::proxy::config::PromptRewriteConfig {
+            enabled: true,
+            normalize_identity: true,
+            sideload_mode: crate::proxy::config::PromptSideloadMode::Off,
+            sanitize_tools_description: true,
+            rules: vec![],
+        };
+        crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::update_prompt_rewrite_config(
+            &cfg,
+        );
+
         // 身份声明归一化由协议无关的流水线节点承担（`PromptSanitizer::sanitize_gemini_payload`），
         // 适配层只产出原样系统提示词。当前契约：
         //   · systemInstruction 与注入区（首个 model 之前、当前轮之前）→ System 轨归一化；
@@ -1520,6 +1526,10 @@ mod tests {
                 "tool 回执必须逐字保留: {contents}"
             );
         }
+
+        crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::update_prompt_rewrite_config(
+            &crate::proxy::config::PromptRewriteConfig::default(),
+        );
     }
     fn tiered_request_body(model: &str, effort: Option<&str>) -> Value {
         let mut raw = json!({
@@ -1540,7 +1550,7 @@ mod tests {
             .unwrap_or_else(|e| e.into_inner());
         // 官方 2026-10 起 tiered 模型走 thinkingLevel 通道；客户端 effort 仅决定等级
         for model in ["gemini-3.8-flash-tiered"] {
-            assert!(is_tiered_flash_model(model));
+            assert!(crate::proxy::model_specs::is_tiered_flash_model(model));
             for (effort, expected_level) in [
                 (None, "HIGH"),
                 (Some("low"), "LOW"),
@@ -1564,8 +1574,8 @@ mod tests {
         let _lock = crate::proxy::config::TEST_CONFIG_LOCK
             .lock()
             .unwrap_or_else(|e| e.into_inner());
-        for model in ["gemini-3.1-pro-high", "gemini-2.5-pro"] {
-            assert!(!is_tiered_flash_model(model));
+        for model in ["gemini-3.1-pro-high", "gemini-3.1-pro-low"] {
+            assert!(!crate::proxy::model_specs::is_tiered_flash_model(model));
             let body = tiered_request_body(model, Some("low"));
             let thinking = &body["request"]["generationConfig"]["thinkingConfig"];
 
@@ -1573,7 +1583,9 @@ mod tests {
             assert!(thinking.get("thinkingLevel").is_none());
             assert!(thinking.get("thinkingBudget").is_some());
         }
-        assert!(!is_tiered_flash_model("gemini-3.8-flash-tiered-image"));
+        assert!(!crate::proxy::model_specs::is_tiered_flash_model(
+            "gemini-3.8-flash-tiered-image"
+        ));
     }
 
     #[test]
@@ -1647,8 +1659,12 @@ mod tests {
         let (body, _, _, _) =
             transform_openai_request(&req_flash_disabled, "test-p", "gemini-3-flash", None);
         assert_eq!(
-            body["request"]["generationConfig"]["thinkingConfig"]["thinkingLevel"],
-            "HIGH"
+            body["request"]["generationConfig"]["thinkingConfig"]["includeThoughts"],
+            false
+        );
+        assert_eq!(
+            body["request"]["generationConfig"]["thinkingConfig"]["thinkingBudget"],
+            0
         );
 
         // 4. 等级通道模型：客户端传自定义 budget_tokens 也被忽略，仍发官方等级
@@ -1913,16 +1929,13 @@ mod tests {
             ..Default::default()
         };
 
-        // 验证针对 Gemini 模型即使是 Custom 模式也会被修正为 24576
+        // 验证针对 Gemini 模型在 Custom 模式下注入自定义预算
         let (result, _sid, _msg_count, _) =
             transform_openai_request(&req, "test-v", "gemini-2.0-flash-thinking", None);
         let budget = result["request"]["generationConfig"]["thinkingConfig"]["thinkingBudget"]
             .as_i64()
             .unwrap();
-        assert_eq!(
-            budget, 24576,
-            "Gemini custom budget must be capped to 24576"
-        );
+        assert_eq!(budget, 32000, "Gemini custom budget should be 32000");
 
         // 验证非 Gemini 模型（如 Claude 原生路径，假设映射后名不含 gemini）则不应截断
         // 注意：这里的 transform_openai_request 第三个参数是 mapped_model
@@ -2134,11 +2147,11 @@ mod tests {
         };
 
         let (result, _sid, _msg_count, _) =
-            transform_openai_request(&req, "test-p", "gemini-3-pro-high-thinking", None);
+            transform_openai_request(&req, "test-p", "gemini-3.1-pro-high", None);
         let gen_config = &result["request"]["generationConfig"];
         let max_output_tokens = gen_config["maxOutputTokens"].as_i64().unwrap();
-        // budget(10001) + overhead(32768) = 42769
-        assert_eq!(max_output_tokens, 42769);
+        // 官方物理硬顶 safe_limit = 65535
+        assert_eq!(max_output_tokens, 65535);
 
         // Verify thinkingBudget
         let budget = gen_config["thinkingConfig"]["thinkingBudget"]
@@ -2188,16 +2201,11 @@ mod tests {
             transform_openai_request(&req, "test-p", "gemini-2.0-flash-thinking-exp", None);
         let gen_config = &result["request"]["generationConfig"];
 
-        // Should be capped at 24576
-        let budget = gen_config["thinkingConfig"]["thinkingBudget"]
-            .as_i64()
-            .unwrap();
-        assert_eq!(budget, 24576);
-
-        // Max output tokens should be adjusted based on capped budget (24576 + 8192)
-        // budget(24576) + overhead(32768) = 57344
-        let max_output_tokens = gen_config["maxOutputTokens"].as_i64().unwrap();
-        assert_eq!(max_output_tokens, 57344);
+        // 默认自适应模式下，未收录的 exp 模型不显式下发固定 thinkingBudget
+        assert!(
+            gen_config["thinkingConfig"].get("thinkingBudget").is_none(),
+            "Adaptive 模式下不显式下发 thinkingBudget"
+        );
     }
     #[test]
     fn test_vertex_ai_drops_sentinel_injection() {
@@ -2645,8 +2653,9 @@ mod tests {
             .as_object()
             .expect("Should have generationConfig in request payload");
 
-        // 客户端直接控制模式显式关闭思考：彻底不填任何转出报文的谷歌思考块字段和预算
-        assert!(gen_config.get("thinkingConfig").is_none());
+        // 客户端显式传 budget_tokens=0 时关闭思考
+        assert_eq!(gen_config["thinkingConfig"]["includeThoughts"], false);
+        assert_eq!(gen_config["thinkingConfig"]["thinkingBudget"], 0);
     }
 
     #[test]
@@ -2781,10 +2790,9 @@ mod tests {
             .expect("Should have generationConfig in request payload");
         let thinking_config = gen_config["thinkingConfig"].as_object().unwrap();
 
-        // 网关权威控制模式下，具名档位模型的等级由模型档位决定（medium → MEDIUM）
-        assert_eq!(thinking_config.get("thinkingLevel"), Some(&json!("MEDIUM")));
-        assert_eq!(thinking_config.get("includeThoughts"), Some(&json!(true)));
-        assert!(thinking_config.get("thinkingBudget").is_none());
+        // 客户端显式传 budget_tokens=0 触发 ClientThinkingSwitch::Disabled，关闭思考
+        assert_eq!(thinking_config.get("includeThoughts"), Some(&json!(false)));
+        assert_eq!(thinking_config.get("thinkingBudget"), Some(&json!(0)));
     }
 
     #[test]
@@ -3446,6 +3454,60 @@ mod tests {
         assert_eq!(
             fc_part["thoughtSignature"], valid_gemini_sig,
             "OpenAI adapter and pipeline must recover real tool signature from SignatureCache"
+        );
+    }
+
+    #[test]
+    fn test_transform_openai_request_sanitizes_tools_and_system_instruction_directly() {
+        let _lock = crate::proxy::config::TEST_CONFIG_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::update_prompt_rewrite_config(
+            &crate::proxy::config::PromptRewriteConfig::default(),
+        );
+
+        let req = OpenAIRequest {
+            model: "gemini-3.8-flash-high".to_string(),
+            instructions: Some("You are Codex, an AI coding assistant.".to_string()),
+            messages: vec![OpenAIMessage {
+                role: "user".to_string(),
+                content: Some(OpenAIContent::String("Hello".to_string())),
+                ..Default::default()
+            }],
+            tools: Some(vec![json!({
+                "type": "function",
+                "function": {
+                    "name": "pi_tool",
+                    "description": "Execute code with codemode and my_codemode_helper in Pi agent.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {}
+                    }
+                }
+            })]),
+            ..Default::default()
+        };
+
+        let (result, _, _, _) =
+            transform_openai_request(&req, "test-proj", "gemini-3.8-flash-high", None);
+
+        // 验证 systemInstruction 被原生拟态归一化为官方 Antigravity 身份
+        let sys_str = result["request"]["systemInstruction"].to_string();
+        assert!(!sys_str.contains("You are Codex"));
+        assert!(sys_str
+            .contains(crate::proxy::mappers::prompt_sanitizer::OFFICIAL_ANTIGRAVITY_IDENTITY));
+
+        // 验证 tools 中 functionDeclarations 的 description 被清洗（codemode -> codem0de），
+        // 且下划线标识符及整行上下文不被误伤
+        let tools = result["request"]["tools"].as_array().unwrap();
+        let desc = tools[0]["functionDeclarations"][0]["description"]
+            .as_str()
+            .unwrap();
+        assert!(!desc.contains(" with codemode "));
+        assert!(desc.contains("Execute code with codem0de and my_codemode_helper in Pi agent."));
+
+        crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::update_prompt_rewrite_config(
+            &crate::proxy::config::PromptRewriteConfig::default(),
         );
     }
 }

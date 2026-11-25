@@ -15,13 +15,11 @@ use tracing::{debug, error, info};
 use crate::proxy::common::client_adapter::CLIENT_ADAPTERS; // [NEW] Import Adapter Registry
 use crate::proxy::debug_logger;
 use crate::proxy::mappers::claude::{
-    clean_cache_control_from_messages, create_claude_sse_stream,
-    filter_invalid_thinking_blocks_with_family, merge_consecutive_messages,
-    models::{Message, MessageContent},
+    clean_cache_control_from_messages, create_claude_sse_stream_with_anchor,
+    filter_invalid_thinking_blocks_with_family, merge_consecutive_messages, models::MessageContent,
     transform_response, ClaudeRequest,
 };
 use crate::proxy::mappers::context_manager::ContextManager;
-use crate::proxy::mappers::gemini::SUMMARY_REQUEST_TIMEOUT_SECS;
 use crate::proxy::model_specs;
 use crate::proxy::pipeline::timing::{TimingBuilderExt, TimingHeaders};
 use crate::proxy::server::AppState;
@@ -152,7 +150,6 @@ pub fn calculate_effective_auto_compact_threshold(user_threshold: u32, target_li
 /// 检查请求最新一条 user 消息是否包含 tool_result 或处于工具调用接续阶段。
 /// 在工具调用接续期间（Agent loop in-flight），绝不能假报 400 截断，
 /// 否则客户端的工具执行状态机会直接崩溃并将错误呈现给用户！
-#[allow(dead_code)]
 pub fn is_tool_result_continuation(request: &ClaudeRequest) -> bool {
     let last_user_msg = request.messages.iter().rev().find(|m| m.role == "user");
     if let Some(msg) = last_user_msg {
@@ -177,7 +174,6 @@ pub fn is_tool_result_continuation(request: &ClaudeRequest) -> bool {
 /// 1. 模型名称显式属于 Claude 5 家族 (fable, opus-5, sonnet-5) 或显式标注 [1m] / 1m，
 ///    或属于 Gemini 长上下文模型 (gemini, flash, pro)；
 /// 2. 请求头 anthropic-beta 包含 `context-1m`。
-#[allow(dead_code)]
 pub fn is_1m_context_requested(request: &ClaudeRequest, headers: &HeaderMap) -> bool {
     let model_lower = request.model.to_lowercase();
     if model_lower.contains("fable")
@@ -202,12 +198,15 @@ pub fn is_1m_context_requested(request: &ClaudeRequest, headers: &HeaderMap) -> 
 
 /// 判断当前请求是否应该触发 Cowork 响应式自动压缩假报警门禁。
 ///
-/// 核心铁律（边界如铁）：
+/// 核心准则：
 /// 1. 配置守卫：`enable_cowork_auto_compact` 必须为 true；
 /// 2. 状态守卫：非压缩总结请求、非刚压缩接续、非手动 ./compact 指令、非正在压缩中；
-/// 3. 真实 Cowork 阈值守卫：
-///    - 必须为真正的 Cowork 会话（且非 Code 模式），且实际 tokens >= effective_threshold 与 target_limit。
-///    - 严格按用户配置的阈值触发压缩，不再对 1M 模型一刀切豁免，确保会话达到设定限额时受控深度压缩。
+/// 3. 真实 Cowork 会话守卫：必须为真正的 Cowork 会话（且非 Code 模式）；
+/// 4. 工具在途避让（核心防护）：Agent 正在执行工具链（最新一条包含 tool_result）期间绝不假报 400！
+///    必须等待当前工具调用链闭环、回到用户新回合输入时再优雅触发压缩，
+///    彻底杜绝客户端工具状态机崩溃并弹出全屏 "Your context window is full" 阻塞弹窗；
+/// 5. 1M 兼顾与配额自愈：1M 模型同样必须按用户配置阈值（如 150k）受控压缩，防止无限膨胀；
+///    当 est_tokens >= effective_threshold 且处于人类新回合开始时，平滑触发原生压缩。
 pub fn should_trigger_cowork_auto_compact(
     enable_auto_compact: bool,
     user_configured_threshold: u32,
@@ -228,7 +227,15 @@ pub fn should_trigger_cowork_auto_compact(
         return None;
     }
 
+    // 必须为真正的 Cowork 会话（且非 Code 模式）
     if !is_cowork_session(request, headers) {
+        return None;
+    }
+
+    // 关键守卫：Agent 执行工具链接续期间（包含 tool_result）绝不截断！
+    // 此时客户端正在等待模型消费工具结果，若突发 400 会打崩客户端工具调用状态机并弹窗报错。
+    // 必须等待当前工具调用链闭环、回到用户新回合输入时再优雅触发压缩！
+    if is_tool_result_continuation(request) {
         return None;
     }
 
@@ -296,58 +303,91 @@ fn is_manual_compact_command(request: &ClaudeRequest) -> bool {
 }
 
 /// 判断当前请求是否属于 Claude Code 模式（CLI / Desktop Code Tab）
+pub fn is_code_mode(request: &ClaudeRequest) -> bool {
+    is_code_mode_with_headers(request, None)
+}
+
+/// 判断当前请求是否属于 Claude Code 模式（支持标头嗅探）
 ///
 /// 判定依据（与 Cowork 排除判定完全对齐）：
 /// 1. 工具声明包含 `mcp__ccd_` 前缀（Claude Desktop Code Tab 专属工具）；
-/// 2. 或系统提示词显式声明包含 "You are Claude Code"（Claude Code CLI 官方身份）。
-pub fn is_code_mode(request: &ClaudeRequest) -> bool {
-    request.tools.as_ref().map_or(false, |tools| {
-        tools.iter().any(|t| t.get_name().starts_with("mcp__ccd_"))
-    }) || request.system.as_ref().map_or(false, |sys| match sys {
+/// 2. 系统提示词显式声明包含 "You are Claude Code"（Claude Code CLI 官方身份）；
+/// 3. 请求头 anthropic-beta 包含 `claude-code`（Claude Code CLI 专属功能标头）。
+pub fn is_code_mode_with_headers(request: &ClaudeRequest, headers: Option<&HeaderMap>) -> bool {
+    // 1. 工具声明包含 `mcp__ccd_` 前缀（Claude Desktop Code Tab 专属工具）
+    let has_ccd_tools = request
+        .tools
+        .as_ref()
+        .is_some_and(|tools| tools.iter().any(|t| t.get_name().starts_with("mcp__ccd_")));
+    if has_ccd_tools {
+        return true;
+    }
+
+    // 2. 系统提示词显式声明 "You are Claude Code"（无论是否有 cowork 工具，一票否决）
+    let has_code_system = request.system.as_ref().is_some_and(|sys| match sys {
         crate::proxy::mappers::claude::models::SystemPrompt::String(s) => {
             s.contains("You are Claude Code")
         }
         crate::proxy::mappers::claude::models::SystemPrompt::Array(arr) => {
             arr.iter().any(|b| b.text.contains("You are Claude Code"))
         }
-    })
+    });
+    if has_code_system {
+        return true;
+    }
+
+    // 若显式携带真实 Cowork 专属工具 (mcp__cowork_*)，且无上述绝对 Code 身份，坚决归属 Cowork
+    let has_cowork_tools = request.tools.as_ref().is_some_and(|tools| {
+        tools
+            .iter()
+            .any(|t| t.get_name().starts_with("mcp__cowork"))
+    });
+    if has_cowork_tools {
+        return false;
+    }
+
+    // 3. 请求标头包含 Claude Code 专有标识（且无 Cowork 专属工具）
+    if let Some(hdrs) = headers {
+        if let Some(beta) = hdrs.get("anthropic-beta").and_then(|v| v.to_str().ok()) {
+            if beta.contains("claude-code") {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 /// 判断当前请求是否属于 Claude Desktop Cowork 专属会话
-/// 关键防护：严格排除 Claude Code 模式（CLI / Desktop Code Tab），防止日常代码工程被误触截断。
-/// 仅精准放行真正的 Cowork 模式（带 mcp__cowork_* / mcp__workspace_* 工具或 local-agent 运行环境）。
+/// 关键防护：严格排除 Claude Code 模式（CLI / Desktop Code Tab），防止日常代码工程与普通对话被误触截断。
+/// 仅精准放行真正的 Cowork 模式（带 mcp__cowork_* 专属工具，或桌面工作区专属智能体）。
 pub fn is_cowork_session(request: &ClaudeRequest, headers: &HeaderMap) -> bool {
     // 1. 显式排除 Claude Code 模式（一票否决权）：
-    // 关键认知：Claude Desktop 的 Cowork 模式底层同样基于 agent-sdk，也会携带 x-app: cli、x-claude-code-session-id
-    // 以及通用宿主标头 claude-desktop-3p（代表 3p 嵌入桌面宿主），因此绝不能用这些通用标头判定 Code 模式！
-    // 真正的 Code 模式专属特征为：包含 mcp__ccd_* 工具前缀，或系统提示词显式声明 "You are Claude Code"
-    if is_code_mode(request) {
+    if is_code_mode_with_headers(request, Some(headers)) {
         return false;
     }
 
     // 2. 识别真正的 Cowork 会话：
-    // 特征：带有 mcp__cowork_* 或 mcp__workspace_* 专属工具，
-    // 或运行环境为 local-agent / Claude Desktop 内置原生日常工作区
-    let has_cowork_tool = request.tools.as_ref().map_or(false, |tools| {
+    // 特征 A: 带有 mcp__cowork_* 或 mcp__workspace_* 专属工具
+    let has_cowork_tool = request.tools.as_ref().is_some_and(|tools| {
         tools.iter().any(|t| {
             let n = t.get_name();
             n.starts_with("mcp__cowork") || n.starts_with("mcp__workspace")
         })
     });
 
+    // 特征 B: Claude Desktop 内置原生日常工作区智能体应用描述
     let has_cowork_agent = headers
         .iter()
-        .any(|(_, v)| v.to_str().map_or(false, |val| val.contains("local-agent")))
-        || request.system.as_ref().map_or(false, |sys| match sys {
+        .any(|(_, v)| v.to_str().is_ok_and(|val| val.contains("local-agent")))
+        || request.system.as_ref().is_some_and(|sys| match sys {
             crate::proxy::mappers::claude::models::SystemPrompt::String(s) => {
-                s.contains("local-agent")
-                    || s.contains("operating as an agent inside the Claude desktop app")
+                s.contains("operating as an agent inside the Claude desktop app")
             }
             crate::proxy::mappers::claude::models::SystemPrompt::Array(arr) => {
                 arr.iter().any(|b| {
-                    b.text.contains("local-agent")
-                        || b.text
-                            .contains("operating as an agent inside the Claude desktop app")
+                    b.text
+                        .contains("operating as an agent inside the Claude desktop app")
                 })
             }
         });
@@ -589,75 +629,13 @@ fn extract_thinking_hint(body: &Value) -> ThinkingHint {
         .or_else(|| body.get("output_config").and_then(|o| o.get("effort")))
         .or_else(|| body.get("thinking").and_then(|t| t.get("effort")))
         .or_else(|| body.get("effort"))
-        .and_then(|l| l.as_str())
+        .and_then(crate::proxy::pipeline::extract_thinking_level_str)
     {
         hint.level = Some(level.to_lowercase());
     }
 
     hint
 }
-
-const MAX_RETRY_ATTEMPTS: usize = 3;
-
-// ===== Layer 3: XML Summary Prompt Template =====
-// Borrowed from Practical-Guide-to-Context-Engineering + Claude Code official practice
-// This prompt generates a structured 8-section XML summary for context compression
-const CONTEXT_SUMMARY_PROMPT: &str = r#"You are a context compression specialist. Your task is to create a structured XML snapshot of the conversation history.
-
-This snapshot will become the Agent's ONLY memory of the past. All key details, plans, errors, and user instructions MUST be preserved.
-
-First, think through the entire history in a private <scratchpad>. Review the user's overall goal, the agent's actions, tool outputs, file modifications, and any unresolved issues. Identify every piece of information critical for future actions.
-
-After reasoning, generate the final <state_snapshot> XML object. Information must be extremely dense. Omit any irrelevant conversational filler.
-
-The structure MUST be as follows:
-
-<state_snapshot>
-  <overall_goal>
-    <!-- Describe the user's high-level goal in one concise sentence -->
-  </overall_goal>
-
-  <technical_context>
-    <!-- Tech stack: frameworks, languages, toolchain, dependency versions -->
-  </technical_context>
-
-  <file_system_state>
-    <!-- List files that were created, read, modified, or deleted. Note their status -->
-  </file_system_state>
-
-  <code_changes>
-    <!-- Key code snippets (preserve function signatures and important logic) -->
-  </code_changes>
-
-  <debugging_history>
-    <!-- List all errors encountered, with stack traces, and how they were fixed -->
-  </debugging_history>
-
-  <current_plan>
-    <!-- Step-by-step plan. Mark completed steps -->
-  </current_plan>
-
-  <user_preferences>
-    <!-- User's work preferences for this project (test commands, code style, etc.) -->
-  </user_preferences>
-
-  <key_decisions>
-    <!-- Critical architectural decisions and design choices -->
-  </key_decisions>
-
-  <latest_thinking_signature>
-    <!-- [CRITICAL] Preserve the last valid thinking signature -->
-    <!-- Format: base64-encoded signature string -->
-    <!-- This MUST be copied exactly as-is, no modifications -->
-  </latest_thinking_signature>
-</state_snapshot>
-
-**IMPORTANT**:
-1. Code snippets must be complete, including function signatures and key logic
-2. Error messages must be preserved verbatim, including line numbers and stacks
-3. File paths must use absolute paths
-4. The thinking signature must be copied exactly, no modifications
-"#;
 
 // ===== Jitter Configuration (REMOVED) =====
 // Jitter was causing connection instability, reverted to fixed delays
@@ -670,7 +648,7 @@ The structure MUST be as follows:
 
 // ===== 统一退避策略模块 =====
 // 移除本地重复定义，使用 common 中的统一实现
-use super::common::{apply_retry_strategy, should_rotate_account, RetryStrategy};
+use super::common::{apply_retry_strategy, RetryStrategy};
 
 // ===== 退避策略模块结束 =====
 
@@ -724,10 +702,9 @@ mod variant_tests {
     }
 
     #[test]
-    fn invalid_effort_falls_back_to_budget_tokens_for_gemini_3_model() {
-        // Given a Gemini 3 model ("gemini-3-flash") with an unrecognized
-        // effort value ("unrecognized"), tier_from_effort returns None, so
-        // apply_variant falls back to budget-based tier inference.
+    fn invalid_effort_ignores_budget_tokens_for_gemini_3_model() {
+        // [USER RULE] 对于 Gemini >= 3 的裸模型，由客户端思考强度 (effort) 接管，思考预算字段 (budget_tokens) 直接忽略！
+        // 客户端未传 valid effort 时绝不按 budget_tokens 推断档位，默认对齐官方 High 旗舰算力保障通道
         let mut request = request_with_effort("gemini-3-flash", "unrecognized", 4_000);
         let effort = crate::proxy::common::variant_mapping::tier_from_effort(
             request
@@ -739,19 +716,12 @@ mod variant_tests {
         // tier_from_effort(Some("unrecognized")) → None (invalid value)
         assert_eq!(effort, None);
 
-        // With effort=None and budget=4_000, infer_tier → Medium →
-        // resolve_with_tier("gemini-3-flash", None, Some(4_000)) →
-        // SPEC_35_FLASH_LOW → physical id "gemini-3.5-flash-low"
+        // With effort=None and budget=4_000, Gemini >= 3 ignores budget and defaults to High tier -> "gemini-3-flash-agent"
         apply_variant(&mut request, effort, Some(4_000))
             .expect("gemini-3-flash must resolve even without valid effort");
 
-        assert_eq!(request.model, "gemini-3.5-flash-low");
+        assert_eq!(request.model, "gemini-3-flash-agent");
         assert!(request.output_config.is_none());
-        // SPEC_35_FLASH_LOW has thinking_budget=4_000, preserve_client_budget=false
-        assert_eq!(
-            request.thinking.as_ref().and_then(|t| t.budget_tokens),
-            Some(4_000)
-        );
     }
 
     #[test]
@@ -806,6 +776,7 @@ mod variant_tests {
     }
 }
 
+#[cfg(test)]
 fn apply_variant(
     request: &mut ClaudeRequest,
     effort_tier: Option<crate::proxy::common::variant_mapping::VariantTier>,
@@ -1120,7 +1091,7 @@ pub async fn handle_messages(
     // 若对其开启用量缩放，会将百万级物理 Token 压缩映射至假性偏低的数值区间（如 500k 映射为 58k），
     // 导致客户端永远无法感知真实上下文压力、丧失主动 /compact 触发时机，并在触及服务端硬限制时骤然崩溃 (Fixes #867, #1066, #1079)。
     // 因此：若检测为 Claude Code 会话，强制关闭用量缩放，如实下发真实物理 Token 用量。
-    let is_code = is_code_mode(&request);
+    let is_code = is_code_mode_with_headers(&request, Some(&headers));
     let scaling_enabled = experimental.enable_usage_scaling && !is_code;
 
     // [全链路会话生命周期与自愈分流体系 (Pipeline First)]
@@ -1702,13 +1673,10 @@ pub async fn handle_messages(
     // [Stage Timing] 阶段耗时度量变量 (毫秒，保留微秒级浮点精度)
     let clean_micros = clean_start.elapsed().as_micros() as u64;
     let clean_ms: f64 = clean_micros as f64 / 1000.0;
-    let mut norm_ms: f64 = 0.0;
-    let mut think_fill_ms: f64 = 0.0;
     // TTFT 单源口径：仅记录“首个上游数据块”；流式发头时写 -1。
     // 响应头耗时单独用 headers_ms 表达，不再冒充 TTFT。
     let mut ttft_ms: f64 = crate::proxy::pipeline::stream_peek::TTFT_UNKNOWN_MS;
     let mut headers_ms: f64 = 0.0;
-    let mut fallback_overhead_ms: f64 = 0.0;
 
     // [Pipeline Budget] 请求级截止时刻由中间件注入（`pipeline::budget`），
     // 单次上游调用的硬上限已下沉到 `upstream::client`，循环闸门统一用 `budget::exhausted()`；
@@ -1785,7 +1753,7 @@ pub async fn handle_messages(
 
         drop(image_permit.take());
         // [Rotation] GraceRetry 优先复用上一轮的账号凭据，避免重新选号导致粘性丢失
-        let mut token_result = if let Some(creds) = retry_credentials.take() {
+        let token_result = if let Some(creds) = retry_credentials.take() {
             Ok(creds)
         } else if config.request_type == "image_gen" {
             match token_manager
@@ -1851,24 +1819,22 @@ pub async fn handle_messages(
                 } else {
                     e
                 };
-                let headers =
-                    crate::proxy::handlers::common::build_token_error_headers_for_protocol(
-                        "claude",
-                        Some(mapped_model.as_str()),
-                        None,
-                        &safe_message,
-                    );
-                let dual_err = crate::proxy::handlers::common::build_dual_track_error(
-                    "claude",
-                    StatusCode::SERVICE_UNAVAILABLE.as_u16(),
-                    mapped_model.as_str(),
-                    &safe_message,
-                );
+                let status =
+                    crate::proxy::handlers::common::resolve_token_error_status(&safe_message);
                 crate::proxy::stage_trace::StageTrace::alert_current_error(
                     "gateway_local",
-                    format!("token_unavailable status=503 reason={}", safe_message),
+                    format!(
+                        "token_unavailable status={} reason={}",
+                        status.as_u16(),
+                        safe_message
+                    ),
                 );
-                return (StatusCode::SERVICE_UNAVAILABLE, headers, Json(dual_err)).into_response();
+                return crate::proxy::handlers::common::build_token_error_response(
+                    "claude",
+                    mapped_model.as_str(),
+                    None,
+                    &safe_message,
+                );
             }
         };
 
@@ -1951,10 +1917,17 @@ pub async fn handle_messages(
                             .into_response();
                     }
                 };
-            if heal_flags.retried_with_budget_degraded {
+            if heal_flags.retried_with_capacity_promoted {
+                crate::proxy::pipeline::InboundThinkingPipeline::try_promote_to_high_capacity(
+                    &mut b,
+                );
+            } else if heal_flags.retried_with_budget_degraded {
                 crate::proxy::pipeline::InboundThinkingPipeline::try_degrade_thinking_budget(
                     &mut b,
                 );
+            }
+            if heal_flags.retried_with_thinking_level_clamped {
+                crate::proxy::pipeline::InboundThinkingPipeline::try_clamp_thinking_level(&mut b);
             }
             (b, timing)
         };
@@ -1991,11 +1964,6 @@ pub async fn handle_messages(
             );
         }
 
-        let _ =
-            crate::proxy::mappers::context_manager::ContextManager::apply_post_transit_context_mgmt(
-                &mut gemini_body,
-                &mapped_model,
-            );
         crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::sanitize_gemini_payload(
             &mut gemini_body,
         );
@@ -2003,8 +1971,8 @@ pub async fn handle_messages(
 
         let norm_total_micros = norm_start.elapsed().as_micros() as u64;
         let tf_micros = transform_timing.think_fill_micros;
-        norm_ms = norm_total_micros.saturating_sub(tf_micros) as f64 / 1000.0;
-        think_fill_ms = tf_micros as f64 / 1000.0;
+        let norm_ms = norm_total_micros.saturating_sub(tf_micros) as f64 / 1000.0;
+        let think_fill_ms = tf_micros as f64 / 1000.0;
 
         if let Some(ref recorder) = upstream_recorder {
             recorder.set_value(&gemini_body);
@@ -2090,6 +2058,16 @@ pub async fn handle_messages(
             }
         }
 
+        let preceding_turn_anchor = gemini_body
+            .get("request")
+            .and_then(|r| r.get("contents"))
+            .or_else(|| gemini_body.get("contents"))
+            .and_then(|c| c.as_array())
+            .and_then(|a| a.last())
+            .cloned();
+        let causal_anchor =
+            crate::proxy::thinking_store::compute_causal_anchor(preceding_turn_anchor.as_ref());
+
         // [Stage 4 Timing] 等待谷歌上游首包计时起点
         let upstream_req_start = std::time::Instant::now();
 
@@ -2131,19 +2109,51 @@ pub async fn handle_messages(
                     upstream_req_start.elapsed().as_secs_f64(),
                     |err| token_manager.mark_account_transient_failure(&account_id, 30, err),
                 ) {
-                    if handling.disposition.abandon_sticky_account {
+                    // 终态都不是账号故障：解绑 / 换号 / 原地重放统一由 pipeline 按调度模式裁决。
+                    // CacheFirst 下文本请求绝不解绑 / 换号；Balance 下传输层断连先原地重连一次。
+                    let terminal_plan = retry_state.plan_terminal(
+                        &account_id,
+                        handling.disposition,
+                        token_manager.get_scheduling_mode().await,
+                        config.request_type != "image_gen",
+                    );
+                    if terminal_plan.abandon_sticky_account {
                         token_manager.abandon_session(&affinity_key, &account_id);
                         tracing::debug!(
-                            "[{}] Unbound session {} from account {} due to terminal {}",
-                            trace_id,
+                            "Unbound session {} from account {} due to terminal {}",
                             affinity_key,
                             email,
                             handling.terminal.as_str()
                         );
                     }
-                    if handling.disposition.stop_rotation {
-                        break;
+                    match terminal_plan.next {
+                        crate::proxy::pipeline::TerminalNextStep::Stop => break,
+                        crate::proxy::pipeline::TerminalNextStep::RetrySameAccount => {
+                            tracing::info!(
+                                "Upstream terminal {} on account {} (attempt {}/{}): keeping session {} bound and retrying the same account in-place to preserve KV cache",
+                                handling.terminal.as_str(),
+                                email,
+                                attempt + 1,
+                                max_attempts,
+                                affinity_key
+                            );
+                            retry_credentials = Some((
+                                access_token.clone(),
+                                project_id.clone(),
+                                email.clone(),
+                                account_id.clone(),
+                                0,
+                            ));
+                            continue;
+                        }
+                        crate::proxy::pipeline::TerminalNextStep::Rotate => {}
                     }
+                    crate::proxy::pipeline::rotation::record_attempted_account(
+                        &mut attempted_accounts,
+                        &account_id,
+                        pool_size,
+                        &mut force_rotate,
+                    );
                     continue;
                 }
 
@@ -2161,6 +2171,12 @@ pub async fn handle_messages(
                 // 状态码与其余三条链路对齐为 502，不再把所有错误都当 504。
                 failure_statuses.record(StatusCode::BAD_GATEWAY);
                 token_manager.mark_account_transient_failure(&account_id, 30, &e);
+                crate::proxy::pipeline::rotation::record_attempted_account(
+                    &mut attempted_accounts,
+                    &account_id,
+                    pool_size,
+                    &mut force_rotate,
+                );
                 debug!(
                     "Request failed on attempt {}/{}: {}",
                     attempt + 1,
@@ -2184,7 +2200,7 @@ pub async fn handle_messages(
 
         let effective_attempt_start = call_result.effective_attempt_start;
         let mut fallback_attempts = call_result.fallback_attempts.clone();
-        fallback_overhead_ms = call_result.fallback_overhead_s() * 1000.0;
+        let fallback_overhead_ms = call_result.fallback_overhead_s() * 1000.0;
 
         // [NEW] 记录端点降级日志到 debug 文件
         if call_result.has_fallback() && debug_logger::is_enabled(&debug_cfg) {
@@ -2283,6 +2299,20 @@ pub async fn handle_messages(
                         Box::pin(gemini_stream),
                         auto_heal_ctx,
                     );
+                let qos_is_thinking =
+                    request_enables_thinking(request.thinking.is_some(), &gemini_body);
+                let qos_tracker =
+                    std::sync::Arc::new(crate::proxy::pipeline::qos::QosAttemptTracker::new(
+                        token_manager.clone(),
+                        account_id.clone(),
+                        Some(affinity_key.clone()),
+                        qos_is_thinking,
+                        Some(raw_estimated as u32),
+                    ));
+                let gemini_stream = crate::proxy::pipeline::qos::wrap_gemini_stream_with_qos_usage(
+                    gemini_stream,
+                    qos_tracker.clone(),
+                );
 
                 let current_message_count = request_with_mapped.messages.len();
 
@@ -2296,7 +2326,7 @@ pub async fn handle_messages(
                 // [FIX #530/#529/#859] Enhanced Peek logic to handle heartbeats and slow start
                 // We must pre-read until we find a MEANINGFUL content block (like message_start).
                 // If we only get heartbeats (ping) and then the stream dies, we should rotate account.
-                let mut claude_stream = create_claude_sse_stream(
+                let mut claude_stream = create_claude_sse_stream_with_anchor(
                     gemini_stream,
                     trace_id.clone(),
                     email.clone(),
@@ -2307,6 +2337,7 @@ pub async fn handle_messages(
                     current_message_count, // [NEW v4.0.0] Pass message count for rewind detection
                     client_adapter.clone(), // [NEW] Pass client adapter
                     registered_tool_names, // [FIX #MCP] Pass tool names for fuzzy matching
+                    Some(causal_anchor),
                 );
 
                 // [FIX #3634 对齐 Anthropic 官方规范并彻底杜绝网关静默超时]
@@ -2361,16 +2392,11 @@ pub async fn handle_messages(
                             }
                         });
 
-                    // [QoS] 以首个真实数据块为准上报 TTFT（与 peek / 非流式口径一致）
+                    // [QoS] 以首个真实数据块触发 Phase 1，流尾 usageMetadata 完成 Phase 2 核销
                     let ttft_seen = std::sync::Arc::new(std::sync::OnceLock::<f64>::new());
                     let ttft_seen_cb = ttft_seen.clone();
                     let ttft_probe_start = effective_attempt_start;
-                    let ttft_tm = token_manager.clone();
-                    let ttft_account = account_id.clone();
-                    let ttft_session = affinity_key.clone();
-                    let ttft_is_thinking =
-                        request_enables_thinking(request.thinking.is_some(), &gemini_body);
-                    let ttft_tokens = raw_estimated as u32;
+                    let qos_tracker_cb = qos_tracker.clone();
                     let stream_mapped =
                         crate::proxy::pipeline::stream_peek::wrap_stream_with_ttft_probe(
                             stream_mapped,
@@ -2383,14 +2409,7 @@ pub async fn handle_messages(
                             },
                             move |ttft| {
                                 let _ = ttft_seen_cb.set(ttft);
-                                crate::proxy::handlers::common::report_qos_ttft(
-                                    &ttft_tm,
-                                    &ttft_account,
-                                    Some(ttft_session.as_str()),
-                                    ttft,
-                                    ttft_is_thinking,
-                                    Some(ttft_tokens),
-                                );
+                                qos_tracker_cb.on_first_byte(ttft);
                             },
                         );
 
@@ -2453,14 +2472,7 @@ pub async fn handle_messages(
                 {
                     crate::proxy::pipeline::stream_peek::PeekOutcome::Data { bytes, .. } => {
                         ttft_ms = effective_attempt_start.elapsed().as_micros() as f64 / 1000.0;
-                        crate::proxy::handlers::common::report_qos_ttft(
-                            &token_manager,
-                            &account_id,
-                            Some(affinity_key.as_str()),
-                            ttft_ms,
-                            request_enables_thinking(request.thinking.is_some(), &gemini_body),
-                            Some(raw_estimated as u32),
-                        );
+                        qos_tracker.on_first_byte(ttft_ms);
                         if let Some(effective_item) =
                             fallback_attempts.iter_mut().find(|a| a.is_effective)
                         {
@@ -2764,17 +2776,26 @@ pub async fn handle_messages(
         );
 
         if classification.is_model_not_found() {
-            // [Pipeline Policy] 单模型临时熔断 + 是否换号的决策已下沉
-            let can_rotate =
-                crate::proxy::pipeline::policy::apply_model_not_found(attempt, pool_size, || {
+            // [Pipeline Policy] UA 门禁短路 + 单模型临时熔断 + 是否换号的决策统一由 policy 承担
+            let custom_ua = state.upstream.get_user_agent_override().await;
+            let can_rotate = crate::proxy::pipeline::policy::apply_model_not_found_with_ua(
+                &request_with_mapped.model,
+                status_code,
+                &error_text,
+                custom_ua.as_deref(),
+                attempt,
+                pool_size,
+                || {
                     token_manager.mark_model_unsupported(
                         &account_id,
                         &request_with_mapped.model,
                         Some(900),
                     )
-                });
+                },
+            );
 
             if can_rotate {
+                token_manager.abandon_session(&affinity_key, &account_id);
                 tracing::warn!(
                     "[{}] 上游报错模型不可用 (HTTP {})，已标记账号 {} 对模型 [{}] 临时熔断，继续换号重试 ({}/{})...",
                     trace_id, status_code, email, request_with_mapped.model, attempt, pool_size
@@ -2787,11 +2808,12 @@ pub async fn handle_messages(
                 "[{}] Pipeline: Target model [{}] not found on upstream (HTTP {}). Pool exhausted without account-level lockout.",
                 trace_id, request_with_mapped.model, status_code
             );
-            let dual_err = crate::proxy::handlers::common::build_dual_track_error(
+            let dual_err = crate::proxy::handlers::common::build_dual_track_error_with_ua(
                 "claude",
                 status_code,
                 &request_with_mapped.model,
                 &error_text,
+                custom_ua.as_deref(),
             );
             return (
                 StatusCode::from_u16(status_code).unwrap_or(StatusCode::NOT_FOUND),
@@ -2805,7 +2827,12 @@ pub async fn handle_messages(
                 .into_response();
         }
 
-        if classification.should_lock_account() {
+        if classification.should_lock_account_on_attempt(
+            status_code,
+            &error_text,
+            retry_after.as_deref(),
+            attempt,
+        ) {
             token_manager
                 .mark_rate_limited_async_baseline(
                     &email,
@@ -2816,14 +2843,6 @@ pub async fn handle_messages(
                 )
                 .await;
         }
-        if classification.abandons_sticky_account() {
-            token_manager.abandon_session(&affinity_key, &account_id);
-            debug!(
-                "[{}] Unbound session {} from account {} due to status {}",
-                trace_id, affinity_key, email, status_code
-            );
-        }
-
         // [Pipeline Auto-Heal] 503 过载 / 400 tool_choice 冲突 / 400 损坏图片：
         // 三者均是对已转出的 Gemini 报文的原地修复，统一在同账号重试（换号只会重蹈覆车）。
         if let Some(heal) = crate::proxy::pipeline::try_auto_heal(
@@ -2902,8 +2921,13 @@ pub async fn handle_messages(
 
         // [FIX] 403 时设置 is_forbidden 状态，避免账号被重复选中
         if status_code == 403 {
-            // Check for VALIDATION_REQUIRED error - temporarily block account
-            if error_text.contains("VALIDATION_REQUIRED")
+            // 地区不支持属于出口 IP / 代理问题，不能判定为账号封禁
+            if crate::models::account::is_location_unsupported_error(&error_text) {
+                tracing::warn!(
+                    "[Claude] 403 detected on account {} but identified as location unsupported, skipping forbidden mark",
+                    email
+                );
+            } else if error_text.contains("VALIDATION_REQUIRED")
                 || error_text.contains("verify your account")
                 || error_text.contains("validation_url")
             {
@@ -2920,8 +2944,16 @@ pub async fn handle_messages(
                     tracing::error!("Failed to set validation block: {}", e);
                 }
             } else {
-                // 设置 is_forbidden 状态（仅当真正非人机验证类 403 时才进入永久禁用）
-                if let Err(e) = token_manager.set_forbidden(&account_id, &error_text).await {
+                // 设置 is_forbidden 状态（同时传入请求模型与映射模型，彻底消除动态改写盲区）
+                if let Err(e) = token_manager
+                    .set_forbidden_with_models(
+                        &account_id,
+                        &error_text,
+                        Some(&config.final_model),
+                        Some(&mapped_model),
+                    )
+                    .await
+                {
                     tracing::error!("Failed to set forbidden status for {}: {}", email, e);
                 } else {
                     tracing::warn!("[Claude] Account {} marked as forbidden due to 403", email);
@@ -2941,15 +2973,10 @@ pub async fn handle_messages(
             continue; // 重试:下一轮 transform 时读取新代数,派生全新 sessionId
         }
 
-        // 调度模式只表达“是否接受在当前账号原地等待”，由有状态裁决器保证每账号仅一次；
-        // 档位表（退避时长/换号判定）不随调度模式变化。
-        let allow_grace = crate::proxy::pipeline::rotation::scheduling_allows_grace(
-            token_manager.get_scheduling_mode().await,
-            pool_size,
-        );
-
-        // 确定重试策略：传入当前 attempt 与 pool_size，执行智能自适应裁决
-        let retry_strategy = retry_state.determine_strategy_adaptive_with_policy(
+        let sticky_cfg = token_manager.get_sticky_config().await;
+        let allow_grace =
+            crate::proxy::pipeline::rotation::scheduling_allows_grace(sticky_cfg.mode, pool_size);
+        let http_plan = retry_state.plan_http_retry(
             &account_id,
             status_code,
             &error_text,
@@ -2957,12 +2984,24 @@ pub async fn handle_messages(
             retried_without_thinking,
             attempt,
             pool_size,
+            sticky_cfg.mode,
+            config.request_type != "image_gen",
+            sticky_cfg.max_wait_seconds,
             allow_grace,
+            &classification,
         );
+
+        if http_plan.abandon_sticky_account {
+            token_manager.abandon_session(&affinity_key, &account_id);
+            debug!(
+                "[{}] Unbound session {} from account {} due to status {}",
+                trace_id, affinity_key, email, status_code
+            );
+        }
 
         // 执行退避
         if apply_retry_strategy(
-            retry_strategy.clone(),
+            http_plan.strategy.clone(),
             attempt,
             max_attempts,
             status_code,
@@ -2970,35 +3009,41 @@ pub async fn handle_messages(
         )
         .await
         {
-            // [Rotation] GraceRetry 复用同一账号凭据：不重新选号，也不消耗轮换次数
-            if matches!(retry_strategy, RetryStrategy::GraceRetry(_)) {
-                retry_credentials = Some((
-                    access_token.clone(),
-                    project_id.clone(),
-                    email.clone(),
-                    account_id.clone(),
-                    0,
-                ));
-            }
-            // 判断是否需要轮换账号
-            if !should_rotate_account(status_code, Some(&retry_strategy)) {
-                debug!(
-                    "[{}] Keeping same account for status {} (Grace Retry or Server Issue)",
-                    trace_id, status_code
-                );
-                force_rotate = false;
-            } else {
-                force_rotate = true;
-                if pool_size > 1 && attempted_accounts.len() < pool_size {
-                    attempted_accounts.insert(account_id.clone());
-                } else if pool_size > 1 && attempted_accounts.len() >= pool_size {
-                    attempted_accounts.clear();
-                    attempted_accounts.insert(account_id.clone());
+            match http_plan.next {
+                crate::proxy::pipeline::TerminalNextStep::RetrySameAccount => {
+                    debug!(
+                        "[{}] Keeping same account {} for status {} (CacheFirst/Grace in-place retry)",
+                        trace_id, email, status_code
+                    );
+                    force_rotate = false;
+                    retry_credentials = Some((
+                        access_token.clone(),
+                        project_id.clone(),
+                        email.clone(),
+                        account_id.clone(),
+                        0,
+                    ));
                 }
+                crate::proxy::pipeline::TerminalNextStep::Rotate => {
+                    crate::proxy::pipeline::rotation::record_attempted_account(
+                        &mut attempted_accounts,
+                        &account_id,
+                        pool_size,
+                        &mut force_rotate,
+                    );
+                }
+                crate::proxy::pipeline::TerminalNextStep::Stop => break,
             }
             continue;
         } else {
             // 不可重试的错误，直接返回双轨制友好报文
+            if classification.abandons_sticky_account() {
+                token_manager.abandon_session(&affinity_key, &account_id);
+                tracing::debug!(
+                    "[Claude] Unbound session {} from account {} due to non-retryable error (status {})",
+                    affinity_key, email, status_code
+                );
+            }
             error!(
                 "[{}] Non-retryable error {}: {}",
                 trace_id, status_code, error_text
@@ -3603,274 +3648,6 @@ fn create_warmup_response(request: &ClaudeRequest, is_stream: bool) -> Response 
             Json(response),
         )
             .into_response()
-    }
-}
-
-// ===== [Helper] Synchronous Upstream Call =====
-// Reusable function for making non-streaming calls to Gemini API
-// Used by Layer 3 and potentially other internal operations
-
-/// Call Gemini API synchronously and return the response text
-///
-/// This is used for internal operations that need to wait for a complete response,
-/// such as generating summaries or other background tasks.
-async fn call_gemini_sync(
-    model: &str,
-    request: &ClaudeRequest,
-    token_manager: &Arc<crate::proxy::TokenManager>,
-    upstream: &Arc<crate::proxy::upstream::client::UpstreamClient>,
-    trace_id: &str,
-) -> Result<String, String> {
-    // Get token and transform request
-    let (access_token, project_id, _, account_id, _wait_ms) = token_manager
-        .get_token("gemini", false, None, model)
-        .await
-        .map_err(|e| format!("Failed to get account: {}", e))?;
-
-    let token_obj = token_manager.get_token_by_id(&account_id);
-    let gemini_body = crate::proxy::mappers::claude::transform_claude_request_in(
-        request,
-        &project_id,
-        false,
-        Some(account_id.as_str()),
-        trace_id,
-        token_obj.as_ref(),
-    )
-    .map_err(|e| format!("Failed to transform request: {}", e))?;
-
-    // 走共享的辅助调用通道：复用主请求路径的客户端（含按账号代理池）、
-    // 端点顺序（Daily → Sandbox → Prod）、URL 形状与回退判定。
-    //
-    // 历史实现把 `transform_claude_request_in` 产出的**已包装 cloudcode 信封**
-    // （内含 project / request / model / userAgent / requestId / requestType）
-    // POST 到 `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
-    // —— host 与形状双双不符。实测该 host 对 Antigravity 账号恒返回
-    // 403 `ACCESS_TOKEN_SCOPE_INSUFFICIENT`（token 不具备公共 Generative Language API 权限），
-    // 因此该后台摘要从未成功过。
-    debug!(
-        "[{}] Calling {} via cloudcode v1internal for summary",
-        trace_id, model
-    );
-
-    let gemini_response = upstream
-        .call_v1_internal_auxiliary(
-            "generateContent",
-            &access_token,
-            gemini_body,
-            Some(account_id.as_str()),
-            SUMMARY_REQUEST_TIMEOUT_SECS,
-        )
-        .await?;
-
-    // 上游返回 `{"response": {...}}` 包装体，必须先解包。
-    let unwrapped = crate::proxy::mappers::gemini::unwrap_response(&gemini_response);
-
-    // 只拼接「非思考 part」的文本：前面可能存在 `{"thought": true, "text": ""}` 的空块，
-    // 直接取 `parts[0].text` 会拿到空串并把空摘要当成功。
-    unwrapped
-        .get("candidates")
-        .and_then(|c| c.get(0))
-        .and_then(|c| c.get("content"))
-        .and_then(|c| c.get("parts"))
-        .and_then(|parts| parts.as_array())
-        .map(|parts| {
-            parts
-                .iter()
-                .filter(|part| !crate::proxy::thinking_store::is_thought_part(part))
-                .filter_map(|part| part.get("text").and_then(|t| t.as_str()))
-                .collect::<String>()
-        })
-        .filter(|text| !text.trim().is_empty())
-        .ok_or_else(|| "Failed to extract text from response".to_string())
-}
-
-// ===== [Layer 3] Fork Conversation + XML Summary =====
-// This is the ultimate context compression strategy
-// Borrowed from Practical-Guide-to-Context-Engineering + Claude Code official practice
-
-/// Try to compress context by generating an XML summary and forking the conversation
-///
-/// This function:
-/// 1. Extracts the last valid thinking signature
-/// 2. Calls a cheap model (gemini-3.1-flash-lite via internal-background-task) to generate XML summary
-/// 3. Creates a new message sequence with summary as prefix
-/// 4. Preserves the signature in the summary
-/// 5. Returns the forked request
-///
-/// Returns Ok(forked_request) on success, Err(error_message) on failure
-async fn try_compress_with_summary(
-    original_request: &ClaudeRequest,
-    trace_id: &str,
-    token_manager: &Arc<crate::proxy::TokenManager>,
-    upstream: &Arc<crate::proxy::upstream::client::UpstreamClient>,
-) -> Result<ClaudeRequest, String> {
-    info!(
-        "[{}] [Layer-3] Starting context compression with XML summary",
-        trace_id
-    );
-
-    // 1. Extract last valid signature
-    let last_signature = ContextManager::extract_last_valid_signature(&original_request.messages);
-
-    if let Some(ref sig) = last_signature {
-        debug!(
-            "[{}] [Layer-3] Extracted signature (len: {})",
-            trace_id,
-            sig.len()
-        );
-    }
-
-    // 2. Build summary request
-    let mut summary_messages = original_request.messages.clone();
-
-    // Add instruction to include signature in summary
-    let signature_instruction = if let Some(ref sig) = last_signature {
-        format!("\n\n**CRITICAL**: The last thinking signature is:\n```\n{}\n```\nYou MUST include this EXACTLY in the <latest_thinking_signature> section.", sig)
-    } else {
-        "\n\n**Note**: No thinking signature found in history. Leave <latest_thinking_signature> empty.".to_string()
-    };
-
-    // Append summary request as the last user message
-    summary_messages.push(Message {
-        role: "user".to_string(),
-        content: MessageContent::String(format!(
-            "{}{}",
-            CONTEXT_SUMMARY_PROMPT, signature_instruction
-        )),
-    });
-
-    // 兜底简单任务模型完全由当前号池动态推导（优先最新 flash-low，其次无后缀 flash），绝不硬编码
-    let background_model =
-        crate::proxy::common::model_gate::pick_background_model_from_pool(token_manager.as_ref())
-            .ok_or_else(|| "No flash model available in the current quota pool".to_string())?;
-
-    let summary_request = ClaudeRequest {
-        model: background_model.to_string(),
-        messages: summary_messages,
-        system: None,
-        stream: false,
-        max_tokens: Some(8000),
-        temperature: Some(0.3),
-        tools: None,
-        thinking: None,
-        metadata: None,
-        top_p: None,
-        top_k: None,
-        output_config: None,
-        size: None,
-        quality: None,
-        tool_choice: None,
-    };
-
-    debug!(
-        "[{}] [Layer-3] Calling {} for summary generation",
-        trace_id, background_model
-    );
-
-    // 3. Call upstream using helper function (reuse existing infrastructure)
-    let xml_summary = call_gemini_sync(
-        &background_model,
-        &summary_request,
-        token_manager,
-        upstream,
-        trace_id,
-    )
-    .await?;
-
-    info!(
-        "[{}] [Layer-3] Generated XML summary (len: {} chars)",
-        trace_id,
-        xml_summary.len()
-    );
-
-    // 4. Create forked conversation with summary as prefix
-    // Wrap text inside a ContentBlock::Text and attach cache_control to freeze it in upstream's Prompt Cache
-    let mut forked_messages = vec![
-        Message {
-            role: "user".to_string(),
-            content: MessageContent::Array(vec![
-                crate::proxy::mappers::claude::models::ContentBlock::Text {
-                    text: format!(
-                        "Context has been compressed. Here is the structured summary of our conversation history:\n\n{}",
-                        xml_summary
-                    ),
-                }
-            ]),
-        },
-        Message {
-            role: "assistant".to_string(),
-            content: MessageContent::String(
-                "I have reviewed the compressed context summary. I understand the current state and will continue from here.".to_string()
-            ),
-        },
-    ];
-
-    // 5. Append the user's latest message (if exists and is not the summary request)
-    if let Some(last_msg) = original_request.messages.last() {
-        if last_msg.role == "user" {
-            // Check if it's not the summary instruction we just added
-            if !matches!(&last_msg.content, MessageContent::String(s) if s.contains(CONTEXT_SUMMARY_PROMPT))
-            {
-                forked_messages.push(last_msg.clone());
-            }
-        }
-    }
-
-    info!(
-        "[{}] [Layer-3] Fork successful: {} messages → {} messages",
-        trace_id,
-        original_request.messages.len(),
-        forked_messages.len()
-    );
-
-    // 6. Return forked request
-    Ok(ClaudeRequest {
-        model: original_request.model.clone(),
-        messages: forked_messages,
-        system: original_request.system.clone(),
-        stream: original_request.stream,
-        max_tokens: original_request.max_tokens,
-        temperature: original_request.temperature,
-        tools: original_request.tools.clone(),
-        thinking: original_request.thinking.clone(),
-        metadata: original_request.metadata.clone(),
-        top_p: original_request.top_p,
-        top_k: original_request.top_k,
-        output_config: original_request.output_config.clone(),
-        size: original_request.size.clone(),
-        quality: original_request.quality.clone(),
-        tool_choice: original_request.tool_choice.clone(),
-    })
-}
-
-/// Injects cache_control ephemeral trigger to first message's content block if it's the XML summary
-fn inject_cache_control_to_forked_summary(body: &mut serde_json::Value) {
-    if let Some(messages) = body.get_mut("messages").and_then(|m| m.as_array_mut()) {
-        if !messages.is_empty() {
-            let first_msg = &mut messages[0];
-            if let Some(content) = first_msg.get_mut("content") {
-                if let Some(content_arr) = content.as_array_mut() {
-                    if !content_arr.is_empty() {
-                        let is_summary = content_arr[0]
-                            .get("text")
-                            .and_then(|t| t.as_str())
-                            .map(|s| s.contains("Context has been compressed"))
-                            .unwrap_or(false);
-
-                        if is_summary {
-                            if let Some(obj) = content_arr[0].as_object_mut() {
-                                obj.insert(
-                                    "cache_control".to_string(),
-                                    serde_json::json!({
-                                        "type": "ephemeral"
-                                    }),
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -5137,7 +4914,9 @@ mod warmup_tests {
         );
 
         // 场景 3: Agent 处于工具调用中途（最新一条为 tool_result）
-        // 铁律：Cowork 工具执行轮次达到配置阈值时，必须遵从配置正常触发自动压缩自愈
+        // 铁律：工具在途期间（in-flight tool_result）必须暂缓拦截（返回 None），
+        // 允许当前工具调用链顺利闭环，防止打崩客户端工具调用状态机并弹窗 "Your context window is full"！
+        // 待当前工具执行完毕、用户发送新一轮提问时，再在干净的回合边界触发压缩！
         let req_tool_result = ClaudeRequest {
             model: "claude-fable-5".to_string(),
             messages: vec![Message {
@@ -5168,8 +4947,8 @@ mod warmup_tests {
                 false,
                 false,
             )
-            .is_some(),
-            "Cowork 会话即便最新一条为 tool_result，达到配置阈值时也必须遵从配置触发自动压缩自愈！"
+            .is_none(),
+            "Agent 处于工具调用接续在途期间绝不能截断，必须等待工具链闭环！"
         );
 
         // 场景 4: 处于 Code 模式（带有 mcp__ccd_ 工具或 You are Claude Code）
@@ -5218,7 +4997,7 @@ mod warmup_tests {
             input_schema: None,
         }]);
 
-        // 【实验组 1】Cowork 250k+ tokens，包含 tool_result 轮次 (fable-5)
+        // 【实验组 1】Cowork 250k+ tokens，包含 tool_result 轮次 (fable-5) -> 工具在途避让，返回 None
         let exp1 = ClaudeRequest {
             model: "claude-fable-5".to_string(),
             messages: vec![Message {
@@ -5243,7 +5022,7 @@ mod warmup_tests {
             false,
             false
         )
-        .is_some());
+        .is_none());
 
         // 【实验组 2】Cowork 260k+ tokens，携带 context-1m beta 标头 (sonnet-4-6)
         let mut h2 = HeaderMap::new();

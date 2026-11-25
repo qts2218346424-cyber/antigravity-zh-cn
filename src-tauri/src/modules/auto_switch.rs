@@ -19,15 +19,45 @@ pub fn get_category_percentage(quota: &QuotaData, category: &str) -> Option<i32>
 
     // 1. 优先从双窗口 quota_groups 提取
     if let Some(ref groups) = quota.quota_groups {
+        let known_codenames: Vec<String> = quota
+            .models
+            .iter()
+            .filter_map(|m| {
+                let nl = m.name.trim().to_lowercase();
+                if nl.contains("-disabled") || nl.ends_with("_disabled") {
+                    None
+                } else {
+                    crate::proxy::common::model_mapping::extract_gemini4_codename(&nl)
+                }
+            })
+            .collect();
         for group in groups {
             let name = group.display_name.to_lowercase();
-            if name.contains("argon") {
+            let is_dedicated_g4 =
+                crate::proxy::common::model_mapping::extract_group_g4_codename_with_known(
+                    &name,
+                    "",
+                    &known_codenames,
+                )
+                .is_some()
+                    || group.buckets.iter().any(|b| {
+                        let bid = b.bucket_id.to_lowercase();
+                        let bname = b.display_name.as_deref().unwrap_or("").to_lowercase();
+                        crate::proxy::common::model_mapping::extract_group_g4_codename_with_known(
+                            &bname,
+                            &bid,
+                            &known_codenames,
+                        )
+                        .is_some()
+                    });
+            if is_dedicated_g4 {
                 continue;
             }
             let is_target = if is_claude {
                 name.contains("claude") || name.contains("gpt") || name.contains("3p")
             } else if is_gemini {
-                name.contains("gemini") || !name.contains("claude")
+                name.contains("gemini")
+                    || (!name.contains("claude") && !name.contains("gpt") && !name.contains("3p"))
             } else {
                 false
             };
@@ -167,8 +197,11 @@ pub fn find_model_percentage(quota: &QuotaData, model_pattern: &str) -> Option<i
 /// * `threshold`: 触发阈值百分比 (0-99)。当监控模型配额 <= threshold 时判定为耗尽
 /// * `monitored_models`: 监控模型列表。若非空，任一监控模型低于阈值即判定为耗尽；若为空，则全部核心模型归零才触发
 pub fn is_account_depleted(account: &Account, threshold: i32, monitored_models: &[String]) -> bool {
-    // 1. 禁用或封禁
-    if account.disabled || account.validation_blocked {
+    // 1. 禁用或封禁；验证锁按 until 判断，过期后不再判死。
+    if account.disabled
+        || account.banned
+        || account.is_validation_block_active(chrono::Utc::now().timestamp())
+    {
         return true;
     }
 
@@ -182,7 +215,18 @@ pub fn is_account_depleted(account: &Account, threshold: i32, monitored_models: 
         return true;
     }
 
-    // 4. 用户指定了监控模型：任一监控模型额度 <= threshold 即触发
+    // 4. 模型级 403：只有所有监控模型都被冻结时才判定整号耗尽；
+    //    未配置监控模型时不因单个模型冻结而整号判死。
+    if !account.forbidden_models.is_empty()
+        && !monitored_models.is_empty()
+        && monitored_models
+            .iter()
+            .all(|model| account.is_model_forbidden(model))
+    {
+        return true;
+    }
+
+    // 5. 用户指定了监控模型：任一监控模型额度 <= threshold 即触发
     if !monitored_models.is_empty() {
         for model_id in monitored_models {
             if let Some(pct) = find_model_percentage(q, model_id) {
@@ -194,7 +238,7 @@ pub fn is_account_depleted(account: &Account, threshold: i32, monitored_models: 
         return false;
     }
 
-    // 5. 默认回退逻辑：未指定监控模型时，检查所有 Gemini 核心模型
+    // 6. 默认回退逻辑：未指定监控模型时，检查所有 Gemini 核心模型
     let gemini_models: Vec<_> = q
         .models
         .iter()
@@ -289,12 +333,14 @@ pub fn find_best_candidate(
     threshold: i32,
     monitored_models: &[String],
 ) -> Option<Account> {
+    let now = chrono::Utc::now().timestamp();
     accounts
         .iter()
         .filter(|acc| {
             acc.id != current_id
                 && !acc.disabled
-                && !acc.validation_blocked
+                && !acc.banned
+                && !acc.is_validation_block_active(now)
                 && !is_account_depleted(acc, threshold, monitored_models)
         })
         .max_by_key(|acc| calculate_candidate_score(acc, monitored_models))
@@ -321,7 +367,7 @@ pub async fn check_and_auto_switch_classic(
             monitored_models: vec![
                 "gemini-3.8-flash".to_string(),
                 "claude".to_string(),
-                "gemini-3-pro-high".to_string(),
+                "gemini-3.1-pro-high".to_string(),
             ],
         }
     } else {
@@ -406,10 +452,9 @@ pub async fn check_and_auto_switch_classic(
         *last_switch = Some(Instant::now());
     }
 
-    // 同步反代（如果已启动）
-    let instance_lock = proxy_state.instance.read().await;
-    if let Some(instance) = instance_lock.as_ref() {
-        let _ = instance.token_manager.reload_all_accounts().await;
+    // 同步反代（如果已启动，同时涵盖 instance 与 admin_server）
+    for tm in proxy_state.active_token_managers().await {
+        let _ = tm.reload_all_accounts().await;
     }
 
     // 9. 界面与系统通知提醒
@@ -514,6 +559,27 @@ mod tests {
         // 如果用户只监控 flash，90% > 10% -> 不触发
         let monitored_flash = vec!["gemini-3.8-flash".to_string()];
         assert!(!is_account_depleted(&acc, 10, &monitored_flash));
+    }
+
+    #[test]
+    fn test_is_account_depleted_model_forbidden_only_when_all_monitored_models_frozen() {
+        let mut acc = make_test_account("acc1", "a1@test.com", 90, 90, None);
+        acc.forbidden_models.insert("gemini-3.8-flash".to_string());
+
+        // 只监控被冻结的 Gemini 模型 -> 耗尽
+        assert!(is_account_depleted(
+            &acc,
+            10,
+            &["gemini-3.8-flash".to_string()]
+        ));
+        // 监控未被冻结的 Claude -> 不判死
+        assert!(!is_account_depleted(&acc, 10, &["claude".to_string()]));
+        // 同时监控两者：并非全部冻结 -> 不整号判死
+        assert!(!is_account_depleted(
+            &acc,
+            10,
+            &["gemini-3.8-flash".to_string(), "claude".to_string()]
+        ));
     }
 
     #[test]

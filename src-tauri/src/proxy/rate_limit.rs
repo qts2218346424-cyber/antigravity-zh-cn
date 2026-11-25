@@ -189,6 +189,16 @@ impl RateLimitTracker {
         }
     }
 
+    /// 清除某账号的所有连续失败计数（账号级 + 模型级 key）。
+    /// 返回是否实际删除了条目。
+    fn clear_failure_counts(&self, account_id: &str) -> bool {
+        let prefix = format!("{}:", account_id);
+        let before = self.failure_counts.len();
+        self.failure_counts
+            .retain(|key, _| key != account_id && !key.starts_with(&prefix));
+        self.failure_counts.len() != before
+    }
+
     /// 获取账号剩余的等待时间(秒)
     /// 支持检查账号级和模型级锁
     pub fn get_remaining_wait(&self, account_id: &str, model: Option<&str>) -> u64 {
@@ -319,7 +329,7 @@ impl RateLimitTracker {
     /// 当账号成功完成请求后调用此方法，将其失败计数归零，
     /// 这样下次失败时会从最短的锁定时间（60秒）开始。
     pub fn mark_success(&self, account_id: &str) {
-        if self.failure_counts.remove(account_id).is_some() {
+        if self.clear_failure_counts(account_id) {
             tracing::debug!("账号 {} 请求成功，已重置失败计数", account_id);
         }
         // 清除账号级限流
@@ -625,14 +635,14 @@ impl RateLimitTracker {
                 let failure_count = if reason != RateLimitReason::ServerError {
                     // 只有非 ServerError 才累加失败计数（用于指数退避）
                     let now = SystemTime::now();
-                    // 这里我们使用 account_id 作为 key，不区分模型，
-                    // 因为这里是为了计算连续"账号级"问题的退避。
-                    // 如果需要针对模型的连续失败计数，可能需要改变 failure_counts 的 key。
-                    // 暂时保持 account_id，这样如果一个模型一直挂，也会增加计数，符合逻辑。
-                    let mut entry = self
-                        .failure_counts
-                        .entry(account_id.to_string())
-                        .or_insert((0, now));
+                    // [Fixes #3901] 失败计数与限流锁 key 对齐为 account + model 粒度，
+                    // 杜绝不同模型的 429 互相抬升退避阶梯导致跨模型连坐封锁。
+                    let failure_key = if let Some(m) = model.as_deref().filter(|s| !s.is_empty()) {
+                        self.get_limit_key(account_id, Some(m))
+                    } else {
+                        account_id.to_string()
+                    };
+                    let mut entry = self.failure_counts.entry(failure_key).or_insert((0, now));
 
                     let elapsed = now
                         .duration_since(entry.1)
@@ -861,6 +871,7 @@ impl RateLimitTracker {
     }
 
     /// 从错误消息 body 中解析重置时间
+    #[cfg(test)]
     fn parse_retry_time_from_body(&self, body: &str) -> Option<u64> {
         crate::proxy::upstream::retry::parse_retry_delay(body, None)
             .map(|delay_ms| delay_ms.saturating_add(999) / 1000)
@@ -982,32 +993,74 @@ impl RateLimitTracker {
 
     /// 安全释放因配额耗尽产生的持续锁定：
     /// - 仅清除 reason 为 QuotaExhausted 的记录，严禁误触 429 速率限制 (RateLimitExceeded)、服务器错误等独立限流；
-    /// - 针对直接或标准 ID 均做精确比对；
+    /// - 针对直接、标准 ID 以及同族变体均做精确比对；
     pub fn reconcile_quota_recovery(&self, account_id: &str, model: &str) -> bool {
         let normalized = crate::proxy::common::model_mapping::normalize_to_standard_id(model)
             .unwrap_or_else(|| model.to_string());
 
-        let keys = if normalized != model {
-            vec![
-                self.get_limit_key(account_id, Some(&normalized)),
-                self.get_limit_key(account_id, Some(model)),
-            ]
-        } else {
-            vec![self.get_limit_key(account_id, Some(model))]
-        };
-
         let mut cleared = false;
-        for key in keys {
-            if let Some(entry) = self.limits.get(&key) {
-                if entry.reason == RateLimitReason::QuotaExhausted {
-                    drop(entry);
-                    if self.limits.remove(&key).is_some() {
-                        cleared = true;
-                    }
-                }
+        let prefix = format!("{}:", account_id);
+
+        self.limits.retain(|key, entry| {
+            if entry.reason != RateLimitReason::QuotaExhausted {
+                return true;
             }
-        }
+            if !key.starts_with(&prefix) && key != account_id {
+                return true;
+            }
+            let key_model = if key == account_id {
+                ""
+            } else {
+                &key[prefix.len()..]
+            };
+            let matches = key_model == model
+                || key_model == normalized
+                || (!key_model.is_empty()
+                    && crate::proxy::common::model_mapping::normalize_to_standard_id(key_model)
+                        .is_some_and(|std_k| std_k == normalized || std_k == model));
+            if matches {
+                cleared = true;
+                false
+            } else {
+                true
+            }
+        });
+
         cleared
+    }
+
+    /// 安全释放指定账号的所有已恢复配额锁定：
+    /// - 仅清除 reason 为 QuotaExhausted 的记录，严格保留 429 速率限制 (RateLimitExceeded) 等独立限流退避；
+    pub fn reconcile_all_quota_recovery_for_account(&self, account_id: &str) -> bool {
+        let mut cleared = false;
+        let prefix = format!("{}:", account_id);
+
+        self.limits.retain(|key, entry| {
+            if entry.reason != RateLimitReason::QuotaExhausted {
+                return true;
+            }
+            if !key.starts_with(&prefix) && key != account_id {
+                return true;
+            }
+            cleared = true;
+            false
+        });
+
+        cleared
+    }
+
+    /// 仅释放账号级（无模型键）的 `QuotaExhausted` 锁：
+    /// - 账号级“全模型耗尽”锁定在任一模型恢复后即失效；
+    /// - 严格保留 `RateLimitExceeded` / `ServerError` 等独立限流。
+    pub fn reconcile_account_quota_recovery(&self, account_id: &str) -> bool {
+        let Some(entry) = self.limits.get(account_id) else {
+            return false;
+        };
+        if entry.reason != RateLimitReason::QuotaExhausted {
+            return false;
+        }
+        drop(entry);
+        self.limits.remove(account_id).is_some()
     }
 
     /// 检查账号是否仍在限流中
@@ -1054,7 +1107,7 @@ impl RateLimitTracker {
     /// 只清除账号本身的全局限流（不清除具体的模型级配额耗尽锁定）
     pub fn clear_account_only(&self, account_id: &str) -> bool {
         let cleared = self.limits.remove(account_id).is_some();
-        self.failure_counts.remove(account_id);
+        self.clear_failure_counts(account_id);
         cleared
     }
 
@@ -1064,7 +1117,7 @@ impl RateLimitTracker {
         let before = self.limits.len();
         self.limits
             .retain(|key, _| key != account_id && !key.starts_with(&prefix));
-        self.failure_counts.remove(account_id);
+        self.clear_failure_counts(account_id);
         self.limits.len() != before
     }
 
@@ -1551,6 +1604,65 @@ mod tests {
         // 配额恢复：严禁清除独立 429 速率限制！
         assert!(!tracker.reconcile_quota_recovery("acc_test", "claude-sonnet-4-6"));
         assert!(tracker.is_rate_limited("acc_test", Some("claude-sonnet-4-6")));
+    }
+
+    #[test]
+    fn test_reconcile_all_quota_recovery_for_account_preserves_rate_limit_exceeded() {
+        let tracker = RateLimitTracker::new();
+        let target_time = SystemTime::now() + Duration::from_secs(3600);
+
+        // 设置配额耗尽锁定
+        tracker.set_lockout_until_with_cap(
+            "acc_p16",
+            target_time,
+            RateLimitReason::QuotaExhausted,
+            Some("claude".to_string()),
+            false,
+        );
+        // 设置 429 速率限制锁定
+        tracker.set_lockout_until_with_cap(
+            "acc_p16",
+            target_time,
+            RateLimitReason::RateLimitExceeded,
+            Some("gemini-2.5-pro".to_string()),
+            false,
+        );
+
+        assert!(tracker.is_rate_limited("acc_p16", Some("claude")));
+        assert!(tracker.is_rate_limited("acc_p16", Some("gemini-2.5-pro")));
+
+        // 账号全量配额恢复重对齐：仅释放 QuotaExhausted，必须保留 RateLimitExceeded
+        assert!(tracker.reconcile_all_quota_recovery_for_account("acc_p16"));
+        assert!(!tracker.is_rate_limited("acc_p16", Some("claude")));
+        assert!(tracker.is_rate_limited("acc_p16", Some("gemini-2.5-pro")));
+    }
+
+    #[test]
+    fn test_reconcile_account_quota_recovery_clears_only_account_quota_lock() {
+        let tracker = RateLimitTracker::new();
+        let target_time = SystemTime::now() + Duration::from_secs(3600);
+
+        // 账号级“全模型耗尽”锁
+        tracker.set_lockout_until_with_cap(
+            "acc_account_level",
+            target_time,
+            RateLimitReason::QuotaExhausted,
+            None,
+            false,
+        );
+        // 模型级 429 退避，必须保留
+        tracker.set_lockout_until_with_cap(
+            "acc_account_level",
+            target_time,
+            RateLimitReason::RateLimitExceeded,
+            Some("gemini-2.5-pro".to_string()),
+            false,
+        );
+
+        assert!(tracker.is_rate_limited("acc_account_level", None));
+        assert!(tracker.reconcile_account_quota_recovery("acc_account_level"));
+        assert!(!tracker.is_rate_limited("acc_account_level", None));
+        assert!(tracker.is_rate_limited("acc_account_level", Some("gemini-2.5-pro")));
     }
 
     #[test]

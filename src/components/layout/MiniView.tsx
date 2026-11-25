@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
     Maximize2, RefreshCw, ShieldAlert, Tag, Users,
-    Laptop, Code2, Terminal, Mail, Gem, Diamond, Circle, HelpCircle,
+    Laptop, Code2, Terminal, Blocks, Mail, Gem, Diamond, Circle, HelpCircle,
     ArrowRight, Check, ChevronDown, Shuffle, Power, Feather, Copy, Pin, X,
     Sparkles, Bot
 } from 'lucide-react';
@@ -20,11 +20,13 @@ import {
     GroupQuotaSummary
 } from '../../utils/quotaDisplay';
 import { getAccountTier, type Account } from '../../types/account';
+import { isAccountAbnormal } from '../../utils/accountStatus';
 import { getLiveLimitForModel } from '../../utils/liveLimit';
+import { isArgonModel } from '../../utils/modelCategory';
 import { GroupQuotaCard } from '../accounts/GroupQuotaCard';
 import { useConfigStore } from '../../stores/useConfigStore';
 
-type MiniTab = 'classic' | 'ide' | 'agy' | 'pool';
+type MiniTab = 'classic' | 'ide' | 'agy' | 'acp' | 'pool';
 
 interface MiniQuotaRowProps {
     displayName: string;
@@ -130,10 +132,10 @@ export default function MiniView() {
     // 默认是不停留的（Popover 模式），只有用户显式点击图钉才保持常驻悬浮
     const [isPinned, setIsPinned] = useState(false);
 
-    // 默认定位到活跃客户端 Tab，优先 classic/ide/agy，绝不落入 pool
+    // 默认定位到活跃客户端 Tab，优先 classic/ide/agy/acp，绝不落入 pool
     const [activeTab, setActiveTab] = useState<MiniTab>(() => {
         const saved = localStorage.getItem('mini_view_tab');
-        if (saved === 'classic' || saved === 'ide' || saved === 'agy') {
+        if (saved === 'classic' || saved === 'ide' || saved === 'agy' || saved === 'acp') {
             return saved;
         }
         return 'classic';
@@ -171,7 +173,7 @@ export default function MiniView() {
     }, [fetchAccounts, fetchCurrentAccount, loadConfig]);
 
     // Client accounts resolution
-    const getClientAccountId = (tab: 'classic' | 'ide' | 'agy') => {
+    const getClientAccountId = (tab: 'classic' | 'ide' | 'agy' | 'acp') => {
         switch (tab) {
             case 'classic':
                 return activeClients?.classic_account_id;
@@ -179,6 +181,8 @@ export default function MiniView() {
                 return activeClients?.ide_account_id;
             case 'agy':
                 return activeClients?.agy_account_id;
+            case 'acp':
+                return activeClients?.acp_account_id;
         }
     };
 
@@ -218,13 +222,11 @@ export default function MiniView() {
         if (!displayedAccount?.protected_models || displayedAccount.protected_models.length === 0)
             return false;
         if (key === 'argon') {
-            return displayedAccount.protected_models.some((m: string) =>
-                m.toLowerCase().includes('argon')
-            );
+            return displayedAccount.protected_models.some(isArgonModel);
         }
         if (key === 'gemini') {
             return displayedAccount.protected_models.some(
-                (m: string) => m.toLowerCase().includes('gemini') && !m.toLowerCase().includes('argon')
+                (m: string) => m.toLowerCase().includes('gemini') && !isArgonModel(m)
             );
         }
         return displayedAccount.protected_models.some(
@@ -251,22 +253,9 @@ export default function MiniView() {
         }
     };
 
-    const handleRefreshRef = useRef(handleRefresh);
-    handleRefreshRef.current = handleRefresh;
-
-    useEffect(() => {
-        if (!config?.auto_refresh || !config?.refresh_interval || config.refresh_interval <= 0) return;
-
-        const intervalId = setInterval(() => {
-            // [Fix #3757] 当悬浮窗收起或处于后台隐藏态时跳过定时刷新，避免 500 个账号下的 IPC 数据颠簸
-            if (typeof document !== 'undefined' && document.hidden) {
-                return;
-            }
-            handleRefreshRef.current();
-        }, config.refresh_interval * 60 * 1000);
-
-        return () => clearInterval(intervalId);
-    }, [config?.auto_refresh, config?.refresh_interval]);
+    // [Fix #3958] 定时全量刷新已完全下沉至后端调度器 (modules::auto_refresh)；
+    // 全局 accounts://refreshed 广播事件由 App.tsx 根级统一监听并调用 fetchAccounts(true)，
+    // 悬浮窗无需额外绑定重复监听器，彻底杜绝多窗口并发与卸载内存泄漏。
 
     useEffect(() => {
         if (isTauri()) {
@@ -359,14 +348,14 @@ export default function MiniView() {
 
     const availableAccounts = useMemo(() => {
         return accounts.filter(
-            a => !a.disabled && !a.proxy_disabled && !a.validation_blocked && !a.quota?.is_forbidden
+            a => !a.disabled && !a.proxy_disabled && !isAccountAbnormal(a)
         );
     }, [accounts]);
 
     const activePool = useMemo(() => {
         return availableAccounts.length > 0
             ? availableAccounts
-            : accounts.filter(a => !a.validation_blocked && !a.quota?.is_forbidden);
+            : accounts.filter(a => !isAccountAbnormal(a));
     }, [availableAccounts, accounts]);
 
     const handleSwitchAccount = async (accountId: string) => {
@@ -386,7 +375,8 @@ export default function MiniView() {
 
     const handleQuickNextAccount = async () => {
         if (isSwitching || activeTab === 'pool' || accounts.length <= 1) return;
-        const poolToUse = availableAccounts.length > 0 ? availableAccounts : accounts;
+        const poolToUse = availableAccounts.length > 0 ? availableAccounts : activePool;
+        if (poolToUse.length === 0) return;
         const currentId = displayedAccount?.id;
         const currentIndex = poolToUse.findIndex((a: Account) => a.id === currentId);
         const nextIndex = (currentIndex + 1) % poolToUse.length;
@@ -577,16 +567,16 @@ export default function MiniView() {
         );
     };
 
-    const getTabStatus = (tabKey: 'classic' | 'ide' | 'agy') => {
+    const getTabStatus = (tabKey: 'classic' | 'ide' | 'agy' | 'acp') => {
         const id = getClientAccountId(tabKey);
         if (!id && tabKey === 'classic' && currentAccount) {
-            const isHealthy = !currentAccount.quota?.is_forbidden && !currentAccount.validation_blocked && !currentAccount.disabled;
+            const isHealthy = !currentAccount.disabled && !isAccountAbnormal(currentAccount);
             return { hasAccount: true, isHealthy };
         }
         if (!id) return { hasAccount: false, isHealthy: false };
         const acc = accounts.find((a) => a.id === id);
         if (!acc) return { hasAccount: false, isHealthy: false };
-        const isHealthy = !acc.quota?.is_forbidden && !acc.validation_blocked && !acc.disabled;
+        const isHealthy = !acc.disabled && !isAccountAbnormal(acc);
         return { hasAccount: true, isHealthy };
     };
 
@@ -611,6 +601,13 @@ export default function MiniView() {
             icon: Terminal,
             tooltip: t('accounts.client_cli_tooltip', '当前 Antigravity CLI (agy) 登录账号'),
             activeDot: 'bg-emerald-400',
+        },
+        {
+            key: 'acp' as const,
+            label: t('accounts.client_acp', 'Plugin'),
+            icon: Blocks,
+            tooltip: t('accounts.client_acp_tooltip', 'Active account in Antigravity IDE Plugin (ACP)'),
+            activeDot: 'bg-violet-400',
         },
         {
             key: 'pool' as const,
@@ -642,7 +639,7 @@ export default function MiniView() {
             >
                 {/* 3 应用客户端 Tab + 全池胶囊 */}
                 <div
-                    className="flex items-center min-w-0 overflow-x-auto scrollbar-none bg-black/[0.04] dark:bg-white/[0.07] p-0.5 rounded-xl gap-0.5"
+                    className="flex min-w-0 items-center bg-black/[0.04] dark:bg-white/[0.07] p-0.5 rounded-xl gap-0.5"
                     data-tauri-drag-region="false"
                     onMouseDown={(e) => e.stopPropagation()}
                 >
@@ -663,14 +660,14 @@ export default function MiniView() {
                                 }}
                                 title={tab.tooltip}
                                 className={clsx(
-                                    "relative flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] whitespace-nowrap shrink-0 transition-all cursor-pointer outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 select-none",
+                                    "relative flex min-w-0 items-center gap-0.5 px-0.5 py-0.5 rounded-lg text-[11px] transition-all cursor-pointer outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 select-none",
                                     isActive
                                         ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-bold shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
                                         : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
                                 )}
                             >
                                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                                <span className="truncate max-w-[64px]">{tab.label}</span>
+                                <span className="truncate">{tab.label}</span>
                                 {status && (
                                     <span
                                         className={clsx(
@@ -840,7 +837,7 @@ export default function MiniView() {
                             {accounts.map((acc) => {
                                 const isCurrent = acc.id === displayedAccount?.id;
                                 const accTier = getAccountTier(acc);
-                                const isHealthy = !acc.quota?.is_forbidden && !acc.validation_blocked && !acc.disabled;
+                                const isHealthy = !acc.disabled && !isAccountAbnormal(acc);
 
                                 return (
                                     <button

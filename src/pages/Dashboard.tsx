@@ -17,11 +17,12 @@ import { useNavigate } from 'react-router-dom';
 import AddAccountDialog from '../components/accounts/AddAccountDialog';
 import { showToast } from '../components/common/ToastContainer';
 import BestAccounts from '../components/dashboard/BestAccounts';
-import { findImageQuotaModel, findQuotaModel } from '../config/modelConfig';
+import { extractGroupQuotaPercentage, findImageQuotaModel, findQuotaModel } from '../config/modelConfig';
 import CurrentAccount from '../components/dashboard/CurrentAccount';
 import { useAccountStore } from '../stores/useAccountStore';
 import { useConfigStore } from '../stores/useConfigStore';
 import { Account } from '../types/account';
+import { isAccountAbnormal } from '../utils/accountStatus';
 import { DashboardQuotaView } from '../utils/quotaDisplay';
 
 function Dashboard() {
@@ -109,13 +110,9 @@ function Dashboard() {
     const stats = useMemo(() => {
         // 1. 账号生态健康状态分类（风控与启用状态定生死，不以额度定生死）
         // 异常账号：触发 Google 验证码/风控阻断，或配额接口返回 403 Forbidden 封禁
-        const abnormalAccounts = accounts.filter(
-            a => a.validation_blocked || a.quota?.is_forbidden
-        );
+        const abnormalAccounts = accounts.filter(isAccountAbnormal);
         // 全量正常状态账号（彻底剔除风控异常账号）
-        const normalAccounts = accounts.filter(
-            a => !a.validation_blocked && !a.quota?.is_forbidden
-        );
+        const normalAccounts = accounts.filter(a => !isAccountAbnormal(a));
         // 完全被用户手动停用的账号 (disabled 为 true)
         const fullyDisabledAccounts = normalAccounts.filter(
             a => a.disabled
@@ -148,26 +145,10 @@ function Dashboard() {
                 });
                 if (!hasClaude) return null;
             }
-            // 优先从 quota_groups 提取原生 5H 滚动配额桶
-            if (a.quota?.quota_groups) {
-                for (const group of a.quota.quota_groups) {
-                    const gname = group.display_name.toLowerCase();
-                    if (gname.includes('argon')) continue;
-                    const matches = isClaude
-                        ? (gname.includes('claude') || gname.includes('gpt') || gname.includes('3p'))
-                        : (gname.includes('gemini') || (!gname.includes('claude') && !gname.includes('gpt') && !gname.includes('3p')));
-                    if (matches) {
-                        const bucket5h = group.buckets?.find(b =>
-                            b.window?.toLowerCase().includes('5h') ||
-                            b.bucket_id?.toLowerCase().includes('5h') ||
-                            b.window?.toLowerCase().includes('hour') ||
-                            b.bucket_id?.toLowerCase().includes('hour')
-                        );
-                        if (bucket5h && typeof bucket5h.remaining_fraction === 'number') {
-                            return Math.round(bucket5h.remaining_fraction * 100);
-                        }
-                    }
-                }
+            // 优先从 quota_groups 提取原生 5H 滚动配额桶（自动隔离 Gemini 4+ 专属桶）
+            const group5h = extractGroupQuotaPercentage(a.quota, isClaude ? 'claude' : 'gemini', '5h');
+            if (group5h !== null) {
+                return group5h;
             }
             if (modelKey === 'gemini-image') {
                 return findImageQuotaModel(a.quota?.models)?.percentage ?? null;
@@ -184,26 +165,7 @@ function Dashboard() {
                 });
                 if (!hasClaude) return null;
             }
-            if (a.quota?.quota_groups) {
-                for (const group of a.quota.quota_groups) {
-                    const gname = group.display_name.toLowerCase();
-                    if (gname.includes('argon')) continue;
-                    const matches = isClaude
-                        ? (gname.includes('claude') || gname.includes('gpt') || gname.includes('3p'))
-                        : (gname.includes('gemini') || (!gname.includes('claude') && !gname.includes('gpt') && !gname.includes('3p')));
-                    if (matches) {
-                        const weekly = group.buckets?.find(b =>
-                            b.window?.toLowerCase().includes('week') ||
-                            b.bucket_id?.toLowerCase().includes('week') ||
-                            b.window?.toLowerCase().includes('7d')
-                        );
-                        if (weekly && typeof weekly.remaining_fraction === 'number') {
-                            return Math.round(weekly.remaining_fraction * 100);
-                        }
-                    }
-                }
-            }
-            return null;
+            return extractGroupQuotaPercentage(a.quota, isClaude ? 'claude' : 'gemini', 'weekly');
         };
 
         // 计算目标底座池在指定模型下的综合指标（5H均值、周配额均值、周配额熔断加权，以及受周额度木桶约束后的 5H 均值）
@@ -836,7 +798,9 @@ function Dashboard() {
                             <motion.div
                                 whileHover={{ y: -2 }}
                                 transition={{ duration: 0.15 }}
-                                className="bg-white dark:bg-[#15161b] rounded-2xl p-5 shadow-sm dark:shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-white/[0.10] flex flex-col justify-between"
+                                onClick={() => navigate('/accounts', { state: { filter: 'abnormal' } })}
+                                className="bg-white dark:bg-[#15161b] rounded-2xl p-5 shadow-sm dark:shadow-xl dark:shadow-black/40 border border-gray-100 dark:border-white/[0.10] flex flex-col justify-between cursor-pointer group hover:border-purple-300 dark:hover:border-purple-800/60 transition-colors"
+                                title={t('dashboard.view_abnormal_accounts', '点击前往账号列表查看异常与风控详情')}
                             >
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between gap-2">
