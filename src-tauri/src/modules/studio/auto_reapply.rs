@@ -37,8 +37,13 @@ pub fn agent_status(explicit_dir: Option<&str>) -> String {
     };
     match read_asar_file_content(&bytes, "dist/main.js") {
         Ok(main_js) => {
-            if String::from_utf8_lossy(&main_js).contains(PATCH_MARKER) {
-                "patched".to_string()
+            let text = String::from_utf8_lossy(&main_js);
+            if text.contains(PATCH_MARKER) {
+                if text.contains(super::skin_injector::SKIN_HOOK_REV) {
+                    "patched".to_string()
+                } else {
+                    "outdated".to_string()
+                }
             } else {
                 "clean".to_string()
             }
@@ -150,8 +155,10 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
     // 若已开启皮肤但编译文件缺失（或用户点击强制重刷），重新编译当前皮肤至客户端热加载目录
     if cfg.skin_enabled {
         if let Some(active_id) = cfg.active_skin.as_deref() {
-            let css_missing = !compiled_dir().join("skin.css").is_file();
-            if force || css_missing {
+            let cdir = compiled_dir();
+            let css_missing = !cdir.join("skin.css").is_file();
+            let js_missing = !cdir.join("skin-runtime.js").is_file();
+            if force || css_missing || js_missing {
                 match compile_skin(active_id) {
                     Ok(_) => {
                         let msg = format!("已重新编译 Antigravity 应用光学材质 '{}'", active_id);
@@ -176,7 +183,9 @@ pub fn check_and_reapply(force: bool) -> ReapplyCheckResult {
             .map(|p| p.with_extension("asar.bak").is_file())
             .unwrap_or(false);
 
-    if (force && cur_agent != "not_found") || (cur_agent == "clean" && had_agent_patch) {
+    if (force && cur_agent != "not_found")
+        || ((cur_agent == "clean" || cur_agent == "outdated") && had_agent_patch)
+    {
         if is_antigravity_running() && !force {
             let msg = "检测到 Antigravity 应用待挂载补丁/钩子，等待应用退出后自动静默重注";
             actions.push(msg.to_string());

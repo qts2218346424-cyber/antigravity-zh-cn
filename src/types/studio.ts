@@ -83,6 +83,11 @@ export interface SkinManifest {
     code_enhance?: boolean;
     ambient_aura?: boolean;
     backdrop_mode?: 'auto' | 'light' | 'off';
+    motion_preset?: 'full' | 'focus' | 'silent';
+    horizon_ripple?: boolean;
+    ink_stream?: boolean;
+    context_vial?: boolean;
+    live_charm?: boolean;
   };
   icons?: {
     filter?: string;
@@ -124,7 +129,7 @@ export interface CompiledSkin {
 
 export interface StudioStatus {
   install_dir?: string | null;
-  agent_status: 'not_found' | 'clean' | 'patched' | string;
+  agent_status: 'not_found' | 'clean' | 'patched' | 'outdated' | string;
   app_running: boolean;
   active_skin?: string | null;
   skin_enabled: boolean;

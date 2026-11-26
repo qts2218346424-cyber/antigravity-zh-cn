@@ -57,11 +57,17 @@ test('1. skin-runtime.js 语法合法且支持棱镜生命周期与无痕卸载'
   const runtimePath = path!.resolve(rootDir, 'resources/skin-runtime.js');
   const code = fs!.readFileSync(runtimePath, 'utf8');
   assertOk(code.includes('__AGZH_SKIN_RUNTIME__'), '缺少运行时标识头');
+  assertOk(code.includes('__AGZH_SKIN_DISPOSE__'), '缺少热重载卸载钩子');
   assertOk(code.includes('teardownPrismControllers'), '缺少统一卸载清理函数');
-  assertOk(code.includes('data-agzh-rim-active'), '缺少近场边框高光追踪标记');
+  assertOk(code.includes('agzh-rim-canvas'), '缺少 Canvas 近场棱镜激光折光边框引擎');
+  assertOk(code.includes('agzh-horizon-canvas'), '缺少 Canvas 字符波纹矩阵引擎');
+  assertOk(code.includes('agzh-ink-'), '缺少 CSS.highlights 五级水墨流式淡入引擎');
+  assertOk(code.includes('agzh-context-vial'), '缺少 512K 液态上下文试管');
+  assertOk(code.includes('agzh-live-charm'), '缺少活体伴读角色引擎');
+  assertOk(code.includes('agzh-smooth-caret'), '缺少丝滑光标追踪引擎');
   assertOk(code.includes('agzh-code-fold-btn'), '缺少长代码块折叠按钮注入逻辑');
   assertOk(code.includes('agzh-rail-hud'), '缺少会话轮次导轨控件');
-  assertOk(code.includes('agzh-aura-bar'), '缺少语义边缘余晖指示条');
+  assertOk(code.includes('agzh-aura-bar'), '缺少三态切工水晶光束指示条');
 
   new vm!.Script(code, { filename: 'skin-runtime.js' });
 
@@ -224,41 +230,50 @@ test('1. skin-runtime.js 语法合法且支持棱镜生命周期与无痕卸载'
 
   assertOk(docEl.getAttribute('data-agzh-skin') === 'obsidian-glass', '激活后应标记 data-agzh-skin');
   assertOk(docEl.getAttribute('data-agzh-prism') === '1', '激活后应标记 data-agzh-prism=1');
+  assertOk(docEl.getAttribute('data-agzh-motion') === 'full', '激活后应标记默认光效预设 full');
   assertOk(Boolean(byId.get('agzh-skin-style')), '激活后应挂载皮肤样式节点');
   assertOk(Boolean(byId.get('agzh-aura-bar')), '激活后应挂载语义余晖条');
+  assertOk(Boolean(byId.get('agzh-context-vial')), '激活后应挂载 512K 液态上下文试管');
 
   assertOk(Boolean(ipcHandler), '应绑定 agzh:skin-updated IPC 监听');
   ipcHandler!({}, null);
 
   assertOk(docEl.getAttribute('data-agzh-skin') === null, '停用后应清除 data-agzh-skin');
   assertOk(docEl.getAttribute('data-agzh-prism') === null, '停用后应清除 data-agzh-prism');
+  assertOk(docEl.getAttribute('data-agzh-motion') === null, '停用后应清除 data-agzh-motion');
   assertOk(!byId.get('agzh-skin-style'), '停用后应卸载样式节点');
   assertOk(!byId.get('agzh-aura-bar'), '停用后应卸载语义余晖条');
+  assertOk(!byId.get('agzh-context-vial'), '停用后应卸载液态上下文试管');
   assertOk(bodyEl.classList.contains('theme-light'), '停用后应还原宿主原始 theme-light 类名');
 });
 
-test('2. Rust skin_manager.rs 棱镜切面编译器令牌、守卫与语法结构完整', () => {
+test('2. Rust 皮肤编译器、双热重载注入器与自动升级看门狗契约完整', () => {
   assertOk(Boolean(fs && path), 'Node 内置模块不可用');
   const rsPath = path!.resolve(rootDir, 'src-tauri/src/modules/studio/skin_manager.rs');
   const rs = fs!.readFileSync(rsPath, 'utf8');
+  const injPath = path!.resolve(rootDir, 'src-tauri/src/modules/studio/skin_injector.rs');
+  const inj = fs!.readFileSync(injPath, 'utf8');
+  const reapplyPath = path!.resolve(rootDir, 'src-tauri/src/modules/studio/auto_reapply.rs');
+  const reapply = fs!.readFileSync(reapplyPath, 'utf8');
 
   for (const token of [
     '--agzh-facet-top',
-    '--agzh-facet-edge',
-    '--agzh-well-bg',
-    '--agzh-kbd-bg',
-    '--agzh-chip-bg',
-    '--agzh-spring',
-    '"prism": {',
-    'prism_facets',
-    'rim_glow',
-    'code_enhance',
-    'ambient_aura',
-    'backdrop_mode',
+    '--agzh-prism-angle',
+    'agzh-ink-0',
+    'agzh-context-vial',
+    'agzh-live-charm',
+    'motion_preset',
+    'horizon_ripple',
+    'ink_stream',
+    'context_vial',
+    'live_charm',
     'test_prism_facets_tokens_compiled_for_all_builtin_skins',
   ]) {
     assertOk(rs.includes(token), `skin_manager.rs 缺少必要标识符或测试: ${token}`);
   }
+  assertOk(inj.includes('AGZH_SKIN_HOOK_V4'), 'skin_injector.rs 缺少 v4 钩子版本标识');
+  assertOk(inj.includes('syncRuntimeScript'), 'skin_injector.rs 缺少 JS 动态引擎热重载函数');
+  assertOk(reapply.includes('"outdated"'), 'auto_reapply.rs 缺少旧钩子 outdated 自动升级识别');
 
   const compileSection = rs.slice(rs.indexOf('pub fn compile_skin'), rs.indexOf('#[cfg(test)]'));
   assertOk(!compileSection.includes('z-index: 9980'), 'compile_skin 不得包含 z-index: 9980');

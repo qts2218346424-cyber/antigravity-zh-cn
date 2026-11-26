@@ -714,6 +714,28 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         .map(str::trim)
         .filter(|s| matches!(*s, "auto" | "light" | "off"))
         .unwrap_or("auto");
+    let motion_preset = surfaces_obj
+        .and_then(|v| v.get("motion_preset"))
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| matches!(*s, "full" | "focus" | "silent"))
+        .unwrap_or("full");
+    let horizon_ripple = surfaces_obj
+        .and_then(|v| v.get("horizon_ripple"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(motion_preset == "full");
+    let ink_stream = surfaces_obj
+        .and_then(|v| v.get("ink_stream"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(motion_preset != "silent");
+    let context_vial = surfaces_obj
+        .and_then(|v| v.get("context_vial"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(motion_preset != "silent");
+    let live_charm = surfaces_obj
+        .and_then(|v| v.get("live_charm"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(motion_preset == "full");
     let card_opacity = surfaces_obj
         .and_then(|v| v.get("card_opacity"))
         .and_then(|v| v.as_f64())
@@ -1582,6 +1604,215 @@ __BODY__ .agy-card {
         css_parts.push(aura_css);
     }
 
+    // 3.6 Prism Motion v4 动态光学引擎样式（旋转棱镜输入舱、切工水晶光束、五级水墨流式淡入、液态试管、丝滑光标与活体伴读角色）
+    let motion_v4_css = r#"
+@property --agzh-prism-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes agzh-prism-spin {
+  to { --agzh-prism-angle: 360deg; }
+}
+@keyframes agzh-crystal-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes agzh-charm-breathe {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-2.5px) scale(1.02); }
+}
+@keyframes agzh-charm-hop {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-10px) scale(1.12, 0.92); }
+  68% { transform: translateY(-3px) scale(0.96, 1.06); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes agzh-spark-pop {
+  0% { opacity: 0.95; transform: translate(0, 0) scale(0.7); }
+  100% { opacity: 0; transform: translate(var(--sx, 0px), var(--sy, -22px)) scale(1.25); }
+}
+@keyframes agzh-vial-wave {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes agzh-bubble-rise {
+  0% { transform: translateY(0) scale(0.7); opacity: 0.65; }
+  100% { transform: translateY(-14px) scale(1.1); opacity: 0; }
+}
+:root {
+  --agzh-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+__BODY__ #agzh-rim-canvas,
+__BODY__ #agzh-horizon-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+__BODY__ #agzh-horizon-canvas { z-index: 1; }
+__BODY__ #agzh-rim-canvas { z-index: 48; }
+__BODY__ #agzh-smooth-caret {
+  position: fixed;
+  width: 2px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 49;
+  opacity: 0;
+  background: var(--agzh-accent, var(--primary));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--agzh-accent, var(--primary)) 75%, transparent);
+  transition: transform 68ms cubic-bezier(0.22, 1, 0.36, 1), height 90ms ease, opacity 140ms ease;
+}
+html:not([data-agzh-motion="silent"]) __BODY__ .surface-composer > .surface-composer-card:focus-within,
+html:not([data-agzh-motion="silent"]) __BODY__ .surface-composer > .surface-composer-card[data-agzh-typing="1"] {
+  border-color: transparent !important;
+  background-image:
+    linear-gradient(var(--onyx-raised, var(--panel)), var(--onyx-raised, var(--panel))),
+    conic-gradient(from var(--agzh-prism-angle, 0deg),
+      color-mix(in srgb, var(--agzh-accent, var(--primary)) 82%, #ffffff 18%),
+      color-mix(in srgb, var(--agzh-accent, var(--primary)) 22%, transparent) 38%,
+      color-mix(in srgb, var(--agzh-accent, var(--primary)) 68%, transparent) 72%,
+      color-mix(in srgb, var(--agzh-accent, var(--primary)) 82%, #ffffff 18%)) !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
+  animation: agzh-prism-spin 4.8s linear infinite;
+}
+html[data-agzh-aura="thinking"] __BODY__ #agzh-aura-bar {
+  height: 2.5px;
+  opacity: 0.96;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--agzh-accent, var(--primary)) 45%, transparent) 22%,
+    #ffffff 50%,
+    color-mix(in srgb, var(--agzh-accent, var(--primary)) 45%, transparent) 78%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: agzh-crystal-sweep 1.8s linear infinite;
+}
+html[data-agzh-aura="done"] __BODY__ #agzh-aura-bar {
+  height: 2.5px;
+  opacity: 0.92;
+  background: linear-gradient(90deg, transparent 0%, #10b981 48%, #a7f3d0 50%, #10b981 52%, transparent 100%);
+  background-size: 200% 100%;
+  animation: agzh-crystal-sweep 1.3s ease-out 1;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.58);
+}
+::highlight(agzh-ink-0) { color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 40%, transparent); }
+::highlight(agzh-ink-1) { color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 32%, var(--foreground)); }
+::highlight(agzh-ink-2) { color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 22%, var(--foreground)); }
+::highlight(agzh-ink-3) { color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 11%, var(--foreground)); }
+::highlight(agzh-ink-4) { color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 4%, var(--foreground)); }
+html[data-agzh-live-charm="1"] __BODY__ .surface-composer-card::after,
+html[data-agzh-live-charm="1"] __BODY__ form:has(textarea):not(:has(.surface-composer-card))::after {
+  opacity: 0 !important;
+}
+__BODY__ #agzh-live-charm {
+  position: absolute;
+  right: 18px;
+  top: -24px;
+  width: 72px;
+  height: 26px;
+  z-index: 20;
+  cursor: pointer;
+  background: var(--agzh-composer-charm) right bottom / contain no-repeat;
+  animation: agzh-charm-breathe 3.4s ease-in-out infinite;
+  transition: transform 0.24s var(--agzh-spring-bounce);
+  transform-origin: center bottom;
+}
+html[data-agzh-aura="thinking"] __BODY__ #agzh-live-charm {
+  animation: agzh-charm-breathe 1.6s ease-in-out infinite;
+}
+__BODY__ #agzh-live-charm.is-hopping {
+  animation: agzh-charm-hop 0.56s var(--agzh-spring-bounce) !important;
+}
+__BODY__ .agzh-charm-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: var(--agzh-accent, var(--primary));
+  box-shadow: 0 0 8px var(--agzh-accent, var(--primary));
+  animation: agzh-spark-pop 0.65s ease-out forwards;
+}
+__BODY__ #agzh-context-vial {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 56;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 7px;
+  border-radius: 9999px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--panel, var(--card)) 88%, transparent);
+  border: 1px solid var(--agzh-facet-edge, var(--border));
+  box-shadow: inset 0 1px 0 var(--agzh-facet-top), 0 10px 28px -8px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(10px);
+  color: var(--foreground);
+  font-size: 11px;
+  font-family: var(--agzh-font-mono, monospace);
+  transition: transform 0.2s var(--agzh-spring-bounce), border-color 0.2s ease;
+}
+__BODY__ #agzh-context-vial:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 55%, var(--border));
+}
+__BODY__ .agzh-vial-tube {
+  width: 14px;
+  height: 22px;
+  border-radius: 4px 4px 7px 7px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--agzh-accent, var(--primary)) 45%, var(--border));
+  background: color-mix(in srgb, var(--background) 78%, transparent);
+  position: relative;
+}
+__BODY__ .agzh-vial-wave-group {
+  animation: agzh-vial-wave 3.2s linear infinite;
+}
+__BODY__ .agzh-vial-bubble {
+  animation: agzh-bubble-rise 2.4s ease-in infinite;
+}
+__BODY__ .agzh-vial-popover {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 210px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel, var(--card)) 94%, transparent);
+  border: 1px solid var(--agzh-facet-edge, var(--border));
+  box-shadow: inset 0 1px 0 var(--agzh-facet-top), 0 16px 38px -10px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+  pointer-events: none;
+}
+__BODY__ #agzh-context-vial:hover .agzh-vial-popover {
+  display: block;
+}
+html[data-agzh-motion="silent"] __BODY__ *,
+html[data-agzh-motion="silent"] __BODY__ #agzh-aura-bar,
+html[data-agzh-motion="silent"] __BODY__ #agzh-live-charm {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  __BODY__ #agzh-live-charm,
+  __BODY__ .agzh-vial-wave-group,
+  __BODY__ .agzh-vial-bubble,
+  __BODY__ .surface-composer-card {
+    animation: none !important;
+  }
+}"#
+    .replace("__BODY__", no_hole_body);
+    css_parts.push(motion_v4_css);
+
     // 4. 底层画布背景插画与环境极光合成（严格置于容器 background 层，绝不盖在文字与卡片上方）
     let mut bg_items: Vec<(String, Map<String, Value>)> = Vec::new();
     if let Some(bg_val) = manifest.get("background").or_else(|| manifest.get("backgrounds")) {
@@ -1866,6 +2097,11 @@ __BODY__ .agy-card {
             "code_enhance": code_enhance,
             "ambient_aura": ambient_aura,
             "backdrop_mode": backdrop_mode,
+            "motion_preset": motion_preset,
+            "horizon_ripple": horizon_ripple,
+            "ink_stream": ink_stream,
+            "context_vial": context_vial,
+            "live_charm": live_charm,
         },
         "backgrounds": resolved_backgrounds,
         "icons": resolved_icons,
@@ -1877,11 +2113,15 @@ __BODY__ .agy-card {
     let cdir = compiled_dir();
     let css_path = cdir.join("skin.css");
     let runtime_path = cdir.join("skin-runtime.json");
+    let runtime_js_out = cdir.join("skin-runtime.js");
     atomic_write_text(&css_path, &final_css)?;
     atomic_write_text(
         &runtime_path,
         &serde_json::to_string_pretty(&runtime_json).unwrap_or_default(),
     )?;
+    if let Ok(rt_js) = std::fs::read_to_string(super::resources_dir().join("skin-runtime.js")) {
+        let _ = atomic_write_text(&runtime_js_out, &rt_js);
+    }
 
     Ok(CompiledSkin {
         skin_id: skin_id.to_string(),
@@ -1968,9 +2208,11 @@ pub fn activate_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     // 若早期版本曾在旧版 IDE 中遗留过皮肤块，自动无损剥离还原
     super::skin_injector::cleanup_legacy_ide_injection();
 
-    // 若官方 Antigravity 桌面应用当前空闲且尚未挂载热重载钩子，自动无损打入钩子
+    // 若官方 Antigravity 桌面应用当前空闲且尚未挂载（或需升级至 v4 动态）热重载钩子，自动无损打入钩子
     let cur_agent = super::auto_reapply::agent_status(cfg.install_dir.as_deref());
-    if cur_agent == "clean" && !super::auto_reapply::is_antigravity_running() {
+    if (cur_agent == "clean" || cur_agent == "outdated")
+        && !super::auto_reapply::is_antigravity_running()
+    {
         let _ = super::l10n::apply_l10n_patch(
             cfg.install_dir.as_deref(),
             &cfg.lang,
@@ -2407,6 +2649,11 @@ mod tests {
                 "--agzh-kbd-bg:",
                 "--agzh-chip-bg:",
                 "--agzh-spring:",
+                "--agzh-spring-bounce:",
+                "--agzh-prism-angle",
+                "agzh-ink-0",
+                "agzh-context-vial",
+                "agzh-live-charm",
                 "data-agzh-rim-active",
                 ".agzh-code-fold-btn",
                 "#agzh-aura-bar",
@@ -2420,6 +2667,9 @@ mod tests {
             }
             assert_eq!(compiled.runtime_json["prism"]["facets"], true);
             assert_eq!(compiled.runtime_json["prism"]["rim_glow"], true);
+            assert_eq!(compiled.runtime_json["prism"]["motion_preset"], "full");
+            assert_eq!(compiled.runtime_json["prism"]["horizon_ripple"], true);
+            assert_eq!(compiled.runtime_json["prism"]["context_vial"], true);
             assert!(
                 !css.contains("z-index: 9980")
                     && !css.contains("z-index: 9985")

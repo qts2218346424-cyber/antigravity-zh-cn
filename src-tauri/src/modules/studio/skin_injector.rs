@@ -9,6 +9,7 @@ use super::skin_manager::{compiled_dir, load_studio_config, save_studio_config};
 
 pub const LEGACY_IDE_SKIN_START: &str = "/* [AGZH_IDE_SKIN_START] */";
 pub const LEGACY_IDE_SKIN_END: &str = "/* [AGZH_IDE_SKIN_END] */";
+pub const SKIN_HOOK_REV: &str = "AGZH_SKIN_HOOK_V4";
 
 /// 生成注入 Google Antigravity 独立桌面应用（AGY Hub）主进程的光学皮肤热重载钩子：
 /// - 精准对接官方 `dist/utils.js` (`getHubWindows` / `getHubWebContents` / `setHubCurtainColor`)
@@ -32,10 +33,17 @@ pub fn build_agent_main_hook() -> String {
             .to_string(),
     )
     .unwrap_or_else(|_| "\"\"".to_string());
+    let runtime_js_path_json = serde_json::to_string(
+        &cdir
+            .join("skin-runtime.js")
+            .to_string_lossy()
+            .to_string(),
+    )
+    .unwrap_or_else(|_| "\"\"".to_string());
 
     format!(
         r#"
-// === [AGZH_SKIN_HOOK_START] ===
+// === [AGZH_SKIN_HOOK_START:{hook_rev}] ===
 ;(function() {{
   try {{
     if (globalThis.__agzhSkin && globalThis.__agzhSkin.__initialized) return;
@@ -47,9 +55,11 @@ pub fn build_agent_main_hook() -> String {
 
     const SKIN_CSS_PATH = {css_path};
     const SKIN_RUNTIME_PATH = {runtime_path};
+    const SKIN_RUNTIME_JS_PATH = {runtime_js_path};
     const STUDIO_CFG_PATH = {cfg_path};
     const keyMap = new WeakMap();
     const genMap = new WeakMap();
+    const runtimeSigMap = new WeakMap();
     const attachedContents = new WeakSet();
 
     function readConfig() {{
@@ -124,6 +134,29 @@ pub fn build_agent_main_hook() -> String {
       }}
     }}
 
+    async function syncRuntimeScript(wc) {{
+      try {{
+        if (!wc || wc.isDestroyed?.() || typeof wc.executeJavaScript !== 'function') return;
+        if (!fs.existsSync(SKIN_RUNTIME_JS_PATH)) return;
+        const st = fs.statSync(SKIN_RUNTIME_JS_PATH);
+        const sig = st.mtimeMs + ':' + st.size;
+        if (runtimeSigMap.get(wc) === sig) return;
+        const code = fs.readFileSync(SKIN_RUNTIME_JS_PATH, 'utf8');
+        if (!code || !code.trim()) return;
+        const payloadJson = JSON.stringify(readRuntimePayload());
+        const sigJson = JSON.stringify(sig);
+        const script =
+          '(function(){{try{{if(window.__AGZH_RUNTIME_SIG__===' + sigJson + ')return;' +
+          'if(typeof window.__AGZH_SKIN_DISPOSE__==="function")try{{window.__AGZH_SKIN_DISPOSE__();}}catch(_){{}}' +
+          'window.__AGZH_SKIN__=' + payloadJson + ';' +
+          'window.__AGZH_RUNTIME_SIG__=' + sigJson + ';' +
+          code +
+          '}}catch(_e){{}}}})();';
+        await wc.executeJavaScript(script, true);
+        runtimeSigMap.set(wc, sig);
+      }} catch (_e) {{}}
+    }}
+
     async function applyToWebContents(wc) {{
       if (!isTargetAppWebContents(wc)) return;
       const gen = (genMap.get(wc) || 0) + 1;
@@ -145,6 +178,7 @@ pub fn build_agent_main_hook() -> String {
           keyMap.set(wc, key);
         }} catch (_e) {{}}
       }}
+      await syncRuntimeScript(wc);
       try {{
         wc.send('agzh:skin-updated', readRuntimePayload());
       }} catch (_e) {{}}
@@ -286,6 +320,7 @@ pub fn build_agent_main_hook() -> String {
     }}
 
     let lastCssStamp = getStamp(SKIN_CSS_PATH);
+    let lastJsStamp = getStamp(SKIN_RUNTIME_JS_PATH);
     let lastCfgStamp = getStamp(STUDIO_CFG_PATH);
 
     if (ipcMain && typeof ipcMain.listenerCount === 'function') {{
@@ -323,16 +358,18 @@ pub fn build_agent_main_hook() -> String {
       updateNativeWindowChrome();
     }} catch (_e) {{}}
 
-    setupDirWatch(SKIN_CSS_PATH, ['skin.css', 'skin-runtime.json']);
+    setupDirWatch(SKIN_CSS_PATH, ['skin.css', 'skin-runtime.json', 'skin-runtime.js']);
     setupDirWatch(STUDIO_CFG_PATH, ['studio.json']);
 
     // 轻量兜底时间戳比对（解决首次运行时尚未创建配置文件或目录事件丢失）
     const pollTimer = setInterval(() => {{
       const s1 = getStamp(SKIN_CSS_PATH);
       const s2 = getStamp(STUDIO_CFG_PATH);
-      if (s1 !== lastCssStamp || s2 !== lastCfgStamp) {{
+      const s3 = getStamp(SKIN_RUNTIME_JS_PATH);
+      if (s1 !== lastCssStamp || s2 !== lastCfgStamp || s3 !== lastJsStamp) {{
         lastCssStamp = s1;
         lastCfgStamp = s2;
+        lastJsStamp = s3;
         scheduleRefresh();
       }}
     }}, 1200);
@@ -341,8 +378,10 @@ pub fn build_agent_main_hook() -> String {
 }})();
 // === [AGZH_SKIN_HOOK_END] ===
 "#,
+        hook_rev = SKIN_HOOK_REV,
         css_path = css_path_json,
         runtime_path = runtime_path_json,
+        runtime_js_path = runtime_js_path_json,
         cfg_path = config_path_json
     )
 }
@@ -509,10 +548,13 @@ mod tests {
     #[test]
     fn test_agent_hook_uses_hub_utils_and_curtain_sync() {
         let hook = build_agent_main_hook();
+        assert!(hook.contains(SKIN_HOOK_REV));
         assert!(hook.contains("getHubWindows"));
         assert!(hook.contains("getHubWebContents"));
         assert!(hook.contains("setHubCurtainColor"));
         assert!(hook.contains("agzh:skin-updated"));
+        assert!(hook.contains("skin-runtime.js"));
+        assert!(hook.contains("syncRuntimeScript"));
     }
 
     #[test]

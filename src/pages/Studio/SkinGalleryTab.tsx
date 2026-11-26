@@ -168,13 +168,36 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
                   : `radial-gradient(80% 48% at 50% 0%, ${accent}1f 0%, transparent 72%)`,
             }}
           >
-            {/* 顶部 1.5px 语义边缘余晖光带 */}
+            {/* 顶部 2px 切工水晶语义光束（带流动微光） */}
             <div
-              className="pointer-events-none absolute top-0 left-3 right-3 h-[1.5px] rounded-full opacity-85"
+              className="pointer-events-none absolute top-0 left-2 right-2 h-[2px] rounded-full opacity-90 animate-pulse"
               style={{
-                background: `linear-gradient(90deg, transparent 0%, ${accent} 50%, transparent 100%)`,
+                background: `linear-gradient(90deg, transparent 0%, ${accent} 35%, #ffffff 50%, ${accent} 65%, transparent 100%)`,
+                boxShadow: `0 0 8px ${accent}66`,
               }}
             />
+
+            {/* 右下角极简 512K 液态上下文试管指示器 */}
+            <div
+              className="pointer-events-none absolute right-1.5 bottom-7 z-20 flex items-center gap-0.5 rounded-full px-1 py-0.5"
+              style={{
+                backgroundColor: `${panel}dd`,
+                border: `1px solid ${border}`,
+              }}
+            >
+              <span
+                className="inline-block h-2 w-1.5 rounded-sm overflow-hidden relative"
+                style={{ border: `1px solid ${accent}88` }}
+              >
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-1.5"
+                  style={{ backgroundColor: accent }}
+                />
+              </span>
+              <span className="text-[6.5px] font-mono opacity-80" style={{ color: fg }}>
+                128K
+              </span>
+            </div>
 
             {/* 右侧极简轮次导轨刻度点 */}
             <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-60">
@@ -547,10 +570,12 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
               }`}
             >
               {hookReady
-                ? '热重载钩子已就绪（切换即刻生效）'
-                : status.agent_status === 'not_found'
-                  ? '未探测到官方应用目录'
-                  : '待挂载客户端皮肤钩子'}
+                ? 'v4 动态光学热重载已就绪（CSS+JS 免重启生效）'
+                : status.agent_status === 'outdated'
+                  ? '发现新版 v4 动态光学引擎钩子，请一键升级'
+                  : status.agent_status === 'not_found'
+                    ? '未探测到官方应用目录'
+                    : '待挂载客户端皮肤钩子'}
             </span>
           </div>
 
@@ -570,9 +595,11 @@ export const SkinGalleryTab: React.FC<SkinGalleryTabProps> = ({
               <Wand2 className="h-3 w-3" />
               {busyId === '__mount__'
                 ? '正在挂载...'
-                : status.app_running
-                  ? '挂载至 Antigravity 应用'
-                  : '一键挂载钩子'}
+                : status.agent_status === 'outdated'
+                  ? '升级 v4 动态钩子'
+                  : status.app_running
+                    ? '挂载至 Antigravity 应用'
+                    : '一键挂载钩子'}
             </button>
           )}
 

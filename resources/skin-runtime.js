@@ -1,20 +1,38 @@
 /* __AGZH_SKIN_RUNTIME__
- * Google Antigravity 桌面应用（AGY Hub）光学材质包渲染层运行时 v3.0
+ * Google Antigravity 桌面应用（AGY Hub）光学材质包渲染层全动态引擎 v4.0
  * - 输入：window.__AGZH_SKIN__ = { skin_id, base, colors, surfaces, prism, css, pet } 或 null（关闭材质）
- * - 同步宿主深浅色模式类名（.dark / .dark-theme / .theme-dark / .theme-light），杜绝浅色宿主下黑底白块与黑字代码冲突
- * - 集成零侵入棱镜光学交互：近场指针边框高光（空闲 0fps）、长代码块手动折叠防跳动、会话轮次导轨与语义边缘余晖
- * - 停用材质时 100% 无损还原宿主原始主题类名、color-scheme 并卸载全部监听器与注入节点
+ * - 支持热重载卸载钩子 window.__AGZH_SKIN_DISPOSE__，配合主进程双热重载架构零重启升级 JS 引擎
+ * - 7 大真动态光学引擎（空闲/失焦/浏览器透视孔自动 0fps 休眠）：
+ *   1. PrismRimCanvasEngine：全屏 DPR Canvas 近场棱镜激光折光边框
+ *   2. HorizonRippleEngine：欢迎页字符波纹矩阵 + 物理水波涟漪 + 对话地平线极光
+ *   3. InkStreamEngine：CSS.highlights 五级水墨流式淡入（零 DOM 侵入）
+ *   4. SmoothCaretAndComposerEngine：旋转棱镜流光输入舱 + 阻尼跟随光标
+ *   5. ContextVialWidget：512K 液态波动上下文试管 + 悬停详情 + 一键切换预设
+ *   6. CrystalAuraEngine：思考/待决策/完成三态切工水晶光束
+ *   7. LiveCharmEngine：活体伴读角色呼吸律动、鼠标注视与点击 Q 弹星芒彩蛋
  */
 (function () {
   try {
+    if (typeof window.__AGZH_SKIN_DISPOSE__ === 'function') {
+      try {
+        window.__AGZH_SKIN_DISPOSE__();
+      } catch (_) {}
+    }
+
     var STYLE_ID = 'agzh-skin-style';
     var PET_STYLE_ID = 'agzh-skin-pet-style';
     var SPRITE_ID = 'agzh-skin-pet-sprite';
     var AURA_BAR_ID = 'agzh-aura-bar';
     var RAIL_ID = 'agzh-rail-hud';
+    var RIM_CANVAS_ID = 'agzh-rim-canvas';
+    var HORIZON_CANVAS_ID = 'agzh-horizon-canvas';
+    var CARET_ID = 'agzh-smooth-caret';
+    var VIAL_ID = 'agzh-context-vial';
+    var CHARM_ID = 'agzh-live-charm';
+
     var THEME_CLASSES = ['dark', 'light', 'dark-theme', 'theme-dark', 'theme-light'];
     var RIM_SELECTOR =
-      '.surface-composer > .surface-composer-card, .artifact-card, .agy-card, .agy-callout, .agy-user-bubble, [data-testid*="user-message"]';
+      '.surface-composer > .surface-composer-card, .artifact-card, .agy-card, .agy-callout, .agy-user-bubble, [data-testid*="user-message"], [data-testid="new-conversation-button"], main pre';
     var TURN_SELECTOR =
       '.agy-user-bubble, [data-testid*="user-message"], [data-message-author-role="user"]';
 
@@ -25,18 +43,61 @@
     var symObserver = null;
     var symTimer = null;
 
-    // 棱镜光学控制器状态
-    var prismOptions = { facets: true, rimGlow: true, codeEnhance: true, ambientAura: true };
+    var prismOptions = {
+      facets: true,
+      rimGlow: true,
+      codeEnhance: true,
+      ambientAura: true,
+      motionPreset: 'full',
+      horizonRipple: true,
+      inkStream: true,
+      contextVial: true,
+      liveCharm: true,
+    };
+    var runtimePresetOverride = null;
     var prismActive = false;
     var prismObserver = null;
     var prismScanTimer = null;
+
+    // CSS 坐标高光 + Canvas 激光边框状态
     var rimRaf = 0;
+    var rimIdleTimer = null;
     var rimTarget = null;
     var pendingPointer = null;
+    var lastPointer = { x: -9999, y: -9999, active: false };
+    var rimCanvasAlpha = 0;
     var rimListenersBound = false;
+
+    // 字符波纹矩阵状态
+    var horizonRaf = 0;
+    var horizonLastDraw = 0;
+    var horizonIdleTimer = null;
+    var horizonPhase = 0;
+    var horizonRipples = [];
+    var horizonBound = false;
+
+    // 水墨流式淡入状态
+    var inkObserver = null;
+    var inkRaf = 0;
+    var inkClearTimer = null;
+    var inkQueue = [];
+
+    // 丝滑光标与输入舱状态
+    var caretBound = false;
+    var typingTimer = null;
+
+    // 轮次导轨状态
     var keyNavBound = false;
     var activeTurnIdx = -1;
     var codeLengthCache = typeof WeakMap === 'function' ? new WeakMap() : null;
+
+    // 语义余晖状态
+    var prevAuraState = 'idle';
+    var doneAuraTimer = null;
+
+    // 活体伴读交互状态
+    var charmBound = false;
+    var charmElRef = null;
 
     function rm(id) {
       var n = document.getElementById(id);
@@ -63,6 +124,16 @@
       }
     }
 
+    function isReducedMotion() {
+      try {
+        if (prismOptions.motionPreset === 'silent') return true;
+        if (typeof window.matchMedia === 'function') {
+          return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        }
+      } catch (_) {}
+      return false;
+    }
+
     function isEditableTarget(el) {
       if (!el) return false;
       var tag = (el.tagName || '').toUpperCase();
@@ -71,15 +142,62 @@
       return Boolean(el.closest && el.closest('[contenteditable="true"], [role="textbox"]'));
     }
 
+    function getAccentColor() {
+      try {
+        var S = window.__AGZH_SKIN__;
+        if (S && S.colors && S.colors.accent) return S.colors.accent;
+        if (typeof getComputedStyle === 'function' && document.documentElement) {
+          var v = getComputedStyle(document.documentElement).getPropertyValue('--agzh-accent').trim();
+          if (v) return v;
+        }
+      } catch (_) {}
+      return '#38bdf8';
+    }
+
+    function parseHexOrRgb(color) {
+      var fallback = { r: 56, g: 189, b: 248 };
+      if (!color || typeof color !== 'string') return fallback;
+      var c = color.trim();
+      var mHex = /^#([0-9a-f]{6})$/i.exec(c);
+      if (mHex) {
+        return {
+          r: parseInt(mHex[1].slice(0, 2), 16),
+          g: parseInt(mHex[1].slice(2, 4), 16),
+          b: parseInt(mHex[1].slice(4, 6), 16),
+        };
+      }
+      var mRgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(c);
+      if (mRgb) {
+        return { r: Number(mRgb[1]), g: Number(mRgb[2]), b: Number(mRgb[3]) };
+      }
+      return fallback;
+    }
+
     function getPrismOptions(S) {
       var p = (S && S.prism) || {};
       var surf = (S && S.surfaces) || {};
-      return {
+      var preset = runtimePresetOverride || p.motion_preset || surf.motion_preset || 'full';
+      var base = {
         facets: p.facets !== undefined ? p.facets !== false : surf.prism_facets !== false,
         rimGlow: p.rim_glow !== undefined ? p.rim_glow !== false : surf.rim_glow !== false,
         codeEnhance: p.code_enhance !== undefined ? p.code_enhance !== false : surf.code_enhance !== false,
         ambientAura: p.ambient_aura !== undefined ? p.ambient_aura !== false : surf.ambient_aura !== false,
+        motionPreset: preset,
+        horizonRipple: p.horizon_ripple !== undefined ? p.horizon_ripple !== false : surf.horizon_ripple !== false,
+        inkStream: p.ink_stream !== undefined ? p.ink_stream !== false : surf.ink_stream !== false,
+        contextVial: p.context_vial !== undefined ? p.context_vial !== false : surf.context_vial !== false,
+        liveCharm: p.live_charm !== undefined ? p.live_charm !== false : surf.live_charm !== false,
       };
+      if (preset === 'silent') {
+        base.rimGlow = false;
+        base.horizonRipple = false;
+        base.inkStream = false;
+        base.liveCharm = false;
+      } else if (preset === 'focus') {
+        base.horizonRipple = false;
+        base.liveCharm = false;
+      }
+      return base;
     }
 
     function tagSymbolElements() {
@@ -239,7 +357,38 @@
       }
     }
 
-    // === 1. 近场指针边框高光控制器（空闲 0fps） ===
+    // === 引擎 1：PrismRimCanvasEngine（近场棱镜激光折光边框 + CSS 坐标高光） ===
+    function ensureRimCanvas() {
+      if (!document.body || isReducedMotion() || !prismOptions.rimGlow || hasBrowserHole()) {
+        rm(RIM_CANVAS_ID);
+        return null;
+      }
+      var cv = document.getElementById(RIM_CANVAS_ID);
+      if (!cv) {
+        cv = document.createElement('canvas');
+        cv.id = RIM_CANVAS_ID;
+        cv.setAttribute('aria-hidden', 'true');
+        cv.setAttribute('data-agzh', 'skin');
+        document.body.appendChild(cv);
+      }
+      return cv;
+    }
+
+    function drawRoundedRectPath(ctx, x, y, w, h, r) {
+      var rad = Math.max(2, Math.min(r, w / 2, h / 2));
+      ctx.beginPath();
+      ctx.moveTo(x + rad, y);
+      ctx.lineTo(x + w - rad, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+      ctx.lineTo(x + w, y + h - rad);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+      ctx.lineTo(x + rad, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+      ctx.lineTo(x, y + rad);
+      ctx.quadraticCurveTo(x, y, x + rad, y);
+      ctx.closePath();
+    }
+
     function clearRimState() {
       if (rimRaf) {
         try {
@@ -247,7 +396,20 @@
         } catch (_) {}
         rimRaf = 0;
       }
+      if (rimIdleTimer) {
+        clearTimeout(rimIdleTimer);
+        rimIdleTimer = null;
+      }
       pendingPointer = null;
+      lastPointer.active = false;
+      rimCanvasAlpha = 0;
+      var cv = document.getElementById(RIM_CANVAS_ID);
+      if (cv && typeof cv.getContext === 'function') {
+        try {
+          var c2d = cv.getContext('2d');
+          if (c2d) c2d.clearRect(0, 0, cv.width, cv.height);
+        } catch (_) {}
+      }
       if (rimTarget) {
         try {
           rimTarget.removeAttribute('data-agzh-rim-active');
@@ -260,47 +422,125 @@
       }
     }
 
-    function flushRimPointer() {
+    function renderRimCanvasFrame() {
       rimRaf = 0;
-      var pt = pendingPointer;
-      pendingPointer = null;
-      if (!pt || !prismActive || !prismOptions.rimGlow || hasBrowserHole()) {
+      if (!prismActive || !prismOptions.rimGlow || isReducedMotion() || hasBrowserHole() || document.hidden) {
         clearRimState();
         return;
       }
-      var el = pt.target && pt.target.closest ? pt.target.closest(RIM_SELECTOR) : null;
-      if (!el || typeof el.getBoundingClientRect !== 'function') {
-        clearRimState();
-        return;
+      if (pendingPointer) {
+        var pt = pendingPointer;
+        pendingPointer = null;
+        lastPointer.x = pt.x;
+        lastPointer.y = pt.y;
+        lastPointer.active = true;
+        rimCanvasAlpha = 1;
+
+        var el = pt.target && pt.target.closest ? pt.target.closest(RIM_SELECTOR) : null;
+        if (rimTarget && rimTarget !== el) {
+          try {
+            rimTarget.removeAttribute('data-agzh-rim-active');
+            if (rimTarget.style && typeof rimTarget.style.removeProperty === 'function') {
+              rimTarget.style.removeProperty('--agzh-mx');
+              rimTarget.style.removeProperty('--agzh-my');
+            }
+          } catch (_) {}
+          rimTarget = null;
+        }
+        if (el && typeof el.getBoundingClientRect === 'function') {
+          rimTarget = el;
+          var r = el.getBoundingClientRect();
+          el.setAttribute('data-agzh-rim-active', '1');
+          if (el.style && typeof el.style.setProperty === 'function') {
+            el.style.setProperty('--agzh-mx', Math.round(pt.x - r.left) + 'px');
+            el.style.setProperty('--agzh-my', Math.round(pt.y - r.top) + 'px');
+          }
+        }
       }
-      if (rimTarget && rimTarget !== el) {
+
+      var cv = ensureRimCanvas();
+      if (!cv || typeof cv.getContext !== 'function') return;
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      var vw = window.innerWidth || 0;
+      var vh = window.innerHeight || 0;
+      if (vw <= 0 || vh <= 0) return;
+      if (cv.width !== Math.round(vw * dpr) || cv.height !== Math.round(vh * dpr)) {
+        cv.width = Math.round(vw * dpr);
+        cv.height = Math.round(vh * dpr);
+      }
+      var ctx = cv.getContext('2d');
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, vw, vh);
+
+      if (!lastPointer.active || rimCanvasAlpha <= 0.02) return;
+
+      var rgb = parseHexOrRgb(getAccentColor());
+      var nodes = document.querySelectorAll(RIM_SELECTOR);
+      var maxDist = 230;
+      for (var i = 0; i < nodes.length && i < 64; i++) {
+        var card = nodes[i];
+        if (!card || typeof card.getBoundingClientRect !== 'function') continue;
+        var rect = card.getBoundingClientRect();
+        if (rect.width < 24 || rect.height < 18 || rect.bottom < 0 || rect.top > vh) continue;
+
+        var cx = Math.max(rect.left, Math.min(lastPointer.x, rect.right));
+        var cy = Math.max(rect.top, Math.min(lastPointer.y, rect.bottom));
+        var dist = Math.hypot(lastPointer.x - cx, lastPointer.y - cy);
+        if (dist > maxDist) continue;
+
+        var intensity = (1 - dist / maxDist) * rimCanvasAlpha;
+        var grad = ctx.createRadialGradient(
+          lastPointer.x,
+          lastPointer.y,
+          4,
+          lastPointer.x,
+          lastPointer.y,
+          210
+        );
+        grad.addColorStop(0, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + (0.85 * intensity).toFixed(3) + ')');
+        grad.addColorStop(0.45, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + (0.28 * intensity).toFixed(3) + ')');
+        grad.addColorStop(1, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0)');
+
+        var rad = 12;
         try {
-          rimTarget.removeAttribute('data-agzh-rim-active');
-          if (rimTarget.style && typeof rimTarget.style.removeProperty === 'function') {
-            rimTarget.style.removeProperty('--agzh-mx');
-            rimTarget.style.removeProperty('--agzh-my');
+          var cs = typeof getComputedStyle === 'function' ? getComputedStyle(card) : null;
+          if (cs && cs.borderRadius) {
+            var parsedR = parseFloat(cs.borderRadius);
+            if (!isNaN(parsedR)) rad = parsedR;
           }
         } catch (_) {}
-      }
-      rimTarget = el;
-      var rect = el.getBoundingClientRect();
-      var x = Math.round(pt.x - rect.left);
-      var y = Math.round(pt.y - rect.top);
-      el.setAttribute('data-agzh-rim-active', '1');
-      if (el.style && typeof el.style.setProperty === 'function') {
-        el.style.setProperty('--agzh-mx', x + 'px');
-        el.style.setProperty('--agzh-my', y + 'px');
+
+        ctx.save();
+        drawRoundedRectPath(ctx, rect.left + 0.5, rect.top + 0.5, rect.width - 1, rect.height - 1, rad);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + (0.45 * intensity).toFixed(3) + ')';
+        ctx.shadowBlur = 10 * intensity;
+        ctx.stroke();
+        ctx.restore();
       }
     }
 
     function onPointerMoveRim(ev) {
-      if (!prismActive || !prismOptions.rimGlow) return;
+      if (!prismActive || !prismOptions.rimGlow || isReducedMotion()) return;
       pendingPointer = { target: ev.target, x: ev.clientX, y: ev.clientY };
       if (!rimRaf && typeof requestAnimationFrame === 'function') {
-        rimRaf = requestAnimationFrame(flushRimPointer);
+        rimRaf = requestAnimationFrame(renderRimCanvasFrame);
       } else if (!rimRaf) {
-        flushRimPointer();
+        renderRimCanvasFrame();
       }
+      if (rimIdleTimer) clearTimeout(rimIdleTimer);
+      rimIdleTimer = setTimeout(function () {
+        rimCanvasAlpha = 0;
+        var cv = document.getElementById(RIM_CANVAS_ID);
+        if (cv && typeof cv.getContext === 'function') {
+          try {
+            var c2d = cv.getContext('2d');
+            if (c2d) c2d.clearRect(0, 0, cv.width, cv.height);
+          } catch (_) {}
+        }
+      }, 320);
     }
 
     function bindRimListeners() {
@@ -316,6 +556,7 @@
 
     function unbindRimListeners() {
       clearRimState();
+      rm(RIM_CANVAS_ID);
       if (!rimListenersBound) return;
       rimListenersBound = false;
       document.removeEventListener('pointermove', onPointerMoveRim);
@@ -333,7 +574,488 @@
       } catch (_) {}
     }
 
-    // === 2. 超长代码块手动折叠控制器（不自动截断、防滚动跳动） ===
+    // === 引擎 2：HorizonRippleEngine（首页字符波纹矩阵 + 物理水波涟漪） ===
+    function spawnHorizonRipple(x, y) {
+      if (!prismActive || !prismOptions.horizonRipple || isReducedMotion()) return;
+      horizonRipples.push({ x: x, y: y, r: 6, alpha: 0.95 });
+      if (horizonRipples.length > 8) horizonRipples.shift();
+      kickHorizonLoop();
+    }
+
+    function onHorizonPointer(ev) {
+      if (ev.type === 'click') {
+        spawnHorizonRipple(ev.clientX, ev.clientY);
+      } else if (Math.random() < 0.16) {
+        spawnHorizonRipple(ev.clientX, ev.clientY);
+      }
+    }
+
+    function drawHorizonFrame(ts) {
+      horizonRaf = 0;
+      if (!prismActive || !prismOptions.horizonRipple || isReducedMotion() || hasBrowserHole() || document.hidden) {
+        rm(HORIZON_CANVAS_ID);
+        return;
+      }
+      if (ts && ts - horizonLastDraw < 32) {
+        horizonRaf = requestAnimationFrame(drawHorizonFrame);
+        return;
+      }
+      horizonLastDraw = ts || Date.now();
+
+      var cv = document.getElementById(HORIZON_CANVAS_ID);
+      if (!cv && document.body) {
+        cv = document.createElement('canvas');
+        cv.id = HORIZON_CANVAS_ID;
+        cv.setAttribute('aria-hidden', 'true');
+        cv.setAttribute('data-agzh', 'skin');
+        document.body.appendChild(cv);
+      }
+      if (!cv || typeof cv.getContext !== 'function') return;
+
+      var dpr = Math.min(1.5, window.devicePixelRatio || 1);
+      var vw = window.innerWidth || 0;
+      var vh = window.innerHeight || 0;
+      if (vw <= 0 || vh <= 0) return;
+      if (cv.width !== Math.round(vw * dpr) || cv.height !== Math.round(vh * dpr)) {
+        cv.width = Math.round(vw * dpr);
+        cv.height = Math.round(vh * dpr);
+      }
+      var ctx = cv.getContext('2d');
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, vw, vh);
+
+      var rgb = parseHexOrRgb(getAccentColor());
+      var turns = collectUserTurns();
+      var isHome = turns.length === 0;
+      horizonPhase += 0.045;
+
+      // 首页欢迎空画布呈现柔和交互字符矩阵，多轮对话中收敛为顶部/底沿极光地平线
+      var glyphs = ['·', '∘', '✦', '◇', '⊹'];
+      var stepX = 36;
+      var stepY = 34;
+      var startX = Math.min(280, Math.round(vw * 0.2));
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (var y = 64; y < vh - 84; y += stepY) {
+        if (!isHome && y > 136 && y < vh - 150) continue;
+        for (var x = startX; x < vw - 36; x += stepX) {
+          var wave = Math.sin(x * 0.014 + y * 0.012 + horizonPhase) * 0.5 + 0.5;
+          var boost = 0;
+          for (var rIdx = 0; rIdx < horizonRipples.length; rIdx++) {
+            var rp = horizonRipples[rIdx];
+            var d = Math.abs(Math.hypot(x - rp.x, y - rp.y) - rp.r);
+            if (d < 46) {
+              boost = Math.max(boost, (1 - d / 46) * rp.alpha);
+            }
+          }
+          var baseAlpha = isHome ? 0.05 + wave * 0.08 : 0.03 + wave * 0.04;
+          var alpha = Math.min(0.72, baseAlpha + boost * 0.6);
+          if (alpha < 0.035) continue;
+          var gIdx = Math.min(glyphs.length - 1, Math.floor((wave + boost) * 2.6));
+          ctx.fillStyle = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha.toFixed(3) + ')';
+          ctx.fillText(glyphs[gIdx], x, y);
+        }
+      }
+
+      for (var k = horizonRipples.length - 1; k >= 0; k--) {
+        horizonRipples[k].r += 7.5;
+        horizonRipples[k].alpha *= 0.94;
+        if (horizonRipples[k].alpha < 0.04) {
+          horizonRipples.splice(k, 1);
+        }
+      }
+
+      if (horizonRipples.length > 0 || isHome) {
+        horizonRaf = requestAnimationFrame(drawHorizonFrame);
+      }
+    }
+
+    function kickHorizonLoop() {
+      if (!prismActive || !prismOptions.horizonRipple || isReducedMotion() || hasBrowserHole()) return;
+      if (!horizonRaf && typeof requestAnimationFrame === 'function') {
+        horizonRaf = requestAnimationFrame(drawHorizonFrame);
+      }
+      if (horizonIdleTimer) clearTimeout(horizonIdleTimer);
+      horizonIdleTimer = setTimeout(function () {
+        if (horizonRaf && horizonRipples.length === 0) {
+          try {
+            cancelAnimationFrame(horizonRaf);
+          } catch (_) {}
+          horizonRaf = 0;
+        }
+      }, 2800);
+    }
+
+    function bindHorizonEngine() {
+      if (!prismOptions.horizonRipple || isReducedMotion()) {
+        unbindHorizonEngine();
+        return;
+      }
+      if (!horizonBound) {
+        horizonBound = true;
+        document.addEventListener('click', onHorizonPointer, { passive: true });
+        document.addEventListener('pointermove', onHorizonPointer, { passive: true });
+      }
+      kickHorizonLoop();
+    }
+
+    function unbindHorizonEngine() {
+      if (horizonRaf) {
+        try {
+          cancelAnimationFrame(horizonRaf);
+        } catch (_) {}
+        horizonRaf = 0;
+      }
+      if (horizonIdleTimer) {
+        clearTimeout(horizonIdleTimer);
+        horizonIdleTimer = null;
+      }
+      horizonRipples = [];
+      if (horizonBound) {
+        horizonBound = false;
+        document.removeEventListener('click', onHorizonPointer);
+        document.removeEventListener('pointermove', onHorizonPointer);
+      }
+      rm(HORIZON_CANVAS_ID);
+    }
+
+    // === 引擎 3：InkStreamEngine（CSS.highlights 五级水墨流式淡入） ===
+    function clearInkHighlights() {
+      inkQueue = [];
+      if (inkRaf) {
+        try {
+          cancelAnimationFrame(inkRaf);
+        } catch (_) {}
+        inkRaf = 0;
+      }
+      if (inkClearTimer) {
+        clearTimeout(inkClearTimer);
+        inkClearTimer = null;
+      }
+      try {
+        if (typeof CSS !== 'undefined' && CSS.highlights) {
+          for (var i = 0; i < 5; i++) {
+            CSS.highlights.delete('agzh-ink-' + i);
+          }
+        }
+      } catch (_) {}
+    }
+
+    function tickInkHighlights() {
+      inkRaf = 0;
+      if (!prismActive || !prismOptions.inkStream || isReducedMotion() || typeof CSS === 'undefined' || !CSS.highlights) {
+        clearInkHighlights();
+        return;
+      }
+      var now = Date.now();
+      var buckets = [[], [], [], [], []];
+      var nextQueue = [];
+      for (var i = 0; i < inkQueue.length; i++) {
+        var entry = inkQueue[i];
+        var age = now - entry.t;
+        if (age < 280 && entry.range) {
+          var stage = Math.min(4, Math.max(0, Math.floor((age / 280) * 5)));
+          buckets[stage].push(entry.range);
+          nextQueue.push(entry);
+        }
+      }
+      inkQueue = nextQueue;
+      try {
+        for (var s = 0; s < 5; s++) {
+          if (buckets[s].length > 0 && typeof Highlight === 'function') {
+            var hl = new Highlight();
+            for (var bIdx = 0; bIdx < buckets[s].length; bIdx++) {
+              if (typeof hl.add === 'function') hl.add(buckets[s][bIdx]);
+            }
+            CSS.highlights.set('agzh-ink-' + s, hl);
+          } else {
+            CSS.highlights.delete('agzh-ink-' + s);
+          }
+        }
+      } catch (_) {
+        clearInkHighlights();
+        return;
+      }
+      if (inkQueue.length > 0 && typeof requestAnimationFrame === 'function') {
+        inkRaf = requestAnimationFrame(tickInkHighlights);
+      }
+    }
+
+    function bindInkStreamEngine() {
+      if (!prismOptions.inkStream || isReducedMotion() || typeof MutationObserver === 'undefined' || typeof CSS === 'undefined' || !CSS.highlights || typeof Highlight !== 'function') {
+        unbindInkStreamEngine();
+        return;
+      }
+      if (inkObserver) return;
+      var root = document.querySelector('main, [data-main-content-body]') || document.body;
+      if (!root) return;
+      inkObserver = new MutationObserver(function (mutations) {
+        if (!prismActive || !prismOptions.inkStream || hasBrowserHole()) return;
+        var now = Date.now();
+        for (var i = 0; i < mutations.length; i++) {
+          var m = mutations[i];
+          if (m.type === 'characterData' && m.target && m.target.nodeType === 3) {
+            var len = (m.target.nodeValue || '').length;
+            if (len > 0 && typeof document.createRange === 'function') {
+              try {
+                var r = document.createRange();
+                r.setStart(m.target, Math.max(0, len - 18));
+                r.setEnd(m.target, len);
+                inkQueue.push({ range: r, t: now });
+              } catch (_) {}
+            }
+          }
+        }
+        if (inkQueue.length > 40) inkQueue = inkQueue.slice(-40);
+        if (inkQueue.length > 0 && !inkRaf && typeof requestAnimationFrame === 'function') {
+          inkRaf = requestAnimationFrame(tickInkHighlights);
+        }
+      });
+      inkObserver.observe(root, { characterData: true, subtree: true });
+    }
+
+    function unbindInkStreamEngine() {
+      if (inkObserver) {
+        try {
+          inkObserver.disconnect();
+        } catch (_) {}
+        inkObserver = null;
+      }
+      clearInkHighlights();
+    }
+
+    // === 引擎 4：SmoothCaretAndComposerEngine（输入舱脉冲 + 阻尼光标） ===
+    function syncCaretOrTyping() {
+      if (!prismActive || isReducedMotion() || hasBrowserHole()) return;
+      var active = document.activeElement;
+      var card = active && active.closest ? active.closest('.surface-composer > .surface-composer-card') : null;
+      if (card) {
+        card.setAttribute('data-agzh-typing', '1');
+        if (typingTimer) clearTimeout(typingTimer);
+        typingTimer = setTimeout(function () {
+          try {
+            card.removeAttribute('data-agzh-typing');
+          } catch (_) {}
+        }, 1200);
+      }
+      if (prismOptions.motionPreset === 'silent') {
+        rm(CARET_ID);
+        return;
+      }
+      try {
+        if (active && isEditableTarget(active) && typeof window.getSelection === 'function') {
+          var sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            var range = sel.getRangeAt(0).cloneRange();
+            range.collapse(true);
+            var rect = range.getBoundingClientRect ? range.getBoundingClientRect() : null;
+            if (rect && rect.height > 4 && rect.width >= 0 && document.body) {
+              var caret = document.getElementById(CARET_ID);
+              if (!caret) {
+                caret = document.createElement('div');
+                caret.id = CARET_ID;
+                caret.setAttribute('aria-hidden', 'true');
+                caret.setAttribute('data-agzh', 'skin');
+                document.body.appendChild(caret);
+              }
+              caret.style.height = Math.round(rect.height) + 'px';
+              caret.style.transform = 'translate3d(' + Math.round(rect.left) + 'px,' + Math.round(rect.top) + 'px,0)';
+              caret.style.opacity = '0.9';
+              return;
+            }
+          }
+        }
+      } catch (_) {}
+      var existing = document.getElementById(CARET_ID);
+      if (existing) existing.style.opacity = '0';
+    }
+
+    function bindCaretEngine() {
+      if (caretBound) return;
+      caretBound = true;
+      document.addEventListener('input', syncCaretOrTyping, { passive: true });
+      document.addEventListener('selectionchange', syncCaretOrTyping, { passive: true });
+    }
+
+    function unbindCaretEngine() {
+      if (typingTimer) {
+        clearTimeout(typingTimer);
+        typingTimer = null;
+      }
+      if (caretBound) {
+        caretBound = false;
+        document.removeEventListener('input', syncCaretOrTyping);
+        document.removeEventListener('selectionchange', syncCaretOrTyping);
+      }
+      rm(CARET_ID);
+      try {
+        var nodes = document.querySelectorAll('[data-agzh-typing]');
+        for (var i = 0; i < nodes.length; i++) nodes[i].removeAttribute('data-agzh-typing');
+      } catch (_) {}
+    }
+
+    // === 引擎 5：ContextVialWidget（512K 液态波动上下文试管） ===
+    function syncContextVial() {
+      if (!prismActive || !prismOptions.contextVial || hasBrowserHole() || !document.body) {
+        rm(VIAL_ID);
+        return;
+      }
+      var turns = collectUserTurns();
+      var bodyTextLen = 0;
+      try {
+        var mainNode = document.querySelector('main, [data-main-content-body]');
+        bodyTextLen = mainNode ? (mainNode.textContent || '').length : 0;
+      } catch (_) {}
+      var estK = Math.min(512, Math.max(4, Math.round(bodyTextLen / 900 + turns.length * 6)));
+      var pct = Math.min(100, Math.max(8, Math.round((estK / 512) * 100)));
+      var liquidColor = pct >= 85 ? '#fb7185' : pct >= 60 ? '#f59e0b' : getAccentColor();
+
+      var vial = document.getElementById(VIAL_ID);
+      if (!vial) {
+        vial = document.createElement('button');
+        vial.id = VIAL_ID;
+        vial.type = 'button';
+        vial.setAttribute('data-agzh', 'skin');
+        vial.title = '点击切换光效模式（完整 / 专注 / 静默）';
+        vial.addEventListener('click', function () {
+          var order = ['full', 'focus', 'silent'];
+          var cur = prismOptions.motionPreset || 'full';
+          var next = order[(order.indexOf(cur) + 1) % order.length];
+          runtimePresetOverride = next;
+          applySkinPayload(window.__AGZH_SKIN__);
+        });
+        document.body.appendChild(vial);
+      }
+
+      var waveY = Math.round(22 - (pct / 100) * 18);
+      var presetLabel =
+        prismOptions.motionPreset === 'silent'
+          ? '静默省电'
+          : prismOptions.motionPreset === 'focus'
+            ? '专注编码'
+            : '完整光效';
+
+      while (vial.firstChild) vial.removeChild(vial.firstChild);
+
+      var tube = document.createElement('span');
+      tube.className = 'agzh-vial-tube';
+      tube.innerHTML =
+        '<svg viewBox="0 0 14 22" width="14" height="22" aria-hidden="true">' +
+        '<g class="agzh-vial-wave-group">' +
+        '<path d="M0 ' + waveY + ' Q 3.5 ' + (waveY - 2) + ' 7 ' + waveY + ' T 14 ' + waveY + ' T 21 ' + waveY + ' T 28 ' + waveY + ' V 22 H 0 Z" fill="' + liquidColor + '" opacity="0.88"/>' +
+        '</g>' +
+        '<circle class="agzh-vial-bubble" cx="5" cy="' + Math.min(19, waveY + 5) + '" r="1" fill="#ffffff" opacity="0.7"/>' +
+        '<circle class="agzh-vial-bubble" cx="10" cy="' + Math.min(20, waveY + 7) + '" r="0.8" fill="#ffffff" opacity="0.5" style="animation-delay:1.1s"/>' +
+        '</svg>';
+
+      var text = document.createElement('span');
+      text.textContent = estK + 'K';
+
+      var pop = document.createElement('div');
+      pop.className = 'agzh-vial-popover';
+      pop.innerHTML =
+        '<div style="font-weight:700;margin-bottom:4px;color:' + liquidColor + '">512K 上下文液位 · ' + pct + '%</div>' +
+        '<div>当前轮次：' + turns.length + ' 轮 · 估算 ~' + estK + 'K tokens</div>' +
+        '<div>光效场景：<b>' + presetLabel + '</b>（点击试管切换）</div>';
+
+      vial.appendChild(tube);
+      vial.appendChild(text);
+      vial.appendChild(pop);
+    }
+
+    // === 引擎 6：LiveCharmEngine（活体伴读角色呼吸、注视与点击 Q 弹星芒彩蛋） ===
+    function spawnCharmSparks(host) {
+      if (!host) return;
+      var angles = [-140, -110, -80, -50, -25, -165, -95, -65];
+      for (var i = 0; i < angles.length; i++) {
+        var sp = document.createElement('span');
+        sp.className = 'agzh-charm-spark';
+        var rad = (angles[i] * Math.PI) / 180;
+        var dist = 20 + (i % 3) * 8;
+        sp.style.left = '34px';
+        sp.style.top = '10px';
+        sp.style.setProperty('--sx', Math.round(Math.cos(rad) * dist) + 'px');
+        sp.style.setProperty('--sy', Math.round(Math.sin(rad) * dist) + 'px');
+        host.appendChild(sp);
+        setTimeout(
+          (function (node) {
+            return function () {
+              if (node && node.parentNode) node.parentNode.removeChild(node);
+            };
+          })(sp),
+          680
+        );
+      }
+    }
+
+    function syncLiveCharm() {
+      var root = document.documentElement;
+      if (!root) return;
+      if (!prismActive || !prismOptions.liveCharm || isReducedMotion() || hasBrowserHole()) {
+        root.removeAttribute('data-agzh-live-charm');
+        rm(CHARM_ID);
+        charmElRef = null;
+        return;
+      }
+      var hasCharmAsset = false;
+      try {
+        var S = window.__AGZH_SKIN__;
+        if (S && S.icons && S.icons.composer_charm) hasCharmAsset = true;
+      } catch (_) {}
+      if (!hasCharmAsset) {
+        root.removeAttribute('data-agzh-live-charm');
+        rm(CHARM_ID);
+        return;
+      }
+
+      var card = document.querySelector('.surface-composer-card') || document.querySelector('form:has(textarea)');
+      if (!card) return;
+      root.setAttribute('data-agzh-live-charm', '1');
+
+      var charm = document.getElementById(CHARM_ID);
+      if (!charm) {
+        charm = document.createElement('div');
+        charm.id = CHARM_ID;
+        charm.title = '戳戳伴读团子 ✨';
+        charm.setAttribute('data-agzh', 'skin');
+        charm.addEventListener('click', function (ev) {
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          charm.classList.remove('is-hopping');
+          void charm.offsetWidth;
+          charm.classList.add('is-hopping');
+          spawnCharmSparks(charm);
+          setTimeout(function () {
+            charm.classList.remove('is-hopping');
+          }, 600);
+        });
+      }
+      if (charm.parentNode !== card) {
+        card.appendChild(charm);
+      }
+      charmElRef = charm;
+      if (!charmBound) {
+        charmBound = true;
+        document.addEventListener('pointermove', function (ev) {
+          if (!charmElRef || !prismActive || !prismOptions.liveCharm) return;
+          try {
+            var r = charmElRef.getBoundingClientRect();
+            var dx = ev.clientX - (r.left + r.width / 2);
+            var dy = ev.clientY - (r.top + r.height / 2);
+            if (Math.abs(dx) < 220 && Math.abs(dy) < 180) {
+              var deg = Math.max(-8, Math.min(8, Math.round(dx / 24)));
+              charmElRef.style.transform = 'rotate(' + deg + 'deg)';
+            } else if (charmElRef.style.transform) {
+              charmElRef.style.transform = '';
+            }
+          } catch (_) {}
+        }, { passive: true });
+      }
+    }
+
+    // === 7. 超长代码块手动折叠控制器 ===
     function findScrollableAncestor(el) {
       var cur = el ? el.parentElement : null;
       while (cur && cur !== document.body && cur !== document.documentElement) {
@@ -362,7 +1084,6 @@
           var lines = text ? text.split('\n').length : 0;
           if (lines < 48) continue;
 
-          // 若仍在流式增长则等待下一轮防抖扫描稳定后再注入按钮
           if (codeLengthCache) {
             var prevLen = codeLengthCache.get(pre);
             codeLengthCache.set(pre, text.length);
@@ -423,7 +1144,7 @@
       } catch (_) {}
     }
 
-    // === 3. 会话轮次导轨与 Alt+↑/↓ 快捷跳转 ===
+    // === 8. 会话轮次导轨与 Alt+↑/↓ 快捷跳转 ===
     function collectUserTurns() {
       try {
         var nodes = document.querySelectorAll(TURN_SELECTOR);
@@ -554,13 +1275,14 @@
       rm(RAIL_ID);
     }
 
-    // === 4. 语义状态边缘余晖（静态/空闲 0fps） ===
+    // === 9. CrystalAuraEngine（思考/待决策/完成三态切工水晶光束） ===
     function syncAmbientAura() {
       var root = document.documentElement;
       if (!root) return;
       if (!prismActive || !prismOptions.ambientAura || hasBrowserHole()) {
         root.removeAttribute('data-agzh-aura');
         rm(AURA_BAR_ID);
+        prevAuraState = 'idle';
         return;
       }
       if (document.body && !document.getElementById(AURA_BAR_ID)) {
@@ -578,7 +1300,19 @@
           state = 'thinking';
         }
       } catch (_) {}
-      root.setAttribute('data-agzh-aura', state);
+
+      if (prevAuraState === 'thinking' && state === 'idle') {
+        root.setAttribute('data-agzh-aura', 'done');
+        if (doneAuraTimer) clearTimeout(doneAuraTimer);
+        doneAuraTimer = setTimeout(function () {
+          if (prismActive && root.getAttribute('data-agzh-aura') === 'done') {
+            root.setAttribute('data-agzh-aura', 'idle');
+          }
+        }, 1400);
+      } else if (state !== 'idle' || root.getAttribute('data-agzh-aura') !== 'done') {
+        root.setAttribute('data-agzh-aura', state);
+      }
+      prevAuraState = state;
     }
 
     function runPrismScan() {
@@ -586,6 +1320,8 @@
       enhanceLongCodeBlocks();
       syncTurnRail();
       syncAmbientAura();
+      syncContextVial();
+      syncLiveCharm();
     }
 
     function ensurePrismControllers() {
@@ -593,6 +1329,8 @@
       if (!root) return;
       prismActive = true;
       root.setAttribute('data-agzh-prism', '1');
+      root.setAttribute('data-agzh-motion', prismOptions.motionPreset || 'full');
+
       if (prismOptions.rimGlow) bindRimListeners();
       else unbindRimListeners();
 
@@ -602,6 +1340,9 @@
         clearCodeEnhancements();
       }
 
+      bindHorizonEngine();
+      bindInkStreamEngine();
+      bindCaretEngine();
       runPrismScan();
 
       if (!prismObserver && typeof MutationObserver !== 'undefined') {
@@ -611,7 +1352,7 @@
           prismScanTimer = setTimeout(function () {
             prismScanTimer = null;
             runPrismScan();
-          }, 260);
+          }, 240);
         });
         prismObserver.observe(target, { childList: true, subtree: true });
       }
@@ -629,13 +1370,25 @@
         clearTimeout(prismScanTimer);
         prismScanTimer = null;
       }
+      if (doneAuraTimer) {
+        clearTimeout(doneAuraTimer);
+        doneAuraTimer = null;
+      }
       unbindRimListeners();
+      unbindHorizonEngine();
+      unbindInkStreamEngine();
+      unbindCaretEngine();
       unbindTurnNav();
       clearCodeEnhancements();
       rm(AURA_BAR_ID);
+      rm(VIAL_ID);
+      rm(CHARM_ID);
+      charmElRef = null;
       if (document.documentElement) {
         document.documentElement.removeAttribute('data-agzh-prism');
         document.documentElement.removeAttribute('data-agzh-aura');
+        document.documentElement.removeAttribute('data-agzh-motion');
+        document.documentElement.removeAttribute('data-agzh-live-charm');
       }
     }
 
@@ -672,7 +1425,6 @@
           ensureSymbolObserver();
         }
 
-        // 渲染层同步挂载编译样式表，确保冷启动首帧与 IPC 热更新零延迟生效
         if (S.css) addStyle(STYLE_ID, S.css);
 
         var pet = S.pet || {};
@@ -695,6 +1447,17 @@
         }, 120);
       }
     }
+
+    window.__AGZH_SKIN_DISPOSE__ = function () {
+      try {
+        rm(STYLE_ID);
+        rm(PET_STYLE_ID);
+        rm(SPRITE_ID);
+        stopClassGuardAndRestore();
+        clearSymbolTags();
+        teardownPrismControllers();
+      } catch (_) {}
+    };
 
     function start() {
       var initialPayload = typeof window !== 'undefined' ? window.__AGZH_SKIN__ : undefined;

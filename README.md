@@ -191,7 +191,7 @@ npm run tauri build
 
 ```bash
 # 1. 统一递增 package.json / package-lock.json / Cargo.toml / Cargo.lock / tauri.conf.json / README.md 版本号
-node scripts/bump-version.mjs 5.10.0
+node scripts/bump-version.mjs 5.11.0
 
 # 2. 执行单元测试、类型校验与生产打包
 npm test
@@ -200,9 +200,9 @@ npm run build
 
 # 3. 提交并推送版本标签以触发全平台构建与 OTA 发布
 git add -A
-git commit -m "chore: 发布 v5.10.0"
-git tag v5.10.0
-git push origin main v5.10.0
+git commit -m "chore: 发布 v5.11.0"
+git tag v5.11.0
+git push origin main v5.11.0
 ```
 
 ---

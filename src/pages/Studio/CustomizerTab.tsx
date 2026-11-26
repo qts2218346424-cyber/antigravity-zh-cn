@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Code,
   MessageSquarePlus,
   Palette,
+  Play,
   RotateCcw,
   Save,
   Send,
@@ -11,6 +12,7 @@ import {
   Type,
 } from 'lucide-react';
 import { showToast } from '../../components/common/ToastContainer';
+import { resolveSkinVisualMotifs } from '../../components/Studio/skinIconRegistry';
 import { studioService } from '../../services/studioService';
 import type { SkinInfo, SkinManifest } from '../../types/studio';
 
@@ -83,10 +85,21 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
   const [codeEnhance, setCodeEnhance] = useState(true);
   const [ambientAura, setAmbientAura] = useState(true);
   const [backdropMode, setBackdropMode] = useState<'auto' | 'light' | 'off'>('auto');
+  const [motionPreset, setMotionPreset] = useState<'full' | 'focus' | 'silent'>('full');
+  const [horizonRipple, setHorizonRipple] = useState(true);
+  const [inkStream, setInkStream] = useState(true);
+  const [contextVial, setContextVial] = useState(true);
+  const [liveCharm, setLiveCharm] = useState(true);
 
-  // 右侧 1:1 模拟器交互状态
+  // 右侧 1:1 实时动态模拟器交互状态
   const [simRim, setSimRim] = useState<{ target: 'think' | 'code' | 'composer'; x: number; y: number } | null>(null);
   const [simCodeFolded, setSimCodeFolded] = useState(false);
+  const [simAura, setSimAura] = useState<'thinking' | 'attention' | 'done'>('thinking');
+  const [inkDemoTick, setInkDemoTick] = useState(5);
+  const [charmHop, setCharmHop] = useState(false);
+  const [charmSparkKey, setCharmSparkKey] = useState(0);
+  const horizonCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ripplesRef = useRef<Array<{ x: number; y: number; r: number; a: number }>>([]);
 
   const [customCss, setCustomCss] = useState('');
   const [saving, setSaving] = useState(false);
@@ -117,6 +130,13 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
     setAmbientAura(m.surfaces?.ambient_aura !== false);
     const bm = m.surfaces?.backdrop_mode;
     setBackdropMode(bm === 'light' || bm === 'off' ? bm : 'auto');
+    const mp = m.surfaces?.motion_preset;
+    const resolvedPreset = mp === 'focus' || mp === 'silent' ? mp : 'full';
+    setMotionPreset(resolvedPreset);
+    setHorizonRipple(m.surfaces?.horizon_ripple ?? resolvedPreset === 'full');
+    setInkStream(m.surfaces?.ink_stream ?? resolvedPreset !== 'silent');
+    setContextVial(m.surfaces?.context_vial ?? resolvedPreset !== 'silent');
+    setLiveCharm(m.surfaces?.live_charm ?? resolvedPreset === 'full');
 
     // 从 rgba(..., alpha) 解析高光透明度
     const glowRaw = m.surfaces?.border_glow || '';
@@ -174,6 +194,11 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
           code_enhance: codeEnhance,
           ambient_aura: ambientAura,
           backdrop_mode: backdropMode,
+          motion_preset: motionPreset,
+          horizon_ripple: horizonRipple,
+          ink_stream: inkStream,
+          context_vial: contextVial,
+          live_charm: liveCharm,
         },
         font: {
           family: fontFamily.trim(),
@@ -234,6 +259,114 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
   const fg = colors.foreground || '#e6edf7';
   const panel = colors.panel || '#0f141f';
   const border = colors.border || '#1f293b';
+
+  const selectedSkin = useMemo(
+    () => skins.find((s) => s.id === selectedSkinId),
+    [skins, selectedSkinId],
+  );
+  const motifs = useMemo(
+    () => (selectedSkin ? resolveSkinVisualMotifs(selectedSkin) : null),
+    [selectedSkin],
+  );
+
+  const applyMotionPreset = (preset: 'full' | 'focus' | 'silent') => {
+    setMotionPreset(preset);
+    if (preset === 'full') {
+      setPrismFacets(true);
+      setRimGlow(true);
+      setCodeEnhance(true);
+      setAmbientAura(true);
+      setHorizonRipple(true);
+      setInkStream(true);
+      setContextVial(true);
+      setLiveCharm(true);
+    } else if (preset === 'focus') {
+      setPrismFacets(true);
+      setRimGlow(true);
+      setCodeEnhance(true);
+      setAmbientAura(true);
+      setHorizonRipple(false);
+      setInkStream(true);
+      setContextVial(true);
+      setLiveCharm(false);
+    } else {
+      setPrismFacets(true);
+      setRimGlow(false);
+      setCodeEnhance(true);
+      setAmbientAura(false);
+      setHorizonRipple(false);
+      setInkStream(false);
+      setContextVial(false);
+      setLiveCharm(false);
+    }
+    setDirty(true);
+  };
+
+  useEffect(() => {
+    const cv = horizonCanvasRef.current;
+    if (!cv || !horizonRipple || motionPreset === 'silent') return;
+    let raf = 0;
+    let phase = 0;
+    let lastDraw = 0;
+    const glyphs = ['·', '∘', '✦', '◇', '⊹'];
+
+    const parseHex = (hex: string) => {
+      const m = /^#([0-9a-f]{6})/i.exec(hex.trim());
+      if (!m) return { r: 56, g: 189, b: 248 };
+      return {
+        r: parseInt(m[1].slice(0, 2), 16),
+        g: parseInt(m[1].slice(2, 4), 16),
+        b: parseInt(m[1].slice(4, 6), 16),
+      };
+    };
+
+    const draw = (ts: number) => {
+      if (ts - lastDraw >= 36) {
+        lastDraw = ts;
+        const w = cv.clientWidth || 320;
+        const h = cv.clientHeight || 420;
+        if (cv.width !== w || cv.height !== h) {
+          cv.width = w;
+          cv.height = h;
+        }
+        const ctx = cv.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, w, h);
+          const rgb = parseHex(accent);
+          phase += 0.055;
+          ctx.font = '11px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          for (let y = 20; y < h - 16; y += 26) {
+            for (let x = 20; x < w - 16; x += 26) {
+              const wave = Math.sin(x * 0.024 + y * 0.02 + phase) * 0.5 + 0.5;
+              let boost = 0;
+              for (const rp of ripplesRef.current) {
+                const d = Math.abs(Math.hypot(x - rp.x, y - rp.y) - rp.r);
+                if (d < 36) boost = Math.max(boost, (1 - d / 36) * rp.a);
+              }
+              const alpha = Math.min(0.85, 0.06 + wave * 0.1 + boost * 0.72);
+              const gIdx = Math.min(glyphs.length - 1, Math.floor((wave + boost) * 2.6));
+              ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha.toFixed(3)})`;
+              ctx.fillText(glyphs[gIdx], x, y);
+            }
+          }
+          ripplesRef.current = ripplesRef.current
+            .map((rp) => ({ ...rp, r: rp.r + 5.5, a: rp.a * 0.93 }))
+            .filter((rp) => rp.a > 0.05);
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [accent, horizonRipple, motionPreset]);
+
+  useEffect(() => {
+    if (inkDemoTick >= 5) return;
+    const t = setTimeout(() => setInkDemoTick((v) => v + 1), 90);
+    return () => clearTimeout(t);
+  }, [inkDemoTick]);
 
   return (
     <div
@@ -473,32 +606,56 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
           <div className="pt-3 border-t border-gray-200/70 dark:border-white/10 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
-                棱镜光学元素与工作台增强（自适应当前主题色）
+                动态光学引擎与工作台增强（自适应当前主题色）
               </div>
-              <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/5 p-0.5 text-[10.5px] border border-gray-200/60 dark:border-white/10">
-                {(
-                  [
-                    ['auto', '智能平衡'],
-                    ['light', '轻盈省电'],
-                    ['off', '纯切面极速'],
-                  ] as const
-                ).map(([modeKey, modeLabel]) => (
-                  <button
-                    key={modeKey}
-                    type="button"
-                    onClick={() => {
-                      setBackdropMode(modeKey);
-                      setDirty(true);
-                    }}
-                    className={`rounded-lg px-2.5 py-1 transition-all ${
-                      backdropMode === modeKey
-                        ? 'bg-white dark:bg-slate-800 font-semibold text-sky-500 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                    }`}
-                  >
-                    {modeLabel}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/5 p-0.5 text-[10.5px] border border-gray-200/60 dark:border-white/10">
+                  {(
+                    [
+                      ['full', '完整光效'],
+                      ['focus', '专注编码'],
+                      ['silent', '静默省电'],
+                    ] as const
+                  ).map(([presetKey, presetLabel]) => (
+                    <button
+                      key={presetKey}
+                      type="button"
+                      onClick={() => applyMotionPreset(presetKey)}
+                      className={`rounded-lg px-2.5 py-1 transition-all ${
+                        motionPreset === presetKey
+                          ? 'bg-gradient-to-r from-sky-500 to-indigo-500 font-semibold text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      {presetLabel}
+                    </button>
+                  ))}
+                </div>
+                <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/5 p-0.5 text-[10.5px] border border-gray-200/60 dark:border-white/10">
+                  {(
+                    [
+                      ['auto', '模糊平衡'],
+                      ['light', '轻盈模糊'],
+                      ['off', '纯切面'],
+                    ] as const
+                  ).map(([modeKey, modeLabel]) => (
+                    <button
+                      key={modeKey}
+                      type="button"
+                      onClick={() => {
+                        setBackdropMode(modeKey);
+                        setDirty(true);
+                      }}
+                      className={`rounded-lg px-2 py-1 transition-all ${
+                        backdropMode === modeKey
+                          ? 'bg-white dark:bg-slate-800 font-semibold text-sky-500 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      {modeLabel}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -506,18 +663,53 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               {(
                 [
                   {
-                    key: 'facets',
-                    label: '棱镜切面与控制台凹槽',
-                    desc: '气泡顶沿高光、kbd 键帽、文件芯片与终端内陷',
-                    checked: prismFacets,
-                    toggle: () => setPrismFacets((v) => !v),
+                    key: 'horizon',
+                    label: 'Canvas 字符波纹矩阵',
+                    desc: '首页交互波纹与对话地平线极光（空闲 0fps）',
+                    checked: horizonRipple,
+                    toggle: () => setHorizonRipple((v) => !v),
                   },
                   {
                     key: 'rim',
-                    label: '近场指针边框高光',
-                    desc: '悬停卡片沿边框浮现主题柔光（空闲 0fps）',
+                    label: 'Canvas 近场棱镜折光',
+                    desc: '指针靠近卡片自动绘制主题色激光边框高光',
                     checked: rimGlow,
                     toggle: () => setRimGlow((v) => !v),
+                  },
+                  {
+                    key: 'ink',
+                    label: '五级水墨流式淡入',
+                    desc: '零 DOM 侵入的 AI 流式吐字水墨晕染渐显',
+                    checked: inkStream,
+                    toggle: () => setInkStream((v) => !v),
+                  },
+                  {
+                    key: 'vial',
+                    label: '512K 液态上下文试管',
+                    desc: '双波浪上升气泡玻璃试管，点击切换光效预设',
+                    checked: contextVial,
+                    toggle: () => setContextVial((v) => !v),
+                  },
+                  {
+                    key: 'charm',
+                    label: '活体伴读角色与星芒彩蛋',
+                    desc: '输入舱挂件呼吸律动、鼠标注视与点击 Q 弹跳跃',
+                    checked: liveCharm,
+                    toggle: () => setLiveCharm((v) => !v),
+                  },
+                  {
+                    key: 'aura',
+                    label: '三态切工水晶光束',
+                    desc: '思考流光 / 待决策琥珀 / 完成翡翠回响扫光',
+                    checked: ambientAura,
+                    toggle: () => setAmbientAura((v) => !v),
+                  },
+                  {
+                    key: 'facets',
+                    label: '棱镜切面与控制台凹槽',
+                    desc: '旋转流光输入舱、kbd 键帽、文件芯片与终端内陷',
+                    checked: prismFacets,
+                    toggle: () => setPrismFacets((v) => !v),
                   },
                   {
                     key: 'code',
@@ -525,13 +717,6 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                     desc: '顶栏吸顶、长代码手动收起、Alt+↑/↓ 轮次跳转',
                     checked: codeEnhance,
                     toggle: () => setCodeEnhance((v) => !v),
-                  },
-                  {
-                    key: 'aura',
-                    label: '对话语义边缘余晖',
-                    desc: '思考中与待决策时顶部 2px 极简微光提示',
-                    checked: ambientAura,
-                    toggle: () => setAmbientAura((v) => !v),
                   },
                 ] as const
               ).map((item) => (
@@ -632,18 +817,59 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
       {/* 右侧 1:1 真实感 Google Antigravity 桌面应用视窗模拟器 */}
       <div className="xl:col-span-5">
         <div className="sticky top-6 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/85 dark:bg-slate-900/65 backdrop-blur-xl p-4 shadow-sm space-y-3">
-          <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-white">
+          <div className="flex items-center justify-between gap-2 text-xs font-bold text-gray-800 dark:text-white">
             <span className="inline-flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-sky-500" />
-              Antigravity 应用实时视窗预览
+              Antigravity 动态视窗实验室
             </span>
-            <span className="text-[11px] font-mono text-gray-400">
-              blur({glassBlur}px) · {Math.round(cardOpacity * 100)}%
-            </span>
+            <div className="flex items-center gap-1.5 text-[10px] font-normal">
+              <button
+                type="button"
+                onClick={() =>
+                  setSimAura((a) =>
+                    a === 'thinking' ? 'attention' : a === 'attention' ? 'done' : 'thinking',
+                  )
+                }
+                className="rounded-lg border border-gray-200 dark:border-white/15 px-2 py-0.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+              >
+                光束：{simAura === 'thinking' ? '思考流光' : simAura === 'attention' ? '待决策琥珀' : '完成翡翠'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setInkDemoTick(0)}
+                className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-sky-600 dark:text-sky-300 hover:bg-sky-500/20"
+              >
+                <Play className="h-2.5 w-2.5" />
+                水墨演示
+              </button>
+            </div>
           </div>
 
           <div
             className="relative h-[520px] w-full overflow-hidden rounded-2xl border shadow-2xl flex flex-col select-none"
+            onClick={(e) => {
+              const cv = horizonCanvasRef.current;
+              if (!cv || !horizonRipple || motionPreset === 'silent') return;
+              const rect = cv.getBoundingClientRect();
+              ripplesRef.current.push({
+                x: Math.round(e.clientX - rect.left),
+                y: Math.round(e.clientY - rect.top),
+                r: 6,
+                a: 0.95,
+              });
+            }}
+            onMouseMove={(e) => {
+              const cv = horizonCanvasRef.current;
+              if (!cv || !horizonRipple || motionPreset === 'silent' || Math.random() > 0.18) return;
+              const rect = cv.getBoundingClientRect();
+              ripplesRef.current.push({
+                x: Math.round(e.clientX - rect.left),
+                y: Math.round(e.clientY - rect.top),
+                r: 4,
+                a: 0.55,
+              });
+              if (ripplesRef.current.length > 8) ripplesRef.current.shift();
+            }}
             style={{
               backgroundColor: bg,
               color: fg,
@@ -653,6 +879,13 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               backgroundImage: `radial-gradient(76% 42% at 50% 0%, ${accent}22 0%, transparent 72%), radial-gradient(circle at 86% 84%, ${accent}18 0%, transparent 56%)`,
             }}
           >
+            {/* 真实交互式 Canvas 字符波纹矩阵 */}
+            {horizonRipple && motionPreset !== 'silent' && (
+              <canvas
+                ref={horizonCanvasRef}
+                className="pointer-events-none absolute inset-0 z-0 h-full w-full opacity-90"
+              />
+            )}
 
             {/* 模拟 Antigravity 应用无边框顶栏 */}
             <div
@@ -687,13 +920,23 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
             {/* Antigravity 应用主区：左侧会话抽屉 + 中央对话与指令输入舱 */}
             <div className="relative z-10 flex flex-1 min-h-0">
-              {/* 顶部 2px 语义边缘余晖预览条 */}
+              {/* 顶部 2.5px 三态切工水晶光束预览条 */}
               {ambientAura && (
                 <div
-                  className="pointer-events-none absolute top-0 left-0 right-0 h-[2px] z-20"
+                  className="pointer-events-none absolute top-0 left-0 right-0 h-[2.5px] z-20 transition-all duration-300"
                   style={{
-                    background: `linear-gradient(90deg, transparent 0%, ${accent} 50%, transparent 100%)`,
-                    boxShadow: `0 0 10px ${accent}88`,
+                    background:
+                      simAura === 'attention'
+                        ? 'linear-gradient(90deg, transparent 0%, #f59e0b 50%, transparent 100%)'
+                        : simAura === 'done'
+                          ? 'linear-gradient(90deg, transparent 0%, #10b981 48%, #a7f3d0 50%, #10b981 52%, transparent 100%)'
+                          : `linear-gradient(90deg, transparent 0%, ${accent} 35%, #ffffff 50%, ${accent} 65%, transparent 100%)`,
+                    boxShadow:
+                      simAura === 'attention'
+                        ? '0 0 12px rgba(245,158,11,0.75)'
+                        : simAura === 'done'
+                          ? '0 0 12px rgba(16,185,129,0.75)'
+                          : `0 0 12px ${accent}88`,
                   }}
                 />
               )}
@@ -855,18 +1098,44 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                       )}
                     </div>
                     <p className="text-[10.5px] leading-relaxed opacity-90">
-                      已更新{' '}
                       <span
-                        className="inline-block px-1.5 py-0.2 text-[9.5px] font-mono"
+                        className="transition-all duration-200"
+                        style={{
+                          opacity: !inkStream || inkDemoTick >= 1 ? 1 : 0.15,
+                          color: inkStream && inkDemoTick === 1 ? accent : fg,
+                        }}
+                      >
+                        已更新{' '}
+                      </span>
+                      <span
+                        className="inline-block px-1.5 py-0.2 text-[9.5px] font-mono transition-all duration-200"
                         style={{
                           backgroundColor: prismFacets ? `${accent}1e` : 'transparent',
                           border: prismFacets ? `1px solid ${accent}4a` : 'none',
                           borderRadius: '9999px',
+                          opacity: !inkStream || inkDemoTick >= 2 ? 1 : 0.15,
                         }}
                       >
                         skin_manager.rs
                       </span>{' '}
-                      切面令牌，保留原配色灵魂。
+                      <span
+                        className="transition-all duration-200"
+                        style={{
+                          opacity: !inkStream || inkDemoTick >= 3 ? 1 : 0.15,
+                          color: inkStream && inkDemoTick === 3 ? accent : fg,
+                        }}
+                      >
+                        切面令牌，
+                      </span>
+                      <span
+                        className="transition-all duration-200"
+                        style={{
+                          opacity: !inkStream || inkDemoTick >= 4 ? 1 : 0.15,
+                          color: inkStream && inkDemoTick === 4 ? accent : fg,
+                        }}
+                      >
+                        水墨流式渐显与波纹矩阵均已实时激活。
+                      </span>
                     </p>
                   </div>
 
@@ -953,9 +1222,9 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                   )}
                 </div>
 
-                {/* 底部悬浮指令输入舱（Composer） */}
+                {/* 底部悬浮指令输入舱（Composer · 含活体伴读点击跳跃与 512K 液态上下文试管） */}
                 <div
-                  className="flex items-center justify-between px-3 py-2 text-[11px] shadow-lg transition-all"
+                  className="relative flex items-center justify-between px-3 py-2 text-[11px] shadow-lg transition-all"
                   onMouseMove={(e) => {
                     if (!rimGlow) return;
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -970,27 +1239,99 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                     backgroundColor: colors.input || '#131a27',
                     backgroundImage:
                       rimGlow && simRim?.target === 'composer'
-                        ? `radial-gradient(180px circle at ${simRim.x}px ${simRim.y}px, ${accent}24 0%, transparent 72%)`
+                        ? `radial-gradient(180px circle at ${simRim.x}px ${simRim.y}px, ${accent}28 0%, transparent 72%)`
                         : undefined,
                     borderRadius: `${borderRadius}px`,
                     border: `1px solid ${
-                      rimGlow && simRim?.target === 'composer' ? `${accent}88` : border
+                      rimGlow && simRim?.target === 'composer' ? accent : `${accent}55`
                     }`,
+                    boxShadow:
+                      prismFacets && motionPreset !== 'silent'
+                        ? `0 0 0 1px ${accent}22, 0 8px 22px -6px ${accent}33`
+                        : undefined,
                     color: colors.muted || '#7e8ca6',
                   }}
                 >
-                  <span>向 Antigravity 智能体下达指令…</span>
-                  <span
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold shadow-sm"
-                    style={{
-                      backgroundColor: accent,
-                      color: colors.accentForeground || '#04131e',
-                      borderRadius: `${Math.max(6, borderRadius - 4)}px`,
-                    }}
-                  >
-                    <Send className="h-2.5 w-2.5" />
-                    发送
-                  </span>
+                  {/* 活体伴读角色挂件（可点击 Q 弹跳跃并喷发星芒粒子） */}
+                  {liveCharm && motifs?.composerCharmUri && (
+                    <button
+                      type="button"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setCharmHop(true);
+                        setCharmSparkKey((k) => k + 1);
+                        setTimeout(() => setCharmHop(false), 520);
+                      }}
+                      title="点击戳戳伴读团子 ✨"
+                      className={`absolute -top-[18px] right-4 z-30 h-6 w-14 flex items-end justify-end transition-transform duration-300 ${
+                        charmHop ? '-translate-y-2.5 scale-110' : 'hover:-translate-y-0.5'
+                      }`}
+                    >
+                      <img
+                        src={motifs.composerCharmUri}
+                        alt=""
+                        className="h-full w-auto object-contain drop-shadow"
+                      />
+                      {charmSparkKey > 0 && charmHop && (
+                        <span
+                          key={charmSparkKey}
+                          className="pointer-events-none absolute -top-2 right-3 text-[10px] animate-ping"
+                          style={{ color: accent }}
+                        >
+                          ✦ ✧ ✦
+                        </span>
+                      )}
+                    </button>
+                  )}
+
+                  <span className="truncate">向 Antigravity 智能体下达指令…</span>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* 512K 液态上下文试管指示器 */}
+                    {contextVial && (
+                      <div
+                        className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-mono"
+                        style={{
+                          backgroundColor: `${panel}cc`,
+                          border: `1px solid ${border}`,
+                          color: fg,
+                        }}
+                        title="512K 液态上下文实时监控"
+                      >
+                        <svg viewBox="0 0 12 16" width="10" height="14" aria-hidden="true">
+                          <rect
+                            x="1"
+                            y="1"
+                            width="10"
+                            height="14"
+                            rx="3"
+                            fill="none"
+                            stroke={accent}
+                            strokeOpacity="0.6"
+                            strokeWidth="1"
+                          />
+                          <path
+                            d="M1.5 7 Q 4 5.5 6.5 7 T 10.5 7 V 14.5 H 1.5 Z"
+                            fill={accent}
+                            opacity="0.88"
+                          />
+                        </svg>
+                        <span>142K</span>
+                      </div>
+                    )}
+
+                    <span
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold shadow-sm"
+                      style={{
+                        backgroundColor: accent,
+                        color: colors.accentForeground || '#04131e',
+                        borderRadius: `${Math.max(6, borderRadius - 4)}px`,
+                      }}
+                    >
+                      <Send className="h-2.5 w-2.5" />
+                      发送
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
