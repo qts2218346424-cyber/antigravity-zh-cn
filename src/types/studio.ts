@@ -78,6 +78,11 @@ export interface SkinManifest {
     border_glow?: string;
     noise_grain?: number;
     shadow_elevation?: string;
+    prism_facets?: boolean;
+    rim_glow?: boolean;
+    code_enhance?: boolean;
+    ambient_aura?: boolean;
+    backdrop_mode?: 'auto' | 'light' | 'off';
   };
   icons?: {
     filter?: string;

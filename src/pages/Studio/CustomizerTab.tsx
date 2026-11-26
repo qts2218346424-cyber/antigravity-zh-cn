@@ -77,6 +77,17 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
   const [bgOpacity, setBgOpacity] = useState(0.14);
   const [bgBlur, setBgBlur] = useState(2);
 
+  // 棱镜光学切面与工作台增强参数
+  const [prismFacets, setPrismFacets] = useState(true);
+  const [rimGlow, setRimGlow] = useState(true);
+  const [codeEnhance, setCodeEnhance] = useState(true);
+  const [ambientAura, setAmbientAura] = useState(true);
+  const [backdropMode, setBackdropMode] = useState<'auto' | 'light' | 'off'>('auto');
+
+  // 右侧 1:1 模拟器交互状态
+  const [simRim, setSimRim] = useState<{ target: 'think' | 'code' | 'composer'; x: number; y: number } | null>(null);
+  const [simCodeFolded, setSimCodeFolded] = useState(false);
+
   const [customCss, setCustomCss] = useState('');
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -100,6 +111,12 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
     const parsedRadius = parseInt(String(m.surfaces?.radius || '12').replace(/px/g, ''), 10);
     setBorderRadius(Number.isFinite(parsedRadius) ? parsedRadius : 12);
     setNoiseGrain(m.surfaces?.noise_grain ?? 0.03);
+    setPrismFacets(m.surfaces?.prism_facets !== false);
+    setRimGlow(m.surfaces?.rim_glow !== false);
+    setCodeEnhance(m.surfaces?.code_enhance !== false);
+    setAmbientAura(m.surfaces?.ambient_aura !== false);
+    const bm = m.surfaces?.backdrop_mode;
+    setBackdropMode(bm === 'light' || bm === 'off' ? bm : 'auto');
 
     // 从 rgba(..., alpha) 解析高光透明度
     const glowRaw = m.surfaces?.border_glow || '';
@@ -152,6 +169,11 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
           border_glow: `rgba(255, 255, 255, ${borderGlowAlpha.toFixed(2)})`,
           noise_grain: Number(noiseGrain.toFixed(3)),
           shadow_elevation: manifest?.surfaces?.shadow_elevation || defaultShadow,
+          prism_facets: prismFacets,
+          rim_glow: rimGlow,
+          code_enhance: codeEnhance,
+          ambient_aura: ambientAura,
+          backdrop_mode: backdropMode,
         },
         font: {
           family: fontFamily.trim(),
@@ -446,6 +468,111 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               />
             </div>
           </div>
+
+          {/* 棱镜光学元素与工作台增强 */}
+          <div className="pt-3 border-t border-gray-200/70 dark:border-white/10 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
+                棱镜光学元素与工作台增强（自适应当前主题色）
+              </div>
+              <div className="inline-flex rounded-xl bg-gray-100 dark:bg-white/5 p-0.5 text-[10.5px] border border-gray-200/60 dark:border-white/10">
+                {(
+                  [
+                    ['auto', '智能平衡'],
+                    ['light', '轻盈省电'],
+                    ['off', '纯切面极速'],
+                  ] as const
+                ).map(([modeKey, modeLabel]) => (
+                  <button
+                    key={modeKey}
+                    type="button"
+                    onClick={() => {
+                      setBackdropMode(modeKey);
+                      setDirty(true);
+                    }}
+                    className={`rounded-lg px-2.5 py-1 transition-all ${
+                      backdropMode === modeKey
+                        ? 'bg-white dark:bg-slate-800 font-semibold text-sky-500 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {modeLabel}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {(
+                [
+                  {
+                    key: 'facets',
+                    label: '棱镜切面与控制台凹槽',
+                    desc: '气泡顶沿高光、kbd 键帽、文件芯片与终端内陷',
+                    checked: prismFacets,
+                    toggle: () => setPrismFacets((v) => !v),
+                  },
+                  {
+                    key: 'rim',
+                    label: '近场指针边框高光',
+                    desc: '悬停卡片沿边框浮现主题柔光（空闲 0fps）',
+                    checked: rimGlow,
+                    toggle: () => setRimGlow((v) => !v),
+                  },
+                  {
+                    key: 'code',
+                    label: '代码块吸顶折叠与导轨',
+                    desc: '顶栏吸顶、长代码手动收起、Alt+↑/↓ 轮次跳转',
+                    checked: codeEnhance,
+                    toggle: () => setCodeEnhance((v) => !v),
+                  },
+                  {
+                    key: 'aura',
+                    label: '对话语义边缘余晖',
+                    desc: '思考中与待决策时顶部 2px 极简微光提示',
+                    checked: ambientAura,
+                    toggle: () => setAmbientAura((v) => !v),
+                  },
+                ] as const
+              ).map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="switch"
+                  aria-checked={item.checked}
+                  onClick={() => {
+                    item.toggle();
+                    setDirty(true);
+                  }}
+                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.99] ${
+                    item.checked
+                      ? 'border-sky-500/40 bg-sky-500/10 dark:bg-sky-500/10'
+                      : 'border-gray-200/70 dark:border-white/10 bg-gray-50/70 dark:bg-black/20 opacity-75'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="text-[11.5px] font-semibold text-gray-800 dark:text-gray-100 truncate">
+                      {item.label}
+                    </div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                      {item.desc}
+                    </div>
+                  </div>
+                  <span
+                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+                      item.checked ? 'bg-sky-500' : 'bg-gray-300 dark:bg-white/15'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                        item.checked ? 'translate-x-4.5' : 'translate-x-1'
+                      }`}
+                    />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* 模块三：字体与自定义 CSS */}
@@ -560,6 +687,17 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
 
             {/* Antigravity 应用主区：左侧会话抽屉 + 中央对话与指令输入舱 */}
             <div className="relative z-10 flex flex-1 min-h-0">
+              {/* 顶部 2px 语义边缘余晖预览条 */}
+              {ambientAura && (
+                <div
+                  className="pointer-events-none absolute top-0 left-0 right-0 h-[2px] z-20"
+                  style={{
+                    background: `linear-gradient(90deg, transparent 0%, ${accent} 50%, transparent 100%)`,
+                    boxShadow: `0 0 10px ${accent}88`,
+                  }}
+                />
+              )}
+
               {/* 左侧会话导航抽屉（无 IDE 活动栏与文件树） */}
               <div
                 className="w-36 p-3 border-r flex flex-col justify-between text-[11px]"
@@ -609,31 +747,73 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
               </div>
 
               {/* 中央智能体对话流与悬浮输入舱 */}
-              <div className="flex-1 flex flex-col min-w-0 p-3.5 justify-between gap-3 overflow-hidden">
-                <div className="space-y-3">
-                  {/* 用户消息胶囊 */}
+              <div className="relative flex-1 flex flex-col min-w-0 p-3.5 justify-between gap-2.5 overflow-hidden">
+                {/* 右侧微缩会话轮次导轨 */}
+                {codeEnhance && (
+                  <div
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1 px-1 py-1.5 rounded-full"
+                    style={{
+                      backgroundColor: `color-mix(in srgb, ${panel} 88%, transparent)`,
+                      border: `1px solid ${border}`,
+                      boxShadow: '0 6px 16px rgba(0,0,0,0.22)',
+                    }}
+                    title="轮次导轨 (Alt+↑/↓)"
+                  >
+                    <span className="text-[8px] opacity-65">↑</span>
+                    <span className="text-[8px] font-mono opacity-80">2/3</span>
+                    <span className="text-[8px] opacity-65">↓</span>
+                  </div>
+                )}
+
+                <div className="space-y-2.5">
+                  {/* 用户消息胶囊（切面微渐变 + 顶沿折射高光） */}
                   <div className="flex justify-end">
                     <div
                       className="px-3 py-1.5 text-[11px] max-w-[85%]"
                       style={{
                         backgroundColor: colors.selection || `${accent}28`,
+                        backgroundImage: prismFacets
+                          ? `linear-gradient(180deg, ${accent}20 0%, transparent 100%)`
+                          : undefined,
                         borderRadius: `${borderRadius}px`,
                         border: `1px solid ${border}`,
+                        boxShadow: prismFacets
+                          ? `inset 0 1px 0 rgba(255,255,255,${Math.min(0.9, borderGlowAlpha + 0.1)})`
+                          : undefined,
                       }}
                     >
-                      将这些皮肤全面适配到 Antigravity 桌面应用
+                      将这些棱镜元素融合进 Antigravity 主题
                     </div>
                   </div>
 
-                  {/* 玻璃态深度思考折叠卡（仅背景应用通透度，保持文字 100% 锐利清晰） */}
+                  {/* 玻璃态深度思考折叠卡（支持指针边框高光交互 + 文件芯片 + kbd 键帽） */}
                   <div
-                    className="p-3 space-y-1.5 transition-all"
+                    className="p-2.5 space-y-1.5 transition-all"
+                    onMouseMove={(e) => {
+                      if (!rimGlow) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setSimRim({
+                        target: 'think',
+                        x: Math.round(e.clientX - rect.left),
+                        y: Math.round(e.clientY - rect.top),
+                      });
+                    }}
+                    onMouseLeave={() => setSimRim(null)}
                     style={{
                       backgroundColor: `color-mix(in srgb, ${panel} ${Math.round(cardOpacity * 100)}%, transparent)`,
+                      backgroundImage:
+                        rimGlow && simRim?.target === 'think'
+                          ? `radial-gradient(180px circle at ${simRim.x}px ${simRim.y}px, ${accent}26 0%, transparent 72%)`
+                          : undefined,
                       borderRadius: `${borderRadius}px`,
-                      border: `1px solid ${border}`,
-                      backdropFilter: `blur(${glassBlur}px) saturate(1.35)`,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,${borderGlowAlpha}), 0 14px 32px rgba(0,0,0,0.32)`,
+                      border: `1px solid ${
+                        rimGlow && simRim?.target === 'think' ? `${accent}88` : border
+                      }`,
+                      backdropFilter:
+                        backdropMode === 'off'
+                          ? undefined
+                          : `blur(${backdropMode === 'light' ? Math.max(4, Math.round(glassBlur / 2)) : glassBlur}px) saturate(1.35)`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,${borderGlowAlpha}), 0 14px 32px rgba(0,0,0,0.28)`,
                     }}
                   >
                     <div className="flex items-center justify-between text-[10px]">
@@ -645,44 +825,157 @@ export const CustomizerTab: React.FC<CustomizerTabProps> = ({
                           className="h-1.5 w-1.5 rounded-full animate-pulse"
                           style={{ backgroundColor: accent }}
                         />
-                        深度思考过程 · 已折叠推演流
+                        深度思考过程 · 光学切面同步
                       </span>
-                      <span style={{ color: colors.muted || '#7e8ca6' }}>实时热重载</span>
+                      {prismFacets ? (
+                        <span className="inline-flex items-center gap-1">
+                          <kbd
+                            className="px-1 py-0.5 rounded text-[9px] font-mono"
+                            style={{
+                              backgroundColor: colors.input || panel,
+                              border: `1px solid ${border}`,
+                              borderBottomWidth: '2px',
+                            }}
+                          >
+                            Alt
+                          </kbd>
+                          <kbd
+                            className="px-1 py-0.5 rounded text-[9px] font-mono"
+                            style={{
+                              backgroundColor: colors.input || panel,
+                              border: `1px solid ${border}`,
+                              borderBottomWidth: '2px',
+                            }}
+                          >
+                            ↑
+                          </kbd>
+                        </span>
+                      ) : (
+                        <span style={{ color: colors.muted || '#7e8ca6' }}>实时热重载</span>
+                      )}
                     </div>
-                    <p className="text-[11px] leading-relaxed opacity-90">
-                      已完成 Antigravity 应用原生宿主令牌（<code className="font-mono">--background</code> / <code className="font-mono">--card</code> / <code className="font-mono">--primary</code>）与三层幕布色彩同步。
+                    <p className="text-[10.5px] leading-relaxed opacity-90">
+                      已更新{' '}
+                      <span
+                        className="inline-block px-1.5 py-0.2 text-[9.5px] font-mono"
+                        style={{
+                          backgroundColor: prismFacets ? `${accent}1e` : 'transparent',
+                          border: prismFacets ? `1px solid ${accent}4a` : 'none',
+                          borderRadius: '9999px',
+                        }}
+                      >
+                        skin_manager.rs
+                      </span>{' '}
+                      切面令牌，保留原配色灵魂。
                     </p>
                   </div>
 
-                  {/* 工件代码片段预览卡 */}
+                  {/* 工件代码块卡（Sticky 顶栏 + 可点击折叠） */}
                   <div
-                    className="p-3 text-[11px] leading-relaxed"
+                    className="overflow-hidden text-[10.5px] leading-relaxed transition-all"
+                    onMouseMove={(e) => {
+                      if (!rimGlow) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setSimRim({
+                        target: 'code',
+                        x: Math.round(e.clientX - rect.left),
+                        y: Math.round(e.clientY - rect.top),
+                      });
+                    }}
+                    onMouseLeave={() => setSimRim(null)}
                     style={{
                       backgroundColor: colors.input || '#131a27',
                       fontFamily: monoFamily,
                       borderRadius: `${Math.max(6, borderRadius - 2)}px`,
-                      border: `1px solid ${border}`,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,${borderGlowAlpha * 0.6})`,
+                      border: `1px solid ${
+                        rimGlow && simRim?.target === 'code' ? `${accent}88` : border
+                      }`,
+                      backgroundImage:
+                        rimGlow && simRim?.target === 'code'
+                          ? `radial-gradient(180px circle at ${simRim.x}px ${simRim.y}px, ${accent}22 0%, transparent 72%)`
+                          : undefined,
                     }}
                   >
-                    <div>
-                      <span style={{ color: accent }}>setHubCurtainColor</span>(win,{' '}
-                      <span style={{ color: accent }}>&quot;{bg}&quot;</span>);
-                    </div>
-                    <div className="pl-3 opacity-85">
-                      glassBlur: <span style={{ color: accent }}>{glassBlur}px</span>, cardOpacity:{' '}
-                      <span style={{ color: accent }}>{cardOpacity.toFixed(2)}</span>
-                    </div>
+                    {codeEnhance && (
+                      <div
+                        className="flex items-center justify-between px-2.5 py-1 text-[9.5px] border-b"
+                        style={{
+                          borderColor: border,
+                          backgroundColor: `color-mix(in srgb, ${panel} 80%, transparent)`,
+                        }}
+                      >
+                        <span className="opacity-70">rust · skin_manager.rs</span>
+                        <button
+                          type="button"
+                          onClick={() => setSimCodeFolded((v) => !v)}
+                          className="rounded-full px-2 py-0.5 text-[9px] font-semibold transition-colors"
+                          style={{
+                            backgroundColor: `${accent}24`,
+                            border: `1px solid ${accent}52`,
+                            color: fg,
+                          }}
+                        >
+                          {simCodeFolded ? '展开代码 (52行)' : '收起代码 (52行)'}
+                        </button>
+                      </div>
+                    )}
+                    {!simCodeFolded && (
+                      <div className="px-2.5 py-1.5">
+                        <div>
+                          <span style={{ color: accent }}>setHubCurtainColor</span>(win,{' '}
+                          <span style={{ color: accent }}>&quot;{bg}&quot;</span>);
+                        </div>
+                        <div className="pl-3 opacity-85">
+                          prismFacets: <span style={{ color: accent }}>{String(prismFacets)}</span>, backdrop:{' '}
+                          <span style={{ color: accent }}>{backdropMode}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 沉降式控制台凹槽 Console Well */}
+                  {prismFacets && (
+                    <div
+                      className="px-2.5 py-1.5 text-[9.5px] font-mono flex items-center justify-between"
+                      style={{
+                        backgroundColor:
+                          manifest?.base === 'light' ? 'rgba(15,23,42,0.05)' : 'rgba(0,0,0,0.42)',
+                        borderRadius: `${Math.max(6, borderRadius - 4)}px`,
+                        border: `1px solid ${border}`,
+                        boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.28)',
+                      }}
+                    >
+                      <span className="opacity-80">
+                        <span style={{ color: accent }}>$</span> npm test -- prismSkinEngine
+                      </span>
+                      <span className="text-emerald-400">PASS</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* 底部悬浮指令输入舱（Composer） */}
                 <div
-                  className="flex items-center justify-between px-3 py-2.5 text-[11px] shadow-lg"
+                  className="flex items-center justify-between px-3 py-2 text-[11px] shadow-lg transition-all"
+                  onMouseMove={(e) => {
+                    if (!rimGlow) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setSimRim({
+                      target: 'composer',
+                      x: Math.round(e.clientX - rect.left),
+                      y: Math.round(e.clientY - rect.top),
+                    });
+                  }}
+                  onMouseLeave={() => setSimRim(null)}
                   style={{
                     backgroundColor: colors.input || '#131a27',
+                    backgroundImage:
+                      rimGlow && simRim?.target === 'composer'
+                        ? `radial-gradient(180px circle at ${simRim.x}px ${simRim.y}px, ${accent}24 0%, transparent 72%)`
+                        : undefined,
                     borderRadius: `${borderRadius}px`,
-                    border: `1px solid ${border}`,
+                    border: `1px solid ${
+                      rimGlow && simRim?.target === 'composer' ? `${accent}88` : border
+                    }`,
                     color: colors.muted || '#7e8ca6',
                   }}
                 >

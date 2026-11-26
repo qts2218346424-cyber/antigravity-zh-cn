@@ -157,7 +157,7 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
             </div>
           </div>
 
-          {/* 中央智能体对话流 + 深度思考卡片 + 底部悬浮指令输入舱 */}
+          {/* 中央智能体对话流 + 深度思考卡片 + 控制台凹槽 + 底部悬浮指令输入舱 */}
           <div
             className="flex-1 p-2 flex flex-col justify-between min-w-0 relative"
             style={{
@@ -168,27 +168,50 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
                   : `radial-gradient(80% 48% at 50% 0%, ${accent}1f 0%, transparent 72%)`,
             }}
           >
+            {/* 顶部 1.5px 语义边缘余晖光带 */}
+            <div
+              className="pointer-events-none absolute top-0 left-3 right-3 h-[1.5px] rounded-full opacity-85"
+              style={{
+                background: `linear-gradient(90deg, transparent 0%, ${accent} 50%, transparent 100%)`,
+              }}
+            />
+
+            {/* 右侧极简轮次导轨刻度点 */}
+            <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-60">
+              <span className="h-1 w-1 rounded-full" style={{ backgroundColor: muted }} />
+              <span className="h-1.5 w-1 rounded-full" style={{ backgroundColor: accent }} />
+              <span className="h-1 w-1 rounded-full" style={{ backgroundColor: muted }} />
+            </div>
+
             <div className="space-y-1.5">
-              {/* 用户消息气泡（右对齐胶囊） */}
+              {/* 用户消息气泡（切面微渐变 + 顶沿 1px 折射高光） */}
               <div className="flex justify-end">
                 <div
                   className="h-3 px-2 rounded-full flex items-center"
                   style={{
                     backgroundColor: selection,
+                    backgroundImage: `linear-gradient(180deg, ${accent}24 0%, transparent 100%)`,
                     border: `1px solid ${border}`,
+                    boxShadow:
+                      skin.base === 'light'
+                        ? 'inset 0 1px 0 rgba(255,255,255,0.9)'
+                        : `inset 0 1px 0 ${accent}38`,
                   }}
                 >
                   <span className="h-1 w-10 rounded-full opacity-85" style={{ backgroundColor: fg }} />
                 </div>
               </div>
 
-              {/* 智能体毛玻璃深度思考与回复卡片（带思考团子/光玉微章） */}
+              {/* 智能体毛玻璃深度思考与切面卡片（含行内文件芯片与 kbd 键帽微缩） */}
               <div
                 className="rounded-lg p-1.5 space-y-1"
                 style={{
                   backgroundColor: panel,
                   border: `1px solid ${border}`,
-                  boxShadow: '0 6px 16px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.08)',
+                  boxShadow:
+                    skin.base === 'light'
+                      ? '0 6px 14px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)'
+                      : '0 6px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.10)',
                 }}
               >
                 <div className="flex items-center justify-between">
@@ -198,12 +221,40 @@ const MiniAntigravityAppPreview: React.FC<{ skin: SkinInfo }> = ({ skin }) => {
                     ) : (
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
                     )}
-                    <span className="h-1.5 w-10 rounded-full opacity-85" style={{ backgroundColor: accent }} />
+                    <span className="h-1.5 w-8 rounded-full opacity-85" style={{ backgroundColor: accent }} />
+                    {/* 微缩行内文件芯片 */}
+                    <span
+                      className="h-1.5 w-5 rounded-full"
+                      style={{
+                        backgroundColor: `${accent}26`,
+                        border: `1px solid ${accent}48`,
+                      }}
+                    />
                   </div>
-                  <span className="h-1 w-4 rounded-full opacity-40" style={{ backgroundColor: muted }} />
+                  {/* 微缩 kbd 键帽 */}
+                  <span
+                    className="h-2 w-3 rounded-[3px]"
+                    style={{
+                      backgroundColor: inputBg,
+                      border: `1px solid ${border}`,
+                      borderBottomWidth: '1.5px',
+                    }}
+                  />
                 </div>
                 <div className="h-1.5 w-11/12 rounded-full opacity-75" style={{ backgroundColor: fg }} />
-                <div className="h-1.5 w-3/5 rounded-full opacity-45" style={{ backgroundColor: muted }} />
+                {/* 沉降式控制台凹槽 Console Well */}
+                <div
+                  className="h-2.5 w-full rounded px-1 flex items-center gap-1"
+                  style={{
+                    backgroundColor:
+                      skin.base === 'light' ? 'rgba(15,23,42,0.05)' : 'rgba(0,0,0,0.36)',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.25)',
+                    border: `1px solid ${border}`,
+                  }}
+                >
+                  <span className="h-1 w-1 rounded-full" style={{ backgroundColor: accent }} />
+                  <span className="h-1 w-12 rounded-full opacity-55" style={{ backgroundColor: muted }} />
+                </div>
               </div>
             </div>
 

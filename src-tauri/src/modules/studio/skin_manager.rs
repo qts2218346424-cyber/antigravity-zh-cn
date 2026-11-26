@@ -692,6 +692,28 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
     let color_scheme = if is_light { "light" } else { "dark" };
 
     let surfaces_obj = manifest.get("surfaces").and_then(|v| v.as_object());
+    let prism_facets = surfaces_obj
+        .and_then(|v| v.get("prism_facets"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let rim_glow = surfaces_obj
+        .and_then(|v| v.get("rim_glow"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let code_enhance = surfaces_obj
+        .and_then(|v| v.get("code_enhance"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let ambient_aura = surfaces_obj
+        .and_then(|v| v.get("ambient_aura"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let backdrop_mode = surfaces_obj
+        .and_then(|v| v.get("backdrop_mode"))
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| matches!(*s, "auto" | "light" | "off"))
+        .unwrap_or("auto");
     let card_opacity = surfaces_obj
         .and_then(|v| v.get("card_opacity"))
         .and_then(|v| v.as_f64())
@@ -930,6 +952,37 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
         } else {
             "rgb(0 0 0 / 0.66)"
         };
+        let facet_top = if is_light {
+            "rgba(255, 255, 255, 0.92)".to_string()
+        } else {
+            format!("color-mix(in srgb, {} 14%, rgba(255, 255, 255, 0.12))", acc)
+        };
+        let facet_edge = if is_light {
+            format!("color-mix(in srgb, {} 82%, rgba(15, 23, 42, 0.08))", bd)
+        } else {
+            format!("color-mix(in srgb, {} 18%, {})", acc, effective_card_border)
+        };
+        let well_bg = if is_light {
+            format!("color-mix(in srgb, {} 6.5%, {})", fg, bg)
+        } else {
+            format!("color-mix(in srgb, #000000 42%, {})", bg)
+        };
+        let kbd_bg = if is_light {
+            format!("color-mix(in srgb, #ffffff 88%, {})", bg)
+        } else {
+            format!("color-mix(in srgb, {} 11%, {})", fg, onyx_key)
+        };
+        let kbd_shadow = if is_light {
+            "0 1px 0 rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95)".to_string()
+        } else {
+            "0 1px 0 rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.12)".to_string()
+        };
+        let chip_bg = if is_light {
+            format!("color-mix(in srgb, {} 9%, {})", acc, pn)
+        } else {
+            format!("color-mix(in srgb, {} 11%, {})", acc, pn)
+        };
+        let chip_border = format!("color-mix(in srgb, {} 28%, {})", acc, effective_border);
 
         let token_pairs: Vec<(&str, String)> = vec![
             ("--agzh-bg", bg.to_string()),
@@ -1021,6 +1074,14 @@ pub fn compile_skin(skin_id: &str) -> Result<CompiledSkin, String> {
             ("--editor-selection-background", sel.to_string()),
             ("--home-glow", home_glow),
             ("--scrim", scrim.to_string()),
+            ("--agzh-facet-top", facet_top),
+            ("--agzh-facet-edge", facet_edge),
+            ("--agzh-well-bg", well_bg),
+            ("--agzh-kbd-bg", kbd_bg),
+            ("--agzh-kbd-shadow", kbd_shadow),
+            ("--agzh-chip-bg", chip_bg),
+            ("--agzh-chip-border", chip_border),
+            ("--agzh-spring", "cubic-bezier(0.22, 1, 0.36, 1)".to_string()),
         ];
 
         let mut hub_overrides = Vec::with_capacity(token_pairs.len() + 1);
@@ -1172,11 +1233,16 @@ body[data-agy-theme] .agy-callout {
             ));
         }
         if let Some(blur) = surfaces.get("glass_blur").and_then(|v| v.as_u64()) {
-            root_vars.push(format!("  --agzh-glass-blur: {}px !important;", blur));
-            if blur > 0 {
+            let effective_blur = match backdrop_mode {
+                "off" => 0,
+                "light" => (blur / 2).max(4),
+                _ => blur,
+            };
+            root_vars.push(format!("  --agzh-glass-blur: {}px !important;", effective_blur));
+            if effective_blur > 0 {
                 css_parts.push(format!(
-                    ".surface-glass, .agy-user-bubble, .agy-takeover-card, .agy-fastpick, .surface-composer > .surface-composer-card, .artifact-card, [role='dialog'], [role='menu'], [role='listbox'] {{ backdrop-filter: blur({}px) saturate(1.4) !important; -webkit-backdrop-filter: blur({}px) saturate(1.4) !important; }}",
-                    blur, blur
+                    ".surface-glass, .agy-takeover-card, .agy-fastpick, .surface-composer > .surface-composer-card, [role='dialog'], [role='menu'], [role='listbox'] {{ backdrop-filter: blur({}px) saturate(1.35) !important; -webkit-backdrop-filter: blur({}px) saturate(1.35) !important; }}",
+                    effective_blur, effective_blur
                 ));
             }
         }
@@ -1278,6 +1344,242 @@ body[data-agy-theme] .agy-callout {
 
     if !root_vars.is_empty() {
         css_parts.push(format!(":root {{\n{}\n}}", root_vars.join("\n")));
+    }
+
+    // 3.5 棱镜光学切面、近场指针高光、代码块与控制台凹槽增强（完全消费各材质自身颜色令牌，自适应深浅）
+    if prism_facets {
+        let facets_css = r#"
+__BODY__ .agy-user-bubble,
+__BODY__ [data-testid*="user-message"] {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--agzh-accent, var(--primary)) 10%, transparent) 0%, transparent 100%) !important;
+  border-color: var(--agzh-facet-edge, var(--card-border)) !important;
+  box-shadow: inset 0 1px 0 var(--agzh-facet-top), 0 6px 18px -8px rgba(0, 0, 0, 0.24) !important;
+}
+__BODY__ .artifact-card,
+__BODY__ .agy-card,
+__BODY__ .agy-callout,
+__BODY__ [data-testid*="diff-card"] {
+  border-color: var(--agzh-facet-edge, var(--card-border)) !important;
+  box-shadow: inset 0 1px 0 var(--agzh-facet-top), 0 8px 24px -10px rgba(0, 0, 0, 0.22);
+}
+__BODY__ kbd {
+  font-family: var(--agzh-font-mono, monospace);
+  font-size: 0.85em;
+  line-height: 1.25;
+  padding: 1px 6px 2px;
+  border-radius: 6px;
+  background-color: var(--agzh-kbd-bg) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--agzh-facet-edge, var(--border)) !important;
+  border-bottom-width: 2px !important;
+  box-shadow: var(--agzh-kbd-shadow) !important;
+}
+__BODY__ a[data-file-path],
+__BODY__ [data-testid*="file-chip"],
+__BODY__ .file-pill {
+  background-color: var(--agzh-chip-bg) !important;
+  border: 1px solid var(--agzh-chip-border) !important;
+  border-radius: 9999px !important;
+  padding: 1px 8px !important;
+  box-shadow: none !important;
+  transition: background-color 0.18s var(--agzh-spring), border-color 0.18s var(--agzh-spring);
+}
+__BODY__ a[data-file-path]:hover,
+__BODY__ [data-testid*="file-chip"]:hover,
+__BODY__ .file-pill:hover {
+  background-color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 20%, var(--panel, var(--card))) !important;
+  border-color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 50%, var(--border)) !important;
+}
+__BODY__ [data-testid*="terminal"],
+__BODY__ [data-testid*="command-output"],
+__BODY__ [data-testid*="background-task"],
+__BODY__ .terminal-container,
+__BODY__ pre:has(> code.language-bash),
+__BODY__ pre:has(> code.language-sh),
+__BODY__ pre:has(> code.language-powershell) {
+  background-color: var(--agzh-well-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent) !important;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
+}"#
+        .replace("__BODY__", no_hole_body);
+        css_parts.push(facets_css);
+    }
+
+    if rim_glow {
+        let rim_css = r#"
+__BODY__ [data-agzh-rim-active="1"] {
+  background-image: radial-gradient(240px circle at var(--agzh-mx, -999px) var(--agzh-my, -999px), color-mix(in srgb, var(--agzh-accent, var(--primary)) 16%, transparent) 0%, transparent 72%) !important;
+  border-color: color-mix(in srgb, var(--agzh-accent, var(--primary)) 46%, var(--border)) !important;
+  box-shadow: inset 0 1px 0 var(--agzh-facet-top), 0 0 0 1px color-mix(in srgb, var(--agzh-accent, var(--primary)) 22%, transparent), 0 10px 26px -10px color-mix(in srgb, var(--agzh-accent, var(--primary)) 28%, transparent) !important;
+}"#
+        .replace("__BODY__", no_hole_body);
+        css_parts.push(rim_css);
+    }
+
+    if code_enhance {
+        let code_css = r#"
+__BODY__ pre {
+  position: relative;
+}
+__BODY__ pre > div:first-child:has(button),
+__BODY__ [data-testid*="code-block-header"] {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background-color: color-mix(in srgb, var(--editor-code-block-background, var(--panel)) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+__BODY__ .agzh-code-fold-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 6;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--agzh-accent, var(--primary)) 16%, var(--panel, var(--card)));
+  border: 1px solid color-mix(in srgb, var(--agzh-accent, var(--primary)) 38%, var(--border));
+  transition: transform 0.16s var(--agzh-spring), background-color 0.16s var(--agzh-spring);
+}
+__BODY__ .agzh-code-fold-btn:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--agzh-accent, var(--primary)) 26%, var(--panel, var(--card)));
+}
+__BODY__ pre[data-agzh-code-folded="1"] {
+  max-height: 220px !important;
+  overflow: hidden !important;
+  mask-image: linear-gradient(180deg, #000 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 100%);
+}
+__BODY__ .agzh-rail-hud {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 55;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--panel, var(--card)) 88%, transparent);
+  border: 1px solid var(--agzh-facet-edge, var(--border));
+  box-shadow: inset 0 1px 0 var(--agzh-facet-top), 0 10px 26px -8px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(10px);
+}
+__BODY__ .agzh-rail-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s var(--agzh-spring), color 0.15s var(--agzh-spring);
+}
+__BODY__ .agzh-rail-btn:hover {
+  background: color-mix(in srgb, var(--agzh-accent, var(--primary)) 22%, transparent);
+  color: var(--agzh-accent, var(--primary));
+}
+__BODY__ .agzh-rail-count {
+  font-size: 10px;
+  font-family: var(--agzh-font-mono, monospace);
+  color: var(--muted-foreground);
+  padding: 1px 3px;
+  user-select: none;
+}
+__BODY__ .agzh-rail-popover {
+  display: none;
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 230px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel, var(--card)) 94%, transparent);
+  border: 1px solid var(--agzh-facet-edge, var(--border));
+  box-shadow: inset 0 1px 0 var(--agzh-facet-top), 0 16px 36px -10px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+}
+__BODY__ .agzh-rail-hud:hover .agzh-rail-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+__BODY__ .agzh-rail-item {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+__BODY__ .agzh-rail-item:hover,
+__BODY__ .agzh-rail-item.is-active {
+  background: color-mix(in srgb, var(--agzh-accent, var(--primary)) 20%, transparent);
+  color: var(--agzh-accent, var(--primary));
+}"#
+        .replace("__BODY__", no_hole_body);
+        css_parts.push(code_css);
+    }
+
+    if ambient_aura {
+        let aura_css = r#"
+__BODY__ #agzh-aura-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0;
+  transition: opacity 0.28s var(--agzh-spring), background 0.28s var(--agzh-spring);
+}
+html[data-agzh-aura="thinking"] __BODY__ #agzh-aura-bar {
+  opacity: 0.92;
+  background: linear-gradient(90deg, transparent 0%, var(--agzh-accent, var(--primary)) 50%, transparent 100%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--agzh-accent, var(--primary)) 65%, transparent);
+}
+html[data-agzh-aura="attention"] __BODY__ #agzh-aura-bar {
+  opacity: 0.96;
+  background: linear-gradient(90deg, transparent 0%, #f59e0b 50%, transparent 100%);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.65);
+}
+__BODY__ button,
+__BODY__ [role="button"],
+__BODY__ .artifact-card,
+__BODY__ .agy-card {
+  transition: transform 0.18s var(--agzh-spring), border-color 0.18s var(--agzh-spring), box-shadow 0.18s var(--agzh-spring), background-color 0.18s var(--agzh-spring);
+}
+@media (prefers-reduced-motion: reduce) {
+  __BODY__ *,
+  __BODY__ #agzh-aura-bar {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}"#
+        .replace("__BODY__", no_hole_body);
+        css_parts.push(aura_css);
     }
 
     // 4. 底层画布背景插画与环境极光合成（严格置于容器 background 层，绝不盖在文字与卡片上方）
@@ -1558,6 +1860,13 @@ body[data-agy-theme] .agy-callout {
         "base": manifest.get("base").cloned().unwrap_or_else(|| json!("dark")),
         "colors": manifest.get("colors").cloned().unwrap_or_else(|| json!({})),
         "surfaces": manifest.get("surfaces").cloned().unwrap_or_else(|| json!({})),
+        "prism": {
+            "facets": prism_facets,
+            "rim_glow": rim_glow,
+            "code_enhance": code_enhance,
+            "ambient_aura": ambient_aura,
+            "backdrop_mode": backdrop_mode,
+        },
         "backgrounds": resolved_backgrounds,
         "icons": resolved_icons,
         "pet": pet_runtime,
@@ -2069,6 +2378,53 @@ mod tests {
             assert!(
                 !css.contains("--text-sm:"),
                 "皮肤 {} 不应强行覆盖 Tailwind --text-sm 字号梯度",
+                id
+            );
+        }
+    }
+
+    #[test]
+    fn test_prism_facets_tokens_compiled_for_all_builtin_skins() {
+        let all_ids = [
+            "obsidian-glass",
+            "midnight-dark",
+            "vermilion-lacquer",
+            "nordic-aurora",
+            "nezuko-bamboo",
+            "sakura-light",
+            "clannad-sakura-hill",
+            "clannad-illusionary-orbs",
+            "clannad-after-sunflower",
+            "clannad-starfish-library",
+        ];
+        for id in all_ids {
+            let compiled = compile_skin(id).unwrap_or_else(|e| panic!("编译 {} 失败: {}", id, e));
+            let css = &compiled.css;
+            for required in [
+                "--agzh-facet-top:",
+                "--agzh-facet-edge:",
+                "--agzh-well-bg:",
+                "--agzh-kbd-bg:",
+                "--agzh-chip-bg:",
+                "--agzh-spring:",
+                "data-agzh-rim-active",
+                ".agzh-code-fold-btn",
+                "#agzh-aura-bar",
+            ] {
+                assert!(
+                    css.contains(required),
+                    "皮肤 {} 编译产物缺少棱镜光学令牌或规则 {}",
+                    id,
+                    required
+                );
+            }
+            assert_eq!(compiled.runtime_json["prism"]["facets"], true);
+            assert_eq!(compiled.runtime_json["prism"]["rim_glow"], true);
+            assert!(
+                !css.contains("z-index: 9980")
+                    && !css.contains("z-index: 9985")
+                    && !css.contains("--text-sm:"),
+                "皮肤 {} 不应注入禁止的顶层遮罩或破坏字号梯度",
                 id
             );
         }
